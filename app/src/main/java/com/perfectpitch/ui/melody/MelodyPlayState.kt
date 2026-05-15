@@ -17,6 +17,7 @@ data class MelodyPlayState(
     val waitMode: Boolean = true,
     val allowWrongNotes: Boolean = false,
     val tempoMultiplier: Float = 1.0f,
+    val transposeSemitones: Int = 0,
     val melodyScore: MelodyScore? = null,
     val isListening: Boolean = false,
     // View controls

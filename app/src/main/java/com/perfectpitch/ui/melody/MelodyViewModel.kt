@@ -47,6 +47,7 @@ class MelodyViewModel @Inject constructor(
     private var noteFirstDetectedSongTime = 0.0
 
     private var latencyOffsetSeconds = 0.236
+    private var originalMelodyTrack: MelodyTrack? = null
 
     init {
         viewModelScope.launch {
@@ -65,6 +66,7 @@ class MelodyViewModel @Inject constructor(
     fun loadMelody(info: MelodyRepository.MelodyInfo): Boolean {
         val track = melodyRepository.loadMelody(info)
         if (track != null) {
+            originalMelodyTrack = track
             val range = track.noteRange
             val viewMin = (range.first - NOTE_RANGE_PADDING).toFloat().coerceAtLeast(21f)
             val viewMax = (range.last + NOTE_RANGE_PADDING).toFloat().coerceAtMost(108f)
@@ -73,7 +75,8 @@ class MelodyViewModel @Inject constructor(
                     melodyTrack = track,
                     phase = PlayPhase.NOT_STARTED,
                     viewMinMidi = viewMin,
-                    viewMaxMidi = viewMax
+                    viewMaxMidi = viewMax,
+                    transposeSemitones = 0
                 )
             }
             return true
@@ -84,6 +87,7 @@ class MelodyViewModel @Inject constructor(
     fun loadMelodyFromUri(uri: android.net.Uri): Boolean {
         val track = melodyRepository.loadFromUri(uri, "Imported MIDI")
         if (track != null) {
+            originalMelodyTrack = track
             val range = track.noteRange
             val viewMin = (range.first - NOTE_RANGE_PADDING).toFloat().coerceAtLeast(21f)
             val viewMax = (range.last + NOTE_RANGE_PADDING).toFloat().coerceAtMost(108f)
@@ -92,7 +96,8 @@ class MelodyViewModel @Inject constructor(
                     melodyTrack = track,
                     phase = PlayPhase.NOT_STARTED,
                     viewMinMidi = viewMin,
-                    viewMaxMidi = viewMax
+                    viewMaxMidi = viewMax,
+                    transposeSemitones = 0
                 )
             }
             return true
@@ -110,6 +115,23 @@ class MelodyViewModel @Inject constructor(
 
     fun setTempoMultiplier(multiplier: Float) {
         _state.update { it.copy(tempoMultiplier = multiplier.coerceIn(0.5f, 1.5f)) }
+    }
+
+    fun setTranspose(semitones: Int) {
+        val clamped = semitones.coerceIn(-36, 36)
+        val base = originalMelodyTrack ?: return
+        val transposed = base.transpose(clamped)
+        val range = transposed.noteRange
+        val viewMin = (range.first - NOTE_RANGE_PADDING).toFloat().coerceAtLeast(21f)
+        val viewMax = (range.last + NOTE_RANGE_PADDING).toFloat().coerceAtMost(108f)
+        _state.update {
+            it.copy(
+                melodyTrack = transposed,
+                transposeSemitones = clamped,
+                viewMinMidi = viewMin,
+                viewMaxMidi = viewMax
+            )
+        }
     }
 
     fun startPlaying() {

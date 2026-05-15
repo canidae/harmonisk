@@ -108,4 +108,16 @@ data class MelodyTrack(
     fun noteStartSeconds(note: NoteEvent): Double {
         return tickToSeconds(note.startTick)
     }
+
+    /**
+     * Returns a new MelodyTrack with all notes transposed by the given number of semitones.
+     * Notes are clamped to valid MIDI range (0-127).
+     */
+    fun transpose(semitones: Int): MelodyTrack {
+        if (semitones == 0) return this
+        val transposedNotes = notes.map { note ->
+            note.copy(noteNumber = (note.noteNumber + semitones).coerceIn(0, 127))
+        }
+        return copy(notes = transposedNotes)
+    }
 }

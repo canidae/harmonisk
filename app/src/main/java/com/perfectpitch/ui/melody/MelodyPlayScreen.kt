@@ -218,6 +218,24 @@ fun MelodyPlayScreen(
                                 steps = 9,
                                 modifier = Modifier.padding(horizontal = 16.dp)
                             )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (state.transposeSemitones == 0) "Transpose: 0"
+                                        else if (state.transposeSemitones > 0) "Transpose: +${state.transposeSemitones}"
+                                        else "Transpose: ${state.transposeSemitones}"
+                                    )
+                                },
+                                onClick = { }
+                            )
+                            Slider(
+                                value = state.transposeSemitones.toFloat(),
+                                onValueChange = { viewModel.setTranspose(it.toInt()) },
+                                valueRange = -36f..36f,
+                                steps = 71,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
                         }
                     }
 
