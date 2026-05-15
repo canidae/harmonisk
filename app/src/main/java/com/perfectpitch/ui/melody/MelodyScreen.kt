@@ -1,6 +1,7 @@
 package com.perfectpitch.ui.melody
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -13,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -24,12 +26,17 @@ fun MelodyScreen(
     onStartPlay: () -> Unit = {},
     viewModel: MelodyViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
-            viewModel.loadMelodyFromUri(it)
-            onStartPlay()
+            if (viewModel.loadMelodyFromUri(it)) {
+                onStartPlay()
+            } else {
+                Toast.makeText(context, "Failed to load MIDI file", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -67,8 +74,11 @@ fun MelodyScreen(
                     items(melodies) { info ->
                         Card(
                             onClick = {
-                                viewModel.loadMelody(info)
-                                onStartPlay()
+                                if (viewModel.loadMelody(info)) {
+                                    onStartPlay()
+                                } else {
+                                    Toast.makeText(context, "Failed to load melody", Toast.LENGTH_SHORT).show()
+                                }
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {

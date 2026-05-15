@@ -2,8 +2,11 @@ package com.perfectpitch.data
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.perfectpitch.midi.MelodyTrack
 import com.perfectpitch.midi.MidiParser
+
+private const val TAG = "MelodyRepository"
 
 /**
  * Repository for managing MIDI melodies (bundled and user-imported).
@@ -63,6 +66,7 @@ class MelodyRepository(
                 else -> null
             }
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to load melody '${info.name}' (id=${info.id})", e)
             null
         }
 
@@ -82,6 +86,7 @@ class MelodyRepository(
                 track
             }
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to load melody from URI: $uri", e)
             null
         }
     }

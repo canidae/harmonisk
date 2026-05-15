@@ -61,14 +61,11 @@ fun MelodyPlayScreen(
                 .fillMaxSize()
                 .systemBarsPadding()
                 .pointerInput(Unit) {
-                    detectTransformGestures { centroid, pan, zoom, _ ->
-                        val canvasHeight = size.height.toFloat()
-
+                    detectTransformGestures { _, pan, zoom, _ ->
                         // Vertical zoom only (pinch)
                         if (zoom != 1f) {
                             viewModel.onVerticalZoom(zoom)
                         }
-
                         // Vertical scroll: drag up = see future notes, drag down = see past notes
                         if (pan.y != 0f) {
                             val secondsPerPx = 1.0 / (state.fallSpeedPxPerSec * density.density)
@@ -78,7 +75,9 @@ fun MelodyPlayScreen(
                 }
         ) {
             val track = state.melodyTrack
+
             if (track != null) {
+                // Canvas
                 MelodyPlayCanvas(
                     state = state,
                     melodyTrack = track,
@@ -127,8 +126,7 @@ fun MelodyPlayScreen(
                 // Top-left: progress info
                 if (state.phase == PlayPhase.PLAYING || state.phase == PlayPhase.PAUSED || state.phase == PlayPhase.WAITING_FOR_NOTE) {
                     Row(
-                        modifier = Modifier
-                            .padding(start = 12.dp, top = 8.dp),
+                        modifier = Modifier.padding(start = 12.dp, top = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -143,7 +141,6 @@ fun MelodyPlayScreen(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
-
                         val notesHit = state.noteResults.count { it.value != NoteResultState.MISS && it.value != NoteResultState.ACTIVE }
                         Surface(color = Color(0xCC1A1A2E), shape = MaterialTheme.shapes.small) {
                             Text(
@@ -210,9 +207,7 @@ fun MelodyPlayScreen(
                                 )
                             }
                             DropdownMenuItem(
-                                text = {
-                                    Text("Tempo: ${"%.0f".format(state.tempoMultiplier * 100)}%")
-                                },
+                                text = { Text("Tempo: ${"%.0f".format(state.tempoMultiplier * 100)}%") },
                                 onClick = { }
                             )
                             Slider(
@@ -229,11 +224,7 @@ fun MelodyPlayScreen(
                     if (state.phase == PlayPhase.PLAYING || state.phase == PlayPhase.PAUSED || state.phase == PlayPhase.WAITING_FOR_NOTE) {
                         IconButton(
                             onClick = {
-                                if (state.phase == PlayPhase.PAUSED) {
-                                    viewModel.resume()
-                                } else {
-                                    viewModel.pause()
-                                }
+                                if (state.phase == PlayPhase.PAUSED) viewModel.resume() else viewModel.pause()
                             },
                             modifier = Modifier
                                 .size(OVERLAY_BUTTON_SIZE)
@@ -248,7 +239,7 @@ fun MelodyPlayScreen(
                         }
                     }
 
-                    // Scroll-to-live button (when scrolled away from current time)
+                    // Scroll-to-live button
                     if (state.songTimeOffsetSeconds != 0.0) {
                         IconButton(
                             onClick = { viewModel.scrollToLive() },
@@ -278,6 +269,24 @@ fun MelodyPlayScreen(
                             tint = OVERLAY_ICON_TINT,
                             modifier = Modifier.size(20.dp)
                         )
+                    }
+                }
+            } else {
+                // Error fallback — melody failed to load
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Failed to load melody",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = onBack) {
+                            Text("Go Back")
+                        }
                     }
                 }
             }

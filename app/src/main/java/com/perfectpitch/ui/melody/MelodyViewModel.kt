@@ -58,7 +58,7 @@ class MelodyViewModel @Inject constructor(
         return melodyRepository.getAvailableMelodies()
     }
 
-    fun loadMelody(info: MelodyRepository.MelodyInfo) {
+    fun loadMelody(info: MelodyRepository.MelodyInfo): Boolean {
         val track = melodyRepository.loadMelody(info)
         if (track != null) {
             val range = track.noteRange
@@ -72,10 +72,12 @@ class MelodyViewModel @Inject constructor(
                     viewMaxMidi = viewMax
                 )
             }
+            return true
         }
+        return false
     }
 
-    fun loadMelodyFromUri(uri: android.net.Uri) {
+    fun loadMelodyFromUri(uri: android.net.Uri): Boolean {
         val track = melodyRepository.loadFromUri(uri, "Imported MIDI")
         if (track != null) {
             val range = track.noteRange
@@ -89,7 +91,9 @@ class MelodyViewModel @Inject constructor(
                     viewMaxMidi = viewMax
                 )
             }
+            return true
         }
+        return false
     }
 
     fun setWaitMode(enabled: Boolean) {
