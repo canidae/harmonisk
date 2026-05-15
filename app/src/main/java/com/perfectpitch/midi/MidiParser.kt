@@ -35,8 +35,8 @@ class MidiParser {
         require(format in 0..1) { "Only MIDI format 0 and 1 are supported, got $format" }
         require(timeDivision > 0) { "Only ticks-per-quarter-note time division is supported" }
 
-        // Skip any remaining header bytes
-        pos = 8 + 4 + headerLength
+        // Skip any remaining header bytes (MThd=4 + lengthField=4 + headerLength)
+        pos = 8 + headerLength
 
         // Parse all tracks
         val allNotes = mutableListOf<NoteEvent>()
