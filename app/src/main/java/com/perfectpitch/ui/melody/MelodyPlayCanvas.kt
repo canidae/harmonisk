@@ -104,21 +104,26 @@ fun MelodyPlayCanvas(
         }
 
         // Draw melody notes
+        val minGapPx = 4f * density  // minimum 4dp gap between consecutive same-pitch notes
         for ((index, note) in melodyTrack.notes.withIndex()) {
             val noteStartTime = melodyTrack.noteStartSeconds(note)
             val noteDuration = melodyTrack.noteDurationSeconds(note)
             val noteEndTime = noteStartTime + noteDuration
 
-            // Time relative to current view time:
-            // Notes that haven't been reached yet have positive relativeStart (above hit zone)
-            // Notes that are past have negative relativeStart (below hit zone, behind piano)
             val relativeStart = noteStartTime - viewTimeSeconds
             val relativeEnd = noteEndTime - viewTimeSeconds
 
-            // Y positions: hit zone is at hitZoneY, notes above are earlier in future
-            // A note at relativeStart=0 has its bottom edge at hitZoneY
-            val noteBottomY = hitZoneY - (relativeStart * pixelsPerSecond).toFloat()
-            val noteTopY = hitZoneY - (relativeEnd * pixelsPerSecond).toFloat()
+            var noteBottomY = hitZoneY - (relativeStart * pixelsPerSecond).toFloat()
+            var noteTopY = hitZoneY - (relativeEnd * pixelsPerSecond).toFloat()
+
+            // Enforce minimum gap with adjacent same-pitch notes
+            if (index > 0 && melodyTrack.notes[index - 1].noteNumber == note.noteNumber) {
+                noteBottomY -= minGapPx / 2f
+            }
+            if (index < melodyTrack.notes.size - 1 && melodyTrack.notes[index + 1].noteNumber == note.noteNumber) {
+                noteTopY += minGapPx / 2f
+            }
+
             val noteHeight = (noteBottomY - noteTopY).coerceAtLeast(4f)
 
             // Skip off-screen notes (above canvas or behind piano)
@@ -138,11 +143,17 @@ fun MelodyPlayCanvas(
             // Determine color
             val noteColor = getNoteColor(index, state, relativeStart)
 
+            // Pill-shaped corners
+            val cornerRadius = CornerRadius(
+                kotlin.math.min(barW, clippedHeight) / 2f,
+                kotlin.math.min(barW, clippedHeight) / 2f
+            )
+
             drawRoundRect(
                 color = noteColor,
                 topLeft = Offset(barX, clippedTop),
                 size = Size(barW, clippedHeight),
-                cornerRadius = CornerRadius(3f * density, 3f * density)
+                cornerRadius = cornerRadius
             )
 
             // Draw border
@@ -150,7 +161,7 @@ fun MelodyPlayCanvas(
                 color = Color.White.copy(alpha = 0.15f),
                 topLeft = Offset(barX, clippedTop),
                 size = Size(barW, clippedHeight),
-                cornerRadius = CornerRadius(3f * density, 3f * density),
+                cornerRadius = cornerRadius,
                 style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1f)
             )
         }

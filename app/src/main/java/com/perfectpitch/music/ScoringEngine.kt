@@ -91,14 +91,13 @@ class ScoringEngine {
      * Score timing (when the note started relative to when it should have).
      */
     private fun scoreTiming(offsetMs: Long, expectedDurationMs: Long): Float {
-        if (expectedDurationMs <= 0) return 100f
-        val tolerance = expectedDurationMs * 0.25f
         val absOffset = abs(offsetMs).toFloat()
         return when {
-            absOffset <= tolerance * 0.5f -> 100f
-            absOffset <= tolerance -> 80f
-            absOffset <= tolerance * 2f -> 60f
-            else -> 0f
+            absOffset <= 30f -> 100f   // Perfect timing
+            absOffset <= 80f -> 80f    // Great
+            absOffset <= 150f -> 50f   // Good
+            absOffset <= 250f -> 25f   // Ok
+            else -> 0f                  // Miss
         }
     }
 
@@ -140,12 +139,12 @@ class ScoringEngine {
 
     private fun getEncouragingMessage(score: Float): String {
         return when {
-            score >= 95f -> "Outstanding! Perfect pitch mastery! 🌟"
-            score >= 80f -> "Excellent performance! 🎉"
-            score >= 65f -> "Well done! Almost there! 👏"
-            score >= 50f -> "Good progress! Keep practicing! 💪"
-            score >= 30f -> "Getting better! Don't give up! 🎵"
-            else -> "Keep practicing! You'll get there! 🎶"
+            score >= 95f -> "🌟 Outstanding! 🌟"
+            score >= 80f -> "🎉 Excellent! 🎉"
+            score >= 65f -> "👏 Well done! 👏"
+            score >= 50f -> "💪 Keep it up! 💪"
+            score >= 30f -> "🎵 Getting there! 🎵"
+            else -> "🎶 Keep practicing! 🎶"
         }
     }
 }
@@ -181,6 +180,6 @@ data class MelodyScore(
     val encouragingMessage: String = ""
 ) {
     companion object {
-        val EMPTY = MelodyScore(0f, 0, 0, 0, 0, 0, 0f, 0f, "Keep practicing! You'll get there! 🎶")
+        val EMPTY = MelodyScore(0f, 0, 0, 0, 0, 0, 0f, 0f, "🎶 Keep practicing! 🎶")
     }
 }

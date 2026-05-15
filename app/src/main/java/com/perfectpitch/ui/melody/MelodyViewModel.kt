@@ -42,7 +42,9 @@ class MelodyViewModel @Inject constructor(
     // Per-note tracking
     private var currentNoteStartTime = 0L
     private var currentNoteDetectedCorrectly = false
-    private var bestCentsOff = Float.MAX_VALUE
+    private var centsOffSum = 0f
+    private var centsOffCount = 0
+    private var correctPitchFrameCount = 0
     private var isWaitingForNote = false
     private var noteFirstDetectedSongTime = 0.0
 
@@ -153,7 +155,9 @@ class MelodyViewModel @Inject constructor(
         }
 
         isWaitingForNote = false
-        bestCentsOff = Float.MAX_VALUE
+        centsOffSum = 0f
+        centsOffCount = 0
+        correctPitchFrameCount = 0
         currentNoteDetectedCorrectly = false
 
         viewModelScope.launch {
@@ -220,6 +224,14 @@ class MelodyViewModel @Inject constructor(
 
     fun scrollToLive() {
         _state.update { it.copy(songTimeOffsetSeconds = 0.0) }
+    }
+
+    fun scrollToBeginning() {
+        val track = _state.value.melodyTrack ?: return
+        val firstNoteStart = track.notes.firstOrNull()?.let { track.noteStartSeconds(it) } ?: 0.0
+        _state.update {
+            it.copy(songTimeOffsetSeconds = firstNoteStart - it.currentTimeSeconds)
+        }
     }
 
     // --- Playback ---
@@ -299,7 +311,9 @@ class MelodyViewModel @Inject constructor(
             _state.update { it.copy(currentNoteIndex = noteIndex, noteResults = results) }
             currentNoteStartTime = SystemClock.elapsedRealtime()
             currentNoteDetectedCorrectly = false
-            bestCentsOff = Float.MAX_VALUE
+            centsOffSum = 0f
+            centsOffCount = 0
+            correctPitchFrameCount = 0
             noteFirstDetectedSongTime = 0.0
 
             // In wait mode, freeze time until correct note is played
@@ -326,8 +340,14 @@ class MelodyViewModel @Inject constructor(
         val expectedFreq = noteUtils.midiToFrequency(expectedMidi)
         val centsOff = noteUtils.frequencyToCents(result.frequency, expectedFreq)
 
-        if (abs(centsOff) < abs(bestCentsOff)) {
-            bestCentsOff = centsOff
+        // Accumulate cents-off when player is on the correct MIDI note
+        if (detectedMidi == expectedMidi) {
+            centsOffSum += abs(centsOff)
+            centsOffCount++
+            // Count frames where pitch is within non-MISS range for duration scoring
+            if (abs(centsOff) <= 50f) {
+                correctPitchFrameCount++
+            }
         }
 
         val isCorrectNote = detectedMidi == expectedMidi && abs(centsOff) <= 50f
@@ -378,9 +398,10 @@ class MelodyViewModel @Inject constructor(
     private fun scoreCurrentNote(expectedNote: com.perfectpitch.midi.NoteEvent, noteIndex: Int) {
         val track = _state.value.melodyTrack ?: return
         val expectedDurationMs = (track.noteDurationSeconds(expectedNote) * 1000).toLong()
-        val actualDurationMs = SystemClock.elapsedRealtime() - currentNoteStartTime
+        // Duration = time player held correct pitch (each frame ≈ 93ms)
+        val actualDurationMs = correctPitchFrameCount * 93L
 
-        val effectiveCentsOff = if (bestCentsOff == Float.MAX_VALUE) 100f else bestCentsOff
+        val effectiveCentsOff = if (centsOffCount > 0) centsOffSum / centsOffCount else 100f
 
         val expectedStartSec = track.noteStartSeconds(expectedNote)
         val timingOffsetMs = if (currentNoteDetectedCorrectly) {
@@ -453,11 +474,19 @@ class MelodyViewModel @Inject constructor(
         val noteScores = _state.value.noteScores
         val melodyScore = scoringEngine.calculateMelodyScore(noteScores)
 
+        // Auto-zoom to fit entire melody and scroll to beginning
+        val firstNoteStart = track.notes.firstOrNull()?.let { track.noteStartSeconds(it) } ?: 0.0
+        val songDuration = track.durationSeconds
+        val fitSpeed = if (songDuration > 0) (700.0 / songDuration).toFloat() else MIN_FALL_SPEED
+        val clampedSpeed = fitSpeed.coerceIn(MIN_FALL_SPEED, MAX_FALL_SPEED)
+
         _state.update {
             it.copy(
                 phase = PlayPhase.FINISHED,
                 melodyScore = melodyScore,
-                isListening = false
+                isListening = false,
+                fallSpeedPxPerSec = clampedSpeed,
+                songTimeOffsetSeconds = firstNoteStart - it.currentTimeSeconds
             )
         }
     }

@@ -141,4 +141,72 @@ class ScoringEngineTest {
         val melodyScore = engine.calculateMelodyScore(emptyList())
         assertEquals(MelodyScore.EMPTY, melodyScore)
     }
+
+    // --- Timing scoring tests (fixed ms thresholds) ---
+
+    @Test
+    fun `perfect timing within 30ms gives 100`() {
+        val result = engine.scoreNote(NotePerformance(
+            expectedMidiNote = 69, detectedMidiNote = 69,
+            centsOff = 0f, expectedDurationMs = 500,
+            actualDurationMs = 500, timingOffsetMs = 25
+        ))
+        assertEquals(100f, result.timingScore, 0.01f)
+    }
+
+    @Test
+    fun `great timing within 80ms gives 80`() {
+        val result = engine.scoreNote(NotePerformance(
+            expectedMidiNote = 69, detectedMidiNote = 69,
+            centsOff = 0f, expectedDurationMs = 500,
+            actualDurationMs = 500, timingOffsetMs = 50
+        ))
+        assertEquals(80f, result.timingScore, 0.01f)
+    }
+
+    @Test
+    fun `good timing within 150ms gives 50`() {
+        val result = engine.scoreNote(NotePerformance(
+            expectedMidiNote = 69, detectedMidiNote = 69,
+            centsOff = 0f, expectedDurationMs = 500,
+            actualDurationMs = 500, timingOffsetMs = 120
+        ))
+        assertEquals(50f, result.timingScore, 0.01f)
+    }
+
+    @Test
+    fun `ok timing within 250ms gives 25`() {
+        val result = engine.scoreNote(NotePerformance(
+            expectedMidiNote = 69, detectedMidiNote = 69,
+            centsOff = 0f, expectedDurationMs = 500,
+            actualDurationMs = 500, timingOffsetMs = 200
+        ))
+        assertEquals(25f, result.timingScore, 0.01f)
+    }
+
+    @Test
+    fun `timing beyond 250ms gives 0`() {
+        val result = engine.scoreNote(NotePerformance(
+            expectedMidiNote = 69, detectedMidiNote = 69,
+            centsOff = 0f, expectedDurationMs = 500,
+            actualDurationMs = 500, timingOffsetMs = 300
+        ))
+        assertEquals(0f, result.timingScore, 0.01f)
+    }
+
+    @Test
+    fun `timing thresholds are absolute not relative to duration`() {
+        // Short note (100ms) and long note (2000ms) should score the same for identical offset
+        val shortNote = engine.scoreNote(NotePerformance(
+            expectedMidiNote = 69, detectedMidiNote = 69,
+            centsOff = 0f, expectedDurationMs = 100,
+            actualDurationMs = 100, timingOffsetMs = 50
+        ))
+        val longNote = engine.scoreNote(NotePerformance(
+            expectedMidiNote = 69, detectedMidiNote = 69,
+            centsOff = 0f, expectedDurationMs = 2000,
+            actualDurationMs = 2000, timingOffsetMs = 50
+        ))
+        assertEquals(shortNote.timingScore, longNote.timingScore, 0.01f)
+    }
 }

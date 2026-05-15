@@ -6,9 +6,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -258,17 +260,24 @@ fun MelodyPlayScreen(
                         }
                     }
 
-                    // Scroll-to-live button
+                    // Scroll button
                     if (state.songTimeOffsetSeconds != 0.0) {
                         IconButton(
-                            onClick = { viewModel.scrollToLive() },
+                            onClick = {
+                                if (state.phase == PlayPhase.FINISHED) {
+                                    viewModel.scrollToBeginning()
+                                } else {
+                                    viewModel.scrollToLive()
+                                }
+                            },
                             modifier = Modifier
                                 .size(OVERLAY_BUTTON_SIZE)
                                 .background(OVERLAY_BG, CircleShape)
                         ) {
                             Icon(
-                                Icons.Filled.KeyboardArrowUp,
-                                contentDescription = "Back to live",
+                                if (state.phase == PlayPhase.FINISHED) Icons.Filled.KeyboardArrowDown
+                                else Icons.Filled.KeyboardArrowUp,
+                                contentDescription = if (state.phase == PlayPhase.FINISHED) "Scroll to beginning" else "Back to live",
                                 tint = OVERLAY_ICON_TINT,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -292,6 +301,23 @@ fun MelodyPlayScreen(
                         }
                     }
 
+                    // Play Again button
+                    if (state.phase == PlayPhase.FINISHED) {
+                        IconButton(
+                            onClick = { viewModel.startPlaying() },
+                            modifier = Modifier
+                                .size(OVERLAY_BUTTON_SIZE)
+                                .background(OVERLAY_BG, CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Filled.Refresh,
+                                contentDescription = "Play Again",
+                                tint = OVERLAY_ICON_TINT,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
                     // Close button
                     IconButton(
                         onClick = { viewModel.stop(); onBack() },
@@ -308,23 +334,6 @@ fun MelodyPlayScreen(
                     }
                 }
 
-                // Post-play controls
-                if (state.phase == PlayPhase.FINISHED) {
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = PIANO_HEIGHT_DP.dp + 8.dp, start = 16.dp, end = BUTTON_AREA_WIDTH + 8.dp)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)
-                    ) {
-                        OutlinedButton(onClick = { viewModel.stop(); onBack() }) {
-                            Text("Back to Menu")
-                        }
-                        Button(onClick = { viewModel.startPlaying() }) {
-                            Text("Play Again")
-                        }
-                    }
-                }
             } else {
                 // Error fallback — melody failed to load
                 Box(
