@@ -209,7 +209,8 @@ class FreePlayViewModel @Inject constructor(
                     octave = result.octave,
                     midiNumber = midi,
                     startTimeMs = virtualNowMs,
-                    averageCentsOff = result.centsOff
+                    averageCentsOff = result.centsOff,
+                    centsHistory = listOf(result.centsOff)
                 )
                 _state.update { it.copy(activeNote = note, pitchResult = result) }
             } else {
@@ -217,7 +218,10 @@ class FreePlayViewModel @Inject constructor(
                 val avgCents = centsSamples.average().toFloat()
                 _state.update { current ->
                     current.copy(
-                        activeNote = current.activeNote?.copy(averageCentsOff = avgCents),
+                        activeNote = current.activeNote?.copy(
+                            averageCentsOff = avgCents,
+                            centsHistory = current.activeNote.centsHistory + result.centsOff
+                        ),
                         pitchResult = result
                     )
                 }

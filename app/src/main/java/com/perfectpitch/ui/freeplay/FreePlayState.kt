@@ -25,7 +25,8 @@ data class PlayedNote(
     val midiNumber: Int,
     val startTimeMs: Long,
     val endTimeMs: Long? = null,
-    val averageCentsOff: Float = 0f
+    val averageCentsOff: Float = 0f,
+    val centsHistory: List<Float> = emptyList()
 ) {
     val isActive: Boolean get() = endTimeMs == null
 

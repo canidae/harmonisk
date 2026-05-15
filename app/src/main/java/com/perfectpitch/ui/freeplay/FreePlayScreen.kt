@@ -18,9 +18,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.perfectpitch.ui.components.CanvasMode
 import com.perfectpitch.ui.components.KeepScreenOn
 import com.perfectpitch.ui.components.PIANO_HEIGHT_DP
 import com.perfectpitch.ui.components.RequireMicPermission
+import com.perfectpitch.ui.components.SharedNoteCanvas
 
 private val BUTTON_AREA_WIDTH = 52.dp
 private val OVERLAY_BG = Color(0xAA1A1A2E)
@@ -87,9 +89,17 @@ fun FreePlayScreen(
                 onDispose { viewModel.stopListening() }
             }
 
-            FreePlayCanvas(
-                state = state,
-                currentTimeMs = effectiveTime,
+            SharedNoteCanvas(
+                mode = CanvasMode.FreePlay(
+                    notes = state.playedNotes,
+                    activeNote = state.activeNote,
+                    currentTimeMs = effectiveTime,
+                    timeOffsetMs = state.timeOffsetMs,
+                    fallSpeedPxPerSec = state.fallSpeedPxPerSec
+                ),
+                pianoAtBottom = false,
+                viewMinMidi = state.viewMinMidi,
+                viewMaxMidi = state.viewMaxMidi,
                 rightPaddingPx = rightPaddingPx,
                 modifier = Modifier.fillMaxSize()
             )

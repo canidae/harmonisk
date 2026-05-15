@@ -46,6 +46,7 @@ class MelodyViewModel @Inject constructor(
     private var centsOffCount = 0
     private var correctPitchFrameCount = 0
     private var isWaitingForNote = false
+    private var wasWaitingForNote = false
     private var noteFirstDetectedSongTime = 0.0
 
     private var latencyOffsetSeconds = 0.236
@@ -155,6 +156,7 @@ class MelodyViewModel @Inject constructor(
         }
 
         isWaitingForNote = false
+        wasWaitingForNote = false
         centsOffSum = 0f
         centsOffCount = 0
         correctPitchFrameCount = 0
@@ -177,12 +179,19 @@ class MelodyViewModel @Inject constructor(
         pauseOffset = _state.value.currentTimeSeconds
         playbackJob?.cancel()
         pitchJob?.cancel()
+        wasWaitingForNote = isWaitingForNote
         isWaitingForNote = false
         _state.update { it.copy(phase = PlayPhase.PAUSED, isListening = false) }
     }
 
     fun resume() {
-        _state.update { it.copy(phase = PlayPhase.PLAYING) }
+        if (wasWaitingForNote) {
+            isWaitingForNote = true
+            wasWaitingForNote = false
+            _state.update { it.copy(phase = PlayPhase.WAITING_FOR_NOTE) }
+        } else {
+            _state.update { it.copy(phase = PlayPhase.PLAYING) }
+        }
         startPitchDetection()
         startPlaybackTimer()
     }
@@ -192,6 +201,7 @@ class MelodyViewModel @Inject constructor(
         pitchJob?.cancel()
         pauseOffset = 0.0
         isWaitingForNote = false
+        wasWaitingForNote = false
         _state.update {
             it.copy(
                 phase = PlayPhase.NOT_STARTED,

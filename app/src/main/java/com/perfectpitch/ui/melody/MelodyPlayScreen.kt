@@ -23,9 +23,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.perfectpitch.ui.components.CanvasMode
 import com.perfectpitch.ui.components.KeepScreenOn
 import com.perfectpitch.ui.components.PIANO_HEIGHT_DP
 import com.perfectpitch.ui.components.RequireMicPermission
+import com.perfectpitch.ui.components.SharedNoteCanvas
 
 private val BUTTON_AREA_WIDTH = 52.dp
 private val OVERLAY_BG = Color(0xAA1A1A2E)
@@ -81,11 +83,21 @@ fun MelodyPlayScreen(
 
             if (track != null) {
                 // Canvas
-                MelodyPlayCanvas(
-                    state = state,
-                    melodyTrack = track,
-                    detectedMidiNote = if (state.pitchResult.isValid) state.pitchResult.midiNoteNumber else null,
-                    detectedCentsOff = if (state.pitchResult.isValid) state.pitchResult.centsOff else null,
+                SharedNoteCanvas(
+                    mode = CanvasMode.Melody(
+                        melodyTrack = track,
+                        noteResults = state.noteResults,
+                        currentNoteIndex = state.currentNoteIndex,
+                        pitchTrace = state.pitchTrace,
+                        currentTimeSeconds = state.currentTimeSeconds,
+                        songTimeOffsetSeconds = state.songTimeOffsetSeconds,
+                        fallSpeedPxPerSec = state.fallSpeedPxPerSec,
+                        detectedMidiNote = if (state.pitchResult.isValid) state.pitchResult.midiNoteNumber else null,
+                        detectedCentsOff = if (state.pitchResult.isValid) state.pitchResult.centsOff else null
+                    ),
+                    pianoAtBottom = true,
+                    viewMinMidi = state.viewMinMidi,
+                    viewMaxMidi = state.viewMaxMidi,
                     rightPaddingPx = rightPaddingPx,
                     modifier = Modifier.fillMaxSize()
                 )
