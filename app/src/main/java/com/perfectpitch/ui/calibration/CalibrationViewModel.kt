@@ -26,16 +26,18 @@ class CalibrationViewModel @Inject constructor(
         const val MIDI_NOTE_C4 = 60
         const val MIDI_VELOCITY = 80
         const val NOTE_DURATION_MS = 100L
+        const val TIMEOUT_MS = 30_000L
     }
 
     data class CalibrationState(
         val device: AudioOutputDevice? = null,
         val phase: CalibrationPhase = CalibrationPhase.READY,
+        val synthReady: Boolean = false,
         val tapsCollected: Int = 0,
-        val currentBeat: Int = 0,
         val resultDelayMs: Int? = null,
         val editedDelayMs: String = "",
-        val saved: Boolean = false
+        val saved: Boolean = false,
+        val timedOut: Boolean = false
     )
 
     enum class CalibrationPhase {
@@ -60,16 +62,21 @@ class CalibrationViewModel @Inject constructor(
     }
 
     fun initSynthesizer(context: android.content.Context) {
-        if (melodySynthesizer.isReady) return
+        if (melodySynthesizer.isReady) {
+            _state.update { it.copy(synthReady = true) }
+            return
+        }
         viewModelScope.launch {
             try {
                 melodySynthesizer.open(context)
+                _state.update { it.copy(synthReady = true) }
             } catch (_: Exception) { }
         }
     }
 
     fun startCalibration() {
         if (_state.value.phase == CalibrationPhase.PLAYING) return
+        if (!melodySynthesizer.isReady) return
 
         beatTimes.clear()
         tapDeltas.clear()
@@ -78,22 +85,24 @@ class CalibrationViewModel @Inject constructor(
             it.copy(
                 phase = CalibrationPhase.PLAYING,
                 tapsCollected = 0,
-                currentBeat = 0,
                 resultDelayMs = null,
                 editedDelayMs = "",
-                saved = false
+                saved = false,
+                timedOut = false
             )
         }
 
         metronomeJob = viewModelScope.launch {
             val startTime = System.currentTimeMillis()
 
-            // Play enough beats for TOTAL_TAPS + a few extra for late tappers
-            val totalBeats = TOTAL_TAPS + 4
-            for (beat in 0 until totalBeats) {
-                if (!isActive) break
+            // Play beats until 16 taps collected or 30s timeout
+            while (isActive) {
+                val elapsed = System.currentTimeMillis() - startTime
+                if (elapsed >= TIMEOUT_MS) break
+                if (tapDeltas.size >= TOTAL_TAPS) break
 
-                val targetTime = startTime + beat * BEAT_INTERVAL_MS
+                val beatIndex = beatTimes.size
+                val targetTime = startTime + beatIndex * BEAT_INTERVAL_MS
                 val now = System.currentTimeMillis()
                 val waitMs = targetTime - now
                 if (waitMs > 0) delay(waitMs)
@@ -101,20 +110,12 @@ class CalibrationViewModel @Inject constructor(
                 val beatTime = System.currentTimeMillis()
                 beatTimes.add(beatTime)
 
-                _state.update { it.copy(currentBeat = beat + 1) }
-
                 // Play note
-                if (melodySynthesizer.isReady) {
-                    melodySynthesizer.noteOn(0, MIDI_NOTE_C4, MIDI_VELOCITY)
-                    delay(NOTE_DURATION_MS)
-                    melodySynthesizer.noteOff(0, MIDI_NOTE_C4)
-                }
-
-                if (tapDeltas.size >= TOTAL_TAPS) break
+                melodySynthesizer.noteOn(0, MIDI_NOTE_C4, MIDI_VELOCITY)
+                delay(NOTE_DURATION_MS)
+                melodySynthesizer.noteOff(0, MIDI_NOTE_C4)
             }
 
-            // Wait a moment for final taps
-            delay(BEAT_INTERVAL_MS)
             finishCalibration()
         }
     }
@@ -145,11 +146,11 @@ class CalibrationViewModel @Inject constructor(
         if (_state.value.phase == CalibrationPhase.RESULT) return
 
         if (tapDeltas.size < WARMUP_TAPS + 1) {
-            _state.update { it.copy(phase = CalibrationPhase.READY) }
+            // Not enough taps
+            _state.update { it.copy(phase = CalibrationPhase.READY, timedOut = true) }
             return
         }
 
-        // Discard warmup taps, take median of the rest
         val usableDeltas = tapDeltas.drop(WARMUP_TAPS)
         val medianMs = median(usableDeltas).toInt().coerceIn(-200, 500)
 

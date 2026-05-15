@@ -51,7 +51,6 @@ class MelodyViewModel @Inject constructor(
     private var isWaitingForNote = false
     private var wasWaitingForNote = false
 
-    private var latencyOffsetSeconds = 0.236
     private var originalMelodyTrack: MelodyTrack? = null
 
     // Melody audio output delay
@@ -62,7 +61,6 @@ class MelodyViewModel @Inject constructor(
             settingsRepository.settings.collect { settings ->
                 pitchProcessor.setReferenceA4(settings.concertPitch)
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
-                latencyOffsetSeconds = settings.audioLatencyMs / 1000.0
             }
         }
         // Observe per-device audio delay and update the melody player
@@ -384,7 +382,7 @@ class MelodyViewModel @Inject constructor(
 
     private fun updateCurrentNote(currentTime: Double) {
         val track = _state.value.melodyTrack ?: return
-        val adjustedTime = currentTime - latencyOffsetSeconds
+        val adjustedTime = currentTime
 
         // Find the note that should be active at the latency-adjusted time
         val noteIndex = track.notes.indexOfFirst { note ->

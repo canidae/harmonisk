@@ -1,7 +1,5 @@
 package com.perfectpitch.ui.calibration
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -17,7 +15,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.perfectpitch.ui.calibration.CalibrationViewModel.CalibrationPhase
-import com.perfectpitch.ui.theme.Green80
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,12 +89,13 @@ fun CalibrationScreen(
 
             when (state.phase) {
                 CalibrationPhase.READY -> ReadyContent(
+                    synthReady = state.synthReady,
+                    timedOut = state.timedOut,
                     onStart = { viewModel.startCalibration() }
                 )
                 CalibrationPhase.PLAYING -> PlayingContent(
                     tapsCollected = state.tapsCollected,
                     totalTaps = CalibrationViewModel.TOTAL_TAPS,
-                    currentBeat = state.currentBeat,
                     onTap = { viewModel.onTap() },
                     onStop = { viewModel.stopCalibration() }
                 )
@@ -117,7 +115,11 @@ fun CalibrationScreen(
 }
 
 @Composable
-private fun ReadyContent(onStart: () -> Unit) {
+private fun ReadyContent(
+    synthReady: Boolean,
+    timedOut: Boolean,
+    onStart: () -> Unit
+) {
     Text(
         text = "Tap the button in time with the piano beats to measure your audio delay.",
         style = MaterialTheme.typography.bodyLarge,
@@ -125,10 +127,30 @@ private fun ReadyContent(onStart: () -> Unit) {
         modifier = Modifier.padding(horizontal = 16.dp)
     )
 
+    if (timedOut) {
+        Text(
+            text = "Not enough taps collected. Try again and tap along with each beat.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+    }
+
+    if (!synthReady) {
+        CircularProgressIndicator(modifier = Modifier.size(32.dp))
+        Text(
+            text = "Initializing audio…",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+
     Spacer(modifier = Modifier.height(24.dp))
 
     Button(
         onClick = onStart,
+        enabled = synthReady,
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp),
@@ -142,33 +164,13 @@ private fun ReadyContent(onStart: () -> Unit) {
 private fun PlayingContent(
     tapsCollected: Int,
     totalTaps: Int,
-    currentBeat: Int,
     onTap: () -> Unit,
     onStop: () -> Unit
 ) {
-    // Progress
     Text(
         text = "Tap in time with the beat",
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-
-    // Beat pulse animation
-    val beatPulse = remember { Animatable(1f) }
-    LaunchedEffect(currentBeat) {
-        if (currentBeat > 0) {
-            beatPulse.snapTo(1.15f)
-            beatPulse.animateTo(1f, tween(300, easing = FastOutSlowInEasing))
-        }
-    }
-
-    val progressColor by animateColorAsState(
-        targetValue = if (tapsCollected >= CalibrationViewModel.WARMUP_TAPS)
-            Green80
-        else
-            MaterialTheme.colorScheme.primary,
-        animationSpec = tween(300),
-        label = "progress_color"
     )
 
     LinearProgressIndicator(
@@ -176,7 +178,6 @@ private fun PlayingContent(
         modifier = Modifier
             .fillMaxWidth()
             .height(8.dp),
-        color = progressColor,
         trackColor = MaterialTheme.colorScheme.surfaceVariant
     )
 
@@ -196,11 +197,10 @@ private fun PlayingContent(
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    // Big TAP button
+    // Static TAP button — no beat animation
     FilledTonalButton(
         onClick = onTap,
-        modifier = Modifier
-            .size((180 * beatPulse.value).dp),
+        modifier = Modifier.size(180.dp),
         shape = MaterialTheme.shapes.extraLarge
     ) {
         Text(

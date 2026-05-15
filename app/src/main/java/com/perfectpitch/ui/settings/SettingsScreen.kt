@@ -1,12 +1,14 @@
 package com.perfectpitch.ui.settings
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 
@@ -91,48 +93,69 @@ fun SettingsScreen(
                 )
             }
 
-            // Audio latency compensation
-            SettingSection(title = "Audio Latency") {
-                Text(
-                    text = "Latency compensation: ${settings.audioLatencyMs} ms",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    text = "Adjust if notes feel delayed or early",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Slider(
-                    value = settings.audioLatencyMs.toFloat(),
-                    onValueChange = { viewModel.updateAudioLatency(it.toInt()) },
-                    valueRange = 0f..500f,
-                    steps = 49
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("0 ms", style = MaterialTheme.typography.labelLarge)
-                    Text("500 ms", style = MaterialTheme.typography.labelLarge)
-                }
-            }
-
             // Audio delay calibration (per-device)
             SettingSection(title = "Audio Delay") {
                 val device by viewModel.currentDevice.collectAsState()
                 val activeDelay by viewModel.activeDelay.collectAsState()
+                var editingDelay by remember { mutableStateOf(false) }
+                var delayText by remember(activeDelay) { mutableStateOf(activeDelay.toString()) }
 
                 device?.let {
                     Text(
-                        text = "Current device: ${it.name}",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = "Delay: ${activeDelay}ms",
+                        text = "Device: ${it.name}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                Spacer(modifier = Modifier.height(4.dp))
+
+                if (editingDelay) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = delayText,
+                            onValueChange = { delayText = it },
+                            label = { Text("Delay (ms)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.width(140.dp)
+                        )
+                        Button(
+                            onClick = {
+                                delayText.toIntOrNull()?.let { ms ->
+                                    viewModel.saveDelay(ms)
+                                }
+                                editingDelay = false
+                            },
+                            enabled = delayText.toIntOrNull() != null
+                        ) {
+                            Text("Save")
+                        }
+                        TextButton(onClick = {
+                            delayText = activeDelay.toString()
+                            editingDelay = false
+                        }) {
+                            Text("Cancel")
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Current delay: ${activeDelay}ms",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        TextButton(onClick = { editingDelay = true }) {
+                            Text("Edit")
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = onNavigateToCalibration,

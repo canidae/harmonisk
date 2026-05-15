@@ -18,7 +18,6 @@ class SettingsRepository(
         val IN_TUNE_CENTS = intPreferencesKey("in_tune_cents")
         val DARK_THEME = booleanPreferencesKey("dark_theme")
         val SILENCE_THRESHOLD_DB = floatPreferencesKey("silence_threshold_db")
-        val AUDIO_LATENCY_MS = intPreferencesKey("audio_latency_ms")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -27,8 +26,7 @@ class SettingsRepository(
             yinThreshold = prefs[YIN_THRESHOLD] ?: 0.15f,
             inTuneCents = prefs[IN_TUNE_CENTS] ?: 10,
             darkTheme = prefs[DARK_THEME] ?: true,
-            silenceThresholdDb = prefs[SILENCE_THRESHOLD_DB] ?: -50f,
-            audioLatencyMs = prefs[AUDIO_LATENCY_MS] ?: 236
+            silenceThresholdDb = prefs[SILENCE_THRESHOLD_DB] ?: -50f
         )
     }
 
@@ -52,10 +50,6 @@ class SettingsRepository(
         context.dataStore.edit { it[SILENCE_THRESHOLD_DB] = db }
     }
 
-    suspend fun updateAudioLatency(ms: Int) {
-        context.dataStore.edit { it[AUDIO_LATENCY_MS] = ms }
-    }
-
     suspend fun resetToDefaults() {
         context.dataStore.edit { it.clear() }
     }
@@ -66,6 +60,5 @@ data class AppSettings(
     val yinThreshold: Float = 0.15f,
     val inTuneCents: Int = 10,
     val darkTheme: Boolean = true,
-    val silenceThresholdDb: Float = -50f,
-    val audioLatencyMs: Int = 236
+    val silenceThresholdDb: Float = -50f
 )

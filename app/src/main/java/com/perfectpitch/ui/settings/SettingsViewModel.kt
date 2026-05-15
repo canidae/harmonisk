@@ -44,8 +44,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.updateSilenceThreshold(db) }
     }
 
-    fun updateAudioLatency(ms: Int) {
-        viewModelScope.launch { settingsRepository.updateAudioLatency(ms) }
+    fun saveDelay(ms: Int) {
+        val device = audioDeviceMonitor.currentDevice.value
+        viewModelScope.launch {
+            audioDelayProfileRepository.setDelayForDevice(device.deviceKey, ms)
+        }
     }
 
     fun resetToDefaults() {
