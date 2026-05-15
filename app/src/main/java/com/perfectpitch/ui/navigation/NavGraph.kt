@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import com.perfectpitch.ui.calibration.CalibrationScreen
 import com.perfectpitch.ui.freeplay.FreePlayScreen
 import com.perfectpitch.ui.home.HomeScreen
 import com.perfectpitch.ui.melody.MelodyPlayScreen
@@ -61,7 +62,13 @@ fun NavGraph() {
             TunerScreen(onBack = { navController.popBackStack() })
         }
         composable("settings") {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToCalibration = { navController.navigate("calibration") }
+            )
+        }
+        composable("calibration") {
+            CalibrationScreen(onBack = { navController.popBackStack() })
         }
     }
 }

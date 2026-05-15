@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.perfectpitch.audio.MelodyPlayer
 import com.perfectpitch.audio.MelodySynthesizer
 import com.perfectpitch.audio.PitchProcessor
+import com.perfectpitch.data.AudioDelayProfileRepository
 import com.perfectpitch.data.MelodyRepository
 import com.perfectpitch.data.SettingsRepository
 import com.perfectpitch.midi.MelodyTrack
@@ -15,8 +16,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
 
 @HiltViewModel
 class MelodyViewModel @Inject constructor(
@@ -26,15 +25,14 @@ class MelodyViewModel @Inject constructor(
     private val scoringEngine: ScoringEngine,
     private val noteUtils: NoteUtils,
     private val melodySynthesizer: MelodySynthesizer,
-    private val melodyPlayer: MelodyPlayer
+    private val melodyPlayer: MelodyPlayer,
+    private val audioDelayProfileRepository: AudioDelayProfileRepository
 ) : ViewModel() {
 
     companion object {
         const val MIN_FALL_SPEED = 30f
         const val MAX_FALL_SPEED = 600f
         const val NOTE_RANGE_PADDING = 3
-        private const val CALIBRATION_SAMPLE_COUNT = 5
-        private const val CALIBRATION_EMA_ALPHA = 0.4
     }
 
     private val _state = MutableStateFlow(MelodyPlayState())
@@ -46,25 +44,17 @@ class MelodyViewModel @Inject constructor(
     private var pauseOffset = 0.0
 
     // Per-note tracking
-    private var currentNoteStartTime = 0L
     private var currentNoteDetectedCorrectly = false
     private var centsOffSum = 0f
     private var centsOffCount = 0
     private var correctPitchFrameCount = 0
     private var isWaitingForNote = false
     private var wasWaitingForNote = false
-    private var noteFirstDetectedSongTime = 0.0
 
     private var latencyOffsetSeconds = 0.236
     private var originalMelodyTrack: MelodyTrack? = null
 
-    // Auto-calibration: measure input latency from first few notes
-    private var calibrationSamples = mutableListOf<Double>()
-    private var calibratedLatency: Double? = null
-    private var noteEnteredWaitingTime = 0.0  // song time when wait mode started for current note
-
     // Melody audio output delay
-    private var melodyAudioDelayMs = 150L
     private var synthOpenJob: Job? = null
 
     init {
@@ -73,8 +63,12 @@ class MelodyViewModel @Inject constructor(
                 pitchProcessor.setReferenceA4(settings.concertPitch)
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
                 latencyOffsetSeconds = settings.audioLatencyMs / 1000.0
-                melodyAudioDelayMs = settings.melodyAudioDelayMs.toLong()
-                melodyPlayer.setAudioOutputDelay(melodyAudioDelayMs)
+            }
+        }
+        // Observe per-device audio delay and update the melody player
+        viewModelScope.launch {
+            audioDelayProfileRepository.activeDelay.collect { delayMs ->
+                melodyPlayer.setAudioOutputDelay(delayMs.toLong())
             }
         }
     }
@@ -227,11 +221,6 @@ class MelodyViewModel @Inject constructor(
         centsOffCount = 0
         correctPitchFrameCount = 0
         currentNoteDetectedCorrectly = false
-
-        // Reset auto-calibration for this playthrough
-        calibrationSamples.clear()
-        calibratedLatency = null
-        noteEnteredWaitingTime = 0.0
 
         // Stop any preview playback and reset game sync
         melodyPlayer.stop()
@@ -412,17 +401,14 @@ class MelodyViewModel @Inject constructor(
             val results = _state.value.noteResults.toMutableMap()
             results[noteIndex] = NoteResultState.ACTIVE
             _state.update { it.copy(currentNoteIndex = noteIndex, noteResults = results) }
-            currentNoteStartTime = SystemClock.elapsedRealtime()
             currentNoteDetectedCorrectly = false
             centsOffSum = 0f
             centsOffCount = 0
             correctPitchFrameCount = 0
-            noteFirstDetectedSongTime = 0.0
 
             // In wait mode, freeze time until correct note is played
             if (_state.value.waitMode) {
                 isWaitingForNote = true
-                noteEnteredWaitingTime = currentTime
                 _state.update { it.copy(phase = PlayPhase.WAITING_FOR_NOTE) }
             }
         } else if (noteIndex < 0 && _state.value.currentNoteIndex >= 0) {
@@ -457,24 +443,9 @@ class MelodyViewModel @Inject constructor(
         val isCorrectNote = detectedMidi == expectedMidi && abs(centsOff) <= 50f
 
         if (isWaitingForNote) {
-            // Auto-calibration: any note detection while waiting records a latency sample.
-            // We assume the user started playing when the bar hit the piano, so
-            // the delta between noteEnteredWaitingTime and now is input latency.
-            if (calibrationSamples.size < CALIBRATION_SAMPLE_COUNT) {
-                val expectedNoteStartSec = track.noteStartSeconds(expectedNote)
-                val detectionTimeSec = _state.value.currentTimeSeconds
-                val delta = detectionTimeSec - expectedNoteStartSec
-                if (delta > 0) {
-                    calibrationSamples.add(delta)
-                    applyCalibration()
-                }
-            }
-
             if (isCorrectNote) {
                 // Correct note played — unfreeze
                 currentNoteDetectedCorrectly = true
-                noteFirstDetectedSongTime = _state.value.currentTimeSeconds - latencyOffsetSeconds
-                currentNoteStartTime = SystemClock.elapsedRealtime()
                 isWaitingForNote = false
                 // Recalculate playback offset so time resumes from current position
                 pauseOffset = _state.value.currentTimeSeconds
@@ -493,28 +464,7 @@ class MelodyViewModel @Inject constructor(
             // Continuous mode (not waiting)
             if (isCorrectNote && !currentNoteDetectedCorrectly) {
                 currentNoteDetectedCorrectly = true
-                noteFirstDetectedSongTime = _state.value.currentTimeSeconds - latencyOffsetSeconds
             }
-        }
-    }
-
-    /**
-     * Apply auto-calibration from collected latency samples.
-     * Uses EMA to smooth the offset and updates latencyOffsetSeconds.
-     */
-    private fun applyCalibration() {
-        if (calibrationSamples.isEmpty()) return
-
-        val newSample = calibrationSamples.last()
-        calibratedLatency = if (calibratedLatency == null) {
-            newSample
-        } else {
-            CALIBRATION_EMA_ALPHA * newSample + (1 - CALIBRATION_EMA_ALPHA) * calibratedLatency!!
-        }
-
-        // Update the latency offset used for note detection timing
-        calibratedLatency?.let { calibrated ->
-            latencyOffsetSeconds = calibrated
         }
     }
 
@@ -540,20 +490,12 @@ class MelodyViewModel @Inject constructor(
 
         val effectiveCentsOff = if (centsOffCount > 0) centsOffSum / centsOffCount else 100f
 
-        val expectedStartSec = track.noteStartSeconds(expectedNote)
-        val timingOffsetMs = if (currentNoteDetectedCorrectly) {
-            ((noteFirstDetectedSongTime - expectedStartSec) * 1000).toLong()
-        } else {
-            (track.noteDurationSeconds(expectedNote) * 1000).toLong()
-        }
-
         val performance = NotePerformance(
             expectedMidiNote = expectedNote.noteNumber,
             detectedMidiNote = _state.value.pitchResult.midiNoteNumber,
             centsOff = effectiveCentsOff,
             expectedDurationMs = expectedDurationMs,
-            actualDurationMs = actualDurationMs,
-            timingOffsetMs = timingOffsetMs
+            actualDurationMs = actualDurationMs
         )
 
         val score = scoringEngine.scoreNote(performance)
@@ -588,8 +530,7 @@ class MelodyViewModel @Inject constructor(
                     detectedMidiNote = 0,
                     centsOff = 100f,
                     expectedDurationMs = expectedDurationMs,
-                    actualDurationMs = 0,
-                    timingOffsetMs = expectedDurationMs
+                    actualDurationMs = 0
                 )
                 val score = scoringEngine.scoreNote(performance)
                 _state.update { current ->

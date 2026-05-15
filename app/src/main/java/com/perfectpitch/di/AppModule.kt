@@ -2,10 +2,12 @@ package com.perfectpitch.di
 
 import android.content.Context
 import com.perfectpitch.audio.AudioCaptureService
+import com.perfectpitch.audio.AudioDeviceMonitor
 import com.perfectpitch.audio.MelodyPlayer
 import com.perfectpitch.audio.MelodySynthesizer
 import com.perfectpitch.audio.PitchDetector
 import com.perfectpitch.audio.PitchProcessor
+import com.perfectpitch.data.AudioDelayProfileRepository
 import com.perfectpitch.data.MelodyRepository
 import com.perfectpitch.data.SettingsRepository
 import com.perfectpitch.music.NoteUtils
@@ -62,6 +64,19 @@ object AppModule {
     @Provides
     @Singleton
     fun provideMelodySynthesizer(): MelodySynthesizer = MelodySynthesizer()
+
+    @Provides
+    @Singleton
+    fun provideAudioDeviceMonitor(
+        @ApplicationContext context: Context
+    ): AudioDeviceMonitor = AudioDeviceMonitor(context)
+
+    @Provides
+    @Singleton
+    fun provideAudioDelayProfileRepository(
+        @ApplicationContext context: Context,
+        audioDeviceMonitor: AudioDeviceMonitor
+    ): AudioDelayProfileRepository = AudioDelayProfileRepository(context, audioDeviceMonitor)
 
     @Provides
     @Singleton

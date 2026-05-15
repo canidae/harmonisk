@@ -14,6 +14,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onNavigateToCalibration: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsState()
@@ -116,30 +117,34 @@ fun SettingsScreen(
                 }
             }
 
-            // Melody audio output delay
-            SettingSection(title = "Melody Audio Delay") {
+            // Audio delay calibration (per-device)
+            SettingSection(title = "Audio Delay") {
+                val device by viewModel.currentDevice.collectAsState()
+                val activeDelay by viewModel.activeDelay.collectAsState()
+
+                device?.let {
+                    Text(
+                        text = "Current device: ${it.name}",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "Delay: ${activeDelay}ms",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = onNavigateToCalibration,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Calibrate Audio Delay")
+                }
                 Text(
-                    text = "Output delay: ${settings.melodyAudioDelayMs} ms",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    text = "Increase if melody audio feels delayed with Bluetooth headphones",
+                    text = "Tap-to-sync calibration for the connected audio device",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Slider(
-                    value = settings.melodyAudioDelayMs.toFloat(),
-                    onValueChange = { viewModel.updateMelodyAudioDelay(it.toInt()) },
-                    valueRange = -200f..500f,
-                    steps = 69
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("-200 ms", style = MaterialTheme.typography.labelLarge)
-                    Text("500 ms", style = MaterialTheme.typography.labelLarge)
-                }
             }
 
             // Dark theme

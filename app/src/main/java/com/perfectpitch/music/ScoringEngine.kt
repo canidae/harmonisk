@@ -6,7 +6,7 @@ import kotlin.math.max
 
 /**
  * Scoring engine for the Play by Melody mode.
- * Uses a 5-tier accuracy system with weighted pitch, timing, and duration scores.
+ * Uses a 5-tier accuracy system with weighted pitch and duration scores.
  */
 class ScoringEngine {
 
@@ -44,7 +44,6 @@ class ScoringEngine {
         return NoteScore(
             pitchScore = pitchScore,
             durationScore = durationScore,
-            timingScore = 0f,
             overallScore = overallScore,
             pitchAccuracy = getPitchAccuracy(result.centsOff)
         )
@@ -82,20 +81,6 @@ class ScoringEngine {
         if (expectedMs <= 0) return 100f
         val ratio = min(actualMs, expectedMs).toFloat() / max(actualMs, expectedMs).toFloat()
         return ratio * 100f
-    }
-
-    /**
-     * Score timing (when the note started relative to when it should have).
-     */
-    private fun scoreTiming(offsetMs: Long, expectedDurationMs: Long): Float {
-        val absOffset = abs(offsetMs).toFloat()
-        return when {
-            absOffset <= 30f -> 100f   // Perfect timing
-            absOffset <= 80f -> 80f    // Great
-            absOffset <= 150f -> 50f   // Good
-            absOffset <= 250f -> 25f   // Ok
-            else -> 0f                  // Miss
-        }
     }
 
     /**
@@ -151,14 +136,12 @@ data class NotePerformance(
     val detectedMidiNote: Int,
     val centsOff: Float,
     val expectedDurationMs: Long,
-    val actualDurationMs: Long,
-    val timingOffsetMs: Long
+    val actualDurationMs: Long
 )
 
 data class NoteScore(
     val pitchScore: Float,
     val durationScore: Float,
-    val timingScore: Float,
     val overallScore: Float,
     val pitchAccuracy: PitchAccuracy
 )
