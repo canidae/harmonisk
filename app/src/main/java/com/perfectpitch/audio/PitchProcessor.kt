@@ -4,22 +4,19 @@ import com.perfectpitch.music.NoteUtils
 import com.perfectpitch.music.PitchResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Processes audio from the microphone and emits pitch detection results.
  * Combines AudioCaptureService and PitchDetector into a single reactive pipeline.
  */
-@Singleton
-class PitchProcessor @Inject constructor(
+class PitchProcessor(
     private val audioCaptureService: AudioCaptureService,
     private val pitchDetector: PitchDetector,
     private val noteUtils: NoteUtils
 ) {
     companion object {
         const val SILENCE_THRESHOLD_DB = -40f
-        const val MEDIAN_WINDOW_SIZE = 3
+        const val MEDIAN_WINDOW_SIZE = 5
     }
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB

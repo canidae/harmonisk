@@ -1,14 +1,11 @@
 package com.perfectpitch.music
 
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.math.*
 
 /**
  * Utilities for converting between frequencies, note names, MIDI numbers, and cents.
  */
-@Singleton
-class NoteUtils @Inject constructor() {
+class NoteUtils {
 
     companion object {
         val NOTE_NAMES = arrayOf("C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B")

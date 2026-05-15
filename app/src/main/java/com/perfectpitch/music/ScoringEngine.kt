@@ -1,7 +1,5 @@
 package com.perfectpitch.music
 
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.max
@@ -10,8 +8,7 @@ import kotlin.math.max
  * Scoring engine for the Play by Melody mode.
  * Evaluates pitch accuracy, duration accuracy, and timing.
  */
-@Singleton
-class ScoringEngine @Inject constructor() {
+class ScoringEngine {
 
     companion object {
         // Pitch scoring thresholds (cents)

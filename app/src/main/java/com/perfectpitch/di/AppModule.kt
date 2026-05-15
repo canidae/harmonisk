@@ -4,6 +4,7 @@ import android.content.Context
 import com.perfectpitch.audio.AudioCaptureService
 import com.perfectpitch.audio.PitchDetector
 import com.perfectpitch.audio.PitchProcessor
+import com.perfectpitch.data.MelodyRepository
 import com.perfectpitch.data.SettingsRepository
 import com.perfectpitch.music.NoteUtils
 import com.perfectpitch.music.ScoringEngine
@@ -45,6 +46,12 @@ object AppModule {
     fun provideSettingsRepository(
         @ApplicationContext context: Context
     ): SettingsRepository = SettingsRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideMelodyRepository(
+        @ApplicationContext context: Context
+    ): MelodyRepository = MelodyRepository(context)
 
     @Provides
     @Singleton

@@ -7,19 +7,15 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import androidx.core.app.ActivityCompat
 import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class AudioCaptureService @Inject constructor(
-    @ApplicationContext private val context: Context
+class AudioCaptureService(
+    private val context: Context
 ) {
     companion object {
         const val SAMPLE_RATE = 44100

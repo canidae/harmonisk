@@ -1,7 +1,5 @@
 package com.perfectpitch.audio
 
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.math.abs
 
 /**
@@ -10,8 +8,7 @@ import kotlin.math.abs
  * Based on: "YIN, a fundamental frequency estimator for speech and music"
  * by Alain de Cheveigné and Hideki Kawahara (2002).
  */
-@Singleton
-class PitchDetector @Inject constructor() {
+class PitchDetector {
 
     companion object {
         const val DEFAULT_THRESHOLD = 0.15f

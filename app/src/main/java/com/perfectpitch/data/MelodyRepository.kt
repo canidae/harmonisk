@@ -4,16 +4,12 @@ import android.content.Context
 import android.net.Uri
 import com.perfectpitch.midi.MelodyTrack
 import com.perfectpitch.midi.MidiParser
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Repository for managing MIDI melodies (bundled and user-imported).
  */
-@Singleton
-class MelodyRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+class MelodyRepository(
+    private val context: Context
 ) {
     private val parser = MidiParser()
     private val cache = mutableMapOf<String, MelodyTrack>()
