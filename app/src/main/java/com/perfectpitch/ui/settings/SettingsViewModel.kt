@@ -33,6 +33,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.updateSilenceThreshold(db) }
     }
 
+    fun updateAudioLatency(ms: Int) {
+        viewModelScope.launch { settingsRepository.updateAudioLatency(ms) }
+    }
+
     fun resetToDefaults() {
         viewModelScope.launch { settingsRepository.resetToDefaults() }
     }

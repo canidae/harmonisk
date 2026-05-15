@@ -16,7 +16,7 @@ class PitchProcessor(
 ) {
     companion object {
         const val SILENCE_THRESHOLD_DB = -50f
-        const val MEDIAN_WINDOW_SIZE = 5
+        const val MEDIAN_WINDOW_SIZE = 3
     }
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB

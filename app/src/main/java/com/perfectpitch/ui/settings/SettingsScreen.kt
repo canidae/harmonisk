@@ -90,6 +90,32 @@ fun SettingsScreen(
                 )
             }
 
+            // Audio latency compensation
+            SettingSection(title = "Audio Latency") {
+                Text(
+                    text = "Latency compensation: ${settings.audioLatencyMs} ms",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = "Adjust if notes feel delayed or early",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Slider(
+                    value = settings.audioLatencyMs.toFloat(),
+                    onValueChange = { viewModel.updateAudioLatency(it.toInt()) },
+                    valueRange = 0f..500f,
+                    steps = 49
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("0 ms", style = MaterialTheme.typography.labelLarge)
+                    Text("500 ms", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+
             // Dark theme
             SettingSection(title = "Appearance") {
                 Row(

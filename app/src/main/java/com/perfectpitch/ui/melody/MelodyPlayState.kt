@@ -26,7 +26,16 @@ data class MelodyPlayState(
     val viewMinMidi: Float = 60f,
     val viewMaxMidi: Float = 72f,
     // Per-note accuracy overlays for history review
-    val noteAccuracyOverlays: Map<Int, NoteAccuracyOverlay> = emptyMap()
+    val noteAccuracyOverlays: Map<Int, NoteAccuracyOverlay> = emptyMap(),
+    // Continuous pitch trace recorded during playback
+    val pitchTrace: List<PitchFrame> = emptyList()
+)
+
+data class PitchFrame(
+    val timeSeconds: Double,
+    val midiNote: Int,
+    val centsOff: Float,
+    val frequency: Float
 )
 
 data class NoteAccuracyOverlay(
