@@ -50,9 +50,9 @@ fun ScoreResultModal(
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Score with emoji
+                    // Score
                     Text(
-                        text = "${enthusiasm.emoji} ${"%.0f".format(animatedScore)} ${enthusiasm.emoji}",
+                        text = "${"%.0f".format(animatedScore)}",
                         style = enthusiasm.scoreStyle(),
                         color = scoreColor(score)
                     )
