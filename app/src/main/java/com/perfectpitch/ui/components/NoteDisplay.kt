@@ -56,8 +56,10 @@ fun NoteDisplay(
                     text = noteName,
                     style = MaterialTheme.typography.displayLarge,
                     color = when {
+                        abs(centsOff) <= 5f -> Green80
                         abs(centsOff) <= 10f -> Green80
-                        abs(centsOff) <= 25f -> Yellow80
+                        abs(centsOff) <= 30f -> Yellow80
+                        abs(centsOff) <= 50f -> Orange80
                         else -> Red80
                     }
                 )

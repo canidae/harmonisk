@@ -23,8 +23,9 @@ private val BLACK_COLUMN_BG = Color(0xFF151520)
 private val NOTE_COLOR_UPCOMING = Color(0xBB7C4DFF)     // Purple, semi-transparent
 private val NOTE_COLOR_ACTIVE = Color.White
 private val OVERLAY_PERFECT = Color(0xFF4CAF50)          // Green
-private val OVERLAY_GOOD = Color(0xFF81C784)             // Light green
-private val OVERLAY_FAIR = Color(0xFFFFC107)             // Yellow
+private val OVERLAY_GREAT = Color(0xFF81C784)            // Light green
+private val OVERLAY_GOOD = Color(0xFFFFC107)             // Yellow
+private val OVERLAY_OK = Color(0xFFFF9800)               // Orange
 private val OVERLAY_MISS = Color(0xFFF44336)             // Red
 
 private const val BAR_GAP_PX = 2f
@@ -195,8 +196,9 @@ private fun getNoteColor(
     if (overlay != null) {
         return when (overlay.pitchAccuracy) {
             PitchAccuracy.PERFECT -> OVERLAY_PERFECT
+            PitchAccuracy.GREAT -> OVERLAY_GREAT
             PitchAccuracy.GOOD -> OVERLAY_GOOD
-            PitchAccuracy.FAIR -> OVERLAY_FAIR
+            PitchAccuracy.OK -> OVERLAY_OK
             PitchAccuracy.MISS -> OVERLAY_MISS
         }
     }
@@ -207,8 +209,9 @@ private fun getNoteColor(
         return when (result) {
             NoteResultState.ACTIVE -> NOTE_COLOR_ACTIVE
             NoteResultState.PERFECT -> OVERLAY_PERFECT
+            NoteResultState.GREAT -> OVERLAY_GREAT
             NoteResultState.GOOD -> OVERLAY_GOOD
-            NoteResultState.FAIR -> OVERLAY_FAIR
+            NoteResultState.OK -> OVERLAY_OK
             NoteResultState.MISS -> OVERLAY_MISS
         }
     }
@@ -237,9 +240,10 @@ private fun getIndicatorColor(
     return if (detectedMidi == expectedNote.noteNumber) {
         val absCents = kotlin.math.abs(centsOff ?: 50f)
         when {
-            absCents <= 10f -> OVERLAY_PERFECT
-            absCents <= 25f -> OVERLAY_GOOD
-            absCents <= 50f -> OVERLAY_FAIR
+            absCents <= 5f -> OVERLAY_PERFECT
+            absCents <= 10f -> OVERLAY_GREAT
+            absCents <= 30f -> OVERLAY_GOOD
+            absCents <= 50f -> OVERLAY_OK
             else -> OVERLAY_MISS
         }
     } else {

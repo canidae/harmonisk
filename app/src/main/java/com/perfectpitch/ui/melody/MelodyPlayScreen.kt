@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,12 +33,12 @@ private val OVERLAY_BUTTON_SIZE = 40.dp
 @Composable
 fun MelodyPlayScreen(
     onBack: () -> Unit,
-    onShowResults: () -> Unit,
     viewModel: MelodyViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val density = LocalDensity.current
     val rightPaddingPx = with(density) { BUTTON_AREA_WIDTH.toPx() }
+    var showResultsModal by remember { mutableStateOf(false) }
 
     KeepScreenOn()
 
@@ -48,10 +49,10 @@ fun MelodyPlayScreen(
         }
     }
 
-    // Navigate to results when finished
+    // Show results modal when finished
     LaunchedEffect(state.phase) {
         if (state.phase == PlayPhase.FINISHED) {
-            onShowResults()
+            showResultsModal = true
         }
     }
 
@@ -256,6 +257,23 @@ fun MelodyPlayScreen(
                         }
                     }
 
+                    // Show Results button (reopen modal)
+                    if (state.phase == PlayPhase.FINISHED) {
+                        IconButton(
+                            onClick = { showResultsModal = true },
+                            modifier = Modifier
+                                .size(OVERLAY_BUTTON_SIZE)
+                                .background(OVERLAY_BG, CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Filled.Star,
+                                contentDescription = "Results",
+                                tint = OVERLAY_ICON_TINT,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
                     // Close button
                     IconButton(
                         onClick = { viewModel.stop(); onBack() },
@@ -269,6 +287,24 @@ fun MelodyPlayScreen(
                             tint = OVERLAY_ICON_TINT,
                             modifier = Modifier.size(20.dp)
                         )
+                    }
+                }
+
+                // Post-play controls
+                if (state.phase == PlayPhase.FINISHED) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = PIANO_HEIGHT_DP.dp + 8.dp, start = 16.dp, end = BUTTON_AREA_WIDTH + 8.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)
+                    ) {
+                        OutlinedButton(onClick = { viewModel.stop(); onBack() }) {
+                            Text("Back to Menu")
+                        }
+                        Button(onClick = { viewModel.startPlaying() }) {
+                            Text("Play Again")
+                        }
                     }
                 }
             } else {
@@ -291,5 +327,13 @@ fun MelodyPlayScreen(
                 }
             }
         }
+    }
+
+    // Results modal
+    if (showResultsModal && state.melodyScore != null) {
+        ScoreResultModal(
+            melodyScore = state.melodyScore!!,
+            onDismiss = { showResultsModal = false }
+        )
     }
 }

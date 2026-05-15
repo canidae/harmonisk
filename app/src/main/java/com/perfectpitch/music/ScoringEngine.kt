@@ -6,32 +6,28 @@ import kotlin.math.max
 
 /**
  * Scoring engine for the Play by Melody mode.
- * Uses an encouraging scoring system with high base scores,
- * streak bonuses, and positive feedback messages.
+ * Uses a 5-tier accuracy system with weighted pitch, timing, and duration scores.
  */
 class ScoringEngine {
 
     companion object {
         // Pitch scoring thresholds (cents)
-        const val PERFECT_CENTS = 10f
-        const val GOOD_CENTS = 25f
-        const val FAIR_CENTS = 50f
+        const val PERFECT_CENTS = 5f
+        const val GREAT_CENTS = 10f
+        const val GOOD_CENTS = 30f
+        const val OK_CENTS = 50f
 
-        // Encouraging point values (higher base scores)
+        // Point values per tier
         const val PERFECT_POINTS = 100
-        const val GOOD_POINTS = 80
-        const val FAIR_POINTS = 60
-        const val MISS_POINTS = 25
+        const val GREAT_POINTS = 80
+        const val GOOD_POINTS = 50
+        const val OK_POINTS = 25
+        const val MISS_POINTS = 0
 
         // Scoring weights
         const val PITCH_WEIGHT = 0.4f
-        const val DURATION_WEIGHT = 0.4f
-        const val TIMING_WEIGHT = 0.2f
-
-        // Streak bonus thresholds
-        const val STREAK_3_MULTIPLIER = 1.1f
-        const val STREAK_5_MULTIPLIER = 1.2f
-        const val STREAK_10_MULTIPLIER = 1.3f
+        const val DURATION_WEIGHT = 0.3f
+        const val TIMING_WEIGHT = 0.3f
     }
 
     /**
@@ -64,8 +60,9 @@ class ScoringEngine {
         val absCents = abs(centsOff)
         return when {
             absCents <= PERFECT_CENTS -> PERFECT_POINTS.toFloat()
+            absCents <= GREAT_CENTS -> GREAT_POINTS.toFloat()
             absCents <= GOOD_CENTS -> GOOD_POINTS.toFloat()
-            absCents <= FAIR_CENTS -> FAIR_POINTS.toFloat()
+            absCents <= OK_CENTS -> OK_POINTS.toFloat()
             else -> MISS_POINTS.toFloat()
         }
     }
@@ -74,8 +71,9 @@ class ScoringEngine {
         val absCents = abs(centsOff)
         return when {
             absCents <= PERFECT_CENTS -> PitchAccuracy.PERFECT
+            absCents <= GREAT_CENTS -> PitchAccuracy.GREAT
             absCents <= GOOD_CENTS -> PitchAccuracy.GOOD
-            absCents <= FAIR_CENTS -> PitchAccuracy.FAIR
+            absCents <= OK_CENTS -> PitchAccuracy.OK
             else -> PitchAccuracy.MISS
         }
     }
@@ -86,8 +84,7 @@ class ScoringEngine {
     private fun scoreDuration(actualMs: Long, expectedMs: Long): Float {
         if (expectedMs <= 0) return 100f
         val ratio = min(actualMs, expectedMs).toFloat() / max(actualMs, expectedMs).toFloat()
-        // Encouraging: boost duration score so partial matches still get decent points
-        return (ratio * 100f).coerceAtLeast(MISS_POINTS.toFloat())
+        return ratio * 100f
     }
 
     /**
@@ -101,19 +98,7 @@ class ScoringEngine {
             absOffset <= tolerance * 0.5f -> 100f
             absOffset <= tolerance -> 80f
             absOffset <= tolerance * 2f -> 60f
-            else -> MISS_POINTS.toFloat()
-        }
-    }
-
-    /**
-     * Calculate streak bonus multiplier for a given streak length.
-     */
-    fun streakMultiplier(streakLength: Int): Float {
-        return when {
-            streakLength >= 10 -> STREAK_10_MULTIPLIER
-            streakLength >= 5 -> STREAK_5_MULTIPLIER
-            streakLength >= 3 -> STREAK_3_MULTIPLIER
-            else -> 1.0f
+            else -> 0f
         }
     }
 
@@ -123,62 +108,44 @@ class ScoringEngine {
     fun calculateMelodyScore(noteScores: List<NoteScore>): MelodyScore {
         if (noteScores.isEmpty()) return MelodyScore.EMPTY
 
-        // Calculate streak-adjusted scores
         var currentStreak = 0
         var longestStreak = 0
-        var totalStreakBonus = 0f
 
         for (score in noteScores) {
-            if (score.pitchAccuracy == PitchAccuracy.PERFECT || score.pitchAccuracy == PitchAccuracy.GOOD) {
+            if (score.pitchAccuracy == PitchAccuracy.PERFECT || score.pitchAccuracy == PitchAccuracy.GREAT) {
                 currentStreak++
                 longestStreak = max(longestStreak, currentStreak)
-                val bonus = score.overallScore * (streakMultiplier(currentStreak) - 1f)
-                totalStreakBonus += bonus
             } else {
                 currentStreak = 0
             }
         }
 
-        val baseAvgScore = noteScores.map { it.overallScore }.average().toFloat()
-        val streakBonusPerNote = if (noteScores.isNotEmpty()) totalStreakBonus / noteScores.size else 0f
-        val avgScore = (baseAvgScore + streakBonusPerNote).coerceAtMost(100f)
-
+        val avgScore = noteScores.map { it.overallScore }.average().toFloat()
         val notesHit = noteScores.count { it.pitchAccuracy != PitchAccuracy.MISS }
         val perfectCount = noteScores.count { it.pitchAccuracy == PitchAccuracy.PERFECT }
+        val greatCount = noteScores.count { it.pitchAccuracy == PitchAccuracy.GREAT }
 
         return MelodyScore(
             overallScore = avgScore,
-            grade = scoreToGrade(avgScore),
             totalNotes = noteScores.size,
             notesHit = notesHit,
             perfectNotes = perfectCount,
+            greatNotes = greatCount,
             longestStreak = longestStreak,
             avgPitchScore = noteScores.map { it.pitchScore }.average().toFloat(),
             avgDurationScore = noteScores.map { it.durationScore }.average().toFloat(),
-            streakBonus = streakBonusPerNote,
             encouragingMessage = getEncouragingMessage(avgScore)
         )
-    }
-
-    private fun scoreToGrade(score: Float): LetterGrade {
-        return when {
-            score >= 90f -> LetterGrade.S
-            score >= 78f -> LetterGrade.A
-            score >= 65f -> LetterGrade.B
-            score >= 50f -> LetterGrade.C
-            score >= 35f -> LetterGrade.D
-            else -> LetterGrade.F
-        }
     }
 
     private fun getEncouragingMessage(score: Float): String {
         return when {
             score >= 95f -> "Outstanding! Perfect pitch mastery! 🌟"
-            score >= 85f -> "Excellent performance! 🎉"
-            score >= 70f -> "Well done! Almost perfect! 👏"
-            score >= 55f -> "Great progress! You're improving! 💪"
-            score >= 40f -> "Getting better! Keep it up! 🎵"
-            else -> "Keep practicing! Every note counts! 🎶"
+            score >= 80f -> "Excellent performance! 🎉"
+            score >= 65f -> "Well done! Almost there! 👏"
+            score >= 50f -> "Good progress! Keep practicing! 💪"
+            score >= 30f -> "Getting better! Don't give up! 🎵"
+            else -> "Keep practicing! You'll get there! 🎶"
         }
     }
 }
@@ -200,23 +167,20 @@ data class NoteScore(
     val pitchAccuracy: PitchAccuracy
 )
 
-enum class PitchAccuracy { PERFECT, GOOD, FAIR, MISS }
-
-enum class LetterGrade { S, A, B, C, D, F }
+enum class PitchAccuracy { PERFECT, GREAT, GOOD, OK, MISS }
 
 data class MelodyScore(
     val overallScore: Float,
-    val grade: LetterGrade,
     val totalNotes: Int,
     val notesHit: Int,
     val perfectNotes: Int,
+    val greatNotes: Int,
     val longestStreak: Int,
     val avgPitchScore: Float,
     val avgDurationScore: Float,
-    val streakBonus: Float = 0f,
     val encouragingMessage: String = ""
 ) {
     companion object {
-        val EMPTY = MelodyScore(0f, LetterGrade.F, 0, 0, 0, 0, 0f, 0f, 0f, "Keep practicing! Every note counts! 🎶")
+        val EMPTY = MelodyScore(0f, 0, 0, 0, 0, 0, 0f, 0f, "Keep practicing! You'll get there! 🎶")
     }
 }

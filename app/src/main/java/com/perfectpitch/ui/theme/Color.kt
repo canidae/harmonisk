@@ -10,6 +10,10 @@ val Green40 = Color(0xFF388E3C)
 val Yellow80 = Color(0xFFFFF59D)
 val Yellow40 = Color(0xFFF9A825)
 
+// Caution / marginally off
+val Orange80 = Color(0xFFFFCC80)
+val Orange40 = Color(0xFFFF9800)
+
 // Error / way off
 val Red80 = Color(0xFFEF9A9A)
 val Red40 = Color(0xFFD32F2F)

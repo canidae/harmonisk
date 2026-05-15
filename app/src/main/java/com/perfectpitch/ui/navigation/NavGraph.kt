@@ -1,8 +1,6 @@
 package com.perfectpitch.ui.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
@@ -14,10 +12,8 @@ import com.perfectpitch.ui.home.HomeScreen
 import com.perfectpitch.ui.melody.MelodyPlayScreen
 import com.perfectpitch.ui.melody.MelodyScreen
 import com.perfectpitch.ui.melody.MelodyViewModel
-import com.perfectpitch.ui.melody.ScoreResultScreen
 import com.perfectpitch.ui.settings.SettingsScreen
 import com.perfectpitch.ui.tuner.TunerScreen
-import com.perfectpitch.music.MelodyScore
 
 @Composable
 fun NavGraph() {
@@ -57,25 +53,7 @@ fun NavGraph() {
                 val viewModel: MelodyViewModel = hiltViewModel(parentEntry)
                 MelodyPlayScreen(
                     onBack = { navController.popBackStack() },
-                    onShowResults = { navController.navigate("melody/results") },
                     viewModel = viewModel
-                )
-            }
-            composable("melody/results") { entry ->
-                val parentEntry = remember(entry) {
-                    navController.getBackStackEntry("melody_graph")
-                }
-                val viewModel: MelodyViewModel = hiltViewModel(parentEntry)
-                val state by viewModel.state.collectAsState()
-                ScoreResultScreen(
-                    melodyScore = state.melodyScore ?: MelodyScore.EMPTY,
-                    noteScores = state.noteScores,
-                    onPlayAgain = {
-                        navController.popBackStack("melody", inclusive = false)
-                    },
-                    onBack = {
-                        navController.popBackStack("melody", inclusive = false)
-                    }
                 )
             }
         }

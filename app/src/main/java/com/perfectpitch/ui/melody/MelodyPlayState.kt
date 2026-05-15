@@ -44,5 +44,5 @@ enum class PlayPhase {
 }
 
 enum class NoteResultState {
-    ACTIVE, PERFECT, GOOD, FAIR, MISS
+    ACTIVE, PERFECT, GREAT, GOOD, OK, MISS
 }

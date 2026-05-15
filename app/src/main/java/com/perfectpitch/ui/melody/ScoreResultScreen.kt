@@ -2,143 +2,123 @@ package com.perfectpitch.ui.melody
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.perfectpitch.music.*
+import androidx.compose.ui.window.Dialog
+import com.perfectpitch.music.MelodyScore
 import com.perfectpitch.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ScoreResultScreen(
+fun ScoreResultModal(
     melodyScore: MelodyScore,
-    noteScores: List<NoteScore>,
-    onPlayAgain: () -> Unit,
-    onBack: () -> Unit
+    onDismiss: () -> Unit
 ) {
-    // Animated score count-up
     val animatedScore by animateFloatAsState(
         targetValue = melodyScore.overallScore,
         animationSpec = tween(durationMillis = 1500, easing = FastOutSlowInEasing),
         label = "score_animation"
     )
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Results") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
+    val score = melodyScore.overallScore
+    val enthusiasm = enthusiasmLevel(score)
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+                .fillMaxWidth()
                 .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            shape = MaterialTheme.shapes.extraLarge
         ) {
-            // Overall score
-            Text(
-                text = "${"%.0f".format(animatedScore)}",
-                style = MaterialTheme.typography.displayLarge,
-                color = gradeColor(melodyScore.grade)
-            )
-
-            // Letter grade
-            Text(
-                text = melodyScore.grade.name,
-                style = MaterialTheme.typography.headlineLarge,
-                color = gradeColor(melodyScore.grade)
-            )
-
-            // Encouraging message
-            if (melodyScore.encouragingMessage.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = melodyScore.encouragingMessage,
-                    style = MaterialTheme.typography.titleMedium,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Stats cards
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                StatCard("Notes Hit", "${melodyScore.notesHit}/${melodyScore.totalNotes}")
-                StatCard("Perfect", "${melodyScore.perfectNotes}")
-                StatCard("Streak", "${melodyScore.longestStreak}")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                StatCard("Pitch Avg", "${"%.0f".format(melodyScore.avgPitchScore)}")
-                StatCard("Duration Avg", "${"%.0f".format(melodyScore.avgDurationScore)}")
-                if (melodyScore.streakBonus > 0f) {
-                    StatCard("Streak Bonus", "+${"%.0f".format(melodyScore.streakBonus)}")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Per-note breakdown
-            Text(
-                text = "Note Breakdown",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.align(Alignment.Start)
-            )
-
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                itemsIndexed(noteScores) { index, score ->
-                    NoteScoreItem(index + 1, score)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Action buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onBack,
-                    modifier = Modifier.weight(1f)
+            Box(modifier = Modifier.fillMaxWidth()) {
+                // Dismiss button top-right
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.TopEnd)
                 ) {
-                    Text("Back to Menu")
+                    Icon(Icons.Filled.Close, contentDescription = "Dismiss")
                 }
-                Button(
-                    onClick = onPlayAgain,
-                    modifier = Modifier.weight(1f)
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Play Again")
+                    // Score with emoji
+                    Text(
+                        text = "${enthusiasm.emoji} ${"%.0f".format(animatedScore)} ${enthusiasm.emoji}",
+                        style = enthusiasm.scoreStyle(),
+                        color = scoreColor(score)
+                    )
+
+                    // Encouraging message
+                    if (melodyScore.encouragingMessage.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = melodyScore.encouragingMessage,
+                            style = enthusiasm.messageStyle(),
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Stats row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        StatCard("Notes Hit", "${melodyScore.notesHit}/${melodyScore.totalNotes}")
+                        StatCard("Perfect", "${melodyScore.perfectNotes}")
+                        StatCard("Great", "${melodyScore.greatNotes}")
+                    }
                 }
             }
         }
     }
+}
+
+private enum class EnthusiasmLevel(val emoji: String) {
+    LEGENDARY("\uD83C\uDF1F"),   // 🌟
+    EXCELLENT("\uD83C\uDF89"),   // 🎉
+    GREAT("\uD83D\uDC4F"),       // 👏
+    GOOD("\uD83D\uDCAA"),        // 💪
+    OK("\uD83C\uDFB5"),          // 🎵
+    NEEDS_WORK("\uD83C\uDFB6"); // 🎶
+
+    @Composable
+    fun scoreStyle() = when (this) {
+        LEGENDARY, EXCELLENT -> MaterialTheme.typography.displayLarge
+        GREAT, GOOD -> MaterialTheme.typography.displayMedium
+        OK -> MaterialTheme.typography.displaySmall
+        NEEDS_WORK -> MaterialTheme.typography.headlineMedium
+    }
+
+    @Composable
+    fun messageStyle() = when (this) {
+        LEGENDARY -> MaterialTheme.typography.displaySmall
+        EXCELLENT -> MaterialTheme.typography.titleLarge
+        GREAT -> MaterialTheme.typography.titleMedium
+        GOOD -> MaterialTheme.typography.bodyLarge
+        OK -> MaterialTheme.typography.bodyLarge
+        NEEDS_WORK -> MaterialTheme.typography.bodyMedium
+    }
+}
+
+private fun enthusiasmLevel(score: Float) = when {
+    score >= 95f -> EnthusiasmLevel.LEGENDARY
+    score >= 80f -> EnthusiasmLevel.EXCELLENT
+    score >= 65f -> EnthusiasmLevel.GREAT
+    score >= 50f -> EnthusiasmLevel.GOOD
+    score >= 30f -> EnthusiasmLevel.OK
+    else -> EnthusiasmLevel.NEEDS_WORK
 }
 
 @Composable
@@ -158,41 +138,9 @@ private fun StatCard(label: String, value: String) {
     }
 }
 
-@Composable
-private fun NoteScoreItem(number: Int, score: NoteScore) {
-    val color = when (score.pitchAccuracy) {
-        PitchAccuracy.PERFECT -> Green80
-        PitchAccuracy.GOOD -> Green80.copy(alpha = 0.7f)
-        PitchAccuracy.FAIR -> Yellow80
-        PitchAccuracy.MISS -> Red80
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp, horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text("#$number", style = MaterialTheme.typography.bodyLarge)
-        Text(
-            text = score.pitchAccuracy.name,
-            style = MaterialTheme.typography.bodyLarge,
-            color = color
-        )
-        Text(
-            text = "${"%.0f".format(score.overallScore)}",
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.End
-        )
-    }
-}
-
-private fun gradeColor(grade: LetterGrade) = when (grade) {
-    LetterGrade.S -> Green80
-    LetterGrade.A -> Green80
-    LetterGrade.B -> Teal80
-    LetterGrade.C -> Yellow80
-    LetterGrade.D -> Red80
-    LetterGrade.F -> Red80
+private fun scoreColor(score: Float) = when {
+    score >= 80f -> Green80
+    score >= 65f -> Teal80
+    score >= 50f -> Yellow80
+    else -> Red80
 }

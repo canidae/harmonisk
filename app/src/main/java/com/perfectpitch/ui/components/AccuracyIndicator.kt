@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.perfectpitch.ui.theme.Green80
+import com.perfectpitch.ui.theme.Orange80
 import com.perfectpitch.ui.theme.Red80
 import com.perfectpitch.ui.theme.Yellow80
 import kotlin.math.abs
@@ -40,8 +41,10 @@ fun AccuracyIndicator(
 
     val barColor by animateColorAsState(
         targetValue = when {
-            abs(centsOff) <= 10f -> Green80
-            abs(centsOff) <= 25f -> Yellow80
+            abs(centsOff) <= 5f -> Green80
+            abs(centsOff) <= 10f -> Green80.copy(alpha = 0.8f)
+            abs(centsOff) <= 30f -> Yellow80
+            abs(centsOff) <= 50f -> Orange80
             else -> Red80
         },
         animationSpec = tween(durationMillis = 200),
@@ -77,10 +80,11 @@ fun AccuracyIndicator(
 
         Text(
             text = when {
-                abs(centsOff) <= 10f -> "Perfect!"
-                abs(centsOff) <= 25f -> "Good"
-                abs(centsOff) <= 50f -> "Off pitch"
-                else -> "Way off"
+                abs(centsOff) <= 5f -> "Perfect!"
+                abs(centsOff) <= 10f -> "Great!"
+                abs(centsOff) <= 30f -> "Good"
+                abs(centsOff) <= 50f -> "Ok"
+                else -> "Miss"
             },
             style = MaterialTheme.typography.labelLarge,
             color = barColor,

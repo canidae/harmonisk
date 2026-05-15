@@ -350,8 +350,9 @@ class MelodyViewModel @Inject constructor(
         val score = scoringEngine.scoreNote(performance)
         val resultState = when (score.pitchAccuracy) {
             PitchAccuracy.PERFECT -> NoteResultState.PERFECT
+            PitchAccuracy.GREAT -> NoteResultState.GREAT
             PitchAccuracy.GOOD -> NoteResultState.GOOD
-            PitchAccuracy.FAIR -> NoteResultState.FAIR
+            PitchAccuracy.OK -> NoteResultState.OK
             PitchAccuracy.MISS -> NoteResultState.MISS
         }
 

@@ -18,8 +18,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.perfectpitch.ui.theme.Green40
 import com.perfectpitch.ui.theme.Green80
+import com.perfectpitch.ui.theme.Orange80
 import com.perfectpitch.ui.theme.Red80
 import com.perfectpitch.ui.theme.Yellow80
 import kotlin.math.abs
@@ -43,8 +43,10 @@ fun PitchGauge(
 
     val gaugeColor by animateColorAsState(
         targetValue = when {
-            abs(centsOff) <= 10f -> Green80
-            abs(centsOff) <= 25f -> Yellow80
+            abs(centsOff) <= 5f -> Green80
+            abs(centsOff) <= 10f -> Green80.copy(alpha = 0.8f)
+            abs(centsOff) <= 30f -> Yellow80
+            abs(centsOff) <= 50f -> Orange80
             else -> Red80
         },
         animationSpec = tween(durationMillis = 200),
