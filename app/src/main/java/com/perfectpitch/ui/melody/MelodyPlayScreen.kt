@@ -1,19 +1,33 @@
 package com.perfectpitch.ui.melody
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.perfectpitch.ui.components.KeepScreenOn
+import com.perfectpitch.ui.components.PIANO_HEIGHT_DP
 import com.perfectpitch.ui.components.RequireMicPermission
+
+private val BUTTON_AREA_WIDTH = 52.dp
+private val OVERLAY_BG = Color(0xAA1A1A2E)
+private val OVERLAY_ICON_TINT = Color.White.copy(alpha = 0.9f)
+private val OVERLAY_BUTTON_SIZE = 40.dp
 
 @Composable
 fun MelodyPlayScreen(
@@ -22,8 +36,17 @@ fun MelodyPlayScreen(
     viewModel: MelodyViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val density = LocalDensity.current
+    val rightPaddingPx = with(density) { BUTTON_AREA_WIDTH.toPx() }
 
     KeepScreenOn()
+
+    // Auto-start playing when entering this screen
+    LaunchedEffect(Unit) {
+        if (state.phase == PlayPhase.NOT_STARTED) {
+            viewModel.startPlaying()
+        }
+    }
 
     // Navigate to results when finished
     LaunchedEffect(state.phase) {
@@ -33,15 +56,35 @@ fun MelodyPlayScreen(
     }
 
     RequireMicPermission {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .pointerInput(Unit) {
+                    detectTransformGestures { centroid, pan, zoom, _ ->
+                        val canvasHeight = size.height.toFloat()
+
+                        // Vertical zoom only (pinch)
+                        if (zoom != 1f) {
+                            viewModel.onVerticalZoom(zoom)
+                        }
+
+                        // Vertical scroll: drag up = see future notes, drag down = see past notes
+                        if (pan.y != 0f) {
+                            val secondsPerPx = 1.0 / (state.fallSpeedPxPerSec * density.density)
+                            viewModel.onVerticalScroll(pan.y * secondsPerPx)
+                        }
+                    }
+                }
+        ) {
             val track = state.melodyTrack
             if (track != null) {
-                // Synthesia canvas (full screen background)
-                SynthesiaCanvas(
+                MelodyPlayCanvas(
+                    state = state,
                     melodyTrack = track,
-                    currentTimeSeconds = state.currentTimeSeconds,
-                    noteResults = state.noteResults,
                     detectedMidiNote = if (state.pitchResult.isValid) state.pitchResult.midiNoteNumber else null,
+                    detectedCentsOff = if (state.pitchResult.isValid) state.pitchResult.centsOff else null,
+                    rightPaddingPx = rightPaddingPx,
                     modifier = Modifier.fillMaxSize()
                 )
 
@@ -59,64 +102,181 @@ fun MelodyPlayScreen(
                     }
                 }
 
-                // Top overlay - score and progress
-                if (state.phase == PlayPhase.PLAYING || state.phase == PlayPhase.PAUSED) {
-                    Row(
+                // Waiting indicator
+                if (state.phase == PlayPhase.WAITING_FOR_NOTE) {
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(top = 16.dp),
+                        contentAlignment = Alignment.TopCenter
                     ) {
-                        // Progress
-                        val progress = if (track.durationSeconds > 0) {
-                            (state.currentTimeSeconds / track.durationSeconds * 100).toInt()
-                        } else 0
-                        Text(
-                            text = "$progress%",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-
-                        // Notes hit
-                        val notesHit = state.noteResults.count { it.value != NoteResultState.MISS }
-                        Text(
-                            text = "$notesHit / ${track.notes.size}",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-
-                        // Controls
-                        Row {
-                            if (state.phase == PlayPhase.PLAYING) {
-                                IconButton(onClick = { viewModel.pause() }) {
-                                    Icon(Icons.Default.Refresh, "Pause", tint = MaterialTheme.colorScheme.onBackground)
-                                }
-                            } else {
-                                IconButton(onClick = { viewModel.resume() }) {
-                                    Icon(Icons.Default.PlayArrow, "Resume", tint = MaterialTheme.colorScheme.onBackground)
-                                }
-                            }
-                            IconButton(onClick = { viewModel.stop(); onBack() }) {
-                                Icon(Icons.Default.Close, "Stop", tint = MaterialTheme.colorScheme.onBackground)
-                            }
+                        Surface(
+                            color = Color(0xCC1A1A2E),
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                text = "Play the note!",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
                         }
                     }
                 }
 
-                // Bottom overlay - detected note
-                if (state.pitchResult.isValid && state.phase == PlayPhase.PLAYING) {
-                    Box(
+                // Top-left: progress info
+                if (state.phase == PlayPhase.PLAYING || state.phase == PlayPhase.PAUSED || state.phase == PlayPhase.WAITING_FOR_NOTE) {
+                    Row(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.BottomCenter)
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(start = 12.dp, top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "${state.pitchResult.noteName}${state.pitchResult.octave}",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                        val progress = if (track.durationSeconds > 0) {
+                            (state.currentTimeSeconds / track.durationSeconds * 100).toInt().coerceAtMost(100)
+                        } else 0
+                        Surface(color = Color(0xCC1A1A2E), shape = MaterialTheme.shapes.small) {
+                            Text(
+                                text = "$progress%",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        val notesHit = state.noteResults.count { it.value != NoteResultState.MISS && it.value != NoteResultState.ACTIVE }
+                        Surface(color = Color(0xCC1A1A2E), shape = MaterialTheme.shapes.small) {
+                            Text(
+                                text = "$notesHit / ${track.notes.size}",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Right-side button column (above piano)
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // Config dropdown
+                    var showConfigMenu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(
+                            onClick = { showConfigMenu = true },
+                            modifier = Modifier
+                                .size(OVERLAY_BUTTON_SIZE)
+                                .background(OVERLAY_BG, CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Filled.Settings,
+                                contentDescription = "Settings",
+                                tint = OVERLAY_ICON_TINT,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showConfigMenu,
+                            onDismissRequest = { showConfigMenu = false },
+                            offset = DpOffset((-180).dp, 0.dp)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Wait for note") },
+                                trailingIcon = {
+                                    Switch(
+                                        checked = state.waitMode,
+                                        onCheckedChange = { viewModel.setWaitMode(it) },
+                                        modifier = Modifier.height(20.dp)
+                                    )
+                                },
+                                onClick = { viewModel.setWaitMode(!state.waitMode) }
+                            )
+                            if (state.waitMode) {
+                                DropdownMenuItem(
+                                    text = { Text("Allow wrong notes") },
+                                    trailingIcon = {
+                                        Switch(
+                                            checked = state.allowWrongNotes,
+                                            onCheckedChange = { viewModel.setAllowWrongNotes(it) },
+                                            modifier = Modifier.height(20.dp)
+                                        )
+                                    },
+                                    onClick = { viewModel.setAllowWrongNotes(!state.allowWrongNotes) }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = {
+                                    Text("Tempo: ${"%.0f".format(state.tempoMultiplier * 100)}%")
+                                },
+                                onClick = { }
+                            )
+                            Slider(
+                                value = state.tempoMultiplier,
+                                onValueChange = { viewModel.setTempoMultiplier(it) },
+                                valueRange = 0.5f..1.5f,
+                                steps = 9,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        }
+                    }
+
+                    // Play/Pause button
+                    if (state.phase == PlayPhase.PLAYING || state.phase == PlayPhase.PAUSED || state.phase == PlayPhase.WAITING_FOR_NOTE) {
+                        IconButton(
+                            onClick = {
+                                if (state.phase == PlayPhase.PAUSED) {
+                                    viewModel.resume()
+                                } else {
+                                    viewModel.pause()
+                                }
+                            },
+                            modifier = Modifier
+                                .size(OVERLAY_BUTTON_SIZE)
+                                .background(OVERLAY_BG, CircleShape)
+                        ) {
+                            Icon(
+                                if (state.phase == PlayPhase.PAUSED) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                                contentDescription = if (state.phase == PlayPhase.PAUSED) "Resume" else "Pause",
+                                tint = OVERLAY_ICON_TINT,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    // Scroll-to-live button (when scrolled away from current time)
+                    if (state.songTimeOffsetSeconds != 0.0) {
+                        IconButton(
+                            onClick = { viewModel.scrollToLive() },
+                            modifier = Modifier
+                                .size(OVERLAY_BUTTON_SIZE)
+                                .background(OVERLAY_BG, CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Filled.KeyboardArrowUp,
+                                contentDescription = "Back to live",
+                                tint = OVERLAY_ICON_TINT,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    // Close button
+                    IconButton(
+                        onClick = { viewModel.stop(); onBack() },
+                        modifier = Modifier
+                            .size(OVERLAY_BUTTON_SIZE)
+                            .background(OVERLAY_BG, CircleShape)
+                    ) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = "Close",
+                            tint = OVERLAY_ICON_TINT,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }

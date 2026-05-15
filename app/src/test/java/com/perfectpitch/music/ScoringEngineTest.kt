@@ -28,7 +28,7 @@ class ScoringEngineTest {
     }
 
     @Test
-    fun `good pitch gives 75 points`() {
+    fun `good pitch gives 80 points`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69,
             detectedMidiNote = 69,
@@ -37,12 +37,12 @@ class ScoringEngineTest {
             actualDurationMs = 500,
             timingOffsetMs = 0
         ))
-        assertEquals(75f, result.pitchScore, 0.01f)
+        assertEquals(80f, result.pitchScore, 0.01f)
         assertEquals(PitchAccuracy.GOOD, result.pitchAccuracy)
     }
 
     @Test
-    fun `fair pitch gives 50 points`() {
+    fun `fair pitch gives 60 points`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69,
             detectedMidiNote = 69,
@@ -51,12 +51,12 @@ class ScoringEngineTest {
             actualDurationMs = 500,
             timingOffsetMs = 0
         ))
-        assertEquals(50f, result.pitchScore, 0.01f)
+        assertEquals(60f, result.pitchScore, 0.01f)
         assertEquals(PitchAccuracy.FAIR, result.pitchAccuracy)
     }
 
     @Test
-    fun `missed pitch gives 0 points`() {
+    fun `missed pitch gives 25 points`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69,
             detectedMidiNote = 70,
@@ -65,7 +65,7 @@ class ScoringEngineTest {
             actualDurationMs = 500,
             timingOffsetMs = 0
         ))
-        assertEquals(0f, result.pitchScore, 0.01f)
+        assertEquals(25f, result.pitchScore, 0.01f)
         assertEquals(PitchAccuracy.MISS, result.pitchAccuracy)
     }
 
@@ -134,8 +134,8 @@ class ScoringEngineTest {
 
         assertEquals(LetterGrade.S, engine.calculateMelodyScore(makeScores(95f)).grade)
         assertEquals(LetterGrade.A, engine.calculateMelodyScore(makeScores(85f)).grade)
-        assertEquals(LetterGrade.B, engine.calculateMelodyScore(makeScores(75f)).grade)
-        assertEquals(LetterGrade.C, engine.calculateMelodyScore(makeScores(60f)).grade)
+        assertEquals(LetterGrade.B, engine.calculateMelodyScore(makeScores(70f)).grade)
+        assertEquals(LetterGrade.C, engine.calculateMelodyScore(makeScores(55f)).grade)
         assertEquals(LetterGrade.D, engine.calculateMelodyScore(makeScores(40f)).grade)
         assertEquals(LetterGrade.F, engine.calculateMelodyScore(makeScores(30f)).grade)
     }

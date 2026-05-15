@@ -63,6 +63,17 @@ fun ScoreResultScreen(
                 color = gradeColor(melodyScore.grade)
             )
 
+            // Encouraging message
+            if (melodyScore.encouragingMessage.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = melodyScore.encouragingMessage,
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             // Stats cards
@@ -83,6 +94,9 @@ fun ScoreResultScreen(
             ) {
                 StatCard("Pitch Avg", "${"%.0f".format(melodyScore.avgPitchScore)}")
                 StatCard("Duration Avg", "${"%.0f".format(melodyScore.avgDurationScore)}")
+                if (melodyScore.streakBonus > 0f) {
+                    StatCard("Streak Bonus", "+${"%.0f".format(melodyScore.streakBonus)}")
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))

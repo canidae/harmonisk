@@ -3,6 +3,7 @@ package com.perfectpitch.ui.melody
 import com.perfectpitch.midi.MelodyTrack
 import com.perfectpitch.music.MelodyScore
 import com.perfectpitch.music.NoteScore
+import com.perfectpitch.music.PitchAccuracy
 import com.perfectpitch.music.PitchResult
 
 data class MelodyPlayState(
@@ -14,10 +15,23 @@ data class MelodyPlayState(
     val noteScores: List<NoteScore> = emptyList(),
     val currentNoteIndex: Int = -1,
     val pitchResult: PitchResult = PitchResult.SILENT,
-    val waitMode: Boolean = false,
+    val waitMode: Boolean = true,
+    val allowWrongNotes: Boolean = false,
     val tempoMultiplier: Float = 1.0f,
     val melodyScore: MelodyScore? = null,
-    val isListening: Boolean = false
+    val isListening: Boolean = false,
+    // View controls
+    val fallSpeedPxPerSec: Float = 150f,
+    val songTimeOffsetSeconds: Double = 0.0,
+    val viewMinMidi: Float = 60f,
+    val viewMaxMidi: Float = 72f,
+    // Per-note accuracy overlays for history review
+    val noteAccuracyOverlays: Map<Int, NoteAccuracyOverlay> = emptyMap()
+)
+
+data class NoteAccuracyOverlay(
+    val pitchAccuracy: PitchAccuracy,
+    val centsOff: Float
 )
 
 enum class PlayPhase {
@@ -25,5 +39,10 @@ enum class PlayPhase {
     COUNTDOWN,
     PLAYING,
     PAUSED,
+    WAITING_FOR_NOTE,
     FINISHED
+}
+
+enum class NoteResultState {
+    ACTIVE, PERFECT, GOOD, FAIR, MISS
 }

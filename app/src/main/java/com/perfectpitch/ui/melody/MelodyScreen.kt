@@ -24,15 +24,12 @@ fun MelodyScreen(
     onStartPlay: () -> Unit = {},
     viewModel: MelodyViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
-    var waitMode by remember { mutableStateOf(false) }
-    var tempoMultiplier by remember { mutableFloatStateOf(1.0f) }
-
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
             viewModel.loadMelodyFromUri(it)
+            onStartPlay()
         }
     }
 
@@ -54,7 +51,6 @@ fun MelodyScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            // Melody list
             Text(
                 text = "Choose a Melody",
                 style = MaterialTheme.typography.headlineMedium
@@ -62,7 +58,6 @@ fun MelodyScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Built-in melodies
             val melodies = remember { viewModel.getAvailableMelodies() }
             if (melodies.isNotEmpty()) {
                 LazyColumn(
@@ -73,6 +68,7 @@ fun MelodyScreen(
                         Card(
                             onClick = {
                                 viewModel.loadMelody(info)
+                                onStartPlay()
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -110,7 +106,6 @@ fun MelodyScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Import MIDI button
             OutlinedButton(
                 onClick = { filePickerLauncher.launch(arrayOf("audio/midi", "audio/x-midi", "application/x-midi")) },
                 modifier = Modifier.fillMaxWidth()
@@ -118,76 +113,6 @@ fun MelodyScreen(
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Import MIDI File")
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Settings section
-            if (state.melodyTrack != null) {
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Loaded: ${state.melodyTrack?.name}",
-                    style = MaterialTheme.typography.titleMedium
-                )
-
-                val track = state.melodyTrack
-                if (track != null) {
-                    Text(
-                        text = "${track.notes.size} notes • ${"%.0f".format(track.durationSeconds)}s",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Wait mode toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Wait for correct note", style = MaterialTheme.typography.bodyLarge)
-                    Switch(
-                        checked = waitMode,
-                        onCheckedChange = {
-                            waitMode = it
-                            viewModel.setWaitMode(it)
-                        }
-                    )
-                }
-
-                // Tempo slider
-                Text(
-                    text = "Tempo: ${"%.0f".format(tempoMultiplier * 100)}%",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Slider(
-                    value = tempoMultiplier,
-                    onValueChange = {
-                        tempoMultiplier = it
-                        viewModel.setTempoMultiplier(it)
-                    },
-                    valueRange = 0.5f..1.5f,
-                    steps = 9
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Start button
-                Button(
-                    onClick = {
-                        viewModel.startPlaying()
-                        onStartPlay()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                ) {
-                    Text("Start Playing", style = MaterialTheme.typography.titleLarge)
-                }
             }
         }
     }

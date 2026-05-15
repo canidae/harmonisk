@@ -6,7 +6,8 @@ import kotlin.math.max
 
 /**
  * Scoring engine for the Play by Melody mode.
- * Evaluates pitch accuracy, duration accuracy, and timing.
+ * Uses an encouraging scoring system with high base scores,
+ * streak bonuses, and positive feedback messages.
  */
 class ScoringEngine {
 
@@ -16,16 +17,21 @@ class ScoringEngine {
         const val GOOD_CENTS = 25f
         const val FAIR_CENTS = 50f
 
-        // Points for each accuracy level
+        // Encouraging point values (higher base scores)
         const val PERFECT_POINTS = 100
-        const val GOOD_POINTS = 75
-        const val FAIR_POINTS = 50
-        const val MISS_POINTS = 0
+        const val GOOD_POINTS = 80
+        const val FAIR_POINTS = 60
+        const val MISS_POINTS = 25
 
         // Scoring weights
         const val PITCH_WEIGHT = 0.4f
         const val DURATION_WEIGHT = 0.4f
         const val TIMING_WEIGHT = 0.2f
+
+        // Streak bonus thresholds
+        const val STREAK_3_MULTIPLIER = 1.1f
+        const val STREAK_5_MULTIPLIER = 1.2f
+        const val STREAK_10_MULTIPLIER = 1.3f
     }
 
     /**
@@ -80,7 +86,8 @@ class ScoringEngine {
     private fun scoreDuration(actualMs: Long, expectedMs: Long): Float {
         if (expectedMs <= 0) return 100f
         val ratio = min(actualMs, expectedMs).toFloat() / max(actualMs, expectedMs).toFloat()
-        return ratio * 100f
+        // Encouraging: boost duration score so partial matches still get decent points
+        return (ratio * 100f).coerceAtLeast(MISS_POINTS.toFloat())
     }
 
     /**
@@ -88,13 +95,25 @@ class ScoringEngine {
      */
     private fun scoreTiming(offsetMs: Long, expectedDurationMs: Long): Float {
         if (expectedDurationMs <= 0) return 100f
-        val tolerance = expectedDurationMs * 0.25f // 25% of note duration as timing window
+        val tolerance = expectedDurationMs * 0.25f
         val absOffset = abs(offsetMs).toFloat()
         return when {
             absOffset <= tolerance * 0.5f -> 100f
-            absOffset <= tolerance -> 75f
-            absOffset <= tolerance * 2f -> 50f
-            else -> 25f
+            absOffset <= tolerance -> 80f
+            absOffset <= tolerance * 2f -> 60f
+            else -> MISS_POINTS.toFloat()
+        }
+    }
+
+    /**
+     * Calculate streak bonus multiplier for a given streak length.
+     */
+    fun streakMultiplier(streakLength: Int): Float {
+        return when {
+            streakLength >= 10 -> STREAK_10_MULTIPLIER
+            streakLength >= 5 -> STREAK_5_MULTIPLIER
+            streakLength >= 3 -> STREAK_3_MULTIPLIER
+            else -> 1.0f
         }
     }
 
@@ -104,21 +123,28 @@ class ScoringEngine {
     fun calculateMelodyScore(noteScores: List<NoteScore>): MelodyScore {
         if (noteScores.isEmpty()) return MelodyScore.EMPTY
 
-        val avgScore = noteScores.map { it.overallScore }.average().toFloat()
-        val notesHit = noteScores.count { it.pitchAccuracy != PitchAccuracy.MISS }
-        val perfectCount = noteScores.count { it.pitchAccuracy == PitchAccuracy.PERFECT }
-
-        // Calculate longest streak
+        // Calculate streak-adjusted scores
         var currentStreak = 0
         var longestStreak = 0
+        var totalStreakBonus = 0f
+
         for (score in noteScores) {
             if (score.pitchAccuracy == PitchAccuracy.PERFECT || score.pitchAccuracy == PitchAccuracy.GOOD) {
                 currentStreak++
                 longestStreak = max(longestStreak, currentStreak)
+                val bonus = score.overallScore * (streakMultiplier(currentStreak) - 1f)
+                totalStreakBonus += bonus
             } else {
                 currentStreak = 0
             }
         }
+
+        val baseAvgScore = noteScores.map { it.overallScore }.average().toFloat()
+        val streakBonusPerNote = if (noteScores.isNotEmpty()) totalStreakBonus / noteScores.size else 0f
+        val avgScore = (baseAvgScore + streakBonusPerNote).coerceAtMost(100f)
+
+        val notesHit = noteScores.count { it.pitchAccuracy != PitchAccuracy.MISS }
+        val perfectCount = noteScores.count { it.pitchAccuracy == PitchAccuracy.PERFECT }
 
         return MelodyScore(
             overallScore = avgScore,
@@ -128,18 +154,31 @@ class ScoringEngine {
             perfectNotes = perfectCount,
             longestStreak = longestStreak,
             avgPitchScore = noteScores.map { it.pitchScore }.average().toFloat(),
-            avgDurationScore = noteScores.map { it.durationScore }.average().toFloat()
+            avgDurationScore = noteScores.map { it.durationScore }.average().toFloat(),
+            streakBonus = streakBonusPerNote,
+            encouragingMessage = getEncouragingMessage(avgScore)
         )
     }
 
     private fun scoreToGrade(score: Float): LetterGrade {
         return when {
-            score >= 95f -> LetterGrade.S
-            score >= 85f -> LetterGrade.A
-            score >= 75f -> LetterGrade.B
-            score >= 60f -> LetterGrade.C
-            score >= 40f -> LetterGrade.D
+            score >= 90f -> LetterGrade.S
+            score >= 78f -> LetterGrade.A
+            score >= 65f -> LetterGrade.B
+            score >= 50f -> LetterGrade.C
+            score >= 35f -> LetterGrade.D
             else -> LetterGrade.F
+        }
+    }
+
+    private fun getEncouragingMessage(score: Float): String {
+        return when {
+            score >= 95f -> "Outstanding! Perfect pitch mastery! 🌟"
+            score >= 85f -> "Excellent performance! 🎉"
+            score >= 70f -> "Well done! Almost perfect! 👏"
+            score >= 55f -> "Great progress! You're improving! 💪"
+            score >= 40f -> "Getting better! Keep it up! 🎵"
+            else -> "Keep practicing! Every note counts! 🎶"
         }
     }
 }
@@ -173,9 +212,11 @@ data class MelodyScore(
     val perfectNotes: Int,
     val longestStreak: Int,
     val avgPitchScore: Float,
-    val avgDurationScore: Float
+    val avgDurationScore: Float,
+    val streakBonus: Float = 0f,
+    val encouragingMessage: String = ""
 ) {
     companion object {
-        val EMPTY = MelodyScore(0f, LetterGrade.F, 0, 0, 0, 0, 0f, 0f)
+        val EMPTY = MelodyScore(0f, LetterGrade.F, 0, 0, 0, 0, 0f, 0f, 0f, "Keep practicing! Every note counts! 🎶")
     }
 }
