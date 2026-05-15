@@ -15,7 +15,7 @@ class PitchProcessor(
     private val noteUtils: NoteUtils
 ) {
     companion object {
-        const val SILENCE_THRESHOLD_DB = -40f
+        const val SILENCE_THRESHOLD_DB = -50f
         const val MEDIAN_WINDOW_SIZE = 5
     }
 

@@ -26,7 +26,7 @@ class SettingsRepository(
             yinThreshold = prefs[YIN_THRESHOLD] ?: 0.15f,
             inTuneCents = prefs[IN_TUNE_CENTS] ?: 10,
             darkTheme = prefs[DARK_THEME] ?: true,
-            silenceThresholdDb = prefs[SILENCE_THRESHOLD_DB] ?: -40f
+            silenceThresholdDb = prefs[SILENCE_THRESHOLD_DB] ?: -50f
         )
     }
 
@@ -60,5 +60,5 @@ data class AppSettings(
     val yinThreshold: Float = 0.15f,
     val inTuneCents: Int = 10,
     val darkTheme: Boolean = true,
-    val silenceThresholdDb: Float = -40f
+    val silenceThresholdDb: Float = -50f
 )

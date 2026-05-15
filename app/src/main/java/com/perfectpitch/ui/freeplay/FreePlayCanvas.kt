@@ -24,7 +24,6 @@ private val RED_OFF = Color(0xFFF44336)
 private val BAR_BORDER_COLOR = Color(0x40FFFFFF)
 private val BLACK_COLUMN_BG = Color(0xFF151520)
 private val CANVAS_BG = Color(0xFF0D0D1A)
-private val C4_DOT_COLOR = Color(0xFF999999)
 
 internal const val PIANO_HEIGHT_DP = 52f
 private const val BLACK_KEY_HEIGHT_FRACTION = 0.62f
@@ -270,6 +269,9 @@ private fun DrawScope.drawPianoKeyboard(
         val label = if (key.width > 35f * density) "$noteName$octave" else noteName
         val fontSize = (key.width / density * 0.3f).coerceIn(7f, 13f)
 
+        // Track label top-Y for C4 dot positioning
+        var labelTopY = pianoHeight - 4f * density
+
         if (key.width > 12f * density) {
             val textLayout = textMeasurer.measure(
                 text = AnnotatedString(label),
@@ -281,18 +283,18 @@ private fun DrawScope.drawPianoKeyboard(
             )
             if (textLayout.size.width < key.width - 4f) {
                 val textX = key.x + (key.width - textLayout.size.width) / 2f
-                val textY = pianoHeight - textLayout.size.height - 4f * density
-                drawText(textLayout, topLeft = Offset(textX, textY))
+                labelTopY = pianoHeight - textLayout.size.height - 4f * density
+                drawText(textLayout, topLeft = Offset(textX, labelTopY))
             }
         }
 
-        // C4 (middle C) indicator dot
+        // C4 (middle C) indicator dot — just above the text label
         if (midi == C4_MIDI) {
             val dotRadius = C4_DOT_RADIUS_DP * density
             val dotCenterX = key.x + key.width / 2f
-            val dotCenterY = pianoHeight * 0.45f
+            val dotCenterY = labelTopY - dotRadius - 2f * density
             drawCircle(
-                color = C4_DOT_COLOR,
+                color = Color.Black,
                 radius = dotRadius,
                 center = Offset(dotCenterX, dotCenterY)
             )

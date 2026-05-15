@@ -1,12 +1,9 @@
 package com.perfectpitch.ui.freeplay
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -95,37 +92,6 @@ fun FreePlayScreen(
                 rightPaddingPx = rightPaddingPx,
                 modifier = Modifier.fillMaxSize()
             )
-        }
-
-        // Scroll-back indicator (centered chip below piano)
-        if (state.timeOffsetMs > 0L) {
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = PIANO_HEIGHT_DP.dp + 8.dp)
-                    .clickable { viewModel.scrollToTop() },
-                shape = RoundedCornerShape(16.dp),
-                color = Color(0xBB1A1A2E),
-                border = BorderStroke(1.dp, Color(0x30FFFFFF))
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.KeyboardArrowUp,
-                        contentDescription = null,
-                        tint = OVERLAY_ICON_TINT,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        "Live view above",
-                        color = OVERLAY_ICON_TINT,
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
-            }
         }
 
         // Right-side button column (below piano keys)
