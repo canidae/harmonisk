@@ -32,61 +32,61 @@ class PitchDetectorTest {
     @Test
     fun `detect A4 at 440 Hz`() {
         val buffer = generateSineWave(440f)
-        val detected = detector.detectPitch(buffer, sampleRate)
-        assertFrequencyClose(440f, detected, toleranceCents = 5f)
+        val result = detector.detectPitch(buffer, sampleRate)
+        assertFrequencyClose(440f, result.frequency, toleranceCents = 5f)
     }
 
     @Test
     fun `detect C4 at 261_63 Hz`() {
         val buffer = generateSineWave(261.63f)
-        val detected = detector.detectPitch(buffer, sampleRate)
-        assertFrequencyClose(261.63f, detected, toleranceCents = 5f)
+        val result = detector.detectPitch(buffer, sampleRate)
+        assertFrequencyClose(261.63f, result.frequency, toleranceCents = 5f)
     }
 
     @Test
     fun `detect E4 at 329_63 Hz`() {
         val buffer = generateSineWave(329.63f)
-        val detected = detector.detectPitch(buffer, sampleRate)
-        assertFrequencyClose(329.63f, detected, toleranceCents = 5f)
+        val result = detector.detectPitch(buffer, sampleRate)
+        assertFrequencyClose(329.63f, result.frequency, toleranceCents = 5f)
     }
 
     @Test
     fun `detect low frequency G2 at 98 Hz`() {
         val buffer = generateSineWave(98f, numSamples = 4096)
-        val detected = detector.detectPitch(buffer, sampleRate)
-        assertFrequencyClose(98f, detected, toleranceCents = 10f)
+        val result = detector.detectPitch(buffer, sampleRate)
+        assertFrequencyClose(98f, result.frequency, toleranceCents = 10f)
     }
 
     @Test
     fun `detect high frequency C6 at 1047 Hz`() {
         val buffer = generateSineWave(1046.5f)
-        val detected = detector.detectPitch(buffer, sampleRate)
-        assertFrequencyClose(1046.5f, detected, toleranceCents = 5f)
+        val result = detector.detectPitch(buffer, sampleRate)
+        assertFrequencyClose(1046.5f, result.frequency, toleranceCents = 5f)
     }
 
     @Test
     fun `detect very high frequency A6 at 1760 Hz`() {
         val buffer = generateSineWave(1760f)
-        val detected = detector.detectPitch(buffer, sampleRate)
-        assertFrequencyClose(1760f, detected, toleranceCents = 10f)
+        val result = detector.detectPitch(buffer, sampleRate)
+        assertFrequencyClose(1760f, result.frequency, toleranceCents = 10f)
     }
 
     @Test
-    fun `silence returns negative frequency`() {
+    fun `silence returns no pitch`() {
         val buffer = FloatArray(4096) { 0f }
-        val detected = detector.detectPitch(buffer, sampleRate)
-        assertTrue("Should not detect pitch in silence", detected <= 0f)
+        val result = detector.detectPitch(buffer, sampleRate)
+        assertTrue("Should not detect pitch in silence", result.frequency <= 0f)
     }
 
     @Test
-    fun `very low amplitude returns negative frequency`() {
+    fun `very low amplitude returns detected pitch`() {
         val buffer = generateSineWave(440f, amplitude = 0.001f)
         // With such low amplitude, YIN should still detect (it's amplitude-independent)
         // but the RMS check in PitchProcessor would filter this
-        val detected = detector.detectPitch(buffer, sampleRate)
+        val result = detector.detectPitch(buffer, sampleRate)
         // YIN itself doesn't filter by amplitude, so it should still detect
-        if (detected > 0f) {
-            assertFrequencyClose(440f, detected, toleranceCents = 10f)
+        if (result.frequency > 0f) {
+            assertFrequencyClose(440f, result.frequency, toleranceCents = 10f)
         }
     }
 
@@ -102,8 +102,22 @@ class PitchDetectorTest {
              0.1 * sin(2.0 * PI * fundamental * 3 * t)     // 3rd harmonic
             ).toFloat()
         }
-        val detected = detector.detectPitch(buffer, sampleRate)
-        assertFrequencyClose(fundamental, detected, toleranceCents = 10f)
+        val result = detector.detectPitch(buffer, sampleRate)
+        assertFrequencyClose(fundamental, result.frequency, toleranceCents = 10f)
+    }
+
+    @Test
+    fun `confidence is positive for clean signal`() {
+        val buffer = generateSineWave(440f)
+        val result = detector.detectPitch(buffer, sampleRate)
+        assertTrue("Confidence should be positive for clean signal", result.confidence > 0f)
+        assertTrue("Confidence should be at most 1.0", result.confidence <= 1f)
+    }
+
+    @Test
+    fun `PitchDetectionResult NONE has negative frequency`() {
+        assertEquals(-1f, PitchDetectionResult.NONE.frequency, 0f)
+        assertEquals(0f, PitchDetectionResult.NONE.confidence, 0f)
     }
 
     @Test
@@ -132,9 +146,9 @@ class PitchDetectorTest {
     }
 
     @Test
-    fun `empty buffer returns negative`() {
-        val detected = detector.detectPitch(FloatArray(0), sampleRate)
-        assertTrue(detected <= 0f)
+    fun `empty buffer returns no pitch`() {
+        val result = detector.detectPitch(FloatArray(0), sampleRate)
+        assertTrue(result.frequency <= 0f)
     }
 
     /**

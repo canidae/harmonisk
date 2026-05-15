@@ -52,19 +52,22 @@ class PitchProcessor(
             return PitchResult.SILENT
         }
 
+        // Apply Hann window to reduce spectral leakage
+        val windowed = AudioUtils.applyHannWindow(buffer)
+
         // Detect pitch
-        val rawFrequency = pitchDetector.detectPitch(
-            buffer = buffer,
+        val result = pitchDetector.detectPitch(
+            buffer = windowed,
             sampleRate = AudioCaptureService.SAMPLE_RATE,
             threshold = yinThreshold
         )
 
-        if (rawFrequency <= 0f) {
+        if (result.frequency <= 0f) {
             return PitchResult.SILENT
         }
 
         // Moving median filter to reduce jitter
-        recentFrequencies.addLast(rawFrequency)
+        recentFrequencies.addLast(result.frequency)
         if (recentFrequencies.size > MEDIAN_WINDOW_SIZE) {
             recentFrequencies.removeFirst()
         }
@@ -79,7 +82,7 @@ class PitchProcessor(
             octave = noteInfo.octave,
             centsOff = noteInfo.centsOff,
             midiNoteNumber = noteInfo.midiNumber,
-            confidence = 1f - (pitchDetector.detectPitch(buffer, threshold = 1f).let { 0f }), // simplified
+            confidence = result.confidence,
             rmsDb = rmsDb,
             isSilent = false
         )
