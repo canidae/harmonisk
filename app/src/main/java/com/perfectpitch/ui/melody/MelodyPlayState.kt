@@ -3,7 +3,6 @@ package com.perfectpitch.ui.melody
 import com.perfectpitch.midi.MelodyTrack
 import com.perfectpitch.music.MelodyScore
 import com.perfectpitch.music.NoteScore
-import com.perfectpitch.music.PitchAccuracy
 import com.perfectpitch.music.PitchResult
 
 data class MelodyPlayState(
@@ -25,8 +24,6 @@ data class MelodyPlayState(
     val songTimeOffsetSeconds: Double = 0.0,
     val viewMinMidi: Float = 60f,
     val viewMaxMidi: Float = 72f,
-    // Per-note accuracy overlays for history review
-    val noteAccuracyOverlays: Map<Int, NoteAccuracyOverlay> = emptyMap(),
     // Continuous pitch trace recorded during playback
     val pitchTrace: List<PitchFrame> = emptyList()
 )
@@ -36,11 +33,6 @@ data class PitchFrame(
     val midiNote: Int,
     val centsOff: Float,
     val frequency: Float
-)
-
-data class NoteAccuracyOverlay(
-    val pitchAccuracy: PitchAccuracy,
-    val centsOff: Float
 )
 
 enum class PlayPhase {

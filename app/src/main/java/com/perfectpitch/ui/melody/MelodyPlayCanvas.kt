@@ -12,9 +12,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.rememberTextMeasurer
 import com.perfectpitch.midi.MelodyTrack
-import com.perfectpitch.midi.NoteEvent
-import com.perfectpitch.music.PitchAccuracy
 import com.perfectpitch.ui.components.*
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -156,6 +155,9 @@ fun MelodyPlayCanvas(
             )
         }
 
+        // Draw pitch trace (player performance overlay)
+        drawPitchTrace(state, layout, hitZoneY, pixelsPerSecond, viewTimeSeconds, canvasTop, density)
+
         // Draw player pitch indicator (thin bar just above piano)
         if (detectedMidiNote != null) {
             val key = layout[detectedMidiNote]
@@ -191,36 +193,109 @@ private fun getNoteColor(
     state: MelodyPlayState,
     relativeStart: Double
 ): Color {
-    // Check if this note has been scored (history overlay)
-    val overlay = state.noteAccuracyOverlays[noteIndex]
-    if (overlay != null) {
-        return when (overlay.pitchAccuracy) {
-            PitchAccuracy.PERFECT -> OVERLAY_PERFECT
-            PitchAccuracy.GREAT -> OVERLAY_GREAT
-            PitchAccuracy.GOOD -> OVERLAY_GOOD
-            PitchAccuracy.OK -> OVERLAY_OK
-            PitchAccuracy.MISS -> OVERLAY_MISS
-        }
-    }
-
-    // Check note result state
+    // Check note result state for active highlighting only
     val result = state.noteResults[noteIndex]
-    if (result != null) {
-        return when (result) {
-            NoteResultState.ACTIVE -> NOTE_COLOR_ACTIVE
-            NoteResultState.PERFECT -> OVERLAY_PERFECT
-            NoteResultState.GREAT -> OVERLAY_GREAT
-            NoteResultState.GOOD -> OVERLAY_GOOD
-            NoteResultState.OK -> OVERLAY_OK
-            NoteResultState.MISS -> OVERLAY_MISS
-        }
+    if (result == NoteResultState.ACTIVE) {
+        return NOTE_COLOR_ACTIVE
     }
 
-    // Upcoming note: currently at hit zone or still approaching
-    return if (relativeStart <= 0 && relativeStart > -0.5) {
-        NOTE_COLOR_ACTIVE
-    } else {
-        NOTE_COLOR_UPCOMING
+    // All other notes: upcoming purple color
+    return NOTE_COLOR_UPCOMING
+}
+
+private fun DrawScope.drawPitchTrace(
+    state: MelodyPlayState,
+    layout: Map<Int, KeyLayout>,
+    hitZoneY: Float,
+    pixelsPerSecond: Float,
+    viewTimeSeconds: Double,
+    canvasTop: Float,
+    density: Float
+) {
+    val trace = state.pitchTrace
+    if (trace.isEmpty()) return
+
+    val frameDuration = 0.093
+
+    // Group consecutive frames with the same midiNote into segments
+    var segStart = 0
+    while (segStart < trace.size) {
+        val segMidi = trace[segStart].midiNote
+        var segEnd = segStart
+        while (segEnd + 1 < trace.size && trace[segEnd + 1].midiNote == segMidi) {
+            segEnd++
+        }
+
+        val key = layout[segMidi]
+        if (key == null) {
+            segStart = segEnd + 1
+            continue
+        }
+
+        val startTime = trace[segStart].timeSeconds
+        val endTime = trace[segEnd].timeSeconds + frameDuration
+
+        val relativeStart = startTime - viewTimeSeconds
+        val relativeEnd = endTime - viewTimeSeconds
+
+        val noteBottomY = hitZoneY - (relativeStart * pixelsPerSecond).toFloat()
+        val noteTopY = hitZoneY - (relativeEnd * pixelsPerSecond).toFloat()
+
+        // Skip off-screen segments
+        if (noteTopY > hitZoneY + 100f || noteBottomY < -100f) {
+            segStart = segEnd + 1
+            continue
+        }
+
+        // Narrower bar: 60% of key width, centered
+        val traceWidth = key.width * 0.6f
+        val traceX = key.x + (key.width - traceWidth) / 2f
+
+        // Clip to visible area
+        val clippedTop = noteTopY.coerceAtLeast(canvasTop)
+        val clippedBottom = noteBottomY.coerceAtMost(hitZoneY)
+        if (clippedBottom - clippedTop < 1f) {
+            segStart = segEnd + 1
+            continue
+        }
+        val clippedHeight = (clippedBottom - clippedTop).coerceAtLeast(2f * density)
+
+        // Compute average centsOff for the segment
+        var centsSum = 0f
+        for (i in segStart..segEnd) {
+            centsSum += abs(trace[i].centsOff)
+        }
+        val avgCentsOff = centsSum / (segEnd - segStart + 1)
+
+        // Map to color based on accuracy thresholds
+        val baseColor = when {
+            avgCentsOff <= 5f -> OVERLAY_PERFECT
+            avgCentsOff <= 10f -> OVERLAY_GREAT
+            avgCentsOff <= 30f -> OVERLAY_GOOD
+            avgCentsOff <= 50f -> OVERLAY_OK
+            else -> OVERLAY_MISS
+        }
+
+        val cornerRadius = CornerRadius(3f * density, 3f * density)
+
+        // Draw the trace bar (semi-transparent)
+        drawRoundRect(
+            color = baseColor.copy(alpha = 0.75f),
+            topLeft = Offset(traceX, clippedTop),
+            size = Size(traceWidth, clippedHeight),
+            cornerRadius = cornerRadius
+        )
+
+        // Draw subtle white border
+        drawRoundRect(
+            color = Color.White.copy(alpha = 0.25f),
+            topLeft = Offset(traceX, clippedTop),
+            size = Size(traceWidth, clippedHeight),
+            cornerRadius = cornerRadius,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1f)
+        )
+
+        segStart = segEnd + 1
     }
 }
 
@@ -238,7 +313,7 @@ private fun getIndicatorColor(
     if (expectedNote == null) return Color.White.copy(alpha = 0.5f)
 
     return if (detectedMidi == expectedNote.noteNumber) {
-        val absCents = kotlin.math.abs(centsOff ?: 50f)
+        val absCents = abs(centsOff ?: 50f)
         when {
             absCents <= 5f -> OVERLAY_PERFECT
             absCents <= 10f -> OVERLAY_GREAT

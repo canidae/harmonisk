@@ -123,7 +123,6 @@ class MelodyViewModel @Inject constructor(
                 currentTimeSeconds = 0.0,
                 noteResults = emptyMap(),
                 noteScores = emptyList(),
-                noteAccuracyOverlays = emptyMap(),
                 currentNoteIndex = -1,
                 songTimeOffsetSeconds = 0.0,
                 melodyScore = null,
@@ -173,7 +172,6 @@ class MelodyViewModel @Inject constructor(
                 currentTimeSeconds = 0.0,
                 isListening = false,
                 noteResults = emptyMap(),
-                noteAccuracyOverlays = emptyMap(),
                 pitchTrace = emptyList()
             )
         }
@@ -390,10 +388,7 @@ class MelodyViewModel @Inject constructor(
         _state.update { current ->
             val results = current.noteResults.toMutableMap()
             results[noteIndex] = resultState
-            val overlays = current.noteAccuracyOverlays.toMutableMap()
-            overlays[noteIndex] = NoteAccuracyOverlay(score.pitchAccuracy, effectiveCentsOff)
-            val scores = current.noteScores + score
-            current.copy(noteResults = results, noteScores = scores, noteAccuracyOverlays = overlays)
+            current.copy(noteResults = results, noteScores = current.noteScores + score)
         }
     }
 
@@ -420,12 +415,9 @@ class MelodyViewModel @Inject constructor(
                 _state.update { current ->
                     val results = current.noteResults.toMutableMap()
                     results[i] = NoteResultState.MISS
-                    val overlays = current.noteAccuracyOverlays.toMutableMap()
-                    overlays[i] = NoteAccuracyOverlay(PitchAccuracy.MISS, 100f)
                     current.copy(
                         noteResults = results,
-                        noteScores = current.noteScores + score,
-                        noteAccuracyOverlays = overlays
+                        noteScores = current.noteScores + score
                     )
                 }
             }
