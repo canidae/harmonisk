@@ -1,0 +1,132 @@
+package com.perfectpitch.ui.components
+
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.perfectpitch.ui.theme.Green40
+import com.perfectpitch.ui.theme.Green80
+import com.perfectpitch.ui.theme.Red80
+import com.perfectpitch.ui.theme.Yellow80
+import kotlin.math.abs
+
+/**
+ * Semi-circular pitch gauge showing cents offset from -50 to +50.
+ * Needle moves smoothly, color transitions from red→yellow→green.
+ */
+@Composable
+fun PitchGauge(
+    centsOff: Float,
+    modifier: Modifier = Modifier,
+    maxCents: Float = 50f
+) {
+    val clampedCents = centsOff.coerceIn(-maxCents, maxCents)
+    val normalizedPosition by animateFloatAsState(
+        targetValue = (clampedCents + maxCents) / (2 * maxCents),
+        animationSpec = tween(durationMillis = 100),
+        label = "gauge_position"
+    )
+
+    val gaugeColor by animateColorAsState(
+        targetValue = when {
+            abs(centsOff) <= 10f -> Green80
+            abs(centsOff) <= 25f -> Yellow80
+            else -> Red80
+        },
+        animationSpec = tween(durationMillis = 200),
+        label = "gauge_color"
+    )
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+        ) {
+            val arcWidth = size.width * 0.8f
+            val arcHeight = size.height * 1.5f
+            val arcLeft = (size.width - arcWidth) / 2
+            val arcTop = size.height * 0.1f
+
+            // Background arc
+            drawArc(
+                color = Color.Gray.copy(alpha = 0.3f),
+                startAngle = 180f,
+                sweepAngle = 180f,
+                useCenter = false,
+                topLeft = Offset(arcLeft, arcTop),
+                size = Size(arcWidth, arcHeight),
+                style = Stroke(width = 12f, cap = StrokeCap.Round)
+            )
+
+            // Colored indicator arc (center portion)
+            val indicatorSweep = 60f
+            val indicatorStart = 180f + 90f - indicatorSweep / 2
+            drawArc(
+                color = gaugeColor.copy(alpha = 0.4f),
+                startAngle = indicatorStart,
+                sweepAngle = indicatorSweep,
+                useCenter = false,
+                topLeft = Offset(arcLeft, arcTop),
+                size = Size(arcWidth, arcHeight),
+                style = Stroke(width = 12f, cap = StrokeCap.Round)
+            )
+
+            // Needle
+            val needleAngle = 180f + normalizedPosition * 180f
+            val needleRadians = Math.toRadians(needleAngle.toDouble())
+            val needleLength = arcWidth / 2 * 0.7f
+            val centerX = size.width / 2
+            val centerY = arcTop + arcHeight / 2
+
+            val needleEndX = centerX + (needleLength * kotlin.math.cos(needleRadians)).toFloat()
+            val needleEndY = centerY + (needleLength * kotlin.math.sin(needleRadians)).toFloat()
+
+            drawLine(
+                color = gaugeColor,
+                start = Offset(centerX, centerY),
+                end = Offset(needleEndX, needleEndY),
+                strokeWidth = 4f,
+                cap = StrokeCap.Round
+            )
+
+            // Center dot
+            drawCircle(
+                color = gaugeColor,
+                radius = 8f,
+                center = Offset(centerX, centerY)
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("♭", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = "${if (centsOff >= 0) "+" else ""}${"%.0f".format(centsOff)}¢",
+                style = MaterialTheme.typography.titleLarge,
+                color = gaugeColor,
+                textAlign = TextAlign.Center
+            )
+            Text("♯", style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+}

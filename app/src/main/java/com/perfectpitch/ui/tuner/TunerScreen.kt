@@ -1,0 +1,104 @@
+package com.perfectpitch.ui.tuner
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.perfectpitch.ui.components.NoteDisplay
+import com.perfectpitch.ui.components.PitchGauge
+import com.perfectpitch.ui.components.RequireMicPermission
+import com.perfectpitch.ui.theme.Green80
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TunerScreen(
+    onBack: () -> Unit,
+    viewModel: TunerViewModel = hiltViewModel()
+) {
+    val state by viewModel.state.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.startListening()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { viewModel.stopListening() }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Tune Instrument") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        RequireMicPermission {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.SpaceEvenly,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Note display
+                NoteDisplay(
+                    noteName = state.pitchResult.noteName,
+                    octave = state.pitchResult.octave,
+                    centsOff = state.pitchResult.centsOff,
+                    isSilent = state.pitchResult.isSilent
+                )
+
+                // Pitch gauge
+                PitchGauge(
+                    centsOff = state.pitchResult.centsOff,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Frequency display
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (state.pitchResult.isValid) {
+                        Text(
+                            text = "${"%.1f".format(state.pitchResult.frequency)} Hz",
+                            style = MaterialTheme.typography.headlineMedium,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Reference: ${"%.0f".format(state.referenceFrequency)} Hz",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    // In-tune indicator
+                    if (state.isInTune) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "✓ In Tune",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = Green80,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
