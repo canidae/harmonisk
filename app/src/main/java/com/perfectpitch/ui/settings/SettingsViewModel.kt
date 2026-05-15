@@ -37,6 +37,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.updateAudioLatency(ms) }
     }
 
+    fun updateMelodyAudioDelay(ms: Int) {
+        viewModelScope.launch { settingsRepository.updateMelodyAudioDelay(ms) }
+    }
+
     fun resetToDefaults() {
         viewModelScope.launch { settingsRepository.resetToDefaults() }
     }

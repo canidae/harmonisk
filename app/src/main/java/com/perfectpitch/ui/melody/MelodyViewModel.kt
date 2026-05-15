@@ -3,6 +3,8 @@ package com.perfectpitch.ui.melody
 import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.perfectpitch.audio.MelodyPlayer
+import com.perfectpitch.audio.MelodySynthesizer
 import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.MelodyRepository
 import com.perfectpitch.data.SettingsRepository
@@ -22,13 +24,17 @@ class MelodyViewModel @Inject constructor(
     private val melodyRepository: MelodyRepository,
     private val settingsRepository: SettingsRepository,
     private val scoringEngine: ScoringEngine,
-    private val noteUtils: NoteUtils
+    private val noteUtils: NoteUtils,
+    private val melodySynthesizer: MelodySynthesizer,
+    private val melodyPlayer: MelodyPlayer
 ) : ViewModel() {
 
     companion object {
         const val MIN_FALL_SPEED = 30f
         const val MAX_FALL_SPEED = 600f
         const val NOTE_RANGE_PADDING = 3
+        private const val CALIBRATION_SAMPLE_COUNT = 5
+        private const val CALIBRATION_EMA_ALPHA = 0.4
     }
 
     private val _state = MutableStateFlow(MelodyPlayState())
@@ -52,12 +58,23 @@ class MelodyViewModel @Inject constructor(
     private var latencyOffsetSeconds = 0.236
     private var originalMelodyTrack: MelodyTrack? = null
 
+    // Auto-calibration: measure input latency from first few notes
+    private var calibrationSamples = mutableListOf<Double>()
+    private var calibratedLatency: Double? = null
+    private var noteEnteredWaitingTime = 0.0  // song time when wait mode started for current note
+
+    // Melody audio output delay
+    private var melodyAudioDelayMs = 150L
+    private var synthOpenJob: Job? = null
+
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
                 pitchProcessor.setReferenceA4(settings.concertPitch)
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
                 latencyOffsetSeconds = settings.audioLatencyMs / 1000.0
+                melodyAudioDelayMs = settings.melodyAudioDelayMs.toLong()
+                melodyPlayer.setAudioOutputDelay(melodyAudioDelayMs)
             }
         }
     }
@@ -137,15 +154,64 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
+    // --- Melody preview / listen ---
+
+    /**
+     * Open the synthesizer with the provided context.
+     * Call this from the Composable layer where context is available.
+     */
+    fun initSynthesizer(context: android.content.Context) {
+        if (melodySynthesizer.isReady || synthOpenJob?.isActive == true) return
+        synthOpenJob = viewModelScope.launch {
+            try {
+                melodySynthesizer.open(context)
+            } catch (_: Exception) {
+                // Synth unavailable — melody playback will be silently disabled
+            }
+        }
+    }
+
+    /** Preview the loaded melody (audio only, standalone playback). */
+    fun previewMelody() {
+        val track = _state.value.melodyTrack ?: return
+        if (!melodySynthesizer.isReady) return
+        melodyPlayer.playWithTiming(track, viewModelScope, _state.value.tempoMultiplier)
+    }
+
+    /** Preview a specific melody info (loads and plays). */
+    fun previewMelody(info: MelodyRepository.MelodyInfo) {
+        val track = melodyRepository.loadMelody(info) ?: return
+        if (!melodySynthesizer.isReady) return
+        val tempo = _state.value.tempoMultiplier
+        melodyPlayer.playWithTiming(track, viewModelScope, tempo)
+    }
+
+    /** Stop any ongoing melody preview. */
+    fun stopPreview() {
+        melodyPlayer.stop()
+    }
+
+    /** Whether a melody preview is currently playing. */
+    val isPreviewPlaying: StateFlow<Boolean> = melodyPlayer.isPlaying
+
+    /** Toggle in-game melody audio playback. */
+    fun setPlayMelodyAudio(enabled: Boolean) {
+        _state.update { it.copy(playMelodyAudio = enabled) }
+        if (!enabled) {
+            melodyPlayer.resetGameSync()
+        }
+    }
+
     fun startPlaying() {
         val track = _state.value.melodyTrack ?: return
         if (_state.value.phase == PlayPhase.COUNTDOWN || _state.value.phase == PlayPhase.PLAYING) return
 
+        val countdownDuration = _state.value.countdownDurationSeconds
+
         _state.update {
             it.copy(
                 phase = PlayPhase.COUNTDOWN,
-                countdownValue = 3,
-                currentTimeSeconds = 0.0,
+                currentTimeSeconds = -countdownDuration,
                 noteResults = emptyMap(),
                 noteScores = emptyList(),
                 currentNoteIndex = -1,
@@ -162,23 +228,27 @@ class MelodyViewModel @Inject constructor(
         correctPitchFrameCount = 0
         currentNoteDetectedCorrectly = false
 
-        viewModelScope.launch {
-            for (i in 3 downTo 1) {
-                _state.update { it.copy(countdownValue = i) }
-                delay(1000)
-            }
+        // Reset auto-calibration for this playthrough
+        calibrationSamples.clear()
+        calibratedLatency = null
+        noteEnteredWaitingTime = 0.0
 
-            _state.update { it.copy(phase = PlayPhase.PLAYING) }
+        // Stop any preview playback and reset game sync
+        melodyPlayer.stop()
+        melodyPlayer.resetGameSync()
 
-            startPitchDetection()
-            startPlaybackTimer()
-        }
+        // Start the playback timer immediately — bars begin falling during countdown.
+        // Time counts from -countdownDuration toward 0.0.
+        // Pitch detection starts when currentTimeSeconds reaches 0.0 (transition to PLAYING).
+        pauseOffset = -countdownDuration
+        startPlaybackTimer()
     }
 
     fun pause() {
         pauseOffset = _state.value.currentTimeSeconds
         playbackJob?.cancel()
         pitchJob?.cancel()
+        melodyPlayer.resetGameSync()
         wasWaitingForNote = isWaitingForNote
         isWaitingForNote = false
         _state.update { it.copy(phase = PlayPhase.PAUSED, isListening = false) }
@@ -189,16 +259,22 @@ class MelodyViewModel @Inject constructor(
             isWaitingForNote = true
             wasWaitingForNote = false
             _state.update { it.copy(phase = PlayPhase.WAITING_FOR_NOTE) }
+        } else if (_state.value.currentTimeSeconds < 0.0) {
+            // Still in countdown period — resume countdown
+            _state.update { it.copy(phase = PlayPhase.COUNTDOWN) }
         } else {
             _state.update { it.copy(phase = PlayPhase.PLAYING) }
         }
-        startPitchDetection()
+        if (_state.value.currentTimeSeconds >= 0.0) {
+            startPitchDetection()
+        }
         startPlaybackTimer()
     }
 
     fun stop() {
         playbackJob?.cancel()
         pitchJob?.cancel()
+        melodyPlayer.resetGameSync()
         pauseOffset = 0.0
         isWaitingForNote = false
         wasWaitingForNote = false
@@ -251,10 +327,10 @@ class MelodyViewModel @Inject constructor(
         playbackJob = viewModelScope.launch {
             val track = _state.value.melodyTrack ?: return@launch
             val tempo = _state.value.tempoMultiplier
+            var pitchDetectionStarted = _state.value.phase == PlayPhase.PLAYING
 
             while (isActive) {
                 if (isWaitingForNote) {
-                    // Freeze time progression while waiting for correct note
                     delay(16)
                     continue
                 }
@@ -262,13 +338,30 @@ class MelodyViewModel @Inject constructor(
                 val elapsed = (SystemClock.elapsedRealtime() - playbackStartTime) / 1000.0 * tempo
                 val currentTime = pauseOffset + elapsed
 
+                // Transition from COUNTDOWN to PLAYING when time reaches 0.0
+                if (!pitchDetectionStarted && currentTime >= 0.0) {
+                    pitchDetectionStarted = true
+                    _state.update { it.copy(phase = PlayPhase.PLAYING) }
+                    startPitchDetection()
+                }
+
                 if (currentTime >= track.durationSeconds + 1.0) {
                     finishPlaying()
                     break
                 }
 
                 _state.update { it.copy(currentTimeSeconds = currentTime) }
-                updateCurrentNote(currentTime)
+
+                // Only track notes once we're past the countdown
+                if (currentTime >= 0.0) {
+                    updateCurrentNote(currentTime)
+
+                    // Feed melody audio to synthesizer if enabled
+                    if (_state.value.playMelodyAudio && melodySynthesizer.isReady) {
+                        melodyPlayer.updateGameTime(currentTime, track)
+                    }
+                }
+
                 delay(16)
             }
         }
@@ -329,6 +422,7 @@ class MelodyViewModel @Inject constructor(
             // In wait mode, freeze time until correct note is played
             if (_state.value.waitMode) {
                 isWaitingForNote = true
+                noteEnteredWaitingTime = currentTime
                 _state.update { it.copy(phase = PlayPhase.WAITING_FOR_NOTE) }
             }
         } else if (noteIndex < 0 && _state.value.currentNoteIndex >= 0) {
@@ -363,6 +457,19 @@ class MelodyViewModel @Inject constructor(
         val isCorrectNote = detectedMidi == expectedMidi && abs(centsOff) <= 50f
 
         if (isWaitingForNote) {
+            // Auto-calibration: any note detection while waiting records a latency sample.
+            // We assume the user started playing when the bar hit the piano, so
+            // the delta between noteEnteredWaitingTime and now is input latency.
+            if (calibrationSamples.size < CALIBRATION_SAMPLE_COUNT) {
+                val expectedNoteStartSec = track.noteStartSeconds(expectedNote)
+                val detectionTimeSec = _state.value.currentTimeSeconds
+                val delta = detectionTimeSec - expectedNoteStartSec
+                if (delta > 0) {
+                    calibrationSamples.add(delta)
+                    applyCalibration()
+                }
+            }
+
             if (isCorrectNote) {
                 // Correct note played — unfreeze
                 currentNoteDetectedCorrectly = true
@@ -388,6 +495,26 @@ class MelodyViewModel @Inject constructor(
                 currentNoteDetectedCorrectly = true
                 noteFirstDetectedSongTime = _state.value.currentTimeSeconds - latencyOffsetSeconds
             }
+        }
+    }
+
+    /**
+     * Apply auto-calibration from collected latency samples.
+     * Uses EMA to smooth the offset and updates latencyOffsetSeconds.
+     */
+    private fun applyCalibration() {
+        if (calibrationSamples.isEmpty()) return
+
+        val newSample = calibrationSamples.last()
+        calibratedLatency = if (calibratedLatency == null) {
+            newSample
+        } else {
+            CALIBRATION_EMA_ALPHA * newSample + (1 - CALIBRATION_EMA_ALPHA) * calibratedLatency!!
+        }
+
+        // Update the latency offset used for note detection timing
+        calibratedLatency?.let { calibrated ->
+            latencyOffsetSeconds = calibrated
         }
     }
 
@@ -478,6 +605,7 @@ class MelodyViewModel @Inject constructor(
 
         playbackJob?.cancel()
         pitchJob?.cancel()
+        melodyPlayer.resetGameSync()
         pauseOffset = 0.0
         isWaitingForNote = false
 
@@ -505,5 +633,7 @@ class MelodyViewModel @Inject constructor(
         super.onCleared()
         playbackJob?.cancel()
         pitchJob?.cancel()
+        melodyPlayer.stop()
+        melodySynthesizer.close()
     }
 }

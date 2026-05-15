@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Pause
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -40,14 +42,17 @@ fun MelodyPlayScreen(
     viewModel: MelodyViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
     val density = LocalDensity.current
+    val context = LocalContext.current
     val rightPaddingPx = with(density) { BUTTON_AREA_WIDTH.toPx() }
     var showResultsModal by remember { mutableStateOf(false) }
 
     KeepScreenOn()
 
-    // Auto-start playing when entering this screen
+    // Initialize synthesizer and auto-start playing when entering this screen
     LaunchedEffect(Unit) {
+        viewModel.initSynthesizer(context)
         if (state.phase == PlayPhase.NOT_STARTED) {
             viewModel.startPlaying()
         }
@@ -250,7 +255,36 @@ fun MelodyPlayScreen(
                                 steps = 71,
                                 modifier = Modifier.padding(horizontal = 16.dp)
                             )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("Play melody audio") },
+                                trailingIcon = {
+                                    Switch(
+                                        checked = state.playMelodyAudio,
+                                        onCheckedChange = { viewModel.setPlayMelodyAudio(it) },
+                                        modifier = Modifier.height(20.dp)
+                                    )
+                                },
+                                onClick = { viewModel.setPlayMelodyAudio(!state.playMelodyAudio) }
+                            )
                         }
+                    }
+
+                    // Listen to melody button
+                    IconButton(
+                        onClick = {
+                            if (isPreviewPlaying) viewModel.stopPreview() else viewModel.previewMelody()
+                        },
+                        modifier = Modifier
+                            .size(OVERLAY_BUTTON_SIZE)
+                            .background(OVERLAY_BG, CircleShape)
+                    ) {
+                        Icon(
+                            Icons.Filled.MusicNote,
+                            contentDescription = if (isPreviewPlaying) "Stop listening" else "Listen to melody",
+                            tint = if (isPreviewPlaying) Color(0xFF90CAF9) else OVERLAY_ICON_TINT,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
 
                     // Play/Pause button

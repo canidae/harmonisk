@@ -24,10 +24,9 @@ class ScoringEngine {
         const val OK_POINTS = 25
         const val MISS_POINTS = 0
 
-        // Scoring weights
-        const val PITCH_WEIGHT = 0.4f
-        const val DURATION_WEIGHT = 0.3f
-        const val TIMING_WEIGHT = 0.3f
+        // Scoring weights — timing excluded (latency-agnostic)
+        const val PITCH_WEIGHT = 0.6f
+        const val DURATION_WEIGHT = 0.4f
     }
 
     /**
@@ -36,18 +35,16 @@ class ScoringEngine {
     fun scoreNote(result: NotePerformance): NoteScore {
         val pitchScore = scorePitch(result.centsOff)
         val durationScore = scoreDuration(result.actualDurationMs, result.expectedDurationMs)
-        val timingScore = scoreTiming(result.timingOffsetMs, result.expectedDurationMs)
 
         val overallScore = (
             pitchScore * PITCH_WEIGHT +
-            durationScore * DURATION_WEIGHT +
-            timingScore * TIMING_WEIGHT
+            durationScore * DURATION_WEIGHT
         )
 
         return NoteScore(
             pitchScore = pitchScore,
             durationScore = durationScore,
-            timingScore = timingScore,
+            timingScore = 0f,
             overallScore = overallScore,
             pitchAccuracy = getPitchAccuracy(result.centsOff)
         )

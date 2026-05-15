@@ -116,6 +116,32 @@ fun SettingsScreen(
                 }
             }
 
+            // Melody audio output delay
+            SettingSection(title = "Melody Audio Delay") {
+                Text(
+                    text = "Output delay: ${settings.melodyAudioDelayMs} ms",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = "Increase if melody audio feels delayed with Bluetooth headphones",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Slider(
+                    value = settings.melodyAudioDelayMs.toFloat(),
+                    onValueChange = { viewModel.updateMelodyAudioDelay(it.toInt()) },
+                    valueRange = -200f..500f,
+                    steps = 69
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("-200 ms", style = MaterialTheme.typography.labelLarge)
+                    Text("500 ms", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+
             // Dark theme
             SettingSection(title = "Appearance") {
                 Row(

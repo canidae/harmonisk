@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,12 +30,32 @@ fun MelodyScreen(
     viewModel: MelodyViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsStateWithLifecycle()
+    var previewingMelody by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        viewModel.initSynthesizer(context)
+    }
+
+    LaunchedEffect(isPreviewPlaying) {
+        if (!isPreviewPlaying) {
+            previewingMelody = null
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.stopPreview()
+        }
+    }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
             if (viewModel.loadMelodyFromUri(it)) {
+                viewModel.stopPreview()
+                previewingMelody = null
                 onStartPlay()
             } else {
                 Toast.makeText(context, "Failed to load MIDI file", Toast.LENGTH_SHORT).show()
@@ -74,6 +97,8 @@ fun MelodyScreen(
                     items(melodies) { info ->
                         Card(
                             onClick = {
+                                viewModel.stopPreview()
+                                previewingMelody = null
                                 if (viewModel.loadMelody(info)) {
                                     onStartPlay()
                                 } else {
@@ -85,12 +110,12 @@ fun MelodyScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp),
+                                    .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text("🎵", style = MaterialTheme.typography.headlineMedium)
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Column {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(info.name, style = MaterialTheme.typography.titleMedium)
                                     if (info.isBundled) {
                                         Text(
@@ -99,6 +124,24 @@ fun MelodyScreen(
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
+                                }
+                                val isThisPreviewing = previewingMelody == info.name && isPreviewPlaying
+                                IconButton(
+                                    onClick = {
+                                        if (isThisPreviewing) {
+                                            viewModel.stopPreview()
+                                            previewingMelody = null
+                                        } else {
+                                            previewingMelody = info.name
+                                            viewModel.previewMelody(info)
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = if (isThisPreviewing) Icons.Filled.Close else Icons.Filled.PlayArrow,
+                                        contentDescription = if (isThisPreviewing) "Stop preview" else "Preview melody",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             }
                         }

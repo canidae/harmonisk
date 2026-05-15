@@ -9,7 +9,7 @@ data class MelodyPlayState(
     val phase: PlayPhase = PlayPhase.NOT_STARTED,
     val melodyTrack: MelodyTrack? = null,
     val currentTimeSeconds: Double = 0.0,
-    val countdownValue: Int = 3,
+    val countdownDurationSeconds: Double = 3.0,
     val noteResults: Map<Int, NoteResultState> = emptyMap(),
     val noteScores: List<NoteScore> = emptyList(),
     val currentNoteIndex: Int = -1,
@@ -20,6 +20,8 @@ data class MelodyPlayState(
     val transposeSemitones: Int = 0,
     val melodyScore: MelodyScore? = null,
     val isListening: Boolean = false,
+    // Melody audio playback during gameplay (off by default)
+    val playMelodyAudio: Boolean = false,
     // View controls
     val fallSpeedPxPerSec: Float = 150f,
     val songTimeOffsetSeconds: Double = 0.0,
@@ -27,7 +29,11 @@ data class MelodyPlayState(
     val viewMaxMidi: Float = 72f,
     // Continuous pitch trace recorded during playback
     val pitchTrace: List<PitchFrame> = emptyList()
-)
+) {
+    /** Countdown display value derived from currentTimeSeconds (3, 2, 1) */
+    val countdownValue: Int
+        get() = kotlin.math.ceil(-currentTimeSeconds).toInt().coerceIn(1, countdownDurationSeconds.toInt())
+}
 
 data class PitchFrame(
     val timeSeconds: Double,

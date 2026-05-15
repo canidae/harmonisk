@@ -2,6 +2,8 @@ package com.perfectpitch.di
 
 import android.content.Context
 import com.perfectpitch.audio.AudioCaptureService
+import com.perfectpitch.audio.MelodyPlayer
+import com.perfectpitch.audio.MelodySynthesizer
 import com.perfectpitch.audio.PitchDetector
 import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.MelodyRepository
@@ -56,4 +58,14 @@ object AppModule {
     @Provides
     @Singleton
     fun provideScoringEngine(): ScoringEngine = ScoringEngine()
+
+    @Provides
+    @Singleton
+    fun provideMelodySynthesizer(): MelodySynthesizer = MelodySynthesizer()
+
+    @Provides
+    @Singleton
+    fun provideMelodyPlayer(
+        synthesizer: MelodySynthesizer
+    ): MelodyPlayer = MelodyPlayer(synthesizer)
 }
