@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.perfectpitch.ui.components.KeepScreenOn
 import com.perfectpitch.ui.components.RequireMicPermission
 
 @Composable
@@ -21,6 +22,8 @@ fun MelodyPlayScreen(
     viewModel: MelodyViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+
+    KeepScreenOn()
 
     // Navigate to results when finished
     LaunchedEffect(state.phase) {

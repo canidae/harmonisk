@@ -1,5 +1,6 @@
 package com.perfectpitch.ui.tuner
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -7,12 +8,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.perfectpitch.ui.components.NoteDisplay
 import com.perfectpitch.ui.components.PitchGauge
 import com.perfectpitch.ui.components.RequireMicPermission
+import com.perfectpitch.ui.components.KeepScreenOn
 import com.perfectpitch.ui.theme.Green80
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -23,13 +26,7 @@ fun TunerScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    LaunchedEffect(Unit) {
-        viewModel.startListening()
-    }
-
-    DisposableEffect(Unit) {
-        onDispose { viewModel.stopListening() }
-    }
+    KeepScreenOn()
 
     Scaffold(
         topBar = {
@@ -44,6 +41,16 @@ fun TunerScreen(
         }
     ) { padding ->
         RequireMicPermission {
+            LaunchedEffect(Unit) {
+                viewModel.startListening()
+            }
+
+            DisposableEffect(Unit) {
+                onDispose { viewModel.stopListening() }
+            }
+
+            val contentAlpha = if (state.isHeld) 0.5f else 1f
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -53,29 +60,43 @@ fun TunerScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Note display
-                NoteDisplay(
-                    noteName = state.pitchResult.noteName,
-                    octave = state.pitchResult.octave,
-                    centsOff = state.pitchResult.centsOff,
-                    isSilent = state.pitchResult.isSilent
-                )
+                Box(modifier = Modifier.alpha(contentAlpha)) {
+                    NoteDisplay(
+                        noteName = state.displayedResult.noteName,
+                        octave = state.displayedResult.octave,
+                        centsOff = state.smoothedCentsOff,
+                        isSilent = !state.displayedResult.isValid
+                    )
+                }
 
                 // Pitch gauge
-                PitchGauge(
-                    centsOff = state.pitchResult.centsOff,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Box(modifier = Modifier.alpha(contentAlpha)) {
+                    PitchGauge(
+                        centsOff = state.smoothedCentsOff,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 // Frequency display
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.alpha(contentAlpha)
                 ) {
-                    if (state.pitchResult.isValid) {
+                    if (state.displayedResult.isValid) {
                         Text(
-                            text = "${"%.1f".format(state.pitchResult.frequency)} Hz",
+                            text = "${"%.1f".format(state.displayedResult.frequency)} Hz",
                             style = MaterialTheme.typography.headlineMedium,
                             textAlign = TextAlign.Center
                         )
+
+                        if (state.isHeld) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "held",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))

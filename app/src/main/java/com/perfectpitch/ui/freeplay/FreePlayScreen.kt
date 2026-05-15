@@ -1,167 +1,207 @@
 package com.perfectpitch.ui.freeplay
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FitScreen
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.perfectpitch.ui.components.AccuracyIndicator
-import com.perfectpitch.ui.components.NoteDisplay
-import com.perfectpitch.ui.components.PitchGauge
+import com.perfectpitch.ui.components.KeepScreenOn
 import com.perfectpitch.ui.components.RequireMicPermission
-import com.perfectpitch.ui.theme.Green80
-import com.perfectpitch.ui.theme.Red80
-import com.perfectpitch.ui.theme.Yellow80
-import kotlin.math.abs
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val BUTTON_AREA_WIDTH = 52.dp
+private val OVERLAY_BG = Color(0xAA1A1A2E)
+private val OVERLAY_ICON_TINT = Color.White.copy(alpha = 0.9f)
+private val OVERLAY_BUTTON_SIZE = 40.dp
+
 @Composable
 fun FreePlayScreen(
     onBack: () -> Unit,
     viewModel: FreePlayViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val density = LocalDensity.current
 
+    KeepScreenOn()
+
+    // Animation frame counter
+    var frameTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
-        viewModel.startListening()
-    }
-
-    DisposableEffect(Unit) {
-        onDispose { viewModel.stopListening() }
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Free Play") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                }
-            )
+        while (true) {
+            frameTime = System.currentTimeMillis()
+            kotlinx.coroutines.delay(16L)
         }
-    ) { padding ->
-        RequireMicPermission {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Session stats
-                SessionStatsBar(state.sessionStats)
+    }
 
-                Spacer(modifier = Modifier.height(16.dp))
+    val effectiveTime = viewModel.getEffectiveTime(frameTime)
+    val rightPaddingPx = with(density) { BUTTON_AREA_WIDTH.toPx() }
 
-                // Note display
-                NoteDisplay(
-                    noteName = state.pitchResult.noteName,
-                    octave = state.pitchResult.octave,
-                    centsOff = state.pitchResult.centsOff,
-                    isSilent = state.pitchResult.isSilent
-                )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .systemBarsPadding()
+            .pointerInput(Unit) {
+                detectTransformGestures { centroid, pan, zoom, _ ->
+                    val canvasWidth = size.width.toFloat()
+                    val canvasHeight = size.height.toFloat()
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    // Horizontal zoom (pinch): adjust visible key range
+                    if (zoom != 1f) {
+                        val focusFractionX = centroid.x / canvasWidth
+                        viewModel.onHorizontalZoom(zoom, focusFractionX)
+                        viewModel.onVerticalZoom(zoom)
+                    }
 
-                // Accuracy indicator
-                if (state.pitchResult.isValid) {
-                    AccuracyIndicator(centsOff = state.pitchResult.centsOff)
-                }
+                    // Pan (drag): scroll
+                    if (pan.x != 0f || pan.y != 0f) {
+                        val midiRange = state.viewMaxMidi - state.viewMinMidi
+                        val midiPerPx = midiRange / canvasWidth
+                        viewModel.onHorizontalScroll(pan.x * midiPerPx)
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Pitch gauge (smaller)
-                PitchGauge(
-                    centsOff = state.pitchResult.centsOff,
-                    modifier = Modifier.fillMaxWidth(0.7f)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Note history
-                Text(
-                    text = "Recent Notes",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.align(Alignment.Start)
-                )
-
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    items(state.noteHistory) { entry ->
-                        NoteHistoryItem(entry)
+                        // Vertical pan: scroll through time (negate so drag-up = see older notes)
+                        val msPerPx = 1000f / (state.fallSpeedPxPerSec * density.density)
+                        viewModel.onVerticalScroll((-pan.y * msPerPx).toLong())
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun SessionStatsBar(stats: SessionStats) {
-    Card(
-        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
+        RequireMicPermission {
+            LaunchedEffect(Unit) {
+                viewModel.startListening()
+            }
+
+            DisposableEffect(Unit) {
+                onDispose { viewModel.stopListening() }
+            }
+
+            FreePlayCanvas(
+                state = state,
+                currentTimeMs = effectiveTime,
+                rightPaddingPx = rightPaddingPx,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        // Scroll-back indicator (centered chip below piano)
+        if (state.timeOffsetMs > 0L) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = PIANO_HEIGHT_DP.dp + 8.dp)
+                    .clickable { viewModel.scrollToTop() },
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xBB1A1A2E),
+                border = BorderStroke(1.dp, Color(0x30FFFFFF))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.KeyboardArrowUp,
+                        contentDescription = null,
+                        tint = OVERLAY_ICON_TINT,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        "Live view above",
+                        color = OVERLAY_ICON_TINT,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+            }
+        }
+
+        // Right-side button column (below piano keys)
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
+                .align(Alignment.TopEnd)
+                .padding(top = PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            StatItem("Notes", "${stats.totalNotes}")
-            StatItem("Accuracy", "${"%.0f".format(stats.accuracyPercent)}%")
-            StatItem("Avg Off", "${"%.0f".format(stats.averageCentsOff)}¢")
+            // Config dropdown
+            var showConfigMenu by remember { mutableStateOf(false) }
+            Box {
+                IconButton(
+                    onClick = { showConfigMenu = true },
+                    modifier = Modifier
+                        .size(OVERLAY_BUTTON_SIZE)
+                        .background(OVERLAY_BG, CircleShape)
+                ) {
+                    Icon(
+                        Icons.Filled.Settings,
+                        contentDescription = "Settings",
+                        tint = OVERLAY_ICON_TINT,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = showConfigMenu,
+                    onDismissRequest = { showConfigMenu = false },
+                    offset = DpOffset((-120).dp, 0.dp)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Time progression") },
+                        trailingIcon = {
+                            Switch(
+                                checked = state.timeProgressionEnabled,
+                                onCheckedChange = { viewModel.toggleTimeProgression() },
+                                modifier = Modifier.height(20.dp)
+                            )
+                        },
+                        onClick = { viewModel.toggleTimeProgression() }
+                    )
+                }
+            }
+
+            // Scroll-to-top button (only when scrolled back)
+            if (state.timeOffsetMs > 0L) {
+                IconButton(
+                    onClick = { viewModel.scrollToTop() },
+                    modifier = Modifier
+                        .size(OVERLAY_BUTTON_SIZE)
+                        .background(OVERLAY_BG, CircleShape)
+                ) {
+                    Icon(
+                        Icons.Filled.KeyboardArrowUp,
+                        contentDescription = "Scroll to top",
+                        tint = OVERLAY_ICON_TINT,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // Auto-fit button
+            IconButton(
+                onClick = { viewModel.autoFit() },
+                modifier = Modifier
+                    .size(OVERLAY_BUTTON_SIZE)
+                    .background(OVERLAY_BG, CircleShape)
+            ) {
+                Icon(
+                    Icons.Filled.FitScreen,
+                    contentDescription = "Fit to content",
+                    tint = OVERLAY_ICON_TINT,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
-    }
-}
-
-@Composable
-private fun StatItem(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = value, style = MaterialTheme.typography.titleLarge)
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun NoteHistoryItem(entry: NoteHistoryEntry) {
-    val color = when {
-        abs(entry.centsOff) <= 10f -> Green80
-        abs(entry.centsOff) <= 25f -> Yellow80
-        else -> Red80
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp, horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = "${entry.noteName}${entry.octave}",
-            style = MaterialTheme.typography.bodyLarge,
-            color = color
-        )
-        Text(
-            text = "${if (entry.centsOff >= 0) "+" else ""}${"%.0f".format(entry.centsOff)}¢",
-            style = MaterialTheme.typography.bodyLarge,
-            color = color,
-            textAlign = TextAlign.End
-        )
     }
 }
