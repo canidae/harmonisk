@@ -252,10 +252,11 @@ class MelodyViewModel @Inject constructor(
         saveMelodySettings()
     }
 
-    /** Enter READY phase — melody visible but not playing. */
+    /** Enter READY phase — melody visible but not playing. Bars pre-positioned at countdown offset. */
     fun enterReadyPhase() {
         if (_state.value.phase == PlayPhase.NOT_STARTED) {
-            _state.update { it.copy(phase = PlayPhase.READY) }
+            val countdown = _state.value.countdownDurationSeconds
+            _state.update { it.copy(phase = PlayPhase.READY, currentTimeSeconds = -countdown) }
         }
     }
 

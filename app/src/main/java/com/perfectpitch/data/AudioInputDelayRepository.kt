@@ -37,6 +37,7 @@ class AudioInputDelayRepository(
         private val PROFILES_KEY = stringPreferencesKey("input_delay_profiles_json")
         private val CALIBRATION_VERSION_KEY = intPreferencesKey("calibration_version")
         private const val BASELINE_KEY = "__baseline_input_delay"
+        private const val BUILTIN_OFFSET_KEY = "__builtin_input_offset"
         /** Bump this when audio pipeline changes invalidate existing calibration. */
         private const val CURRENT_CALIBRATION_VERSION = 3
 
@@ -76,7 +77,7 @@ class AudioInputDelayRepository(
     /**
      * Emits the delay (ms) for the currently active audio input device.
      *
-     * For built-in mic: uses live measured pipeline delay + algorithm offset.
+     * For built-in mic: uses live measured pipeline delay + algorithm offset + user offset.
      * For external devices: uses calibrated/default values.
      */
     val activeDelay: Flow<Int> = combine(
@@ -85,10 +86,9 @@ class AudioInputDelayRepository(
         audioCaptureService.measuredPipelineDelayMs
     ) { device, profiles, measuredDelay ->
         if (device.type == AudioInputDeviceType.BUILTIN && measuredDelay != null) {
-            // Direct measurement: pipeline delay + algorithm offset for half read chunk
-            (measuredDelay + AudioCaptureService.ALGORITHM_OFFSET_MS).toInt()
+            val userOffset = profiles[BUILTIN_OFFSET_KEY] ?: 0
+            (measuredDelay + AudioCaptureService.ALGORITHM_OFFSET_MS).toInt() + userOffset
         } else {
-            // External device or no measurement: use calibrated value
             profiles[device.deviceKey] ?: defaultDelay(device.type)
         }
     }
@@ -120,6 +120,21 @@ class AudioInputDelayRepository(
             prefs[PROFILES_KEY] = serializeProfiles(current)
         }
     }
+
+    /**
+     * Store a user offset (ms) for the built-in mic.
+     * The total delay = measured_pipeline + algorithm_offset + this offset.
+     */
+    suspend fun setBuiltinOffset(offsetMs: Int) {
+        context.audioInputDelayStore.edit { prefs ->
+            val current = parseProfiles(prefs[PROFILES_KEY]).toMutableMap()
+            current[BUILTIN_OFFSET_KEY] = offsetMs.coerceIn(-200, 200)
+            prefs[PROFILES_KEY] = serializeProfiles(current)
+        }
+    }
+
+    /** Get the current built-in mic user offset (ms). */
+    fun getBuiltinOffset(): Flow<Int> = profilesFlow.map { it[BUILTIN_OFFSET_KEY] ?: 0 }
 
     /** Clear baseline calibration data so the user is prompted to re-calibrate. */
     suspend fun clearBaseline() {

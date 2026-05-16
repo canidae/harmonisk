@@ -158,28 +158,6 @@ fun MelodyPlayScreen(
                     }
                 }
 
-                // Waiting indicator
-                if (state.phase == PlayPhase.WAITING_FOR_NOTE) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 16.dp),
-                        contentAlignment = Alignment.TopCenter
-                    ) {
-                        Surface(
-                            color = Color(0xCC1A1A2E),
-                            shape = MaterialTheme.shapes.small
-                        ) {
-                            Text(
-                                text = "Play the note!",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
-                        }
-                    }
-                }
-
                 // Top-left: progress info
                 if (state.phase == PlayPhase.PLAYING || state.phase == PlayPhase.PAUSED || state.phase == PlayPhase.WAITING_FOR_NOTE) {
                     Row(

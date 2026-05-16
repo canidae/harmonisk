@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.perfectpitch.audio.AudioDeviceMonitor
 import com.perfectpitch.audio.AudioOutputDeviceType
+import com.perfectpitch.audio.MelodySynthesizer
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -20,14 +21,15 @@ private val Context.audioDelayStore: DataStore<Preferences> by preferencesDataSt
 /**
  * Stores per-device audio delay profiles.
  *
- * Each profile is keyed by the device key from [AudioDeviceMonitor] (e.g.
- * "speaker", "wired", "bluetooth_AirPods Pro") and maps to a delay in ms.
+ * For built-in speaker: uses live measurements from [MelodySynthesizer.measuredOutputDelayMs]
+ * when available. Falls back to stored/default values.
  *
- * Smart defaults: 0 ms for speaker and wired, 150 ms for Bluetooth.
+ * For external devices (wired/BT): uses calibrated values from DataStore.
  */
 class AudioDelayProfileRepository(
     private val context: Context,
-    private val audioDeviceMonitor: AudioDeviceMonitor
+    private val audioDeviceMonitor: AudioDeviceMonitor,
+    private val melodySynthesizer: MelodySynthesizer
 ) {
     companion object {
         private val PROFILES_KEY = stringPreferencesKey("delay_profiles_json")
@@ -45,13 +47,20 @@ class AudioDelayProfileRepository(
 
     /**
      * Emits the delay (ms) for the currently active audio output device.
-     * Automatically switches when the device changes.
+     *
+     * For built-in speaker: uses live measured output delay when synth is running.
+     * For external devices: uses calibrated/default values.
      */
     val activeDelay: Flow<Int> = combine(
         audioDeviceMonitor.currentDevice,
-        profilesFlow
-    ) { device, profiles ->
-        profiles[device.deviceKey] ?: defaultDelay(device.type)
+        profilesFlow,
+        melodySynthesizer.measuredOutputDelayMs
+    ) { device, profiles, measuredDelay ->
+        if (device.type == AudioOutputDeviceType.SPEAKER && measuredDelay != null) {
+            measuredDelay.toInt()
+        } else {
+            profiles[device.deviceKey] ?: defaultDelay(device.type)
+        }
     }
 
     /** Get the stored delay for a specific device key, or the smart default. */

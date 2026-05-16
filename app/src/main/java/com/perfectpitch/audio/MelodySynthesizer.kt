@@ -2,8 +2,12 @@ package com.perfectpitch.audio
 
 import android.media.AudioAttributes
 import android.media.AudioFormat
+import android.media.AudioTimestamp
 import android.media.AudioTrack
 import android.util.Log
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.PI
 import kotlin.math.pow
 import kotlin.math.sin
@@ -13,16 +17,6 @@ import kotlin.math.sin
  *
  * Supports polyphony (multiple simultaneous notes) and a simple ADSR envelope
  * to avoid clicks on note-on/off transitions.
- *
- * Usage:
- * ```
- * val synth = MelodySynthesizer()
- * synth.open()
- * synth.noteOn(channel = 0, note = 60, velocity = 100)
- * delay(500)
- * synth.noteOff(channel = 0, note = 60)
- * synth.close()
- * ```
  */
 class MelodySynthesizer {
 
@@ -34,6 +28,8 @@ class MelodySynthesizer {
         private const val DECAY_MS = 50f
         private const val SUSTAIN_LEVEL = 0.7f
         private const val RELEASE_MS = 30f
+        /** Measure output delay every N render calls (~every 0.5s) */
+        private const val MEASURE_INTERVAL = (SAMPLE_RATE / BUFFER_FRAMES / 2)
     }
 
     private var audioTrack: AudioTrack? = null
@@ -44,6 +40,14 @@ class MelodySynthesizer {
     private val noteLock = Any()
 
     val isReady: Boolean get() = audioTrack != null && running
+
+    /**
+     * Measured output pipeline delay (ms) from AudioTrack.getTimestamp().
+     * This is the delay from our write() call to when audio is presented at the speaker.
+     * null if not yet measured or timestamps unavailable.
+     */
+    private val _measuredOutputDelayMs = MutableStateFlow<Float?>(null)
+    val measuredOutputDelayMs: StateFlow<Float?> = _measuredOutputDelayMs.asStateFlow()
 
     private data class NoteState(
         val frequency: Float,
@@ -58,9 +62,6 @@ class MelodySynthesizer {
 
     /**
      * Create the AudioTrack and start the rendering thread.
-     * No special permissions or hardware required — works on all Android devices.
-     *
-     * @param context Unused — kept for API compatibility with callers.
      */
     @Suppress("UNUSED_PARAMETER")
     suspend fun open(context: android.content.Context? = null) {
@@ -94,13 +95,26 @@ class MelodySynthesizer {
         audioTrack = track
         track.play()
         running = true
+        _measuredOutputDelayMs.value = null
 
         renderThread = Thread({
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
             val buffer = ShortArray(BUFFER_FRAMES)
+            var totalFramesWritten = 0L
+            val timestamp = AudioTimestamp()
+            var measureCounter = 0
+
             while (running) {
                 renderBuffer(buffer)
                 track.write(buffer, 0, buffer.size)
+                totalFramesWritten += buffer.size
+
+                // Periodically measure output delay
+                measureCounter++
+                if (measureCounter >= MEASURE_INTERVAL) {
+                    measureCounter = 0
+                    measureOutputDelay(track, timestamp, totalFramesWritten)
+                }
             }
         }, "SynthRenderThread").apply { start() }
 
@@ -154,9 +168,38 @@ class MelodySynthesizer {
             Log.w(TAG, "Error closing AudioTrack", e)
         }
         audioTrack = null
+        _measuredOutputDelayMs.value = null
 
         synchronized(noteLock) { activeNotes.clear() }
         Log.d(TAG, "Synthesizer closed")
+    }
+
+    /**
+     * Measure the output pipeline delay using AudioTrack.getTimestamp().
+     * Computes how far ahead our written frames are from the presentation point.
+     */
+    private fun measureOutputDelay(
+        track: AudioTrack,
+        timestamp: AudioTimestamp,
+        totalFramesWritten: Long
+    ) {
+        if (!track.getTimestamp(timestamp)) return
+
+        val now = System.nanoTime()
+        // How many frames have we written beyond what's been presented?
+        val framesAhead = totalFramesWritten - timestamp.framePosition
+        if (framesAhead < 0) return
+
+        // Extrapolate: when will the last written frame be presented?
+        val presentationTimeNs = timestamp.nanoTime +
+            framesAhead * 1_000_000_000L / SAMPLE_RATE
+        val delayNs = presentationTimeNs - now
+        if (delayNs < 0) return // Already presented
+
+        val delayMs = delayNs / 1_000_000f
+        if (delayMs > 500f) return // Sanity check
+
+        _measuredOutputDelayMs.value = delayMs
     }
 
     private fun renderBuffer(buffer: ShortArray) {
