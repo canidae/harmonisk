@@ -35,6 +35,7 @@ fun FreePlayScreen(
     viewModel: FreePlayViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val continuousPitchLine by viewModel.continuousPitchLine.collectAsState()
     val density = LocalDensity.current
 
     KeepScreenOn()
@@ -95,11 +96,13 @@ fun FreePlayScreen(
                     activeNote = state.activeNote,
                     currentTimeMs = effectiveTime,
                     timeOffsetMs = state.timeOffsetMs,
-                    fallSpeedPxPerSec = state.fallSpeedPxPerSec
+                    fallSpeedPxPerSec = state.fallSpeedPxPerSec,
+                    pitchTrace = state.pitchTrace
                 ),
                 pianoAtBottom = false,
                 viewMinMidi = state.viewMinMidi,
                 viewMaxMidi = state.viewMaxMidi,
+                continuousPitchLine = continuousPitchLine,
                 rightPaddingPx = rightPaddingPx,
                 modifier = Modifier.fillMaxSize()
             )

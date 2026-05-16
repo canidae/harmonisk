@@ -1,6 +1,7 @@
 package com.perfectpitch.ui.melody
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -43,6 +44,7 @@ fun MelodyPlayScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
+    val continuousPitchLine by viewModel.continuousPitchLine.collectAsState()
     val density = LocalDensity.current
     val context = LocalContext.current
     val rightPaddingPx = with(density) { BUTTON_AREA_WIDTH.toPx() }
@@ -50,11 +52,11 @@ fun MelodyPlayScreen(
 
     KeepScreenOn()
 
-    // Initialize synthesizer and auto-start playing when entering this screen
+    // Initialize synthesizer; enter READY phase (don't auto-start)
     LaunchedEffect(Unit) {
         viewModel.initSynthesizer(context)
         if (state.phase == PlayPhase.NOT_STARTED) {
-            viewModel.startPlaying()
+            viewModel.enterReadyPhase()
         }
     }
 
@@ -83,6 +85,14 @@ fun MelodyPlayScreen(
                         }
                     }
                 }
+                .pointerInput(state.phase) {
+                    detectTapGestures {
+                        val phase = state.phase
+                        if (phase == PlayPhase.PLAYING || phase == PlayPhase.COUNTDOWN || phase == PlayPhase.WAITING_FOR_NOTE) {
+                            viewModel.pause()
+                        }
+                    }
+                }
         ) {
             val track = state.melodyTrack
 
@@ -103,6 +113,7 @@ fun MelodyPlayScreen(
                     pianoAtBottom = true,
                     viewMinMidi = state.viewMinMidi,
                     viewMaxMidi = state.viewMaxMidi,
+                    continuousPitchLine = continuousPitchLine,
                     rightPaddingPx = rightPaddingPx,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -118,6 +129,32 @@ fun MelodyPlayScreen(
                             style = MaterialTheme.typography.displayLarge,
                             color = MaterialTheme.colorScheme.onBackground
                         )
+                    }
+                }
+
+                // Center play button (READY / PAUSED)
+                if (state.phase == PlayPhase.READY || state.phase == PlayPhase.PAUSED) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconButton(
+                            onClick = {
+                                if (isPreviewPlaying) viewModel.stopPreview()
+                                if (state.phase == PlayPhase.READY) viewModel.startPlaying()
+                                else viewModel.resume()
+                            },
+                            modifier = Modifier
+                                .size(72.dp)
+                                .background(Color.White.copy(alpha = 0.2f), CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Filled.PlayArrow,
+                                contentDescription = if (state.phase == PlayPhase.READY) "Start" else "Resume",
+                                tint = Color.White.copy(alpha = 0.8f),
+                                modifier = Modifier.size(48.dp)
+                            )
+                        }
                     }
                 }
 
@@ -270,37 +307,21 @@ fun MelodyPlayScreen(
                         }
                     }
 
-                    // Listen to melody button
-                    IconButton(
-                        onClick = {
-                            if (isPreviewPlaying) viewModel.stopPreview() else viewModel.previewMelody()
-                        },
-                        modifier = Modifier
-                            .size(OVERLAY_BUTTON_SIZE)
-                            .background(OVERLAY_BG, CircleShape)
-                    ) {
-                        Icon(
-                            Icons.Filled.MusicNote,
-                            contentDescription = if (isPreviewPlaying) "Stop listening" else "Listen to melody",
-                            tint = if (isPreviewPlaying) Color(0xFF90CAF9) else OVERLAY_ICON_TINT,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    // Play/Pause button
-                    if (state.phase == PlayPhase.PLAYING || state.phase == PlayPhase.PAUSED || state.phase == PlayPhase.WAITING_FOR_NOTE) {
+                    // Listen to melody button (visible in READY and PAUSED states too)
+                    if (state.phase == PlayPhase.READY || state.phase == PlayPhase.PAUSED ||
+                        state.phase == PlayPhase.PLAYING || state.phase == PlayPhase.WAITING_FOR_NOTE) {
                         IconButton(
                             onClick = {
-                                if (state.phase == PlayPhase.PAUSED) viewModel.resume() else viewModel.pause()
+                                if (isPreviewPlaying) viewModel.stopPreview() else viewModel.previewMelody()
                             },
                             modifier = Modifier
                                 .size(OVERLAY_BUTTON_SIZE)
                                 .background(OVERLAY_BG, CircleShape)
                         ) {
                             Icon(
-                                if (state.phase == PlayPhase.PAUSED) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                                contentDescription = if (state.phase == PlayPhase.PAUSED) "Resume" else "Pause",
-                                tint = OVERLAY_ICON_TINT,
+                                Icons.Filled.MusicNote,
+                                contentDescription = if (isPreviewPlaying) "Stop listening" else "Listen to melody",
+                                tint = if (isPreviewPlaying) Color(0xFF90CAF9) else OVERLAY_ICON_TINT,
                                 modifier = Modifier.size(20.dp)
                             )
                         }

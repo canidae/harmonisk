@@ -20,16 +20,21 @@ class AudioDeviceMonitor(context: Context) {
 
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-    private val _currentDevice = MutableStateFlow(resolveActiveDevice())
+    private val _currentDevice = MutableStateFlow(resolveActiveOutputDevice())
     val currentDevice: StateFlow<AudioOutputDevice> = _currentDevice.asStateFlow()
+
+    private val _currentInputDevice = MutableStateFlow(resolveActiveInputDevice())
+    val currentInputDevice: StateFlow<AudioInputDevice> = _currentInputDevice.asStateFlow()
 
     private val callback = object : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) {
-            _currentDevice.value = resolveActiveDevice()
+            _currentDevice.value = resolveActiveOutputDevice()
+            _currentInputDevice.value = resolveActiveInputDevice()
         }
 
         override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
-            _currentDevice.value = resolveActiveDevice()
+            _currentDevice.value = resolveActiveOutputDevice()
+            _currentInputDevice.value = resolveActiveInputDevice()
         }
     }
 
@@ -41,7 +46,7 @@ class AudioDeviceMonitor(context: Context) {
         audioManager.unregisterAudioDeviceCallback(callback)
     }
 
-    private fun resolveActiveDevice(): AudioOutputDevice {
+    private fun resolveActiveOutputDevice(): AudioOutputDevice {
         val outputs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
 
         // Pick the highest-priority connected output device
@@ -73,6 +78,40 @@ class AudioDeviceMonitor(context: Context) {
             deviceKey = "speaker"
         )
     }
+
+    private fun resolveActiveInputDevice(): AudioInputDevice {
+        val inputs = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
+
+        val bluetooth = inputs.firstOrNull {
+            it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
+        }
+        if (bluetooth != null) {
+            val name = bluetooth.productName?.toString()?.takeIf { it.isNotBlank() } ?: "Bluetooth"
+            return AudioInputDevice(
+                type = AudioInputDeviceType.BLUETOOTH,
+                name = name,
+                deviceKey = "bt_mic_$name"
+            )
+        }
+
+        val wired = inputs.firstOrNull {
+            it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET
+        }
+        if (wired != null) {
+            return AudioInputDevice(
+                type = AudioInputDeviceType.WIRED,
+                name = "Wired headset mic",
+                deviceKey = "wired_mic"
+            )
+        }
+
+        return AudioInputDevice(
+            type = AudioInputDeviceType.BUILTIN,
+            name = "Built-in microphone",
+            deviceKey = "builtin_mic"
+        )
+    }
 }
 
 data class AudioOutputDevice(
@@ -83,4 +122,14 @@ data class AudioOutputDevice(
 
 enum class AudioOutputDeviceType {
     SPEAKER, WIRED, BLUETOOTH
+}
+
+data class AudioInputDevice(
+    val type: AudioInputDeviceType,
+    val name: String,
+    val deviceKey: String
+)
+
+enum class AudioInputDeviceType {
+    BUILTIN, WIRED, BLUETOOTH
 }

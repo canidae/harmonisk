@@ -53,7 +53,22 @@ class FreePlayViewModel @Inject constructor(
                 pitchProcessor.setYinThreshold(settings.yinThreshold)
             }
         }
+        // Load persisted Free Play settings
+        viewModelScope.launch {
+            settingsRepository.settings.first().let { settings ->
+                _state.update {
+                    it.copy(
+                        timeProgressionEnabled = settings.timeProgressionEnabled,
+                        fallSpeedPxPerSec = settings.freeplayFallSpeed
+                    )
+                }
+            }
+        }
     }
+
+    val continuousPitchLine: StateFlow<Boolean> = settingsRepository.settings
+        .map { it.continuousPitchLine }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     /**
      * Called each animation frame from the screen composable.
@@ -91,7 +106,9 @@ class FreePlayViewModel @Inject constructor(
     // --- Public actions ---
 
     fun toggleTimeProgression() {
-        _state.update { it.copy(timeProgressionEnabled = !it.timeProgressionEnabled) }
+        val newValue = !_state.value.timeProgressionEnabled
+        _state.update { it.copy(timeProgressionEnabled = newValue) }
+        viewModelScope.launch { settingsRepository.updateTimeProgressionEnabled(newValue) }
     }
 
     fun scrollToTop() {
@@ -163,6 +180,7 @@ class FreePlayViewModel @Inject constructor(
                 .coerceIn(MIN_FALL_SPEED, MAX_FALL_SPEED)
             current.copy(fallSpeedPxPerSec = newSpeed)
         }
+        viewModelScope.launch { settingsRepository.updateFreeplayFallSpeed(_state.value.fallSpeedPxPerSec) }
     }
 
     fun onHorizontalScroll(deltaMidi: Float) {
@@ -195,6 +213,13 @@ class FreePlayViewModel @Inject constructor(
         if (result.isValid) {
             val midi = result.midiNoteNumber
 
+            // Append to continuous pitch trace (independent of note bars)
+            val traceFrame = FreePlayPitchFrame(
+                timeMs = virtualNowMs,
+                midiNote = midi,
+                centsOff = result.centsOff
+            )
+
             if (currentNoteMidi == null || midi != currentNoteMidi) {
                 finalizeCurrentNote()
                 currentNoteMidi = midi
@@ -212,7 +237,13 @@ class FreePlayViewModel @Inject constructor(
                     averageCentsOff = result.centsOff,
                     centsHistory = listOf(result.centsOff)
                 )
-                _state.update { it.copy(activeNote = note, pitchResult = result) }
+                _state.update {
+                    it.copy(
+                        activeNote = note,
+                        pitchResult = result,
+                        pitchTrace = trimTrace(it.pitchTrace + traceFrame)
+                    )
+                }
             } else {
                 centsSamples.add(result.centsOff)
                 val avgCents = centsSamples.average().toFloat()
@@ -222,7 +253,8 @@ class FreePlayViewModel @Inject constructor(
                             averageCentsOff = avgCents,
                             centsHistory = current.activeNote.centsHistory + result.centsOff
                         ),
-                        pitchResult = result
+                        pitchResult = result,
+                        pitchTrace = trimTrace(current.pitchTrace + traceFrame)
                     )
                 }
             }
@@ -231,6 +263,16 @@ class FreePlayViewModel @Inject constructor(
                 finalizeCurrentNote()
                 _state.update { it.copy(activeNote = null, pitchResult = result) }
             }
+        }
+    }
+
+    /** Keep only the most recent trace points to bound memory. */
+    private fun trimTrace(trace: List<FreePlayPitchFrame>): List<FreePlayPitchFrame> {
+        val cutoffMs = virtualNowMs - 120_000L  // keep ~2 minutes
+        return if (trace.size > 100 && trace.first().timeMs < cutoffMs) {
+            trace.dropWhile { it.timeMs < cutoffMs }
+        } else {
+            trace
         }
     }
 

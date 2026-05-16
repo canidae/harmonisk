@@ -8,7 +8,9 @@ import com.perfectpitch.audio.MelodySynthesizer
 import com.perfectpitch.audio.PitchDetector
 import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.AudioDelayProfileRepository
+import com.perfectpitch.data.AudioInputDelayRepository
 import com.perfectpitch.data.MelodyRepository
+import com.perfectpitch.data.MelodySettingsRepository
 import com.perfectpitch.data.SettingsRepository
 import com.perfectpitch.music.NoteUtils
 import com.perfectpitch.music.ScoringEngine
@@ -59,6 +61,12 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideMelodySettingsRepository(
+        @ApplicationContext context: Context
+    ): MelodySettingsRepository = MelodySettingsRepository(context)
+
+    @Provides
+    @Singleton
     fun provideScoringEngine(): ScoringEngine = ScoringEngine()
 
     @Provides
@@ -77,6 +85,13 @@ object AppModule {
         @ApplicationContext context: Context,
         audioDeviceMonitor: AudioDeviceMonitor
     ): AudioDelayProfileRepository = AudioDelayProfileRepository(context, audioDeviceMonitor)
+
+    @Provides
+    @Singleton
+    fun provideAudioInputDelayRepository(
+        @ApplicationContext context: Context,
+        audioDeviceMonitor: AudioDeviceMonitor
+    ): AudioInputDelayRepository = AudioInputDelayRepository(context, audioDeviceMonitor)
 
     @Provides
     @Singleton

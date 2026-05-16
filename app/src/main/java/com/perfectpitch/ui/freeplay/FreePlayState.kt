@@ -16,7 +16,9 @@ data class FreePlayState(
     val fallSpeedPxPerSec: Float = 150f,
     val timeOffsetMs: Long = 0,
     // When false, time only advances while a note is being detected
-    val timeProgressionEnabled: Boolean = true
+    val timeProgressionEnabled: Boolean = true,
+    // Continuous pitch trace independent of note bars
+    val pitchTrace: List<FreePlayPitchFrame> = emptyList()
 )
 
 data class PlayedNote(
@@ -33,3 +35,9 @@ data class PlayedNote(
     val durationMs: Long
         get() = (endTimeMs ?: System.currentTimeMillis()) - startTimeMs
 }
+
+data class FreePlayPitchFrame(
+    val timeMs: Long,
+    val midiNote: Int,
+    val centsOff: Float
+)

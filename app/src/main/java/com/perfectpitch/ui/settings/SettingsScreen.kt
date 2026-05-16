@@ -1,7 +1,9 @@
 package com.perfectpitch.ui.settings
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -37,7 +39,8 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // Concert pitch slider
@@ -94,7 +97,7 @@ fun SettingsScreen(
             }
 
             // Audio delay calibration (per-device)
-            SettingSection(title = "Audio Delay") {
+            SettingSection(title = "Audio Output Delay") {
                 val device by viewModel.currentDevice.collectAsState()
                 val activeDelay by viewModel.activeDelay.collectAsState()
                 var editingDelay by remember { mutableStateOf(false) }
@@ -102,7 +105,7 @@ fun SettingsScreen(
 
                 device?.let {
                     Text(
-                        text = "Device: ${it.name}",
+                        text = "Output device: ${it.name}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -117,7 +120,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = delayText,
                             onValueChange = { delayText = it },
-                            label = { Text("Delay (ms)") },
+                            label = { Text("Output delay (ms)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = Modifier.width(140.dp)
@@ -147,7 +150,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Current delay: ${activeDelay}ms",
+                            text = "Current output delay: ${activeDelay}ms",
                             style = MaterialTheme.typography.bodyLarge
                         )
                         TextButton(onClick = { editingDelay = true }) {
@@ -155,16 +158,25 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+
+            // Audio input delay calibration (per-input-device)
+            SettingSection(title = "Audio Input Delay") {
+                Text(
+                    text = "Measures microphone detection latency by playing tones and timing when they're picked up.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = onNavigateToCalibration,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Calibrate Audio Delay")
+                    Text("Calibrate Audio Input Delay")
                 }
                 Text(
-                    text = "Tap-to-sync calibration for the connected audio device",
+                    text = "Automatic calibration for the connected microphone",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -185,7 +197,33 @@ fun SettingsScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            // Pitch line mode
+            SettingSection(title = "Pitch Line") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Continuous Line", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            text = if (settings.continuousPitchLine)
+                                "Pitch draws as one smooth line across notes"
+                            else
+                                "Pitch shown within each key's full width",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Switch(
+                        checked = settings.continuousPitchLine,
+                        onCheckedChange = { viewModel.updateContinuousPitchLine(it) }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Reset button
             OutlinedButton(

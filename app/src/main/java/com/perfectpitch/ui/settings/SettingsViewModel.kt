@@ -44,6 +44,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.updateSilenceThreshold(db) }
     }
 
+    fun updateContinuousPitchLine(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.updateContinuousPitchLine(enabled) }
+    }
+
     fun saveDelay(ms: Int) {
         val device = audioDeviceMonitor.currentDevice.value
         viewModelScope.launch {

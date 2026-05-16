@@ -3,9 +3,10 @@ package com.perfectpitch.ui.calibration
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.perfectpitch.audio.AudioDeviceMonitor
-import com.perfectpitch.audio.AudioOutputDevice
+import com.perfectpitch.audio.AudioInputDevice
 import com.perfectpitch.audio.MelodySynthesizer
-import com.perfectpitch.data.AudioDelayProfileRepository
+import com.perfectpitch.audio.PitchProcessor
+import com.perfectpitch.data.AudioInputDelayRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -15,48 +16,50 @@ import javax.inject.Inject
 class CalibrationViewModel @Inject constructor(
     private val melodySynthesizer: MelodySynthesizer,
     private val audioDeviceMonitor: AudioDeviceMonitor,
-    private val audioDelayProfileRepository: AudioDelayProfileRepository
+    private val audioInputDelayRepository: AudioInputDelayRepository,
+    private val pitchProcessor: PitchProcessor
 ) : ViewModel() {
 
     companion object {
-        const val BPM = 120
-        const val BEAT_INTERVAL_MS = 60_000L / BPM  // 500ms
-        const val TOTAL_TAPS = 16
-        const val WARMUP_TAPS = 4
-        const val MIDI_NOTE_C4 = 60
-        const val MIDI_VELOCITY = 80
-        const val NOTE_DURATION_MS = 100L
-        const val TIMEOUT_MS = 30_000L
+        const val NUM_TONES = 8
+        const val TONE_SPACING_MS = 600L
+        const val TONE_DURATION_MS = 200L
+        const val MIDI_NOTE = 69 // A4 = 440 Hz
+        const val MIDI_VELOCITY = 100
+        const val TIMEOUT_MS = 15_000L
+        const val MAX_DETECTION_WINDOW_MS = 500L
+        const val TARGET_FREQ = 440f
+        const val FREQ_TOLERANCE = 30f // Hz tolerance for matching
     }
 
     data class CalibrationState(
-        val device: AudioOutputDevice? = null,
+        val inputDevice: AudioInputDevice? = null,
         val phase: CalibrationPhase = CalibrationPhase.READY,
         val synthReady: Boolean = false,
-        val tapsCollected: Int = 0,
+        val synthError: String? = null,
+        val tonesPlayed: Int = 0,
+        val tonesDetected: Int = 0,
         val resultDelayMs: Int? = null,
         val editedDelayMs: String = "",
         val saved: Boolean = false,
-        val timedOut: Boolean = false
+        val error: String? = null
     )
 
     enum class CalibrationPhase {
         READY,
-        PLAYING,
+        CALIBRATING,
         RESULT
     }
 
     private val _state = MutableStateFlow(CalibrationState())
     val state: StateFlow<CalibrationState> = _state.asStateFlow()
 
-    private var metronomeJob: Job? = null
-    private var beatTimes = mutableListOf<Long>()
-    private var tapDeltas = mutableListOf<Long>()
+    private var calibrationJob: Job? = null
 
     init {
         viewModelScope.launch {
-            audioDeviceMonitor.currentDevice.collect { device ->
-                _state.update { it.copy(device = device) }
+            audioDeviceMonitor.currentInputDevice.collect { device ->
+                _state.update { it.copy(inputDevice = device) }
             }
         }
     }
@@ -69,97 +72,108 @@ class CalibrationViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 melodySynthesizer.open(context)
-                _state.update { it.copy(synthReady = true) }
-            } catch (_: Exception) { }
+                _state.update { it.copy(synthReady = true, synthError = null) }
+            } catch (e: Exception) {
+                _state.update { it.copy(synthError = e.message ?: "Failed to initialize audio") }
+            }
         }
     }
 
     fun startCalibration() {
-        if (_state.value.phase == CalibrationPhase.PLAYING) return
+        if (_state.value.phase == CalibrationPhase.CALIBRATING) return
         if (!melodySynthesizer.isReady) return
-
-        beatTimes.clear()
-        tapDeltas.clear()
 
         _state.update {
             it.copy(
-                phase = CalibrationPhase.PLAYING,
-                tapsCollected = 0,
+                phase = CalibrationPhase.CALIBRATING,
+                tonesPlayed = 0,
+                tonesDetected = 0,
                 resultDelayMs = null,
                 editedDelayMs = "",
                 saved = false,
-                timedOut = false
+                error = null
             )
         }
 
-        metronomeJob = viewModelScope.launch {
-            val startTime = System.currentTimeMillis()
+        calibrationJob = viewModelScope.launch {
+            val delays = mutableListOf<Long>()
 
-            // Play beats until 16 taps collected or 30s timeout
-            while (isActive) {
-                val elapsed = System.currentTimeMillis() - startTime
-                if (elapsed >= TIMEOUT_MS) break
-                if (tapDeltas.size >= TOTAL_TAPS) break
-
-                val beatIndex = beatTimes.size
-                val targetTime = startTime + beatIndex * BEAT_INTERVAL_MS
-                val now = System.currentTimeMillis()
-                val waitMs = targetTime - now
-                if (waitMs > 0) delay(waitMs)
-
-                val beatTime = System.currentTimeMillis()
-                beatTimes.add(beatTime)
-
-                // Play note
-                melodySynthesizer.noteOn(0, MIDI_NOTE_C4, MIDI_VELOCITY)
-                delay(NOTE_DURATION_MS)
-                melodySynthesizer.noteOff(0, MIDI_NOTE_C4)
+            // Collect pitch data via PitchProcessor
+            val detections = mutableListOf<Pair<Long, Float>>() // (timeMs, frequency)
+            val pitchJob = launch {
+                pitchProcessor.pitchFlow().collect { result ->
+                    if (result.isValid && result.frequency > 0f) {
+                        detections.add(System.currentTimeMillis() to result.frequency)
+                    }
+                }
             }
 
-            finishCalibration()
-        }
-    }
+            // Brief settling period for mic
+            delay(300)
 
-    fun onTap() {
-        if (_state.value.phase != CalibrationPhase.PLAYING) return
-        if (tapDeltas.size >= TOTAL_TAPS) return
+            try {
+                for (i in 0 until NUM_TONES) {
+                    if (!isActive) break
 
-        val tapTime = System.currentTimeMillis()
-        if (beatTimes.isEmpty()) return
+                    val playTime = System.currentTimeMillis()
+                    melodySynthesizer.noteOn(0, MIDI_NOTE, MIDI_VELOCITY)
+                    delay(TONE_DURATION_MS)
+                    melodySynthesizer.noteOff(0, MIDI_NOTE)
 
-        val nearestBeat = beatTimes.minByOrNull { kotlin.math.abs(it - tapTime) } ?: return
-        val delta = tapTime - nearestBeat
+                    _state.update { it.copy(tonesPlayed = i + 1) }
 
-        // Accept taps within ±400ms of a beat
-        if (kotlin.math.abs(delta) <= 400) {
-            tapDeltas.add(delta)
-            _state.update { it.copy(tapsCollected = tapDeltas.size) }
+                    // Wait for detection within the window
+                    val deadline = playTime + MAX_DETECTION_WINDOW_MS
+                    val remaining = deadline - System.currentTimeMillis()
+                    if (remaining > 0) delay(remaining)
 
-            if (tapDeltas.size >= TOTAL_TAPS) {
-                metronomeJob?.cancel()
-                viewModelScope.launch { finishCalibration() }
+                    // Find the first detection of our frequency after playTime
+                    val detection = detections.firstOrNull { (time, freq) ->
+                        time >= playTime &&
+                            time <= playTime + MAX_DETECTION_WINDOW_MS &&
+                            kotlin.math.abs(freq - TARGET_FREQ) < FREQ_TOLERANCE
+                    }
+
+                    if (detection != null) {
+                        val delayMs = detection.first - playTime
+                        delays.add(delayMs)
+                        _state.update { it.copy(tonesDetected = delays.size) }
+                    }
+
+                    // Wait for gap between tones
+                    val elapsed = System.currentTimeMillis() - playTime
+                    val gap = TONE_SPACING_MS - elapsed
+                    if (gap > 0) delay(gap)
+                }
+            } finally {
+                pitchJob.cancel()
+                melodySynthesizer.allNotesOff()
             }
-        }
-    }
 
-    private fun finishCalibration() {
-        if (_state.value.phase == CalibrationPhase.RESULT) return
-
-        if (tapDeltas.size < WARMUP_TAPS + 1) {
-            // Not enough taps
-            _state.update { it.copy(phase = CalibrationPhase.READY, timedOut = true) }
-            return
-        }
-
-        val usableDeltas = tapDeltas.drop(WARMUP_TAPS)
-        val medianMs = median(usableDeltas).toInt().coerceIn(-200, 500)
-
-        _state.update {
-            it.copy(
-                phase = CalibrationPhase.RESULT,
-                resultDelayMs = medianMs,
-                editedDelayMs = medianMs.toString()
-            )
+            // Compute result
+            if (delays.size >= 2) {
+                val sorted = delays.sorted()
+                val median = if (sorted.size % 2 == 0) {
+                    (sorted[sorted.size / 2 - 1] + sorted[sorted.size / 2]) / 2
+                } else {
+                    sorted[sorted.size / 2]
+                }
+                val result = median.toInt().coerceIn(0, 500)
+                _state.update {
+                    it.copy(
+                        phase = CalibrationPhase.RESULT,
+                        resultDelayMs = result,
+                        editedDelayMs = result.toString()
+                    )
+                }
+            } else {
+                _state.update {
+                    it.copy(
+                        phase = CalibrationPhase.READY,
+                        error = "Could not detect enough tones. Make sure the microphone can hear the speaker."
+                    )
+                }
+            }
         }
     }
 
@@ -168,36 +182,27 @@ class CalibrationViewModel @Inject constructor(
     }
 
     fun saveDelay() {
-        val device = _state.value.device ?: return
+        val device = _state.value.inputDevice ?: return
         val delayMs = _state.value.editedDelayMs.toIntOrNull()
             ?: _state.value.resultDelayMs
             ?: return
 
         viewModelScope.launch {
-            audioDelayProfileRepository.setDelayForDevice(device.deviceKey, delayMs)
+            audioInputDelayRepository.setDelayForDevice(device.deviceKey, delayMs)
             _state.update { it.copy(saved = true) }
         }
     }
 
     fun stopCalibration() {
-        metronomeJob?.cancel()
+        calibrationJob?.cancel()
         if (melodySynthesizer.isReady) {
             melodySynthesizer.allNotesOff()
         }
         _state.update { it.copy(phase = CalibrationPhase.READY) }
     }
 
-    private fun median(values: List<Long>): Long {
-        val sorted = values.sorted()
-        return if (sorted.size % 2 == 0) {
-            (sorted[sorted.size / 2 - 1] + sorted[sorted.size / 2]) / 2
-        } else {
-            sorted[sorted.size / 2]
-        }
-    }
-
     override fun onCleared() {
         super.onCleared()
-        metronomeJob?.cancel()
+        calibrationJob?.cancel()
     }
 }

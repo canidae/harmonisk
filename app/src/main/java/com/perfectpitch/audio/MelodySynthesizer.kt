@@ -1,27 +1,23 @@
 package com.perfectpitch.audio
 
-import android.content.Context
-import android.media.midi.MidiDevice
-import android.media.midi.MidiDeviceInfo
-import android.media.midi.MidiInputPort
-import android.media.midi.MidiManager
-import android.os.Build
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.util.Log
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
+import kotlin.math.PI
+import kotlin.math.pow
+import kotlin.math.sin
 
 /**
- * Wraps Android's built-in MIDI synthesizer to produce piano-like sounds.
+ * Synthesizer that generates piano-like tones using [AudioTrack] and sine waves.
  *
- * Uses [MidiManager] to locate the built-in virtual MIDI synthesizer,
- * opens it, and sends Note-On / Note-Off messages through its input port.
- * Channel 0 maps to General MIDI Acoustic Grand Piano by default.
+ * Supports polyphony (multiple simultaneous notes) and a simple ADSR envelope
+ * to avoid clicks on note-on/off transitions.
  *
  * Usage:
  * ```
  * val synth = MelodySynthesizer()
- * synth.open(context)          // suspends until the device is ready
+ * synth.open()
  * synth.noteOn(channel = 0, note = 60, velocity = 100)
  * delay(500)
  * synth.noteOff(channel = 0, note = 60)
@@ -30,152 +26,199 @@ import kotlin.coroutines.suspendCoroutine
  */
 class MelodySynthesizer {
 
-    private var midiDevice: MidiDevice? = null
-    private var inputPort: MidiInputPort? = null
+    companion object {
+        private const val TAG = "MelodySynthesizer"
+        private const val SAMPLE_RATE = 44100
+        private const val BUFFER_FRAMES = 512
+        private const val ATTACK_MS = 10f
+        private const val DECAY_MS = 50f
+        private const val SUSTAIN_LEVEL = 0.7f
+        private const val RELEASE_MS = 30f
+    }
 
-    /** `true` when the synthesizer device and input port are open. */
-    val isReady: Boolean
-        get() = midiDevice != null && inputPort != null
+    private var audioTrack: AudioTrack? = null
+    private var renderThread: Thread? = null
+    @Volatile private var running = false
+
+    private val activeNotes = mutableMapOf<Int, NoteState>()
+    private val noteLock = Any()
+
+    val isReady: Boolean get() = audioTrack != null && running
+
+    private data class NoteState(
+        val frequency: Float,
+        val velocity: Float,
+        var phase: Double = 0.0,
+        var envelope: Float = 0f,
+        var stage: EnvelopeStage = EnvelopeStage.ATTACK,
+        var releasing: Boolean = false
+    )
+
+    private enum class EnvelopeStage { ATTACK, DECAY, SUSTAIN, RELEASE, DONE }
 
     /**
-     * Locate the built-in MIDI synthesizer and open its first input port.
+     * Create the AudioTrack and start the rendering thread.
+     * No special permissions or hardware required — works on all Android devices.
      *
-     * @param context Any Android [Context] (used to obtain [MidiManager]).
-     * @throws IllegalStateException if no synthesizer device is found.
-     * @throws IllegalStateException if the device has no input ports.
-     * @throws RuntimeException      if the device fails to open.
+     * @param context Unused — kept for API compatibility with callers.
      */
-    suspend fun open(context: Context) {
+    @Suppress("UNUSED_PARAMETER")
+    suspend fun open(context: android.content.Context? = null) {
         if (isReady) return
 
-        val midiManager = context.getSystemService(Context.MIDI_SERVICE) as? MidiManager
-            ?: throw IllegalStateException("MidiManager service not available")
+        val bufferSize = AudioTrack.getMinBufferSize(
+            SAMPLE_RATE,
+            AudioFormat.CHANNEL_OUT_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        ).coerceAtLeast(BUFFER_FRAMES * 2)
 
-        // The built-in synthesizer is a TYPE_VIRTUAL device that accepts
-        // MIDI input (i.e. has at least one input port) to produce audio.
-        val devices: List<MidiDeviceInfo> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            midiManager.getDevicesForTransport(MidiManager.TRANSPORT_MIDI_BYTE_STREAM).toList()
-        } else {
-            @Suppress("DEPRECATION")
-            midiManager.devices.toList()
-        }
+        val track = AudioTrack.Builder()
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+            )
+            .setAudioFormat(
+                AudioFormat.Builder()
+                    .setSampleRate(SAMPLE_RATE)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .build()
+            )
+            .setBufferSizeInBytes(bufferSize)
+            .setTransferMode(AudioTrack.MODE_STREAM)
+            .build()
 
-        val synthInfo = devices.firstOrNull { info ->
-            info.type == MidiDeviceInfo.TYPE_VIRTUAL && info.inputPortCount > 0
-        } ?: throw IllegalStateException(
-            "No built-in MIDI synthesizer found on this device"
-        )
+        audioTrack = track
+        track.play()
+        running = true
 
-        val device = suspendCoroutine { continuation ->
-            midiManager.openDevice(
-                synthInfo,
-                { device ->
-                    if (device != null) {
-                        continuation.resume(device)
-                    } else {
-                        continuation.resumeWithException(
-                            RuntimeException("Failed to open MIDI synthesizer device")
-                        )
-                    }
-                },
-                null // deliver callback on the default handler thread
+        renderThread = Thread({
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
+            val buffer = ShortArray(BUFFER_FRAMES)
+            while (running) {
+                renderBuffer(buffer)
+                track.write(buffer, 0, buffer.size)
+            }
+        }, "SynthRenderThread").apply { start() }
+
+        Log.d(TAG, "Sine wave synthesizer opened")
+    }
+
+    fun noteOn(channel: Int, note: Int, velocity: Int) {
+        val freq = midiToFrequency(note)
+        val vel = (velocity.coerceIn(0, 127)) / 127f
+        synchronized(noteLock) {
+            activeNotes[note] = NoteState(
+                frequency = freq,
+                velocity = vel,
+                phase = activeNotes[note]?.phase ?: 0.0,
+                envelope = 0f,
+                stage = EnvelopeStage.ATTACK,
+                releasing = false
             )
         }
-
-        val port = device.openInputPort(0)
-        if (port == null) {
-            device.close()
-            throw IllegalStateException("Failed to open input port 0 on MIDI synthesizer")
-        }
-
-        midiDevice = device
-        inputPort = port
-        Log.d(TAG, "MIDI synthesizer opened successfully")
     }
 
-    /**
-     * Send a MIDI Note-On message.
-     *
-     * @param channel  MIDI channel (0–15). Default 0 = General MIDI piano.
-     * @param note     MIDI note number (0–127). Middle C = 60.
-     * @param velocity Key velocity (0–127). 0 is equivalent to note-off.
-     */
-    fun noteOn(channel: Int, note: Int, velocity: Int) {
-        requireReady()
-        val msg = byteArrayOf(
-            (0x90 or (channel and 0x0F)).toByte(),
-            (note and 0x7F).toByte(),
-            (velocity and 0x7F).toByte()
-        )
-        sendMessage(msg)
-    }
-
-    /**
-     * Send a MIDI Note-Off message.
-     *
-     * @param channel MIDI channel (0–15).
-     * @param note    MIDI note number (0–127).
-     */
     fun noteOff(channel: Int, note: Int) {
-        requireReady()
-        val msg = byteArrayOf(
-            (0x80 or (channel and 0x0F)).toByte(),
-            (note and 0x7F).toByte(),
-            0.toByte()
-        )
-        sendMessage(msg)
+        synchronized(noteLock) {
+            activeNotes[note]?.let {
+                it.releasing = true
+                it.stage = EnvelopeStage.RELEASE
+            }
+        }
     }
 
-    /**
-     * Send Note-Off for every MIDI note (0–127) on the given [channel].
-     * Useful as a panic/reset to silence all ringing notes.
-     */
     fun allNotesOff(channel: Int = 0) {
-        requireReady()
-        for (note in 0..127) {
-            noteOff(channel, note)
+        synchronized(noteLock) {
+            activeNotes.values.forEach {
+                it.releasing = true
+                it.stage = EnvelopeStage.RELEASE
+            }
         }
     }
 
-    /**
-     * Close the MIDI input port and device, releasing all resources.
-     * Safe to call even if not currently open.
-     */
     fun close() {
+        running = false
         try {
-            inputPort?.close()
-        } catch (e: Exception) {
-            Log.w(TAG, "Error closing MIDI input port", e)
-        } finally {
-            inputPort = null
-        }
+            renderThread?.join(500)
+        } catch (_: InterruptedException) {}
+        renderThread = null
 
         try {
-            midiDevice?.close()
+            audioTrack?.stop()
+            audioTrack?.release()
         } catch (e: Exception) {
-            Log.w(TAG, "Error closing MIDI device", e)
-        } finally {
-            midiDevice = null
+            Log.w(TAG, "Error closing AudioTrack", e)
         }
+        audioTrack = null
 
-        Log.d(TAG, "MIDI synthesizer closed")
+        synchronized(noteLock) { activeNotes.clear() }
+        Log.d(TAG, "Synthesizer closed")
     }
 
-    // ── Private helpers ────────────────────────────────────────────────
+    private fun renderBuffer(buffer: ShortArray) {
+        val attackDelta = 1f / (ATTACK_MS / 1000f * SAMPLE_RATE)
+        val decayDelta = (1f - SUSTAIN_LEVEL) / (DECAY_MS / 1000f * SAMPLE_RATE)
+        val releaseDelta = 1f / (RELEASE_MS / 1000f * SAMPLE_RATE)
+        val phaseInc = 2.0 * PI / SAMPLE_RATE
 
-    private fun requireReady() {
-        check(isReady) { "MelodySynthesizer is not open. Call open() first." }
-    }
+        val toRemove = mutableListOf<Int>()
 
-    private fun sendMessage(msg: ByteArray) {
-        try {
-            inputPort?.send(msg, 0, msg.size, System.nanoTime())
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to send MIDI message", e)
+        for (i in buffer.indices) {
+            var sample = 0f
+            synchronized(noteLock) {
+                for ((note, state) in activeNotes) {
+                    // Advance envelope
+                    when (state.stage) {
+                        EnvelopeStage.ATTACK -> {
+                            state.envelope += attackDelta
+                            if (state.envelope >= 1f) {
+                                state.envelope = 1f
+                                state.stage = EnvelopeStage.DECAY
+                            }
+                        }
+                        EnvelopeStage.DECAY -> {
+                            state.envelope -= decayDelta
+                            if (state.envelope <= SUSTAIN_LEVEL) {
+                                state.envelope = SUSTAIN_LEVEL
+                                state.stage = EnvelopeStage.SUSTAIN
+                            }
+                        }
+                        EnvelopeStage.SUSTAIN -> {}
+                        EnvelopeStage.RELEASE -> {
+                            state.envelope -= releaseDelta
+                            if (state.envelope <= 0f) {
+                                state.envelope = 0f
+                                state.stage = EnvelopeStage.DONE
+                                toRemove.add(note)
+                            }
+                        }
+                        EnvelopeStage.DONE -> {
+                            toRemove.add(note)
+                        }
+                    }
+
+                    // Generate sample: fundamental + 2nd harmonic for richer tone
+                    val fundamental = sin(state.phase * state.frequency).toFloat()
+                    val harmonic2 = sin(state.phase * state.frequency * 2.0).toFloat() * 0.3f
+                    val raw = (fundamental + harmonic2) / 1.3f
+
+                    sample += raw * state.envelope * state.velocity
+                    state.phase += phaseInc
+                }
+                toRemove.forEach { activeNotes.remove(it) }
+                toRemove.clear()
+            }
+
+            // Soft clip and convert to 16-bit
+            val clipped = sample.coerceIn(-1f, 1f)
+            buffer[i] = (clipped * Short.MAX_VALUE).toInt().toShort()
         }
     }
 
-    private companion object {
-        const val TAG = "MelodySynthesizer"
+    private fun midiToFrequency(note: Int): Float {
+        return 440f * 2f.pow((note - 69) / 12f)
     }
 }

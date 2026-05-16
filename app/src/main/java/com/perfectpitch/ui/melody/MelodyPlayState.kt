@@ -44,6 +44,7 @@ data class PitchFrame(
 
 enum class PlayPhase {
     NOT_STARTED,
+    READY,
     COUNTDOWN,
     PLAYING,
     PAUSED,

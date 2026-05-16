@@ -32,7 +32,7 @@ fun CalibrationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Audio Delay Calibration") },
+                title = { Text("Audio Input Delay") },
                 navigationIcon = {
                     IconButton(onClick = {
                         viewModel.stopCalibration()
@@ -52,8 +52,8 @@ fun CalibrationScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Device info
-            state.device?.let { device ->
+            // Input device info
+            state.inputDevice?.let { device ->
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier
@@ -63,9 +63,9 @@ fun CalibrationScreen(
                     ) {
                         Text(
                             text = when (device.type) {
-                                com.perfectpitch.audio.AudioOutputDeviceType.SPEAKER -> "🔊"
-                                com.perfectpitch.audio.AudioOutputDeviceType.WIRED -> "🎧"
-                                com.perfectpitch.audio.AudioOutputDeviceType.BLUETOOTH -> "🎧"
+                                com.perfectpitch.audio.AudioInputDeviceType.BUILTIN -> "🎤"
+                                com.perfectpitch.audio.AudioInputDeviceType.WIRED -> "🎧"
+                                com.perfectpitch.audio.AudioInputDeviceType.BLUETOOTH -> "🎧"
                             },
                             style = MaterialTheme.typography.headlineMedium
                         )
@@ -76,7 +76,7 @@ fun CalibrationScreen(
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                text = "Calibrating for this device",
+                                text = "Calibrating for this input device",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -90,13 +90,14 @@ fun CalibrationScreen(
             when (state.phase) {
                 CalibrationPhase.READY -> ReadyContent(
                     synthReady = state.synthReady,
-                    timedOut = state.timedOut,
+                    synthError = state.synthError,
+                    error = state.error,
                     onStart = { viewModel.startCalibration() }
                 )
-                CalibrationPhase.PLAYING -> PlayingContent(
-                    tapsCollected = state.tapsCollected,
-                    totalTaps = CalibrationViewModel.TOTAL_TAPS,
-                    onTap = { viewModel.onTap() },
+                CalibrationPhase.CALIBRATING -> CalibratingContent(
+                    tonesPlayed = state.tonesPlayed,
+                    tonesDetected = state.tonesDetected,
+                    totalTones = CalibrationViewModel.NUM_TONES,
                     onStop = { viewModel.stopCalibration() }
                 )
                 CalibrationPhase.RESULT -> ResultContent(
@@ -117,19 +118,21 @@ fun CalibrationScreen(
 @Composable
 private fun ReadyContent(
     synthReady: Boolean,
-    timedOut: Boolean,
+    synthError: String?,
+    error: String?,
     onStart: () -> Unit
 ) {
     Text(
-        text = "Tap the button in time with the piano beats to measure your audio delay.",
+        text = "Automatically measures the delay between audio playback and microphone detection. " +
+            "Make sure the environment is quiet.",
         style = MaterialTheme.typography.bodyLarge,
         textAlign = TextAlign.Center,
         modifier = Modifier.padding(horizontal = 16.dp)
     )
 
-    if (timedOut) {
+    if (error != null) {
         Text(
-            text = "Not enough taps collected. Try again and tap along with each beat.",
+            text = error,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.error,
             textAlign = TextAlign.Center,
@@ -137,7 +140,15 @@ private fun ReadyContent(
         )
     }
 
-    if (!synthReady) {
+    if (synthError != null) {
+        Text(
+            text = "Audio error: $synthError",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+    } else if (!synthReady) {
         CircularProgressIndicator(modifier = Modifier.size(32.dp))
         Text(
             text = "Initializing audio…",
@@ -161,20 +172,20 @@ private fun ReadyContent(
 }
 
 @Composable
-private fun PlayingContent(
-    tapsCollected: Int,
-    totalTaps: Int,
-    onTap: () -> Unit,
+private fun CalibratingContent(
+    tonesPlayed: Int,
+    tonesDetected: Int,
+    totalTones: Int,
     onStop: () -> Unit
 ) {
     Text(
-        text = "Tap in time with the beat",
+        text = "Measuring audio delay…",
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 
     LinearProgressIndicator(
-        progress = { tapsCollected.toFloat() / totalTaps },
+        progress = { tonesPlayed.toFloat() / totalTones },
         modifier = Modifier
             .fillMaxWidth()
             .height(8.dp),
@@ -182,32 +193,17 @@ private fun PlayingContent(
     )
 
     Text(
-        text = "$tapsCollected / $totalTaps taps",
+        text = "$tonesPlayed / $totalTones tones played, $tonesDetected detected",
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 
-    if (tapsCollected < CalibrationViewModel.WARMUP_TAPS) {
-        Text(
-            text = "Warming up… get into the groove!",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    // Static TAP button — no beat animation
-    FilledTonalButton(
-        onClick = onTap,
-        modifier = Modifier.size(180.dp),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
-        Text(
-            text = "TAP",
-            style = MaterialTheme.typography.displayMedium
-        )
-    }
+    Text(
+        text = "Playing tones through the speaker and listening via the microphone…",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center
+    )
 
     Spacer(modifier = Modifier.height(16.dp))
 
@@ -231,7 +227,7 @@ private fun ResultContent(
     )
 
     Text(
-        text = "Measured delay: ${measuredDelay}ms",
+        text = "Measured input delay: ${measuredDelay}ms",
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -241,7 +237,7 @@ private fun ResultContent(
     OutlinedTextField(
         value = editedDelay,
         onValueChange = onEditDelay,
-        label = { Text("Audio delay (ms)") },
+        label = { Text("Audio input delay (ms)") },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,
         modifier = Modifier.width(200.dp),

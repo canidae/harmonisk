@@ -99,6 +99,30 @@ fun calculatePianoLayout(
 }
 
 /**
+ * Map a fractional MIDI value (e.g., 60.3 = C4 + 30 cents) to a pixel X position
+ * by interpolating between the center positions of adjacent keys in the layout.
+ * Returns null if the key layout doesn't contain the needed keys.
+ */
+fun midiToPixelX(layout: Map<Int, KeyLayout>, fractionalMidi: Float): Float? {
+    val lowerMidi = kotlin.math.floor(fractionalMidi).toInt()
+    val upperMidi = lowerMidi + 1
+    val fraction = fractionalMidi - lowerMidi
+
+    val lowerKey = layout[lowerMidi]
+    val upperKey = layout[upperMidi]
+
+    if (lowerKey != null && upperKey != null) {
+        val lowerCenterX = lowerKey.x + lowerKey.width / 2f
+        val upperCenterX = upperKey.x + upperKey.width / 2f
+        return lowerCenterX + (upperCenterX - lowerCenterX) * fraction
+    }
+    // Fall back to whichever key we have
+    lowerKey?.let { return it.x + it.width / 2f }
+    upperKey?.let { return it.x + it.width / 2f }
+    return null
+}
+
+/**
  * Draw the piano keyboard.
  * @param pianoAtBottom If true, piano is drawn at the bottom of the canvas; otherwise at the top.
  */

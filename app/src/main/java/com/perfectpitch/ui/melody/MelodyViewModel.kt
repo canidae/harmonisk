@@ -8,6 +8,7 @@ import com.perfectpitch.audio.MelodySynthesizer
 import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.AudioDelayProfileRepository
 import com.perfectpitch.data.MelodyRepository
+import com.perfectpitch.data.MelodySettingsRepository
 import com.perfectpitch.data.SettingsRepository
 import com.perfectpitch.midi.MelodyTrack
 import com.perfectpitch.music.*
@@ -21,6 +22,7 @@ import kotlin.math.abs
 class MelodyViewModel @Inject constructor(
     private val pitchProcessor: PitchProcessor,
     private val melodyRepository: MelodyRepository,
+    private val melodySettingsRepository: MelodySettingsRepository,
     private val settingsRepository: SettingsRepository,
     private val scoringEngine: ScoringEngine,
     private val noteUtils: NoteUtils,
@@ -52,6 +54,7 @@ class MelodyViewModel @Inject constructor(
     private var wasWaitingForNote = false
 
     private var originalMelodyTrack: MelodyTrack? = null
+    private var currentMelodyId: String? = null
 
     // Melody audio output delay
     private var synthOpenJob: Job? = null
@@ -71,6 +74,10 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
+    val continuousPitchLine: StateFlow<Boolean> = settingsRepository.settings
+        .map { it.continuousPitchLine }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     fun getAvailableMelodies(): List<MelodyRepository.MelodyInfo> {
         return melodyRepository.getAvailableMelodies()
     }
@@ -79,6 +86,7 @@ class MelodyViewModel @Inject constructor(
         val track = melodyRepository.loadMelody(info)
         if (track != null) {
             originalMelodyTrack = track
+            currentMelodyId = info.id
             val range = track.noteRange
             val viewMin = (range.first - NOTE_RANGE_PADDING).toFloat().coerceAtLeast(21f)
             val viewMax = (range.last + NOTE_RANGE_PADDING).toFloat().coerceAtMost(108f)
@@ -90,6 +98,22 @@ class MelodyViewModel @Inject constructor(
                     viewMaxMidi = viewMax,
                     transposeSemitones = 0
                 )
+            }
+            // Load per-melody settings
+            viewModelScope.launch {
+                melodySettingsRepository.getSettings(info.id).first().let { saved ->
+                    _state.update {
+                        it.copy(
+                            waitMode = saved.waitMode,
+                            allowWrongNotes = saved.allowWrongNotes,
+                            tempoMultiplier = saved.tempoMultiplier,
+                            playMelodyAudio = saved.playMelodyAudio
+                        )
+                    }
+                    if (saved.transposeSemitones != 0) {
+                        setTranspose(saved.transposeSemitones)
+                    }
+                }
             }
             return true
         }
@@ -119,14 +143,17 @@ class MelodyViewModel @Inject constructor(
 
     fun setWaitMode(enabled: Boolean) {
         _state.update { it.copy(waitMode = enabled) }
+        saveMelodySettings()
     }
 
     fun setAllowWrongNotes(enabled: Boolean) {
         _state.update { it.copy(allowWrongNotes = enabled) }
+        saveMelodySettings()
     }
 
     fun setTempoMultiplier(multiplier: Float) {
         _state.update { it.copy(tempoMultiplier = multiplier.coerceIn(0.5f, 1.5f)) }
+        saveMelodySettings()
     }
 
     fun setTranspose(semitones: Int) {
@@ -144,6 +171,21 @@ class MelodyViewModel @Inject constructor(
                 viewMaxMidi = viewMax
             )
         }
+        saveMelodySettings()
+    }
+
+    private fun saveMelodySettings() {
+        val id = currentMelodyId ?: return
+        val s = _state.value
+        viewModelScope.launch {
+            melodySettingsRepository.saveSettings(id, MelodySettingsRepository.MelodySettings(
+                waitMode = s.waitMode,
+                allowWrongNotes = s.allowWrongNotes,
+                tempoMultiplier = s.tempoMultiplier,
+                transposeSemitones = s.transposeSemitones,
+                playMelodyAudio = s.playMelodyAudio
+            ))
+        }
     }
 
     // --- Melody preview / listen ---
@@ -157,8 +199,8 @@ class MelodyViewModel @Inject constructor(
         synthOpenJob = viewModelScope.launch {
             try {
                 melodySynthesizer.open(context)
-            } catch (_: Exception) {
-                // Synth unavailable — melody playback will be silently disabled
+            } catch (e: Exception) {
+                android.util.Log.w("MelodyViewModel", "Synth init failed", e)
             }
         }
     }
@@ -191,6 +233,14 @@ class MelodyViewModel @Inject constructor(
         _state.update { it.copy(playMelodyAudio = enabled) }
         if (!enabled) {
             melodyPlayer.resetGameSync()
+        }
+        saveMelodySettings()
+    }
+
+    /** Enter READY phase — melody visible but not playing. */
+    fun enterReadyPhase() {
+        if (_state.value.phase == PlayPhase.NOT_STARTED) {
+            _state.update { it.copy(phase = PlayPhase.READY) }
         }
     }
 
@@ -235,7 +285,7 @@ class MelodyViewModel @Inject constructor(
         pauseOffset = _state.value.currentTimeSeconds
         playbackJob?.cancel()
         pitchJob?.cancel()
-        melodyPlayer.resetGameSync()
+        // Let currently playing notes finish naturally (no allNotesOff)
         wasWaitingForNote = isWaitingForNote
         isWaitingForNote = false
         _state.update { it.copy(phase = PlayPhase.PAUSED, isListening = false) }
