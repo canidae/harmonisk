@@ -13,6 +13,7 @@ import com.perfectpitch.data.MelodySettingsRepository
 import com.perfectpitch.data.SettingsRepository
 import com.perfectpitch.midi.MelodyTrack
 import com.perfectpitch.music.*
+import com.perfectpitch.ui.components.PitchFrame
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -447,7 +448,7 @@ class MelodyViewModel @Inject constructor(
         val adjustedTime = songTime - (audioInputDelayMs / 1000.0)
 
         val frame = PitchFrame(
-            timeSeconds = adjustedTime,
+            timeMs = (adjustedTime * 1000).toLong(),
             midiNote = result.midiNoteNumber,
             centsOff = result.centsOff,
             frequency = result.frequency

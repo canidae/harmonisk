@@ -4,6 +4,7 @@ import com.perfectpitch.midi.MelodyTrack
 import com.perfectpitch.music.MelodyScore
 import com.perfectpitch.music.NoteScore
 import com.perfectpitch.music.PitchResult
+import com.perfectpitch.ui.components.PitchFrame
 
 data class MelodyPlayState(
     val phase: PlayPhase = PlayPhase.NOT_STARTED,
@@ -34,13 +35,6 @@ data class MelodyPlayState(
     val countdownValue: Int
         get() = kotlin.math.ceil(-currentTimeSeconds).toInt().coerceIn(1, countdownDurationSeconds.toInt())
 }
-
-data class PitchFrame(
-    val timeSeconds: Double,
-    val midiNote: Int,
-    val centsOff: Float,
-    val frequency: Float
-)
 
 enum class PlayPhase {
     NOT_STARTED,

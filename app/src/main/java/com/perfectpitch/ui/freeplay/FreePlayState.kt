@@ -1,6 +1,7 @@
 package com.perfectpitch.ui.freeplay
 
 import com.perfectpitch.music.PitchResult
+import com.perfectpitch.ui.components.PitchFrame
 
 data class FreePlayState(
     val pitchResult: PitchResult = PitchResult.SILENT,
@@ -18,7 +19,7 @@ data class FreePlayState(
     // When false, time only advances while a note is being detected
     val timeProgressionEnabled: Boolean = true,
     // Continuous pitch trace independent of note bars
-    val pitchTrace: List<FreePlayPitchFrame> = emptyList()
+    val pitchTrace: List<PitchFrame> = emptyList()
 )
 
 data class PlayedNote(
@@ -36,8 +37,3 @@ data class PlayedNote(
         get() = (endTimeMs ?: System.currentTimeMillis()) - startTimeMs
 }
 
-data class FreePlayPitchFrame(
-    val timeMs: Long,
-    val midiNote: Int,
-    val centsOff: Float
-)

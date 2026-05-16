@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.SettingsRepository
 import com.perfectpitch.music.PitchResult
+import com.perfectpitch.ui.components.PitchFrame
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
@@ -44,6 +45,10 @@ class FreePlayViewModel @Inject constructor(
     // When false, virtual time only advances while a note is being detected.
     private var virtualNowMs: Long = System.currentTimeMillis()
     private var lastRealTimeMs: Long = virtualNowMs
+
+    // Tracks the end time of the last finalized note so new notes can start
+    // exactly where the previous ended (zero gap when time progression is off)
+    private var lastFinalizedNoteEndMs: Long = 0L
 
     init {
         viewModelScope.launch {
@@ -214,18 +219,29 @@ class FreePlayViewModel @Inject constructor(
             val midi = result.midiNoteNumber
 
             // Append to continuous pitch trace (independent of note bars)
-            val traceFrame = FreePlayPitchFrame(
+            val traceFrame = PitchFrame(
                 timeMs = virtualNowMs,
                 midiNote = midi,
-                centsOff = result.centsOff
+                centsOff = result.centsOff,
+                frequency = result.frequency
             )
 
             if (currentNoteMidi == null || midi != currentNoteMidi) {
+                val wasInSilence = currentNoteMidi == null
                 finalizeCurrentNote()
                 currentNoteMidi = midi
-                currentNoteStartMs = virtualNowMs
                 centsSamples.clear()
                 centsSamples.add(result.centsOff)
+
+                // When time progression is disabled and resuming after silence,
+                // snap start time to previous note's end for zero-gap bars.
+                val noteStart = if (!_state.value.timeProgressionEnabled && wasInSilence && lastFinalizedNoteEndMs > 0L) {
+                    virtualNowMs = lastFinalizedNoteEndMs
+                    lastFinalizedNoteEndMs
+                } else {
+                    virtualNowMs
+                }
+                currentNoteStartMs = noteStart
 
                 expandRange(midi)
 
@@ -233,7 +249,7 @@ class FreePlayViewModel @Inject constructor(
                     noteName = result.noteName,
                     octave = result.octave,
                     midiNumber = midi,
-                    startTimeMs = virtualNowMs,
+                    startTimeMs = noteStart,
                     averageCentsOff = result.centsOff,
                     centsHistory = listOf(result.centsOff)
                 )
@@ -241,7 +257,7 @@ class FreePlayViewModel @Inject constructor(
                     it.copy(
                         activeNote = note,
                         pitchResult = result,
-                        pitchTrace = trimTrace(it.pitchTrace + traceFrame)
+                        pitchTrace = trimTrace(it.pitchTrace + traceFrame.copy(timeMs = noteStart))
                     )
                 }
             } else {
@@ -267,7 +283,7 @@ class FreePlayViewModel @Inject constructor(
     }
 
     /** Keep only the most recent trace points to bound memory. */
-    private fun trimTrace(trace: List<FreePlayPitchFrame>): List<FreePlayPitchFrame> {
+    private fun trimTrace(trace: List<PitchFrame>): List<PitchFrame> {
         val cutoffMs = virtualNowMs - 120_000L  // keep ~2 minutes
         return if (trace.size > 100 && trace.first().timeMs < cutoffMs) {
             trace.dropWhile { it.timeMs < cutoffMs }
@@ -288,6 +304,7 @@ class FreePlayViewModel @Inject constructor(
                     endTimeMs = now,
                     averageCentsOff = centsSamples.average().toFloat()
                 )
+                lastFinalizedNoteEndMs = now
                 _state.update { current ->
                     current.copy(
                         playedNotes = current.playedNotes + finalNote,

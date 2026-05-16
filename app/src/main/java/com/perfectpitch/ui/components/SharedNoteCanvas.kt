@@ -15,11 +15,8 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.rememberTextMeasurer
 import com.perfectpitch.midi.MelodyTrack
-import com.perfectpitch.ui.freeplay.FreePlayPitchFrame
 import com.perfectpitch.ui.freeplay.PlayedNote
-import com.perfectpitch.ui.melody.MelodyPlayState
 import com.perfectpitch.ui.melody.NoteResultState
-import com.perfectpitch.ui.melody.PitchFrame
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -59,7 +56,7 @@ sealed interface CanvasMode {
         val currentTimeMs: Long,
         val timeOffsetMs: Long,
         val fallSpeedPxPerSec: Float,
-        val pitchTrace: List<FreePlayPitchFrame> = emptyList()
+        val pitchTrace: List<PitchFrame> = emptyList()
     ) : CanvasMode
 
     data class Melody(
@@ -166,14 +163,16 @@ fun SharedNoteCanvas(
             is CanvasMode.FreePlay -> {
                 drawFreePlayNotes(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density, continuousPitchLine)
                 if (continuousPitchLine) {
-                    drawContinuousFreePlayPitchLine(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
+                    val viewTimeMs = mode.currentTimeMs - mode.timeOffsetMs
+                    drawContinuousPitchLine(mode.pitchTrace, viewTimeMs, mode.fallSpeedPxPerSec, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
                 }
             }
             is CanvasMode.Melody -> {
                 drawMelodyNotes(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
                 drawPitchTrace(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density, continuousPitchLine)
                 if (continuousPitchLine) {
-                    drawContinuousMelodyPitchTrace(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
+                    val viewTimeMs = ((mode.currentTimeSeconds + mode.songTimeOffsetSeconds) * 1000).toLong()
+                    drawContinuousPitchLine(mode.pitchTrace, viewTimeMs, mode.fallSpeedPxPerSec, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
                 }
                 drawPitchIndicator(mode, layout, pianoEdgeY, pianoAtBottom, density)
             }
@@ -257,165 +256,55 @@ private fun DrawScope.drawFreePlayNotes(
 
 // endregion
 
-// region Continuous pitch line (Free Play)
-
-/**
- * Draws a continuous pitch line using the raw pitch trace, but ONLY within
- * the time bounds of actual note bars. The X position uses absolute MIDI
- * mapping (midiToPixelX) so the line flows smoothly across note transitions,
- * but it is never drawn in gaps between bars.
- */
-private fun DrawScope.drawContinuousFreePlayPitchLine(
-    mode: CanvasMode.FreePlay,
-    layout: Map<Int, KeyLayout>,
-    pianoEdgeY: Float,
-    canvasFarEdgeY: Float,
-    pianoAtBottom: Boolean,
-    density: Float
-) {
-    val trace = mode.pitchTrace
-    if (trace.isEmpty()) return
-
-    val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
-    val now = mode.currentTimeMs - mode.timeOffsetMs
-    val visibleTop = minOf(pianoEdgeY, canvasFarEdgeY)
-    val visibleBottom = maxOf(pianoEdgeY, canvasFarEdgeY)
-
-    // Build sorted list of note time intervals
-    val allNotes = buildList {
-        addAll(mode.notes)
-        mode.activeNote?.let { add(it) }
-    }.sortedBy { it.startTimeMs }
-
-    if (allNotes.isEmpty()) return
-
-    val path = Path()
-    var pathStarted = false
-    var noteIdx = 0
-    var prevBarIdx = -1
-
-    for (frame in trace) {
-        // Advance noteIdx to find a note that could contain this frame
-        while (noteIdx < allNotes.size) {
-            val noteEnd = allNotes[noteIdx].endTimeMs ?: mode.currentTimeMs
-            if (noteEnd >= frame.timeMs) break
-            noteIdx++
-        }
-
-        // Check if this frame falls within the current note's time range
-        val matchedBar = if (noteIdx < allNotes.size) {
-            val note = allNotes[noteIdx]
-            val noteEnd = note.endTimeMs ?: mode.currentTimeMs
-            if (frame.timeMs in note.startTimeMs..noteEnd) noteIdx else -1
-        } else {
-            -1
-        }
-
-        if (matchedBar < 0) {
-            pathStarted = false
-            prevBarIdx = -1
-            continue
-        }
-
-        // Break the path when transitioning between non-adjacent bars (>1 semitone)
-        if (matchedBar != prevBarIdx) {
-            if (prevBarIdx >= 0) {
-                val prevMidi = allNotes[prevBarIdx].midiNumber
-                val currMidi = allNotes[matchedBar].midiNumber
-                if (kotlin.math.abs(currMidi - prevMidi) > 1) {
-                    pathStarted = false
-                }
-            } else {
-                pathStarted = false
-            }
-        }
-        prevBarIdx = matchedBar
-
-        val fractionalMidi = frame.midiNote + frame.centsOff / 100f
-        val x = midiToPixelX(layout, fractionalMidi) ?: continue
-
-        val ageMs = now - frame.timeMs
-        val y = if (pianoAtBottom) {
-            pianoEdgeY - ageMs * pxPerMs
-        } else {
-            pianoEdgeY + ageMs * pxPerMs
-        }
-
-        if (y < visibleTop - 50f || y > visibleBottom + 50f) {
-            pathStarted = false
-            continue
-        }
-
-        if (!pathStarted) {
-            path.moveTo(x, y)
-            pathStarted = true
-        } else {
-            path.lineTo(x, y)
-        }
-    }
-
-    if (path.isEmpty) return
-
-    drawPath(
-        path,
-        Color.White.copy(alpha = 0.15f),
-        style = Stroke(width = 4f * density, cap = StrokeCap.Round, join = StrokeJoin.Round)
-    )
-    drawPath(
-        path,
-        Color.White.copy(alpha = 0.7f),
-        style = Stroke(width = 1.5f * density, cap = StrokeCap.Round, join = StrokeJoin.Round)
-    )
-}
-
-// endregion
-
-// region Continuous pitch line (Melody)
+// region Continuous pitch line (unified)
 
 /**
  * Draws a single continuous pitch line across ALL pitch trace frames,
  * using absolute MIDI-to-pixel mapping for smooth transitions.
- * The path is broken at silence gaps (>0.15s between frames).
+ * The path is broken at silence gaps (>150ms between frames) and
+ * pitch jumps (>1 semitone between consecutive frames).
  * Uses clipRect so frames that scroll past the piano edge remain
- * connected (the path extends below the piano, but only the visible
- * portion above it is rendered).
+ * connected (the path extends past the piano, but only the visible
+ * portion is rendered).
+ *
+ * Shared by both Free Play and Melody modes.
  */
-private fun DrawScope.drawContinuousMelodyPitchTrace(
-    mode: CanvasMode.Melody,
+private fun DrawScope.drawContinuousPitchLine(
+    trace: List<PitchFrame>,
+    viewTimeMs: Long,
+    fallSpeedPxPerSec: Float,
     layout: Map<Int, KeyLayout>,
     pianoEdgeY: Float,
     canvasFarEdgeY: Float,
     pianoAtBottom: Boolean,
     density: Float
 ) {
-    val trace = mode.pitchTrace
     if (trace.isEmpty()) return
 
-    val pixelsPerSecond = mode.fallSpeedPxPerSec * density
-    if (pixelsPerSecond <= 0f) return
-    val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
+    val pxPerMs = fallSpeedPxPerSec * density / 1000f
+    if (pxPerMs <= 0f) return
 
     val visibleTop = minOf(pianoEdgeY, canvasFarEdgeY)
     val visibleBottom = maxOf(pianoEdgeY, canvasFarEdgeY)
-    val maxGapSec = 0.15
+    val maxGapMs = 150L
 
     // Time range visible on screen, plus a generous margin so lines
     // entering/leaving the viewport stay connected.
-    val visibleSpanSec = (visibleBottom - visibleTop) / pixelsPerSecond
-    val marginSec = visibleSpanSec * 0.5
-    val minTimeSec = viewTimeSeconds - marginSec
-    val maxTimeSec = viewTimeSeconds + visibleSpanSec + marginSec
+    val visibleSpanMs = ((visibleBottom - visibleTop) / pxPerMs).toLong()
+    val marginMs = visibleSpanMs / 2
+    val minTimeMs = viewTimeMs - marginMs
+    val maxTimeMs = viewTimeMs + visibleSpanMs + marginMs
 
     val path = Path()
     var pathStarted = false
-    var prevTimeSec = Double.MIN_VALUE
+    var prevTimeMs = Long.MIN_VALUE
     var prevMidiNote = -1
 
     for (frame in trace) {
         // Skip frames far outside the visible time range (performance)
-        if (frame.timeSeconds < minTimeSec || frame.timeSeconds > maxTimeSec) {
+        if (frame.timeMs < minTimeMs || frame.timeMs > maxTimeMs) {
             if (pathStarted) pathStarted = false
-            prevTimeSec = frame.timeSeconds
+            prevTimeMs = frame.timeMs
             prevMidiNote = frame.midiNote
             continue
         }
@@ -423,11 +312,11 @@ private fun DrawScope.drawContinuousMelodyPitchTrace(
         val fractionalMidi = frame.midiNote + frame.centsOff / 100f
         val x = midiToPixelX(layout, fractionalMidi) ?: continue
 
-        val relativeTime = frame.timeSeconds - viewTimeSeconds
-        val y = pianoEdgeY - (relativeTime * pixelsPerSecond).toFloat()
+        val relativeTimeMs = frame.timeMs - viewTimeMs
+        val y = pianoEdgeY - relativeTimeMs * pxPerMs
 
-        val hasGap = prevTimeSec != Double.MIN_VALUE && (frame.timeSeconds - prevTimeSec) > maxGapSec
-        val hasJump = prevMidiNote >= 0 && kotlin.math.abs(frame.midiNote - prevMidiNote) > 1
+        val hasGap = prevTimeMs != Long.MIN_VALUE && (frame.timeMs - prevTimeMs) > maxGapMs
+        val hasJump = prevMidiNote >= 0 && abs(frame.midiNote - prevMidiNote) > 1
 
         if (!pathStarted || hasGap || hasJump) {
             path.moveTo(x, y)
@@ -435,7 +324,7 @@ private fun DrawScope.drawContinuousMelodyPitchTrace(
         } else {
             path.lineTo(x, y)
         }
-        prevTimeSec = frame.timeSeconds
+        prevTimeMs = frame.timeMs
         prevMidiNote = frame.midiNote
     }
 
@@ -542,9 +431,9 @@ private fun DrawScope.drawPitchTrace(
     val trace = mode.pitchTrace
     if (trace.isEmpty()) return
 
-    val pixelsPerSecond = mode.fallSpeedPxPerSec * density
-    val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
-    val frameDuration = 0.023
+    val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
+    val viewTimeMs = ((mode.currentTimeSeconds + mode.songTimeOffsetSeconds) * 1000).toLong()
+    val frameDurationMs = 23L
 
     // Group consecutive frames with the same midiNote into segments
     var segStart = 0
@@ -561,14 +450,14 @@ private fun DrawScope.drawPitchTrace(
             continue
         }
 
-        val startTime = trace[segStart].timeSeconds
-        val endTime = trace[segEnd].timeSeconds + frameDuration
+        val startTimeMs = trace[segStart].timeMs
+        val endTimeMs = trace[segEnd].timeMs + frameDurationMs
 
-        val relativeStart = startTime - viewTimeSeconds
-        val relativeEnd = endTime - viewTimeSeconds
+        val relativeStartMs = startTimeMs - viewTimeMs
+        val relativeEndMs = endTimeMs - viewTimeMs
 
-        val rawBottomY = pianoEdgeY - (relativeStart * pixelsPerSecond).toFloat()
-        val rawTopY = pianoEdgeY - (relativeEnd * pixelsPerSecond).toFloat()
+        val rawBottomY = pianoEdgeY - relativeStartMs * pxPerMs
+        val rawTopY = pianoEdgeY - relativeEndMs * pxPerMs
 
         // Skip off-screen segments
         val visibleTop = if (pianoAtBottom) canvasFarEdgeY else pianoEdgeY
