@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.perfectpitch.audio.AudioCaptureService
 import com.perfectpitch.audio.AudioDeviceMonitor
 import com.perfectpitch.audio.AudioInputDeviceType
 import kotlinx.coroutines.flow.Flow
@@ -22,19 +23,22 @@ private val Context.audioInputDelayStore: DataStore<Preferences> by preferencesD
 /**
  * Stores per-input-device audio delay profiles (microphone latency).
  *
- * Keyed by the input device key from [AudioDeviceMonitor]
- * (e.g. "builtin_mic", "wired_mic", "bt_mic_AirPods Pro").
+ * For built-in mic: uses live measurements from [AudioCaptureService.measuredPipelineDelayMs]
+ * plus a fixed algorithm offset. No calibration needed.
+ *
+ * For external devices (wired/BT): uses calibrated values from DataStore.
  */
 class AudioInputDelayRepository(
     private val context: Context,
-    private val audioDeviceMonitor: AudioDeviceMonitor
+    private val audioDeviceMonitor: AudioDeviceMonitor,
+    private val audioCaptureService: AudioCaptureService
 ) {
     companion object {
         private val PROFILES_KEY = stringPreferencesKey("input_delay_profiles_json")
         private val CALIBRATION_VERSION_KEY = intPreferencesKey("calibration_version")
         private const val BASELINE_KEY = "__baseline_input_delay"
         /** Bump this when audio pipeline changes invalidate existing calibration. */
-        private const val CURRENT_CALIBRATION_VERSION = 2
+        private const val CURRENT_CALIBRATION_VERSION = 3
 
         fun defaultDelay(type: AudioInputDeviceType): Int = when (type) {
             AudioInputDeviceType.BUILTIN -> 0
@@ -45,21 +49,18 @@ class AudioInputDelayRepository(
 
     /**
      * Estimated output latency for the built-in speaker, derived from the device's
-     * native audio buffer configuration. Used to split calibrated round-trip into
-     * output + input delays. Much more accurate than the old hardcoded 5ms.
+     * native audio buffer configuration. Kept for informational display in calibration.
      */
     val estimatedBuiltinOutputLatencyMs: Int
         get() = audioDeviceMonitor.estimatedOutputLatencyMs
 
     /**
      * Check calibration version and clear stale data if the audio pipeline has changed.
-     * Call once during app startup (e.g. from the Hilt module or ViewModel init).
      */
     suspend fun migrateIfNeeded() {
         context.audioInputDelayStore.edit { prefs ->
             val stored = prefs[CALIBRATION_VERSION_KEY] ?: 0
             if (stored < CURRENT_CALIBRATION_VERSION) {
-                // Audio pipeline changed — existing calibration is invalid
                 val current = parseProfiles(prefs[PROFILES_KEY]).toMutableMap()
                 current.remove(BASELINE_KEY)
                 prefs[PROFILES_KEY] = serializeProfiles(current)
@@ -74,13 +75,22 @@ class AudioInputDelayRepository(
 
     /**
      * Emits the delay (ms) for the currently active audio input device.
-     * Automatically switches when the device changes.
+     *
+     * For built-in mic: uses live measured pipeline delay + algorithm offset.
+     * For external devices: uses calibrated/default values.
      */
     val activeDelay: Flow<Int> = combine(
         audioDeviceMonitor.currentInputDevice,
-        profilesFlow
-    ) { device, profiles ->
-        profiles[device.deviceKey] ?: defaultDelay(device.type)
+        profilesFlow,
+        audioCaptureService.measuredPipelineDelayMs
+    ) { device, profiles, measuredDelay ->
+        if (device.type == AudioInputDeviceType.BUILTIN && measuredDelay != null) {
+            // Direct measurement: pipeline delay + algorithm offset for half read chunk
+            (measuredDelay + AudioCaptureService.ALGORITHM_OFFSET_MS).toInt()
+        } else {
+            // External device or no measurement: use calibrated value
+            profiles[device.deviceKey] ?: defaultDelay(device.type)
+        }
     }
 
     /** Whether the baseline calibration (built-in speaker + built-in mic) has been completed. */
@@ -97,7 +107,6 @@ class AudioInputDelayRepository(
         context.audioInputDelayStore.edit { prefs ->
             val current = parseProfiles(prefs[PROFILES_KEY]).toMutableMap()
             current[BASELINE_KEY] = delayMs.coerceIn(0, 500)
-            // Also store as the built-in mic delay
             current["builtin_mic"] = delayMs.coerceIn(0, 500)
             prefs[PROFILES_KEY] = serializeProfiles(current)
         }

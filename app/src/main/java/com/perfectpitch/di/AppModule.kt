@@ -90,8 +90,9 @@ object AppModule {
     @Singleton
     fun provideAudioInputDelayRepository(
         @ApplicationContext context: Context,
-        audioDeviceMonitor: AudioDeviceMonitor
-    ): AudioInputDelayRepository = AudioInputDelayRepository(context, audioDeviceMonitor)
+        audioDeviceMonitor: AudioDeviceMonitor,
+        audioCaptureService: AudioCaptureService
+    ): AudioInputDelayRepository = AudioInputDelayRepository(context, audioDeviceMonitor, audioCaptureService)
 
     @Provides
     @Singleton

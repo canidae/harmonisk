@@ -91,6 +91,15 @@ fun CalibrationScreen(
                     // Waiting for init
                 }
 
+                CalibrationStep.BUILTIN_INFO -> BuiltinInfoContent(
+                    measuredPipelineDelayMs = state.measuredPipelineDelayMs,
+                    algorithmOffsetMs = com.perfectpitch.audio.AudioCaptureService.ALGORITHM_OFFSET_MS,
+                    onBack = {
+                        viewModel.stopCalibration()
+                        onBack()
+                    }
+                )
+
                 CalibrationStep.BASELINE_NEEDED -> BaselineNeededContent(
                     externalOutputName = state.externalOutputName,
                     externalInputName = state.externalInputName,
@@ -188,6 +197,76 @@ fun CalibrationScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+}
+
+@Composable
+private fun BuiltinInfoContent(
+    measuredPipelineDelayMs: Float?,
+    algorithmOffsetMs: Float,
+    onBack: () -> Unit
+) {
+    Text(
+        text = "Audio Delay Info",
+        style = MaterialTheme.typography.titleLarge
+    )
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Built-in microphone delay is measured automatically — no calibration needed.",
+                style = MaterialTheme.typography.bodyLarge
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (measuredPipelineDelayMs != null) {
+                val totalMs = measuredPipelineDelayMs + algorithmOffsetMs
+                Text(
+                    text = "Measured pipeline delay: ${String.format("%.1f", measuredPipelineDelayMs)}ms",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Algorithm offset: ${String.format("%.0f", algorithmOffsetMs)}ms",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Total input delay: ${String.format("%.0f", totalMs)}ms",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            } else {
+                Text(
+                    text = "Pipeline delay: measuring…",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Start playing or use Free Play to begin measurement.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Connect an external speaker or microphone to calibrate those devices.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Button(
+        onClick = onBack,
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        shape = MaterialTheme.shapes.large
+    ) {
+        Text("Done", style = MaterialTheme.typography.titleMedium)
     }
 }
 

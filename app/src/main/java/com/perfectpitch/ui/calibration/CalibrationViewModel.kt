@@ -14,6 +14,7 @@ import javax.inject.Inject
 class CalibrationViewModel @Inject constructor(
     private val melodySynthesizer: MelodySynthesizer,
     private val audioDeviceMonitor: AudioDeviceMonitor,
+    private val audioCaptureService: AudioCaptureService,
     private val audioInputDelayRepository: AudioInputDelayRepository,
     private val audioDelayProfileRepository: AudioDelayProfileRepository,
     private val pitchProcessor: PitchProcessor
@@ -57,6 +58,7 @@ class CalibrationViewModel @Inject constructor(
      */
     enum class CalibrationStep {
         INIT,
+        BUILTIN_INFO,           // Built-in devices: shows measured delay (no calibration needed)
         BASELINE_NEEDED,
         BASELINE_READY,
         BASELINE_CALIBRATING,
@@ -87,6 +89,8 @@ class CalibrationViewModel @Inject constructor(
         val externalInputName: String = "",
         // Estimated built-in speaker output latency (from AudioManager)
         val estimatedOutputLatencyMs: Int = 0,
+        // Measured input pipeline delay (from AudioRecord.getTimestamp)
+        val measuredPipelineDelayMs: Float? = null,
         // Calibration progress
         val tonesPlayed: Int = 0,
         val tonesDetected: Int = 0,
@@ -118,26 +122,35 @@ class CalibrationViewModel @Inject constructor(
             audioInputDelayRepository.migrateIfNeeded()
         }
 
-        // Track device changes
+        // Track device changes and measured delay
         viewModelScope.launch {
             combine(
                 audioDeviceMonitor.currentDevice,
                 audioDeviceMonitor.currentInputDevice,
-                audioInputDelayRepository.hasBaseline
-            ) { output, input, baseline ->
-                Triple(output, input, baseline)
-            }.collect { (output, input, baseline) ->
+                audioInputDelayRepository.hasBaseline,
+                audioCaptureService.measuredPipelineDelayMs
+            ) { output, input, baseline, measured ->
+                CalibrationDeviceInfo(output, input, baseline, measured)
+            }.collect { info ->
                 _state.update {
                     it.copy(
-                        outputDevice = output,
-                        inputDevice = input,
-                        hasBaseline = baseline,
-                        estimatedOutputLatencyMs = audioInputDelayRepository.estimatedBuiltinOutputLatencyMs
+                        outputDevice = info.output,
+                        inputDevice = info.input,
+                        hasBaseline = info.baseline,
+                        estimatedOutputLatencyMs = audioInputDelayRepository.estimatedBuiltinOutputLatencyMs,
+                        measuredPipelineDelayMs = info.measuredDelay
                     )
                 }
             }
         }
     }
+
+    private data class CalibrationDeviceInfo(
+        val output: AudioOutputDevice,
+        val input: AudioInputDevice,
+        val baseline: Boolean,
+        val measuredDelay: Float?
+    )
 
     fun initSynthesizer(context: android.content.Context) {
         if (melodySynthesizer.isReady) {
@@ -158,7 +171,6 @@ class CalibrationViewModel @Inject constructor(
 
     private fun determineFirstStep() {
         viewModelScope.launch {
-            val hasBaseline = audioInputDelayRepository.getBaselineInputDelay() != null
             val output = audioDeviceMonitor.currentDevice.value
             val input = audioDeviceMonitor.currentInputDevice.value
             val hasExtOutput = output.type != AudioOutputDeviceType.SPEAKER
@@ -166,7 +178,6 @@ class CalibrationViewModel @Inject constructor(
 
             _state.update {
                 it.copy(
-                    hasBaseline = hasBaseline,
                     hasExternalOutput = hasExtOutput,
                     hasExternalInput = hasExtInput,
                     externalOutputName = if (hasExtOutput) output.name else "",
@@ -174,19 +185,13 @@ class CalibrationViewModel @Inject constructor(
                 )
             }
 
-            if (!hasBaseline) {
-                if (hasExtOutput || hasExtInput) {
-                    _state.update { it.copy(step = CalibrationStep.BASELINE_NEEDED) }
-                } else {
-                    _state.update { it.copy(step = CalibrationStep.BASELINE_READY) }
-                }
+            if (!hasExtOutput && !hasExtInput) {
+                // Built-in only: show measured delay info (no calibration needed)
+                _state.update { it.copy(step = CalibrationStep.BUILTIN_INFO) }
             } else if (hasExtOutput) {
-                _state.update { it.copy(step = CalibrationStep.DEVICE_OUTPUT_READY) }
-            } else if (hasExtInput) {
-                _state.update { it.copy(step = CalibrationStep.DEVICE_INPUT_READY) }
+                _state.update { it.copy(step = CalibrationStep.DEVICE_OUTPUT_INSTRUCTIONS) }
             } else {
-                // Built-in only and baseline exists — offer recalibration
-                _state.update { it.copy(step = CalibrationStep.BASELINE_READY) }
+                _state.update { it.copy(step = CalibrationStep.DEVICE_INPUT_INSTRUCTIONS) }
             }
         }
     }
@@ -321,9 +326,17 @@ class CalibrationViewModel @Inject constructor(
         }
     }
 
-    private suspend fun handleDeviceOutputResult(roundTripMs: Int) {
-        val baselineInput = audioInputDelayRepository.getBaselineInputDelay() ?: 0
-        val outputDelay = (roundTripMs - baselineInput).coerceIn(0, 500)
+    private fun handleDeviceOutputResult(roundTripMs: Int) {
+        // External output round-trip = external_output_delay + builtin_input_delay
+        // Use measured pipeline delay for built-in input (much more accurate than calibrated baseline)
+        val measuredInput = audioCaptureService.measuredPipelineDelayMs.value
+        val builtinInputMs = if (measuredInput != null) {
+            (measuredInput + AudioCaptureService.ALGORITHM_OFFSET_MS).toInt()
+        } else {
+            // Fallback: use half the round-trip as rough estimate
+            roundTripMs / 2
+        }
+        val outputDelay = (roundTripMs - builtinInputMs).coerceIn(0, 500)
         _state.update {
             it.copy(
                 step = CalibrationStep.DEVICE_OUTPUT_RESULT,
@@ -335,6 +348,8 @@ class CalibrationViewModel @Inject constructor(
     }
 
     private fun handleDeviceInputResult(roundTripMs: Int) {
+        // External input round-trip = builtin_output_delay + external_input_delay
+        // Use AudioManager estimate for built-in speaker output
         val estimatedOutputMs = audioInputDelayRepository.estimatedBuiltinOutputLatencyMs
         val inputDelay = (roundTripMs - estimatedOutputMs)
             .coerceIn(0, 500)
