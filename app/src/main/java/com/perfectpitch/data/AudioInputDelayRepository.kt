@@ -10,6 +10,7 @@ import com.perfectpitch.audio.AudioDeviceMonitor
 import com.perfectpitch.audio.AudioInputDeviceType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.json.JSONObject
 
@@ -29,6 +30,8 @@ class AudioInputDelayRepository(
 ) {
     companion object {
         private val PROFILES_KEY = stringPreferencesKey("input_delay_profiles_json")
+        private const val BASELINE_KEY = "__baseline_input_delay"
+        const val BUILTIN_SPEAKER_DELAY_MS = 5
 
         fun defaultDelay(type: AudioInputDeviceType): Int = when (type) {
             AudioInputDeviceType.BUILTIN -> 0
@@ -50,6 +53,26 @@ class AudioInputDelayRepository(
         profilesFlow
     ) { device, profiles ->
         profiles[device.deviceKey] ?: defaultDelay(device.type)
+    }
+
+    /** Whether the baseline calibration (built-in speaker + built-in mic) has been completed. */
+    val hasBaseline: Flow<Boolean> = profilesFlow.map { it.containsKey(BASELINE_KEY) }
+
+    /** Get the stored baseline input delay (built-in mic latency). Returns null if not calibrated. */
+    suspend fun getBaselineInputDelay(): Int? {
+        val profiles = profilesFlow.first()
+        return profiles[BASELINE_KEY]
+    }
+
+    /** Store the baseline input delay (measured with built-in speaker + built-in mic). */
+    suspend fun setBaselineInputDelay(delayMs: Int) {
+        context.audioInputDelayStore.edit { prefs ->
+            val current = parseProfiles(prefs[PROFILES_KEY]).toMutableMap()
+            current[BASELINE_KEY] = delayMs.coerceIn(0, 500)
+            // Also store as the built-in mic delay
+            current["builtin_mic"] = delayMs.coerceIn(0, 500)
+            prefs[PROFILES_KEY] = serializeProfiles(current)
+        }
     }
 
     /** Store the delay for a specific input device key. */

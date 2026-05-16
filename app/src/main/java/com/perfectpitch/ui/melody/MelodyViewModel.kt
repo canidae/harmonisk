@@ -7,6 +7,7 @@ import com.perfectpitch.audio.MelodyPlayer
 import com.perfectpitch.audio.MelodySynthesizer
 import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.AudioDelayProfileRepository
+import com.perfectpitch.data.AudioInputDelayRepository
 import com.perfectpitch.data.MelodyRepository
 import com.perfectpitch.data.MelodySettingsRepository
 import com.perfectpitch.data.SettingsRepository
@@ -28,7 +29,8 @@ class MelodyViewModel @Inject constructor(
     private val noteUtils: NoteUtils,
     private val melodySynthesizer: MelodySynthesizer,
     private val melodyPlayer: MelodyPlayer,
-    private val audioDelayProfileRepository: AudioDelayProfileRepository
+    private val audioDelayProfileRepository: AudioDelayProfileRepository,
+    private val audioInputDelayRepository: AudioInputDelayRepository
 ) : ViewModel() {
 
     companion object {
@@ -58,6 +60,8 @@ class MelodyViewModel @Inject constructor(
 
     // Melody audio output delay
     private var synthOpenJob: Job? = null
+    // Input delay for backdating pitch detection timestamps
+    private var audioInputDelayMs: Int = 0
 
     init {
         viewModelScope.launch {
@@ -66,10 +70,16 @@ class MelodyViewModel @Inject constructor(
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
             }
         }
-        // Observe per-device audio delay and update the melody player
+        // Observe per-device audio output delay and update the melody player
         viewModelScope.launch {
             audioDelayProfileRepository.activeDelay.collect { delayMs ->
                 melodyPlayer.setAudioOutputDelay(delayMs.toLong())
+            }
+        }
+        // Observe per-device audio input delay for pitch timestamp correction
+        viewModelScope.launch {
+            audioInputDelayRepository.activeDelay.collect { delayMs ->
+                audioInputDelayMs = delayMs
             }
         }
     }
@@ -421,8 +431,11 @@ class MelodyViewModel @Inject constructor(
         val songTime = _state.value.currentTimeSeconds
         if (_state.value.phase != PlayPhase.PLAYING && _state.value.phase != PlayPhase.WAITING_FOR_NOTE) return
 
+        // Backdate timestamp by input delay to align with when user actually sang
+        val adjustedTime = songTime - (audioInputDelayMs / 1000.0)
+
         val frame = PitchFrame(
-            timeSeconds = songTime,
+            timeSeconds = adjustedTime,
             midiNote = result.midiNoteNumber,
             centsOff = result.centsOff,
             frequency = result.frequency

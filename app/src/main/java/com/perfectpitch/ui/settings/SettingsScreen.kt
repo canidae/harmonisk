@@ -162,21 +162,76 @@ fun SettingsScreen(
 
             // Audio input delay calibration (per-input-device)
             SettingSection(title = "Audio Input Delay") {
-                Text(
-                    text = "Measures microphone detection latency by playing tones and timing when they're picked up.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                val inputDevice by viewModel.currentInputDevice.collectAsState()
+                val activeInputDelay by viewModel.activeInputDelay.collectAsState()
+                var editingInputDelay by remember { mutableStateOf(false) }
+                var inputDelayText by remember(activeInputDelay) { mutableStateOf(activeInputDelay.toString()) }
+
+                inputDevice?.let {
+                    Text(
+                        text = "Input device: ${it.name}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+
+                if (editingInputDelay) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = inputDelayText,
+                            onValueChange = { inputDelayText = it },
+                            label = { Text("Input delay (ms)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.width(140.dp)
+                        )
+                        Button(
+                            onClick = {
+                                inputDelayText.toIntOrNull()?.let { ms ->
+                                    viewModel.saveInputDelay(ms)
+                                }
+                                editingInputDelay = false
+                            },
+                            enabled = inputDelayText.toIntOrNull() != null
+                        ) {
+                            Text("Save")
+                        }
+                        TextButton(onClick = {
+                            inputDelayText = activeInputDelay.toString()
+                            editingInputDelay = false
+                        }) {
+                            Text("Cancel")
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Current input delay: ${activeInputDelay}ms",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        TextButton(onClick = { editingInputDelay = true }) {
+                            Text("Edit")
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = onNavigateToCalibration,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Calibrate Audio Input Delay")
+                    Text("Calibrate Audio Delays")
                 }
                 Text(
-                    text = "Automatic calibration for the connected microphone",
+                    text = "Automatic calibration for connected audio devices",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

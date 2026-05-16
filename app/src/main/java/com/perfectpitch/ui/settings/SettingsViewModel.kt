@@ -3,9 +3,11 @@ package com.perfectpitch.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.perfectpitch.audio.AudioDeviceMonitor
+import com.perfectpitch.audio.AudioInputDevice
 import com.perfectpitch.audio.AudioOutputDevice
 import com.perfectpitch.data.AppSettings
 import com.perfectpitch.data.AudioDelayProfileRepository
+import com.perfectpitch.data.AudioInputDelayRepository
 import com.perfectpitch.data.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -16,7 +18,8 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val audioDeviceMonitor: AudioDeviceMonitor,
-    private val audioDelayProfileRepository: AudioDelayProfileRepository
+    private val audioDelayProfileRepository: AudioDelayProfileRepository,
+    private val audioInputDelayRepository: AudioInputDelayRepository
 ) : ViewModel() {
 
     val settings: StateFlow<AppSettings> = settingsRepository.settings
@@ -25,7 +28,13 @@ class SettingsViewModel @Inject constructor(
     val currentDevice: StateFlow<AudioOutputDevice?> = audioDeviceMonitor.currentDevice
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val currentInputDevice: StateFlow<AudioInputDevice?> = audioDeviceMonitor.currentInputDevice
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val activeDelay: StateFlow<Int> = audioDelayProfileRepository.activeDelay
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val activeInputDelay: StateFlow<Int> = audioInputDelayRepository.activeDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     fun updateConcertPitch(pitch: Float) {
@@ -52,6 +61,13 @@ class SettingsViewModel @Inject constructor(
         val device = audioDeviceMonitor.currentDevice.value
         viewModelScope.launch {
             audioDelayProfileRepository.setDelayForDevice(device.deviceKey, ms)
+        }
+    }
+
+    fun saveInputDelay(ms: Int) {
+        val device = audioDeviceMonitor.currentInputDevice.value
+        viewModelScope.launch {
+            audioInputDelayRepository.setDelayForDevice(device.deviceKey, ms)
         }
     }
 
