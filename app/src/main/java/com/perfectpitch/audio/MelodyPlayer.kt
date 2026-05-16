@@ -21,7 +21,7 @@ class MelodyPlayer(
     private var playJob: Job? = null
     private var track: MelodyTrack? = null
     private var tempoMultiplier: Float = 1.0f
-    private var audioOutputDelayMs: Long = 150L
+    private var audioOutputDelayMs: Long = 0L
 
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()

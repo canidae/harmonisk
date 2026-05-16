@@ -11,6 +11,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.rememberTextMeasurer
 import com.perfectpitch.midi.MelodyTrack
@@ -375,6 +376,9 @@ private fun DrawScope.drawContinuousFreePlayPitchLine(
  * Draws a single continuous pitch line across ALL pitch trace frames,
  * using absolute MIDI-to-pixel mapping for smooth transitions.
  * The path is broken at silence gaps (>0.15s between frames).
+ * Uses clipRect so frames that scroll past the piano edge remain
+ * connected (the path extends below the piano, but only the visible
+ * portion above it is rendered).
  */
 private fun DrawScope.drawContinuousMelodyPitchTrace(
     mode: CanvasMode.Melody,
@@ -388,11 +392,19 @@ private fun DrawScope.drawContinuousMelodyPitchTrace(
     if (trace.isEmpty()) return
 
     val pixelsPerSecond = mode.fallSpeedPxPerSec * density
+    if (pixelsPerSecond <= 0f) return
     val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
 
     val visibleTop = minOf(pianoEdgeY, canvasFarEdgeY)
     val visibleBottom = maxOf(pianoEdgeY, canvasFarEdgeY)
     val maxGapSec = 0.15
+
+    // Time range visible on screen, plus a generous margin so lines
+    // entering/leaving the viewport stay connected.
+    val visibleSpanSec = (visibleBottom - visibleTop) / pixelsPerSecond
+    val marginSec = visibleSpanSec * 0.5
+    val minTimeSec = viewTimeSeconds - marginSec
+    val maxTimeSec = viewTimeSeconds + visibleSpanSec + marginSec
 
     val path = Path()
     var pathStarted = false
@@ -400,6 +412,14 @@ private fun DrawScope.drawContinuousMelodyPitchTrace(
     var prevMidiNote = -1
 
     for (frame in trace) {
+        // Skip frames far outside the visible time range (performance)
+        if (frame.timeSeconds < minTimeSec || frame.timeSeconds > maxTimeSec) {
+            if (pathStarted) pathStarted = false
+            prevTimeSec = frame.timeSeconds
+            prevMidiNote = frame.midiNote
+            continue
+        }
+
         val fractionalMidi = frame.midiNote + frame.centsOff / 100f
         val x = midiToPixelX(layout, fractionalMidi) ?: continue
 
@@ -408,12 +428,6 @@ private fun DrawScope.drawContinuousMelodyPitchTrace(
 
         val hasGap = prevTimeSec != Double.MIN_VALUE && (frame.timeSeconds - prevTimeSec) > maxGapSec
         val hasJump = prevMidiNote >= 0 && kotlin.math.abs(frame.midiNote - prevMidiNote) > 1
-        if (y < visibleTop - 50f || y > visibleBottom + 50f) {
-            pathStarted = false
-            prevTimeSec = frame.timeSeconds
-            prevMidiNote = frame.midiNote
-            continue
-        }
 
         if (!pathStarted || hasGap || hasJump) {
             path.moveTo(x, y)
@@ -425,18 +439,27 @@ private fun DrawScope.drawContinuousMelodyPitchTrace(
         prevMidiNote = frame.midiNote
     }
 
-    if (!pathStarted) return
+    if (path.isEmpty) return
 
-    drawPath(
-        path,
-        Color.White.copy(alpha = 0.15f),
-        style = Stroke(width = 4f * density, cap = StrokeCap.Round, join = StrokeJoin.Round)
-    )
-    drawPath(
-        path,
-        Color.White.copy(alpha = 0.7f),
-        style = Stroke(width = 1.5f * density, cap = StrokeCap.Round, join = StrokeJoin.Round)
-    )
+    // Clip to the canvas area (between piano edge and far edge) so the
+    // line is visible even when its Y coordinates extend past the piano.
+    clipRect(
+        left = 0f,
+        top = visibleTop,
+        right = size.width,
+        bottom = visibleBottom
+    ) {
+        drawPath(
+            path,
+            Color.White.copy(alpha = 0.15f),
+            style = Stroke(width = 4f * density, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        drawPath(
+            path,
+            Color.White.copy(alpha = 0.7f),
+            style = Stroke(width = 1.5f * density, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+    }
 }
 
 // endregion
@@ -521,7 +544,7 @@ private fun DrawScope.drawPitchTrace(
 
     val pixelsPerSecond = mode.fallSpeedPxPerSec * density
     val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
-    val frameDuration = 0.093
+    val frameDuration = 0.023
 
     // Group consecutive frames with the same midiNote into segments
     var segStart = 0
