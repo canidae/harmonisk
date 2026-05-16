@@ -20,6 +20,24 @@ class AudioDeviceMonitor(context: Context) {
 
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
+    /**
+     * Estimated output latency (ms) for the built-in speaker path, derived from the
+     * device's native buffer size. This accounts for the AudioTrack → HAL → speaker
+     * pipeline latency. Used to split calibrated round-trip into output + input.
+     *
+     * Estimation: `framesPerBuffer * 2 / nativeSampleRate * 1000` (double-buffering).
+     * Clamped to [10, 200] to avoid nonsense from devices that report weird values.
+     */
+    val estimatedOutputLatencyMs: Int by lazy {
+        val nativeSrStr = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)
+        val nativeFpbStr = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER)
+        val nativeSr = nativeSrStr?.toIntOrNull() ?: 48000
+        val nativeFpb = nativeFpbStr?.toIntOrNull() ?: 256
+        // Double-buffering: at least 2 buffer periods of latency
+        val estimateMs = (nativeFpb.toLong() * 2 * 1000 / nativeSr).toInt()
+        estimateMs.coerceIn(10, 200)
+    }
+
     private val _currentDevice = MutableStateFlow(resolveActiveOutputDevice())
     val currentDevice: StateFlow<AudioOutputDevice> = _currentDevice.asStateFlow()
 

@@ -114,6 +114,7 @@ fun CalibrationScreen(
                 CalibrationStep.BASELINE_RESULT -> BaselineResultContent(
                     roundTripMs = state.baselineRoundTripMs ?: 0,
                     inputDelayMs = state.baselineInputDelayMs ?: 0,
+                    estimatedOutputLatencyMs = state.estimatedOutputLatencyMs,
                     editedDelay = state.editedBaselineInputDelay,
                     onEditDelay = { viewModel.updateEditedBaselineDelay(it) },
                     onSaveAndContinue = { viewModel.saveBaselineAndContinue() },
@@ -294,6 +295,7 @@ private fun CalibratingContent(
 private fun BaselineResultContent(
     roundTripMs: Int,
     inputDelayMs: Int,
+    estimatedOutputLatencyMs: Int,
     editedDelay: String,
     onEditDelay: (String) -> Unit,
     onSaveAndContinue: () -> Unit,
@@ -310,7 +312,7 @@ private fun BaselineResultContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "Built-in speaker delay: ~${com.perfectpitch.data.AudioInputDelayRepository.BUILTIN_SPEAKER_DELAY_MS}ms (assumed)",
+                text = "Estimated speaker output delay: ~${estimatedOutputLatencyMs}ms",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

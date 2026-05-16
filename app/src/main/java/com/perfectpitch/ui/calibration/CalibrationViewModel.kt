@@ -85,6 +85,8 @@ class CalibrationViewModel @Inject constructor(
         // Remembers device names for instructions
         val externalOutputName: String = "",
         val externalInputName: String = "",
+        // Estimated built-in speaker output latency (from AudioManager)
+        val estimatedOutputLatencyMs: Int = 0,
         // Calibration progress
         val tonesPlayed: Int = 0,
         val tonesDetected: Int = 0,
@@ -111,6 +113,11 @@ class CalibrationViewModel @Inject constructor(
     private var calibrationJob: Job? = null
 
     init {
+        // Clear stale calibration data if the audio pipeline version has changed
+        viewModelScope.launch {
+            audioInputDelayRepository.migrateIfNeeded()
+        }
+
         // Track device changes
         viewModelScope.launch {
             combine(
@@ -124,7 +131,8 @@ class CalibrationViewModel @Inject constructor(
                     it.copy(
                         outputDevice = output,
                         inputDevice = input,
-                        hasBaseline = baseline
+                        hasBaseline = baseline,
+                        estimatedOutputLatencyMs = audioInputDelayRepository.estimatedBuiltinOutputLatencyMs
                     )
                 }
             }
@@ -298,7 +306,10 @@ class CalibrationViewModel @Inject constructor(
     }
 
     private fun handleBaselineResult(roundTripMs: Int) {
-        val inputDelay = (roundTripMs - AudioInputDelayRepository.BUILTIN_SPEAKER_DELAY_MS)
+        // Use the device's estimated output latency (from AudioManager buffer info)
+        // instead of the old hardcoded 5ms to properly split the round-trip.
+        val estimatedOutputMs = audioInputDelayRepository.estimatedBuiltinOutputLatencyMs
+        val inputDelay = (roundTripMs - estimatedOutputMs)
             .coerceIn(0, 500)
         _state.update {
             it.copy(
@@ -324,7 +335,8 @@ class CalibrationViewModel @Inject constructor(
     }
 
     private fun handleDeviceInputResult(roundTripMs: Int) {
-        val inputDelay = (roundTripMs - AudioInputDelayRepository.BUILTIN_SPEAKER_DELAY_MS)
+        val estimatedOutputMs = audioInputDelayRepository.estimatedBuiltinOutputLatencyMs
+        val inputDelay = (roundTripMs - estimatedOutputMs)
             .coerceIn(0, 500)
         _state.update {
             it.copy(
@@ -359,6 +371,13 @@ class CalibrationViewModel @Inject constructor(
 
         viewModelScope.launch {
             audioInputDelayRepository.setBaselineInputDelay(delayMs)
+
+            // Store the estimated output delay for the built-in speaker so the
+            // synth look-ahead works correctly even without external device calibration.
+            val roundTrip = _state.value.baselineRoundTripMs ?: 0
+            val builtinOutputDelay = (roundTrip - delayMs).coerceIn(0, 500)
+            audioDelayProfileRepository.setDelayForDevice("speaker", builtinOutputDelay)
+
             _state.update { it.copy(hasBaseline = true) }
 
             // Advance to device calibration if external devices present

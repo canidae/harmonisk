@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.perfectpitch.audio.AudioDeviceMonitor
@@ -30,13 +31,40 @@ class AudioInputDelayRepository(
 ) {
     companion object {
         private val PROFILES_KEY = stringPreferencesKey("input_delay_profiles_json")
+        private val CALIBRATION_VERSION_KEY = intPreferencesKey("calibration_version")
         private const val BASELINE_KEY = "__baseline_input_delay"
-        const val BUILTIN_SPEAKER_DELAY_MS = 5
+        /** Bump this when audio pipeline changes invalidate existing calibration. */
+        private const val CURRENT_CALIBRATION_VERSION = 2
 
         fun defaultDelay(type: AudioInputDeviceType): Int = when (type) {
             AudioInputDeviceType.BUILTIN -> 0
             AudioInputDeviceType.WIRED -> 0
             AudioInputDeviceType.BLUETOOTH -> 200
+        }
+    }
+
+    /**
+     * Estimated output latency for the built-in speaker, derived from the device's
+     * native audio buffer configuration. Used to split calibrated round-trip into
+     * output + input delays. Much more accurate than the old hardcoded 5ms.
+     */
+    val estimatedBuiltinOutputLatencyMs: Int
+        get() = audioDeviceMonitor.estimatedOutputLatencyMs
+
+    /**
+     * Check calibration version and clear stale data if the audio pipeline has changed.
+     * Call once during app startup (e.g. from the Hilt module or ViewModel init).
+     */
+    suspend fun migrateIfNeeded() {
+        context.audioInputDelayStore.edit { prefs ->
+            val stored = prefs[CALIBRATION_VERSION_KEY] ?: 0
+            if (stored < CURRENT_CALIBRATION_VERSION) {
+                // Audio pipeline changed — existing calibration is invalid
+                val current = parseProfiles(prefs[PROFILES_KEY]).toMutableMap()
+                current.remove(BASELINE_KEY)
+                prefs[PROFILES_KEY] = serializeProfiles(current)
+                prefs[CALIBRATION_VERSION_KEY] = CURRENT_CALIBRATION_VERSION
+            }
         }
     }
 
@@ -80,6 +108,15 @@ class AudioInputDelayRepository(
         context.audioInputDelayStore.edit { prefs ->
             val current = parseProfiles(prefs[PROFILES_KEY]).toMutableMap()
             current[deviceKey] = delayMs.coerceIn(-200, 500)
+            prefs[PROFILES_KEY] = serializeProfiles(current)
+        }
+    }
+
+    /** Clear baseline calibration data so the user is prompted to re-calibrate. */
+    suspend fun clearBaseline() {
+        context.audioInputDelayStore.edit { prefs ->
+            val current = parseProfiles(prefs[PROFILES_KEY]).toMutableMap()
+            current.remove(BASELINE_KEY)
             prefs[PROFILES_KEY] = serializeProfiles(current)
         }
     }

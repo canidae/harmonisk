@@ -23,6 +23,12 @@ class AudioCaptureService(
         const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_FLOAT
         /** Read chunk size — smaller for lower latency. Analysis uses a larger sliding window. */
         const val BUFFER_SIZE_SAMPLES = 1024
+
+        /**
+         * VOICE_PERFORMANCE (API 29+): Designed for live performance / karaoke.
+         * Minimizes latency and decouples from playback path — ideal for instrument pitch detection.
+         */
+        private const val AUDIO_SOURCE = MediaRecorder.AudioSource.VOICE_PERFORMANCE
     }
 
     private val minBufferSize = AudioRecord.getMinBufferSize(
@@ -43,13 +49,18 @@ class AudioCaptureService(
             return@callbackFlow
         }
 
-        val audioRecord = AudioRecord(
-            MediaRecorder.AudioSource.MIC,
-            SAMPLE_RATE,
-            CHANNEL_CONFIG,
-            AUDIO_FORMAT,
-            bufferSize
-        )
+        val audioRecord = AudioRecord.Builder()
+            .setAudioSource(AUDIO_SOURCE)
+            .setAudioFormat(
+                AudioFormat.Builder()
+                    .setSampleRate(SAMPLE_RATE)
+                    .setChannelMask(CHANNEL_CONFIG)
+                    .setEncoding(AUDIO_FORMAT)
+                    .build()
+            )
+            .setBufferSizeInBytes(bufferSize)
+            .setContext(context)
+            .build()
 
         if (audioRecord.state != AudioRecord.STATE_INITIALIZED) {
             close(IllegalStateException("AudioRecord failed to initialize"))

@@ -88,6 +88,7 @@ class MelodySynthesizer {
             )
             .setBufferSizeInBytes(bufferSize)
             .setTransferMode(AudioTrack.MODE_STREAM)
+            .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
             .build()
 
         audioTrack = track
