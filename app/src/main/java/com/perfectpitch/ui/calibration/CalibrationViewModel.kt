@@ -192,9 +192,12 @@ class CalibrationViewModel @Inject constructor(
     fun startCalibration() {
         val step = _state.value.step
         val calibratingStep = when (step) {
-            CalibrationStep.BASELINE_READY -> CalibrationStep.BASELINE_CALIBRATING
-            CalibrationStep.DEVICE_OUTPUT_READY -> CalibrationStep.DEVICE_OUTPUT_CALIBRATING
-            CalibrationStep.DEVICE_INPUT_READY -> CalibrationStep.DEVICE_INPUT_CALIBRATING
+            CalibrationStep.BASELINE_READY, CalibrationStep.BASELINE_RESULT ->
+                CalibrationStep.BASELINE_CALIBRATING
+            CalibrationStep.DEVICE_OUTPUT_READY, CalibrationStep.DEVICE_OUTPUT_RESULT ->
+                CalibrationStep.DEVICE_OUTPUT_CALIBRATING
+            CalibrationStep.DEVICE_INPUT_READY, CalibrationStep.DEVICE_INPUT_RESULT ->
+                CalibrationStep.DEVICE_INPUT_CALIBRATING
             else -> return
         }
 
