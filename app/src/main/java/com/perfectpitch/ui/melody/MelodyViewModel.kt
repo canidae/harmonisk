@@ -37,6 +37,8 @@ class MelodyViewModel @Inject constructor(
         const val MIN_FALL_SPEED = 30f
         const val MAX_FALL_SPEED = 600f
         const val NOTE_RANGE_PADDING = 3
+        /** Extra grace time beyond calibrated input delay — musically acceptable lateness. */
+        const val GRACE_PERIOD_EXTRA_MS = 100L
     }
 
     private val _state = MutableStateFlow(MelodyPlayState())
@@ -54,6 +56,9 @@ class MelodyViewModel @Inject constructor(
     private var correctPitchFrameCount = 0
     private var isWaitingForNote = false
     private var wasWaitingForNote = false
+    // Grace period: time continues advancing for inputDelay + extra before freezing
+    private var waitGraceStartTime = 0L
+    private var waitGraceDurationMs = 0L
 
     private var originalMelodyTrack: MelodyTrack? = null
     private var currentMelodyId: String? = null
@@ -377,9 +382,15 @@ class MelodyViewModel @Inject constructor(
             var pitchDetectionStarted = _state.value.phase == PlayPhase.PLAYING
 
             while (isActive) {
+                // Grace period: continue advancing time for a while after entering wait mode
                 if (isWaitingForNote) {
-                    delay(16)
-                    continue
+                    val graceElapsed = SystemClock.elapsedRealtime() - waitGraceStartTime
+                    if (graceElapsed >= waitGraceDurationMs) {
+                        // Grace expired — actually freeze time
+                        delay(16)
+                        continue
+                    }
+                    // Still in grace period — keep time moving (fall through)
                 }
 
                 val elapsed = (SystemClock.elapsedRealtime() - playbackStartTime) / 1000.0 * tempo
@@ -467,9 +478,11 @@ class MelodyViewModel @Inject constructor(
             centsOffCount = 0
             correctPitchFrameCount = 0
 
-            // In wait mode, freeze time until correct note is played
+            // In wait mode, start grace period before freezing
             if (_state.value.waitMode) {
                 isWaitingForNote = true
+                waitGraceStartTime = SystemClock.elapsedRealtime()
+                waitGraceDurationMs = audioInputDelayMs.toLong() + GRACE_PERIOD_EXTRA_MS
                 _state.update { it.copy(phase = PlayPhase.WAITING_FOR_NOTE) }
             }
         } else if (noteIndex < 0 && _state.value.currentNoteIndex >= 0) {

@@ -230,7 +230,7 @@ class CalibrationViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         step = readyStep,
-                        error = "Could not detect enough tones. Make sure the microphone can hear the speaker and the environment is quiet."
+                        error = "Could not detect enough tones (need at least 3). Make sure the microphone can hear the speaker and the environment is quiet."
                     )
                 }
             }
@@ -286,15 +286,12 @@ class CalibrationViewModel @Inject constructor(
             melodySynthesizer.allNotesOff()
         }
 
-        if (delays.size < 2) return null
+        if (delays.size < 3) return null
 
-        val sorted = delays.sorted()
-        val median = if (sorted.size % 2 == 0) {
-            (sorted[sorted.size / 2 - 1] + sorted[sorted.size / 2]) / 2
-        } else {
-            sorted[sorted.size / 2]
-        }
-        return median.toInt().coerceIn(0, 1000)
+        // Use average of the 3 shortest delays for most accurate floor measurement
+        val shortest3 = delays.sorted().take(3)
+        val avg = shortest3.sum() / shortest3.size
+        return avg.toInt().coerceIn(0, 1000)
     }
 
     private fun handleBaselineResult(roundTripMs: Int) {

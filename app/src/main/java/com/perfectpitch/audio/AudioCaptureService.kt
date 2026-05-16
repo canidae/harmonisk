@@ -21,7 +21,8 @@ class AudioCaptureService(
         const val SAMPLE_RATE = 44100
         const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_FLOAT
-        const val BUFFER_SIZE_SAMPLES = 4096
+        /** Read chunk size — smaller for lower latency. Analysis uses a larger sliding window. */
+        const val BUFFER_SIZE_SAMPLES = 1024
     }
 
     private val minBufferSize = AudioRecord.getMinBufferSize(

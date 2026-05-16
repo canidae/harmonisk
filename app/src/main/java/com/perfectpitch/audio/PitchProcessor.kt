@@ -16,7 +16,8 @@ class PitchProcessor(
 ) {
     companion object {
         const val SILENCE_THRESHOLD_DB = -50f
-        const val MEDIAN_WINDOW_SIZE = 3
+        /** Full analysis window size for YIN — preserves low-frequency detection. */
+        const val ANALYSIS_WINDOW_SIZE = 4096
     }
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB
@@ -29,33 +30,60 @@ class PitchProcessor(
 
     /**
      * Start the pitch detection pipeline.
-     * Emits PitchResult for each audio frame processed.
+     *
+     * Maintains a sliding window of [ANALYSIS_WINDOW_SIZE] samples. Each time a
+     * new chunk arrives from AudioCaptureService (1024 samples, ~23ms), the window
+     * shifts and YIN runs on the full window — giving 4× faster frame rate while
+     * preserving low-frequency resolution.
      */
     fun pitchFlow(): Flow<PitchResult> {
-        val recentFrequencies = ArrayDeque<Float>(MEDIAN_WINDOW_SIZE)
+        val slidingWindow = FloatArray(ANALYSIS_WINDOW_SIZE)
+        var windowFilled = 0
 
         return audioCaptureService.audioFlow()
-            .map { buffer -> processBuffer(buffer, recentFrequencies) }
+            .map { chunk ->
+                // Shift window left and append new chunk
+                val chunkSize = chunk.size.coerceAtMost(ANALYSIS_WINDOW_SIZE)
+                if (windowFilled >= ANALYSIS_WINDOW_SIZE) {
+                    // Window is full — shift left by chunkSize
+                    System.arraycopy(
+                        slidingWindow, chunkSize,
+                        slidingWindow, 0,
+                        ANALYSIS_WINDOW_SIZE - chunkSize
+                    )
+                    System.arraycopy(
+                        chunk, 0,
+                        slidingWindow, ANALYSIS_WINDOW_SIZE - chunkSize,
+                        chunkSize
+                    )
+                } else {
+                    // Still filling window — append
+                    val space = ANALYSIS_WINDOW_SIZE - windowFilled
+                    val toCopy = chunkSize.coerceAtMost(space)
+                    System.arraycopy(chunk, 0, slidingWindow, windowFilled, toCopy)
+                    windowFilled += toCopy
+                }
+
+                if (windowFilled < ANALYSIS_WINDOW_SIZE) {
+                    // Not enough data yet — emit silent
+                    PitchResult.SILENT
+                } else {
+                    processBuffer(slidingWindow)
+                }
+            }
             .flowOn(Dispatchers.Default)
     }
 
-    private fun processBuffer(
-        buffer: FloatArray,
-        recentFrequencies: ArrayDeque<Float>
-    ): PitchResult {
+    private fun processBuffer(buffer: FloatArray): PitchResult {
         val rms = pitchDetector.rms(buffer)
         val rmsDb = pitchDetector.rmsToDb(rms)
 
-        // Check for silence
         if (rmsDb < silenceThresholdDb) {
-            recentFrequencies.clear()
             return PitchResult.SILENT
         }
 
-        // Apply Hann window to reduce spectral leakage
         val windowed = AudioUtils.applyHannWindow(buffer)
 
-        // Detect pitch
         val result = pitchDetector.detectPitch(
             buffer = windowed,
             sampleRate = AudioCaptureService.SAMPLE_RATE,
@@ -66,18 +94,10 @@ class PitchProcessor(
             return PitchResult.SILENT
         }
 
-        // Moving median filter to reduce jitter
-        recentFrequencies.addLast(result.frequency)
-        if (recentFrequencies.size > MEDIAN_WINDOW_SIZE) {
-            recentFrequencies.removeFirst()
-        }
-        val smoothedFrequency = median(recentFrequencies.toList())
-
-        // Convert to note
-        val noteInfo = noteUtils.frequencyToNote(smoothedFrequency, referenceA4)
+        val noteInfo = noteUtils.frequencyToNote(result.frequency, referenceA4)
 
         return PitchResult(
-            frequency = smoothedFrequency,
+            frequency = result.frequency,
             noteName = noteInfo.name,
             octave = noteInfo.octave,
             centsOff = noteInfo.centsOff,
@@ -86,15 +106,5 @@ class PitchProcessor(
             rmsDb = rmsDb,
             isSilent = false
         )
-    }
-
-    private fun median(values: List<Float>): Float {
-        if (values.isEmpty()) return 0f
-        val sorted = values.sorted()
-        return if (sorted.size % 2 == 0) {
-            (sorted[sorted.size / 2 - 1] + sorted[sorted.size / 2]) / 2f
-        } else {
-            sorted[sorted.size / 2]
-        }
     }
 }
