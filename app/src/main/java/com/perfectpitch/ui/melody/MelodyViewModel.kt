@@ -38,7 +38,7 @@ class MelodyViewModel @Inject constructor(
         const val MAX_FALL_SPEED = 600f
         const val NOTE_RANGE_PADDING = 3
         /** Extra grace time beyond calibrated input delay — musically acceptable lateness. */
-        const val GRACE_PERIOD_EXTRA_MS = 100L
+        const val GRACE_PERIOD_EXTRA_MS = 150L
     }
 
     private val _state = MutableStateFlow(MelodyPlayState())
