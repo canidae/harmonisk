@@ -1,10 +1,9 @@
 package com.perfectpitch.ui.calibration
 
-import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -16,8 +15,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -111,6 +108,7 @@ fun CalibrationScreen(
                     warmupBeats = CalibrationViewModel.WARMUP_BEATS,
                     isWarmup = state.isWarmup,
                     beatsDetected = state.beatsDetected,
+                    calibrationStartTimeMs = state.calibrationStartTimeMs,
                     onStop = { viewModel.stopCalibration() }
                 )
 
@@ -180,10 +178,10 @@ private fun InputInstructionsContent(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "A pulsing circle will beat at a steady rhythm. " +
-                    "Make a sound (play a note, hum, or clap) in sync with each pulse.\n\n" +
-                    "The first 4 beats are warm-up — get into the groove. " +
-                    "The next 8 beats will be measured for calibration.",
+                text = "A bar will fall and hit a line at a steady rhythm. " +
+                    "Make a sound (play a note, hum, or clap) each time the bar reaches the line.\n\n" +
+                    "The first 4 bars are warm-up — get into the groove. " +
+                    "The next 8 bars will be measured for calibration.",
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -210,7 +208,7 @@ private fun InputReadyContent(
     )
 
     Text(
-        text = "Press Start and make a sound on each pulse.",
+        text = "Press Start, then make a sound when the bar hits the line.",
         style = MaterialTheme.typography.bodyLarge,
         textAlign = TextAlign.Center
     )
@@ -233,91 +231,91 @@ private fun InputCalibratingContent(
     warmupBeats: Int,
     isWarmup: Boolean,
     beatsDetected: Int,
+    calibrationStartTimeMs: Long,
     onStop: () -> Unit
 ) {
-    val beatIntervalMs = CalibrationViewModel.BEAT_INTERVAL_MS.toInt()
+    val beatIntervalMs = CalibrationViewModel.BEAT_INTERVAL_MS
+    val cycleMs = beatIntervalMs * 2  // 1 beat fall + 1 beat silence
 
-    // Pulsing animation — beats at the metronome BPM
-    val infiniteTransition = rememberInfiniteTransition(label = "metronome")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = keyframes {
-                durationMillis = beatIntervalMs
-                1.0f at 0 using LinearEasing
-                0.6f at (beatIntervalMs * 0.3).toInt() using FastOutSlowInEasing
-                0.6f at beatIntervalMs using LinearEasing
-            },
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "pulse"
-    )
-
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = keyframes {
-                durationMillis = beatIntervalMs
-                1.0f at 0 using LinearEasing
-                0.3f at (beatIntervalMs * 0.3).toInt() using FastOutSlowInEasing
-                0.3f at beatIntervalMs using LinearEasing
-            },
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "alpha"
-    )
-
-    val pulseColor = if (isWarmup) {
-        MaterialTheme.colorScheme.tertiary
-    } else {
-        MaterialTheme.colorScheme.primary
-    }
+    val warmupColor = MaterialTheme.colorScheme.tertiary
+    val measuredColor = MaterialTheme.colorScheme.primary
+    val lineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
 
     Text(
-        text = if (isWarmup) "Warm-up — Get into the rhythm!" else "Measuring — Make a sound on each pulse!",
+        text = if (isWarmup) "Warm-up — Get into the rhythm!" else "Make a sound when the bar hits the line!",
         style = MaterialTheme.typography.titleMedium,
         textAlign = TextAlign.Center,
-        color = if (isWarmup) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
+        color = if (isWarmup) warmupColor else measuredColor
     )
 
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(modifier = Modifier.height(8.dp))
 
-    // Pulsing circle
-    Box(
-        modifier = Modifier.size(160.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        // Outer glow
-        Box(
-            modifier = Modifier
-                .size(160.dp)
-                .scale(pulseScale * 1.2f)
-                .background(
-                    pulseColor.copy(alpha = pulseAlpha * 0.2f),
-                    CircleShape
-                )
-        )
-        // Inner circle
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .scale(pulseScale)
-                .background(
-                    pulseColor.copy(alpha = pulseAlpha * 0.8f),
-                    CircleShape
-                )
-        )
-        // Beat number in center
-        Text(
-            text = "$currentBeat",
-            style = MaterialTheme.typography.headlineLarge,
-            color = Color.White
-        )
+    // Falling bar canvas
+    val barHeightDp = 20.dp
+    val lineThicknessDp = 3.dp
+    val hitLineYFraction = 0.85f
+
+    // Animate continuously for smooth bar movement
+    var elapsedMs by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(calibrationStartTimeMs) {
+        while (true) {
+            withFrameNanos { frameTimeNanos ->
+                elapsedMs = System.currentTimeMillis() - calibrationStartTimeMs
+            }
+        }
     }
 
-    Spacer(modifier = Modifier.height(24.dp))
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(280.dp)
+            .background(surfaceVariant, MaterialTheme.shapes.medium)
+    ) {
+        val canvasHeight = size.height
+        val canvasWidth = size.width
+        val hitLineY = canvasHeight * hitLineYFraction
+        val barHeight = barHeightDp.toPx()
+        val lineThickness = lineThicknessDp.toPx()
+        val barWidth = canvasWidth * 0.4f
+        val barLeft = (canvasWidth - barWidth) / 2f
+
+        // Draw the hit line
+        drawLine(
+            color = lineColor,
+            start = androidx.compose.ui.geometry.Offset(0f, hitLineY),
+            end = androidx.compose.ui.geometry.Offset(canvasWidth, hitLineY),
+            strokeWidth = lineThickness
+        )
+
+        // Compute which bar is falling and its position
+        val elapsed = elapsedMs.toFloat()
+        val cycleMsF = cycleMs.toFloat()
+        val beatMsF = beatIntervalMs.toFloat()
+
+        // Current cycle index (0-based)
+        val currentCycle = (elapsed / cycleMsF).toInt()
+        val timeInCycle = elapsed - currentCycle * cycleMsF
+
+        // Bar is visible during the first beat of the cycle (falling phase)
+        if (currentCycle < totalBeats && timeInCycle < beatMsF) {
+            val progress = timeInCycle / beatMsF  // 0.0 → 1.0
+            // Bar falls from above the canvas to the hit line
+            val barBottomY = hitLineY * progress
+            val barTopY = barBottomY - barHeight
+
+            val barColor = if (currentCycle < warmupBeats) warmupColor else measuredColor
+
+            drawRoundRect(
+                color = barColor.copy(alpha = 0.85f),
+                topLeft = androidx.compose.ui.geometry.Offset(barLeft, barTopY),
+                size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f, 8f)
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
 
     // Progress bar
     LinearProgressIndicator(
@@ -330,9 +328,9 @@ private fun InputCalibratingContent(
     val totalMeasured = totalBeats - warmupBeats
     Text(
         text = if (isWarmup) {
-            "Warm-up: beat $currentBeat of $warmupBeats"
+            "Warm-up: bar $currentBeat of $warmupBeats"
         } else {
-            "Measuring: $measuredBeats / $totalMeasured beats ($beatsDetected detected)"
+            "Measuring: $measuredBeats / $totalMeasured bars ($beatsDetected detected)"
         },
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant

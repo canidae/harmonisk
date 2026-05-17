@@ -77,6 +77,8 @@ class CalibrationViewModel @Inject constructor(
         val isWarmup: Boolean = true,
         val beatsDetected: Int = 0,
         val metronomeActive: Boolean = false,
+        /** Wall-clock time when input calibration started (for UI animation). */
+        val calibrationStartTimeMs: Long = 0L,
         // Input calibration result
         val inputDelayMs: Int? = null,
         val editedInputDelay: String = "",
@@ -211,11 +213,18 @@ class CalibrationViewModel @Inject constructor(
         val offsets = mutableListOf<Long>()
         val startTime = System.currentTimeMillis()
 
+        // Each cycle = 1 beat (bar falling) + 1 beat (silence) = 2 * BEAT_INTERVAL_MS
+        val cycleMs = BEAT_INTERVAL_MS * 2
+
+        _state.update { it.copy(calibrationStartTimeMs = startTime) }
+
         try {
             for (beat in 0 until TOTAL_BEATS) {
                 if (!currentCoroutineContext().isActive) break
 
-                val beatTime = startTime + beat.toLong() * BEAT_INTERVAL_MS
+                // Beat hits the line at: startTime + beat * cycleMs + BEAT_INTERVAL_MS
+                // (bar falls for BEAT_INTERVAL_MS, then silence for BEAT_INTERVAL_MS)
+                val beatTime = startTime + beat.toLong() * cycleMs + BEAT_INTERVAL_MS
                 val isWarmup = beat < WARMUP_BEATS
 
                 _state.update {
@@ -225,7 +234,7 @@ class CalibrationViewModel @Inject constructor(
                     )
                 }
 
-                // Wait until beat time
+                // Wait until beat time (when bar hits the line)
                 val waitMs = beatTime - System.currentTimeMillis()
                 if (waitMs > 0) delay(waitMs)
 
@@ -250,12 +259,12 @@ class CalibrationViewModel @Inject constructor(
                         _state.update { it.copy(beatsDetected = offsets.size) }
                     }
 
-                    // Wait for the rest of the beat interval
+                    // Wait for the silence gap
                     val elapsed = System.currentTimeMillis() - beatTime
                     val remainingGap = BEAT_INTERVAL_MS - elapsed
                     if (remainingGap > 0) delay(remainingGap)
                 } else {
-                    // Warmup beat — just wait for next beat
+                    // Warmup beat — wait for the silence gap
                     val elapsed = System.currentTimeMillis() - beatTime
                     val remainingGap = BEAT_INTERVAL_MS - elapsed
                     if (remainingGap > 0) delay(remainingGap)
