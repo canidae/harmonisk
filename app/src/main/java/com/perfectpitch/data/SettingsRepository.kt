@@ -48,16 +48,8 @@ class SettingsRepository(
         context.dataStore.edit { it[IN_TUNE_CENTS] = cents }
     }
 
-    suspend fun updateDarkTheme(dark: Boolean) {
-        context.dataStore.edit { it[DARK_THEME] = dark }
-    }
-
     suspend fun updateSilenceThreshold(db: Float) {
         context.dataStore.edit { it[SILENCE_THRESHOLD_DB] = db }
-    }
-
-    suspend fun updateContinuousPitchLine(enabled: Boolean) {
-        context.dataStore.edit { it[CONTINUOUS_PITCH_LINE] = enabled }
     }
 
     suspend fun updateTimeProgressionEnabled(enabled: Boolean) {

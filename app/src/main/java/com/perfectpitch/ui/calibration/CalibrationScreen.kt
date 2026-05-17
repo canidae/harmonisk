@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -56,7 +55,6 @@ fun CalibrationScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Synth initialization error
             if (state.synthError != null) {
                 Text(
                     text = "Audio error: ${state.synthError}",
@@ -69,7 +67,6 @@ fun CalibrationScreen(
                 Text("Initializing audio…", style = MaterialTheme.typography.bodySmall)
             }
 
-            // Error from failed calibration
             if (state.error != null) {
                 Card(
                     colors = CardDefaults.cardColors(
@@ -104,18 +101,14 @@ fun CalibrationScreen(
                 )
 
                 CalibrationPhase.ADJUSTING_SPLIT -> AdjustingSplitContent(
-                    totalDelayMs = state.totalDelayMs,
-                    outputDelayMs = state.outputDelayMs,
-                    inputDelayMs = state.inputDelayMs,
-                    splitStartTimeMs = state.splitStartTimeMs,
-                    onSliderChange = { viewModel.updateSplitSlider(it) },
+                    state = state,
+                    onSliderChange = { viewModel.updateSplitPercent(it) },
                     onSave = { viewModel.saveAndFinish() },
                     onRetry = { viewModel.stopCalibration(); viewModel.startRoundTripMeasurement() }
                 )
 
                 CalibrationPhase.DONE -> DoneContent(
-                    outputDelayMs = state.outputDelayMs,
-                    inputDelayMs = state.inputDelayMs,
+                    state = state,
                     onBack = onBack
                 )
             }
@@ -124,8 +117,6 @@ fun CalibrationScreen(
         }
     }
 }
-
-// --- Instructions ---
 
 @Composable
 private fun InstructionsContent(
@@ -169,8 +160,6 @@ private fun InstructionsContent(
     }
 }
 
-// --- Phase 1: Measuring Round-Trip ---
-
 @Composable
 private fun MeasuringRoundTripContent(
     tonesPlayed: Int,
@@ -207,20 +196,14 @@ private fun MeasuringRoundTripContent(
     TextButton(onClick = onCancel) { Text("Cancel") }
 }
 
-// --- Phase 2: Adjusting Split ---
-
 @Composable
 private fun AdjustingSplitContent(
-    totalDelayMs: Int,
-    outputDelayMs: Int,
-    inputDelayMs: Int,
-    splitStartTimeMs: Long,
+    state: CalibrationViewModel.CalibrationState,
     onSliderChange: (Int) -> Unit,
     onSave: () -> Unit,
     onRetry: () -> Unit
 ) {
     val pulseOnMs = CalibrationViewModel.PULSE_ON_MS
-    val pulseCycleMs = CalibrationViewModel.PULSE_CYCLE_MS
     val pulseColor = MaterialTheme.colorScheme.primary
     val pulseOffColor = MaterialTheme.colorScheme.surfaceVariant
 
@@ -237,33 +220,31 @@ private fun AdjustingSplitContent(
 
     Spacer(modifier = Modifier.height(8.dp))
 
-    // Pulsing circle — synced to visual beat.
-    // The visual pulse starts at `outputDelay` after the tone starts.
-    // splitStartTimeMs is when the loop started. Each cycle = outputDelay + PULSE_CYCLE_MS.
+    // Pulsing circle — synced to tone playback.
+    // The visual starts outputDelayMs after the tone starts.
+    // toneStartTimeMs is updated each cycle by the VM's split loop.
     var isVisualOn by remember { mutableStateOf(false) }
 
-    LaunchedEffect(splitStartTimeMs, outputDelayMs) {
+    LaunchedEffect(Unit) {
         while (true) {
             withFrameNanos {
-                val elapsed = System.currentTimeMillis() - splitStartTimeMs
-                val outputDelay = outputDelayMs.toLong()
-                val cycleTotal = outputDelay + pulseCycleMs
-                if (cycleTotal <= 0) {
+                val toneStart = state.toneStartTimeMs
+                if (toneStart <= 0L) {
                     isVisualOn = false
                     return@withFrameNanos
                 }
-                val timeInCycle = elapsed % cycleTotal
-                // Visual is ON from outputDelay to outputDelay + pulseOnMs
-                isVisualOn = timeInCycle >= outputDelay && timeInCycle < outputDelay + pulseOnMs
+                val outputDelay = state.outputDelayMs.toLong()
+                val elapsed = System.currentTimeMillis() - toneStart
+                val visualStart = outputDelay
+                val visualEnd = outputDelay + pulseOnMs
+                isVisualOn = elapsed in visualStart until visualEnd
             }
         }
     }
 
     val circleColor = if (isVisualOn) pulseColor else pulseOffColor
 
-    Canvas(
-        modifier = Modifier.size(120.dp)
-    ) {
+    Canvas(modifier = Modifier.size(120.dp)) {
         drawCircle(
             color = circleColor,
             radius = size.minDimension / 2f,
@@ -273,51 +254,40 @@ private fun AdjustingSplitContent(
 
     Spacer(modifier = Modifier.height(8.dp))
 
-    // Slider
+    // Slider card
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Total delay: ${totalDelayMs}ms",
+                text = "Total: ${state.totalDelayMs}ms — Out: ${state.outputDelayMs}ms / In: ${state.inputDelayMs}ms",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            Text(
+                text = "Output split: ${state.splitPercent}%",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Slider(
+                value = state.splitPercent.toFloat(),
+                onValueChange = { onSliderChange(it.toInt()) },
+                valueRange = 0f..100f,
+                steps = 99,
+                modifier = Modifier.fillMaxWidth()
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "Output: ${outputDelayMs}ms",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "Input: ${inputDelayMs}ms",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text("0% output", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("100% output", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-
-            if (totalDelayMs > 0) {
-                Slider(
-                    value = outputDelayMs.toFloat(),
-                    onValueChange = { onSliderChange(it.toInt()) },
-                    valueRange = 0f..totalDelayMs.toFloat(),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            Text(
-                text = "← Less output delay  |  More output delay →",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
         }
     }
 
@@ -325,18 +295,13 @@ private fun AdjustingSplitContent(
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedButton(onClick = onRetry) { Text("Retry") }
-        Button(onClick = onSave) {
-            Text("Save")
-        }
+        Button(onClick = onSave) { Text("Save") }
     }
 }
 
-// --- Done ---
-
 @Composable
 private fun DoneContent(
-    outputDelayMs: Int,
-    inputDelayMs: Int,
+    state: CalibrationViewModel.CalibrationState,
     onBack: () -> Unit
 ) {
     Icon(
@@ -354,18 +319,18 @@ private fun DoneContent(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Output delay: ${outputDelayMs}ms",
+                text = "Total delay: ${state.totalDelayMs}ms (${state.splitPercent}% output)",
                 style = MaterialTheme.typography.bodyLarge
             )
             Text(
-                text = "Input delay: ${inputDelayMs}ms",
-                style = MaterialTheme.typography.bodyLarge
+                text = "Output: ${state.outputDelayMs}ms / Input: ${state.inputDelayMs}ms",
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }
 
     Text(
-        text = "Audio delays have been saved. You can fine-tune the values in Settings.",
+        text = "Audio delays have been saved. You can fine-tune the split in Settings.",
         style = MaterialTheme.typography.bodyLarge,
         textAlign = TextAlign.Center,
         color = MaterialTheme.colorScheme.onSurfaceVariant

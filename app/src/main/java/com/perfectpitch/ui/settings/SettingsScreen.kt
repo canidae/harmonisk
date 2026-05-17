@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,120 +101,90 @@ fun SettingsScreen(
             SettingSection(title = "Audio Delay") {
                 val device by viewModel.currentDevice.collectAsState()
                 val inputDevice by viewModel.currentInputDevice.collectAsState()
-                val activeOutputDelay by viewModel.activeOutputDelay.collectAsState()
-                val activeInputDelay by viewModel.activeInputDelay.collectAsState()
-                val totalDelay = activeOutputDelay + activeInputDelay
+                val totalDelay by viewModel.activeTotalDelay.collectAsState()
+                val splitPercent by viewModel.activeSplitPercent.collectAsState()
+                val outputDelay by viewModel.activeOutputDelay.collectAsState()
+                val inputDelay by viewModel.activeInputDelay.collectAsState()
 
-                device?.let {
-                    Text(
-                        text = "Output: ${it.name}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                inputDevice?.let {
-                    Text(
-                        text = "Input: ${it.name}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Display current values
-                var editingOutput by remember { mutableStateOf(false) }
-                var editingInput by remember { mutableStateOf(false) }
-                var outputText by remember(activeOutputDelay) { mutableStateOf(activeOutputDelay.toString()) }
-                var inputText by remember(activeInputDelay) { mutableStateOf(activeInputDelay.toString()) }
-
+                // Device line
+                val inName = inputDevice?.name ?: "microphone"
+                val outName = device?.name ?: "speaker"
                 Text(
-                    text = "Total delay: ${totalDelay}ms",
-                    style = MaterialTheme.typography.bodyLarge
+                    text = "In/Out: $inName / $outName",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Output delay row
-                if (editingOutput) {
+                // Total delay — editable inline
+                var editingTotal by remember { mutableStateOf(false) }
+                var totalText by remember(totalDelay) { mutableStateOf(totalDelay.toString()) }
+
+                if (editingTotal) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedTextField(
-                            value = outputText,
-                            onValueChange = { outputText = it },
-                            label = { Text("Output delay (ms)") },
+                            value = totalText,
+                            onValueChange = { totalText = it },
+                            label = { Text("Total delay (ms)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
-                            modifier = Modifier.width(140.dp)
+                            modifier = Modifier.width(160.dp)
                         )
                         Button(
                             onClick = {
-                                outputText.toIntOrNull()?.let { ms ->
-                                    viewModel.saveOutputDelay(ms)
-                                }
-                                editingOutput = false
+                                totalText.toIntOrNull()?.let { viewModel.saveTotalDelay(it) }
+                                editingTotal = false
                             },
-                            enabled = outputText.toIntOrNull() != null
+                            enabled = totalText.toIntOrNull() != null
                         ) { Text("Save") }
                         TextButton(onClick = {
-                            outputText = activeOutputDelay.toString()
-                            editingOutput = false
+                            totalText = totalDelay.toString()
+                            editingTotal = false
                         }) { Text("Cancel") }
                     }
                 } else {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Output delay: ${activeOutputDelay}ms",
-                            style = MaterialTheme.typography.bodyMedium
+                            text = "Total: ${totalDelay}ms",
+                            style = MaterialTheme.typography.bodyLarge
                         )
-                        TextButton(onClick = { editingOutput = true }) { Text("Edit") }
+                        Text(
+                            text = " — Out: ${outputDelay}ms / In: ${inputDelay}ms",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        TextButton(onClick = { editingTotal = true }) { Text("Edit") }
                     }
                 }
 
-                // Input delay row
-                if (editingInput) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = inputText,
-                            onValueChange = { inputText = it },
-                            label = { Text("Input delay (ms)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.width(140.dp)
-                        )
-                        Button(
-                            onClick = {
-                                inputText.toIntOrNull()?.let { ms ->
-                                    viewModel.saveInputDelay(ms)
-                                }
-                                editingInput = false
-                            },
-                            enabled = inputText.toIntOrNull() != null
-                        ) { Text("Save") }
-                        TextButton(onClick = {
-                            inputText = activeInputDelay.toString()
-                            editingInput = false
-                        }) { Text("Cancel") }
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Input delay: ${activeInputDelay}ms",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        TextButton(onClick = { editingInput = true }) { Text("Edit") }
-                    }
+                // Split slider (cold — no audio)
+                val splitPct = (splitPercent * 100).roundToInt()
+                Text(
+                    text = "Output split: $splitPct%",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Slider(
+                    value = splitPct.toFloat(),
+                    onValueChange = { viewModel.saveSplitPercent(it / 100f) },
+                    valueRange = 0f..100f,
+                    steps = 99,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("0% output", style = MaterialTheme.typography.labelSmall)
+                    Text("100% output", style = MaterialTheme.typography.labelSmall)
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -228,47 +199,6 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-
-            // Dark theme
-            SettingSection(title = "Appearance") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Dark Theme", style = MaterialTheme.typography.bodyLarge)
-                    Switch(
-                        checked = settings.darkTheme,
-                        onCheckedChange = { viewModel.updateDarkTheme(it) }
-                    )
-                }
-            }
-
-            // Pitch line mode
-            SettingSection(title = "Pitch Line") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Continuous Line", style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            text = if (settings.continuousPitchLine)
-                                "Pitch draws as one smooth line across notes"
-                            else
-                                "Pitch shown within each key's full width",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Switch(
-                        checked = settings.continuousPitchLine,
-                        onCheckedChange = { viewModel.updateContinuousPitchLine(it) }
-                    )
-                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

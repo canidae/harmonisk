@@ -18,7 +18,6 @@ class CalibrationViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
-        // Round-trip measurement (Phase 1)
         const val NUM_TONES = 8
         const val TONE_SPACING_MS = 800L
         const val TONE_DURATION_MS = 300L
@@ -28,10 +27,8 @@ class CalibrationViewModel @Inject constructor(
         const val TARGET_FREQ = 440f
         const val FREQ_TOLERANCE = 30f
 
-        // Split adjustment (Phase 2)
         const val PULSE_ON_MS = 500L
         const val PULSE_OFF_MS = 500L
-        const val PULSE_CYCLE_MS = PULSE_ON_MS + PULSE_OFF_MS
     }
 
     enum class CalibrationPhase {
@@ -46,26 +43,24 @@ class CalibrationViewModel @Inject constructor(
         val phase: CalibrationPhase = CalibrationPhase.INIT,
         val synthReady: Boolean = false,
         val synthError: String? = null,
-        // Current devices
         val inputDevice: AudioInputDevice? = null,
         val outputDevice: AudioOutputDevice? = null,
-        // Phase 1: round-trip measurement
+        // Phase 1
         val tonesPlayed: Int = 0,
         val tonesDetected: Int = 0,
         val totalDelayMs: Int = 0,
-        // Phase 2: split adjustment
-        /** Current output delay set by slider (ms). */
-        val outputDelayMs: Int = 0,
-        /** Derived: totalDelayMs - outputDelayMs. */
-        val inputDelayMs: Int = 0,
-        /** Whether the split tone loop is currently playing. */
+        // Phase 2: split as percentage (0–100 integer)
+        val splitPercent: Int = 50,
         val splitActive: Boolean = false,
-        /** Wall-clock time when split loop started (for UI pulse animation). */
-        val splitStartTimeMs: Long = 0L,
+        /** Epoch ms when the current tone cycle started playing. Updated each cycle. */
+        val toneStartTimeMs: Long = 0L,
         // Status
         val saved: Boolean = false,
         val error: String? = null
-    )
+    ) {
+        val outputDelayMs: Int get() = (totalDelayMs * splitPercent / 100f).toInt()
+        val inputDelayMs: Int get() = totalDelayMs - outputDelayMs
+    }
 
     private val _state = MutableStateFlow(CalibrationState())
     val state: StateFlow<CalibrationState> = _state.asStateFlow()
@@ -124,19 +119,15 @@ class CalibrationViewModel @Inject constructor(
             val totalMs = measureRoundTrip()
 
             if (totalMs != null) {
-                // Compute initial split.
-                // If we have a stored delay for one device, use that as the pre-fill.
                 val outputDevice = _state.value.outputDevice
                 val inputDevice = _state.value.inputDevice
-                val initialOutput = computeInitialOutputDelay(totalMs, outputDevice, inputDevice)
-                val initialInput = totalMs - initialOutput
+                val initialSplit = computeInitialSplitPercent(totalMs, outputDevice, inputDevice)
 
                 _state.update {
                     it.copy(
                         phase = CalibrationPhase.ADJUSTING_SPLIT,
                         totalDelayMs = totalMs,
-                        outputDelayMs = initialOutput,
-                        inputDelayMs = initialInput
+                        splitPercent = initialSplit
                     )
                 }
 
@@ -152,10 +143,6 @@ class CalibrationViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Plays [NUM_TONES] tones and measures the round-trip time for each (play→detect).
-     * Returns the median round-trip in ms, or null if not enough tones were detected.
-     */
     private suspend fun measureRoundTrip(): Int? {
         val detections = mutableListOf<Pair<Long, Float>>()
 
@@ -167,7 +154,7 @@ class CalibrationViewModel @Inject constructor(
             }
         }
 
-        delay(300) // Mic settling
+        delay(300)
 
         val roundTrips = mutableListOf<Long>()
 
@@ -182,12 +169,10 @@ class CalibrationViewModel @Inject constructor(
 
                 _state.update { it.copy(tonesPlayed = i + 1) }
 
-                // Wait for detection window to close
                 val deadline = playTime + MAX_DETECTION_WINDOW_MS
                 val remaining = deadline - System.currentTimeMillis()
                 if (remaining > 0) delay(remaining)
 
-                // Find the first matching detection after playTime
                 val detection = detections.firstOrNull { (time, freq) ->
                     time >= playTime &&
                         time <= playTime + MAX_DETECTION_WINDOW_MS &&
@@ -200,11 +185,9 @@ class CalibrationViewModel @Inject constructor(
                     _state.update { it.copy(tonesDetected = roundTrips.size) }
                 }
 
-                // Clear used detections to avoid double-counting
                 val cutoff = playTime + MAX_DETECTION_WINDOW_MS
                 detections.removeAll { (time, _) -> time <= cutoff }
 
-                // Wait for next tone spacing
                 val elapsed = System.currentTimeMillis() - playTime
                 val gap = TONE_SPACING_MS - elapsed
                 if (gap > 0) delay(gap)
@@ -221,88 +204,62 @@ class CalibrationViewModel @Inject constructor(
     }
 
     /**
-     * Computes the initial output delay for the slider.
-     * If one device has a stored delay, pre-fill using that.
-     * Otherwise, use [AudioDelayRepository.DEFAULT_OUTPUT_SPLIT].
+     * Computes the initial split percentage (0–100).
+     * Uses stored profile if available, otherwise defaults to 50%.
      */
-    private suspend fun computeInitialOutputDelay(
+    private suspend fun computeInitialSplitPercent(
         totalMs: Int,
         outputDevice: AudioOutputDevice?,
         inputDevice: AudioInputDevice?
     ): Int {
-        // Try to use stored output delay
+        // Use stored split if any device has a profile
         if (outputDevice != null) {
             val profile = audioDelayRepository.getProfile(outputDevice.deviceKey).first()
             if (profile != null) {
-                return profile.outputDelayMs.coerceIn(0, totalMs)
+                return (profile.splitPercent * 100).toInt().coerceIn(0, 100)
             }
         }
-        // Try to use stored input delay to derive output
         if (inputDevice != null) {
             val profile = audioDelayRepository.getProfile(inputDevice.deviceKey).first()
             if (profile != null) {
-                return (totalMs - profile.inputDelayMs).coerceIn(0, totalMs)
+                return (profile.splitPercent * 100).toInt().coerceIn(0, 100)
             }
         }
-        // Default: even split
-        return (totalMs * AudioDelayRepository.DEFAULT_OUTPUT_SPLIT).toInt()
+        return (AudioDelayRepository.DEFAULT_OUTPUT_SPLIT * 100).toInt()
     }
 
     // --- Phase 2: Split adjustment with audio+visual loop ---
 
-    /**
-     * Called when the user moves the slider.
-     * Updates output/input split and restarts the tone loop with new timing.
-     */
-    fun updateSplitSlider(outputDelayMs: Int) {
-        val total = _state.value.totalDelayMs
-        val clamped = outputDelayMs.coerceIn(0, total)
-        _state.update {
-            it.copy(
-                outputDelayMs = clamped,
-                inputDelayMs = total - clamped
-            )
-        }
+    fun updateSplitPercent(percent: Int) {
+        _state.update { it.copy(splitPercent = percent.coerceIn(0, 100)) }
     }
 
     /**
-     * Starts the tone + visual pulse loop for split adjustment.
-     * Plays a tone `outputDelayMs` before each visual pulse.
+     * Continuously plays tone cycles. Each cycle:
+     *   t=0: tone starts → toneStartTimeMs updated
+     *   t=PULSE_ON_MS: tone ends
+     *   t=PULSE_ON_MS + gap: next cycle (gap = outputDelay + PULSE_OFF_MS)
+     *
+     * The loop does NOT restart on slider change. It reads the current outputDelay
+     * each cycle to compute the gap before the next tone.
      */
     private fun startSplitLoop() {
         stopSplitLoop()
-        _state.update {
-            it.copy(
-                splitActive = true,
-                splitStartTimeMs = System.currentTimeMillis()
-            )
-        }
+        _state.update { it.copy(splitActive = true) }
 
         splitLoopJob = viewModelScope.launch {
             while (isActive) {
                 val outputDelay = _state.value.outputDelayMs.toLong()
 
-                // Play tone first (outputDelay ms before the visual pulse)
+                // Play tone
+                _state.update { it.copy(toneStartTimeMs = System.currentTimeMillis()) }
                 melodySynthesizer.noteOn(0, MIDI_NOTE, MIDI_VELOCITY)
                 delay(PULSE_ON_MS)
                 melodySynthesizer.noteOff(0, MIDI_NOTE)
 
-                // After the tone ends, we need to wait for the visual pulse to start,
-                // then the visual will be on for PULSE_ON_MS, then off for PULSE_OFF_MS.
-                // But the visual pulse starts `outputDelay` after the tone started.
-                //
-                // Timeline per cycle:
-                //   t=0:               tone starts
-                //   t=PULSE_ON_MS:     tone ends
-                //   t=outputDelay:     visual pulse starts
-                //   t=outputDelay+PULSE_ON_MS: visual pulse ends
-                //   t=outputDelay+PULSE_CYCLE_MS: next cycle starts
-                //
-                // Wait between tone end and next cycle:
-                val cycleTotal = outputDelay + PULSE_CYCLE_MS
-                val elapsed = PULSE_ON_MS
-                val remaining = cycleTotal - elapsed
-                if (remaining > 0) delay(remaining) else delay(PULSE_OFF_MS)
+                // Wait: outputDelay (before visual) + PULSE_OFF_MS (after visual ends)
+                val gap = outputDelay + PULSE_OFF_MS
+                if (gap > 0) delay(gap)
             }
         }
     }
@@ -322,23 +279,20 @@ class CalibrationViewModel @Inject constructor(
         val s = _state.value
         val inputDevice = s.inputDevice ?: return
         val outputDevice = s.outputDevice ?: return
+        val splitFraction = s.splitPercent / 100f
 
         stopSplitLoop()
 
         viewModelScope.launch {
-            // Save for input device
             audioDelayRepository.saveCalibration(
                 deviceKey = inputDevice.deviceKey,
-                inputDelayMs = s.inputDelayMs,
-                outputDelayMs = s.outputDelayMs,
-                totalDelayMs = s.totalDelayMs
+                totalDelayMs = s.totalDelayMs,
+                splitPercent = splitFraction
             )
-            // Save for output device (same calibration data, keyed differently)
             audioDelayRepository.saveCalibration(
                 deviceKey = outputDevice.deviceKey,
-                inputDelayMs = s.inputDelayMs,
-                outputDelayMs = s.outputDelayMs,
-                totalDelayMs = s.totalDelayMs
+                totalDelayMs = s.totalDelayMs,
+                splitPercent = splitFraction
             )
 
             _state.update { it.copy(phase = CalibrationPhase.DONE, saved = true) }
