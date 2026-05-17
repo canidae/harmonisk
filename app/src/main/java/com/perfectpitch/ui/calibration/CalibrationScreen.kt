@@ -224,16 +224,17 @@ private fun AdjustingSplitContent(
     // The visual starts outputDelayMs after the tone starts.
     // toneStartTimeMs is updated each cycle by the VM's split loop.
     var isVisualOn by remember { mutableStateOf(false) }
+    val currentState by rememberUpdatedState(state)
 
     LaunchedEffect(Unit) {
         while (true) {
             withFrameNanos {
-                val toneStart = state.toneStartTimeMs
+                val toneStart = currentState.toneStartTimeMs
                 if (toneStart <= 0L) {
                     isVisualOn = false
                     return@withFrameNanos
                 }
-                val outputDelay = state.outputDelayMs.toLong()
+                val outputDelay = currentState.outputDelayMs.toLong()
                 val elapsed = System.currentTimeMillis() - toneStart
                 val visualStart = outputDelay
                 val visualEnd = outputDelay + pulseOnMs
@@ -261,17 +262,12 @@ private fun AdjustingSplitContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Total: ${state.totalDelayMs}ms — Out: ${state.outputDelayMs}ms / In: ${state.inputDelayMs}ms",
+                text = "Total delay: ${state.totalDelayMs}ms",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
 
             Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Output split: ${state.splitPercent}%",
-                style = MaterialTheme.typography.bodyMedium
-            )
 
             Slider(
                 value = state.splitPercent.toFloat(),
@@ -285,8 +281,9 @@ private fun AdjustingSplitContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("0% output", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("100% output", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Output delay: ${state.outputDelayMs}ms", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${state.splitPercent}%", style = MaterialTheme.typography.bodyMedium)
+                Text("Input delay: ${state.inputDelayMs}ms", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

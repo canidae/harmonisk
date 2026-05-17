@@ -152,13 +152,8 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Total: ${totalDelay}ms",
+                            text = "Total delay: ${totalDelay}ms",
                             style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            text = " — Out: ${outputDelay}ms / In: ${inputDelay}ms",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         TextButton(onClick = { editingTotal = true }) { Text("Edit") }
@@ -167,11 +162,6 @@ fun SettingsScreen(
 
                 // Split slider (cold — no audio)
                 val splitPct = (splitPercent * 100).roundToInt()
-                Text(
-                    text = "Output split: $splitPct%",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
                 Slider(
                     value = splitPct.toFloat(),
                     onValueChange = { viewModel.saveSplitPercent(it / 100f) },
@@ -183,8 +173,9 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("0% output", style = MaterialTheme.typography.labelSmall)
-                    Text("100% output", style = MaterialTheme.typography.labelSmall)
+                    Text("Output delay: ${outputDelay}ms", style = MaterialTheme.typography.labelSmall)
+                    Text("$splitPct%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Input delay: ${inputDelay}ms", style = MaterialTheme.typography.labelSmall)
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
