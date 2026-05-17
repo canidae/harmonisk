@@ -96,30 +96,51 @@ fun SettingsScreen(
                 )
             }
 
-            // Audio delay calibration (per-device)
-            SettingSection(title = "Audio Output Delay") {
+            // Audio delay calibration (unified)
+            SettingSection(title = "Audio Delay") {
                 val device by viewModel.currentDevice.collectAsState()
-                val activeDelay by viewModel.activeDelay.collectAsState()
-                var editingDelay by remember { mutableStateOf(false) }
-                var delayText by remember(activeDelay) { mutableStateOf(activeDelay.toString()) }
+                val inputDevice by viewModel.currentInputDevice.collectAsState()
+                val activeOutputDelay by viewModel.activeOutputDelay.collectAsState()
+                val activeInputDelay by viewModel.activeInputDelay.collectAsState()
+                val totalDelay = activeOutputDelay + activeInputDelay
 
                 device?.let {
                     Text(
-                        text = "Output device: ${it.name}",
+                        text = "Output: ${it.name}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                inputDevice?.let {
+                    Text(
+                        text = "Input: ${it.name}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
 
-                if (editingDelay) {
+                // Display current values
+                var editingOutput by remember { mutableStateOf(false) }
+                var editingInput by remember { mutableStateOf(false) }
+                var outputText by remember(activeOutputDelay) { mutableStateOf(activeOutputDelay.toString()) }
+                var inputText by remember(activeInputDelay) { mutableStateOf(activeInputDelay.toString()) }
+
+                Text(
+                    text = "Total delay: ${totalDelay}ms",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Output delay row
+                if (editingOutput) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedTextField(
-                            value = delayText,
-                            onValueChange = { delayText = it },
+                            value = outputText,
+                            onValueChange = { outputText = it },
                             label = { Text("Output delay (ms)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
@@ -127,21 +148,17 @@ fun SettingsScreen(
                         )
                         Button(
                             onClick = {
-                                delayText.toIntOrNull()?.let { ms ->
-                                    viewModel.saveDelay(ms)
+                                outputText.toIntOrNull()?.let { ms ->
+                                    viewModel.saveOutputDelay(ms)
                                 }
-                                editingDelay = false
+                                editingOutput = false
                             },
-                            enabled = delayText.toIntOrNull() != null
-                        ) {
-                            Text("Save")
-                        }
+                            enabled = outputText.toIntOrNull() != null
+                        ) { Text("Save") }
                         TextButton(onClick = {
-                            delayText = activeDelay.toString()
-                            editingDelay = false
-                        }) {
-                            Text("Cancel")
-                        }
+                            outputText = activeOutputDelay.toString()
+                            editingOutput = false
+                        }) { Text("Cancel") }
                     }
                 } else {
                     Row(
@@ -150,40 +167,22 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Current output delay: ${activeDelay}ms",
-                            style = MaterialTheme.typography.bodyLarge
+                            text = "Output delay: ${activeOutputDelay}ms",
+                            style = MaterialTheme.typography.bodyMedium
                         )
-                        TextButton(onClick = { editingDelay = true }) {
-                            Text("Edit")
-                        }
+                        TextButton(onClick = { editingOutput = true }) { Text("Edit") }
                     }
                 }
-            }
 
-            // Audio input delay calibration (per-input-device)
-            SettingSection(title = "Audio Input Delay") {
-                val inputDevice by viewModel.currentInputDevice.collectAsState()
-                val activeInputDelay by viewModel.activeInputDelay.collectAsState()
-                var editingInputDelay by remember { mutableStateOf(false) }
-                var inputDelayText by remember(activeInputDelay) { mutableStateOf(activeInputDelay.toString()) }
-
-                inputDevice?.let {
-                    Text(
-                        text = "Input device: ${it.name}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-
-                if (editingInputDelay) {
+                // Input delay row
+                if (editingInput) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedTextField(
-                            value = inputDelayText,
-                            onValueChange = { inputDelayText = it },
+                            value = inputText,
+                            onValueChange = { inputText = it },
                             label = { Text("Input delay (ms)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
@@ -191,21 +190,17 @@ fun SettingsScreen(
                         )
                         Button(
                             onClick = {
-                                inputDelayText.toIntOrNull()?.let { ms ->
+                                inputText.toIntOrNull()?.let { ms ->
                                     viewModel.saveInputDelay(ms)
                                 }
-                                editingInputDelay = false
+                                editingInput = false
                             },
-                            enabled = inputDelayText.toIntOrNull() != null
-                        ) {
-                            Text("Save")
-                        }
+                            enabled = inputText.toIntOrNull() != null
+                        ) { Text("Save") }
                         TextButton(onClick = {
-                            inputDelayText = activeInputDelay.toString()
-                            editingInputDelay = false
-                        }) {
-                            Text("Cancel")
-                        }
+                            inputText = activeInputDelay.toString()
+                            editingInput = false
+                        }) { Text("Cancel") }
                     }
                 } else {
                     Row(
@@ -214,12 +209,10 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Current input delay: ${activeInputDelay}ms",
-                            style = MaterialTheme.typography.bodyLarge
+                            text = "Input delay: ${activeInputDelay}ms",
+                            style = MaterialTheme.typography.bodyMedium
                         )
-                        TextButton(onClick = { editingInputDelay = true }) {
-                            Text("Edit")
-                        }
+                        TextButton(onClick = { editingInput = true }) { Text("Edit") }
                     }
                 }
 

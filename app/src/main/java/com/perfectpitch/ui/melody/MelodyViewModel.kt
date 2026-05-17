@@ -4,12 +4,10 @@ import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.perfectpitch.audio.AudioDeviceMonitor
-import com.perfectpitch.audio.AudioInputDeviceType
 import com.perfectpitch.audio.MelodyPlayer
 import com.perfectpitch.audio.MelodySynthesizer
 import com.perfectpitch.audio.PitchProcessor
-import com.perfectpitch.data.AudioDelayProfileRepository
-import com.perfectpitch.data.AudioInputDelayRepository
+import com.perfectpitch.data.AudioDelayRepository
 import com.perfectpitch.data.MelodyRepository
 import com.perfectpitch.data.MelodySettingsRepository
 import com.perfectpitch.data.SettingsRepository
@@ -32,8 +30,7 @@ class MelodyViewModel @Inject constructor(
     private val noteUtils: NoteUtils,
     private val melodySynthesizer: MelodySynthesizer,
     private val melodyPlayer: MelodyPlayer,
-    private val audioDelayProfileRepository: AudioDelayProfileRepository,
-    private val audioInputDelayRepository: AudioInputDelayRepository,
+    private val audioDelayRepository: AudioDelayRepository,
     private val audioDeviceMonitor: AudioDeviceMonitor
 ) : ViewModel() {
 
@@ -81,13 +78,13 @@ class MelodyViewModel @Inject constructor(
         }
         // Observe per-device audio output delay and update the melody player
         viewModelScope.launch {
-            audioDelayProfileRepository.activeDelay.collect { delayMs ->
+            audioDelayRepository.activeOutputDelay.collect { delayMs ->
                 melodyPlayer.setAudioOutputDelay(delayMs.toLong())
             }
         }
         // Observe per-device audio input delay for pitch timestamp correction
         viewModelScope.launch {
-            audioInputDelayRepository.activeDelay.collect { delayMs ->
+            audioDelayRepository.activeInputDelay.collect { delayMs ->
                 audioInputDelayMs = delayMs
             }
         }
@@ -100,20 +97,15 @@ class MelodyViewModel @Inject constructor(
     /** Emits a device name when an uncalibrated device is detected, null otherwise. */
     val uncalibratedDevicePrompt: StateFlow<String?> = combine(
         audioDeviceMonitor.currentInputDevice,
-        audioInputDelayRepository.allProfiles,
         audioDeviceMonitor.currentDevice,
-        audioDelayProfileRepository.allProfiles
-    ) { inputDevice, inputProfiles, outputDevice, outputProfiles ->
+        audioDelayRepository.allProfiles
+    ) { inputDevice, outputDevice, profiles ->
         // Check if the current input device has a stored calibration
-        if (inputDevice.type != AudioInputDeviceType.BUILTIN &&
-            !inputProfiles.containsKey(inputDevice.deviceKey)
-        ) {
+        if (!profiles.containsKey(inputDevice.deviceKey)) {
             return@combine inputDevice.name
         }
         // Check if the current output device has a stored calibration
-        if (outputDevice.type != com.perfectpitch.audio.AudioOutputDeviceType.SPEAKER &&
-            !outputProfiles.containsKey(outputDevice.deviceKey)
-        ) {
+        if (!profiles.containsKey(outputDevice.deviceKey)) {
             return@combine outputDevice.name
         }
         null

@@ -3,8 +3,7 @@ package com.perfectpitch.ui.calibration
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.perfectpitch.audio.*
-import com.perfectpitch.data.AudioDelayProfileRepository
-import com.perfectpitch.data.AudioInputDelayRepository
+import com.perfectpitch.data.AudioDelayRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -14,53 +13,32 @@ import javax.inject.Inject
 class CalibrationViewModel @Inject constructor(
     private val melodySynthesizer: MelodySynthesizer,
     private val audioDeviceMonitor: AudioDeviceMonitor,
-    private val audioCaptureService: AudioCaptureService,
-    private val audioInputDelayRepository: AudioInputDelayRepository,
-    private val audioDelayProfileRepository: AudioDelayProfileRepository,
-    private val pitchProcessor: PitchProcessor
+    private val pitchProcessor: PitchProcessor,
+    private val audioDelayRepository: AudioDelayRepository
 ) : ViewModel() {
 
     companion object {
-        /** Metronome BPM for input calibration. */
-        const val METRONOME_BPM = 90
-        /** Milliseconds per metronome beat. */
-        const val BEAT_INTERVAL_MS = (60_000.0 / METRONOME_BPM).toLong() // ~667ms
-        /** Number of warm-up beats (not counted for calibration). */
-        const val WARMUP_BEATS = 4
-        /** Number of measured beats for calibration. */
-        const val MEASURED_BEATS = 8
-        /** Total beats in the input calibration sequence. */
-        const val TOTAL_BEATS = WARMUP_BEATS + MEASURED_BEATS
-        /** Maximum window to match a sound detection to a beat (±ms). */
-        const val INPUT_DETECTION_WINDOW_MS = 250L
+        // Round-trip measurement (Phase 1)
+        const val NUM_TONES = 8
+        const val TONE_SPACING_MS = 800L
+        const val TONE_DURATION_MS = 300L
+        const val MIDI_NOTE = 69 // A4 = 440 Hz
+        const val MIDI_VELOCITY = 100
+        const val MAX_DETECTION_WINDOW_MS = 600L
+        const val TARGET_FREQ = 440f
+        const val FREQ_TOLERANCE = 30f
 
-        // Output calibration constants
-        const val OUTPUT_NUM_TONES = 8
-        const val OUTPUT_TONE_SPACING_MS = 600L
-        const val OUTPUT_TONE_DURATION_MS = 200L
-        const val OUTPUT_MIDI_NOTE = 69 // A4 = 440 Hz
-        const val OUTPUT_MIDI_VELOCITY = 100
-        const val OUTPUT_MAX_DETECTION_WINDOW_MS = 500L
-        const val OUTPUT_TARGET_FREQ = 440f
-        const val OUTPUT_FREQ_TOLERANCE = 30f
+        // Split adjustment (Phase 2)
+        const val PULSE_ON_MS = 500L
+        const val PULSE_OFF_MS = 500L
+        const val PULSE_CYCLE_MS = PULSE_ON_MS + PULSE_OFF_MS
     }
 
-    /**
-     * Two-phase calibration flow:
-     *
-     * INIT → INPUT_INSTRUCTIONS → INPUT_CALIBRATING → INPUT_RESULT
-     *      → OUTPUT_OFFER → OUTPUT_CALIBRATING → OUTPUT_RESULT → DONE
-     *
-     * Output phase can be skipped from OUTPUT_OFFER.
-     */
     enum class CalibrationPhase {
         INIT,
-        INPUT_INSTRUCTIONS,
-        INPUT_CALIBRATING,
-        INPUT_RESULT,
-        OUTPUT_OFFER,
-        OUTPUT_CALIBRATING,
-        OUTPUT_RESULT,
+        INSTRUCTIONS,
+        MEASURING_ROUNDTRIP,
+        ADJUSTING_SPLIT,
         DONE
     }
 
@@ -71,21 +49,19 @@ class CalibrationViewModel @Inject constructor(
         // Current devices
         val inputDevice: AudioInputDevice? = null,
         val outputDevice: AudioOutputDevice? = null,
-        // Input calibration progress
-        val currentBeat: Int = 0,
-        val isWarmup: Boolean = true,
-        val beatsDetected: Int = 0,
-        /** Wall-clock time when input calibration started (for UI animation). */
-        val calibrationStartTimeMs: Long = 0L,
-        // Input calibration result
-        val inputDelayMs: Int? = null,
-        val editedInputDelay: String = "",
-        // Output calibration progress
+        // Phase 1: round-trip measurement
         val tonesPlayed: Int = 0,
         val tonesDetected: Int = 0,
-        // Output calibration result
-        val outputDelayMs: Int? = null,
-        val editedOutputDelay: String = "",
+        val totalDelayMs: Int = 0,
+        // Phase 2: split adjustment
+        /** Current output delay set by slider (ms). */
+        val outputDelayMs: Int = 0,
+        /** Derived: totalDelayMs - outputDelayMs. */
+        val inputDelayMs: Int = 0,
+        /** Whether the split tone loop is currently playing. */
+        val splitActive: Boolean = false,
+        /** Wall-clock time when split loop started (for UI pulse animation). */
+        val splitStartTimeMs: Long = 0L,
         // Status
         val saved: Boolean = false,
         val error: String? = null
@@ -95,13 +71,9 @@ class CalibrationViewModel @Inject constructor(
     val state: StateFlow<CalibrationState> = _state.asStateFlow()
 
     private var calibrationJob: Job? = null
-    private var currentInputDelayMs: Int = 0
+    private var splitLoopJob: Job? = null
 
     init {
-        viewModelScope.launch {
-            audioInputDelayRepository.migrateIfNeeded()
-        }
-
         viewModelScope.launch {
             combine(
                 audioDeviceMonitor.currentDevice,
@@ -111,200 +83,37 @@ class CalibrationViewModel @Inject constructor(
                     _state.update { it.copy(outputDevice = output, inputDevice = input) }
                 }
         }
-
-        viewModelScope.launch {
-            audioInputDelayRepository.activeDelay.collect { delayMs ->
-                currentInputDelayMs = delayMs
-            }
-        }
     }
 
     fun initSynthesizer(context: android.content.Context) {
         if (melodySynthesizer.isReady) {
             _state.update { it.copy(synthReady = true) }
-            goToInputInstructions()
+            goToInstructions()
             return
         }
         viewModelScope.launch {
             try {
                 melodySynthesizer.open(context)
                 _state.update { it.copy(synthReady = true, synthError = null) }
-                goToInputInstructions()
+                goToInstructions()
             } catch (e: Exception) {
                 _state.update { it.copy(synthError = e.message ?: "Failed to initialize audio") }
             }
         }
     }
 
-    private fun goToInputInstructions() {
-        _state.update { it.copy(phase = CalibrationPhase.INPUT_INSTRUCTIONS, error = null) }
+    private fun goToInstructions() {
+        _state.update { it.copy(phase = CalibrationPhase.INSTRUCTIONS, error = null) }
     }
 
-    // --- Input calibration: metronome sync ---
+    // --- Phase 1: Measure total round-trip delay ---
 
-    fun startInputCalibration() {
-        _state.update {
-            it.copy(
-                phase = CalibrationPhase.INPUT_CALIBRATING,
-                currentBeat = 0,
-                isWarmup = true,
-                beatsDetected = 0,
-                error = null
-            )
-        }
-
-        calibrationJob = viewModelScope.launch {
-            val offsets = runInputCalibration()
-
-            if (offsets != null && offsets.isNotEmpty()) {
-                val sorted = offsets.sorted()
-                val median = sorted[sorted.size / 2]
-                // Positive median means detections arrive after the beat → input delay is too low
-                // Negative means detections arrive before → input delay is too high
-                val currentDelay = currentInputDelayMs
-                val adjustedDelay = (currentDelay + median.toInt()).coerceIn(0, 500)
-
-                _state.update {
-                    it.copy(
-                        phase = CalibrationPhase.INPUT_RESULT,
-                        inputDelayMs = adjustedDelay,
-                        editedInputDelay = adjustedDelay.toString()
-                    )
-                }
-            } else {
-                _state.update {
-                    it.copy(
-                        phase = CalibrationPhase.INPUT_INSTRUCTIONS,
-                        error = "Could not detect enough sounds. Try making louder or clearer sounds (clap, hum, or play a note) in sync with each pulse."
-                    )
-                }
-            }
-        }
-    }
-
-    /**
-     * Runs the metronome input calibration sequence.
-     *
-     * Returns a list of timing offsets (ms): positive = detection was late, negative = early.
-     * Returns null if not enough beats were detected.
-     */
-    private suspend fun runInputCalibration(): List<Long>? {
-        val detections = mutableListOf<Pair<Long, Float>>()
-
-        val pitchJob = viewModelScope.launch {
-            pitchProcessor.pitchFlow().collect { result ->
-                if (result.isValid && result.frequency > 0f) {
-                    detections.add(System.currentTimeMillis() to result.frequency)
-                }
-            }
-        }
-
-        delay(300) // Mic settling
-
-        val offsets = mutableListOf<Long>()
-        val startTime = System.currentTimeMillis()
-
-        // Each cycle = 1 beat (bar falling) + 1 beat (silence) = 2 * BEAT_INTERVAL_MS
-        val cycleMs = BEAT_INTERVAL_MS * 2
-
-        _state.update { it.copy(calibrationStartTimeMs = startTime) }
-
-        try {
-            for (beat in 0 until TOTAL_BEATS) {
-                if (!currentCoroutineContext().isActive) break
-
-                // Beat hits the line at: startTime + beat * cycleMs + BEAT_INTERVAL_MS
-                // (bar falls for BEAT_INTERVAL_MS, then silence for BEAT_INTERVAL_MS)
-                val beatTime = startTime + beat.toLong() * cycleMs + BEAT_INTERVAL_MS
-                val isWarmup = beat < WARMUP_BEATS
-
-                _state.update {
-                    it.copy(
-                        currentBeat = beat + 1,
-                        isWarmup = isWarmup
-                    )
-                }
-
-                // Wait until beat time (when bar hits the line)
-                val waitMs = beatTime - System.currentTimeMillis()
-                if (waitMs > 0) delay(waitMs)
-
-                // For measured beats, find the nearest detection within the window
-                if (!isWarmup) {
-                    // Wait for the full detection window after the beat
-                    delay(INPUT_DETECTION_WINDOW_MS)
-
-                    val windowStart = beatTime - INPUT_DETECTION_WINDOW_MS
-                    val windowEnd = beatTime + INPUT_DETECTION_WINDOW_MS
-
-                    // Find the detection closest to the beat time
-                    val nearestDetection = detections.filter { (time, _) ->
-                        time in windowStart..windowEnd
-                    }.minByOrNull { (time, _) ->
-                        kotlin.math.abs(time - beatTime)
-                    }
-
-                    if (nearestDetection != null) {
-                        val offset = nearestDetection.first - beatTime
-                        offsets.add(offset)
-                        _state.update { it.copy(beatsDetected = offsets.size) }
-                    }
-
-                    // Wait for the silence gap
-                    val elapsed = System.currentTimeMillis() - beatTime
-                    val remainingGap = BEAT_INTERVAL_MS - elapsed
-                    if (remainingGap > 0) delay(remainingGap)
-                } else {
-                    // Warmup beat — wait for the silence gap
-                    val elapsed = System.currentTimeMillis() - beatTime
-                    val remainingGap = BEAT_INTERVAL_MS - elapsed
-                    if (remainingGap > 0) delay(remainingGap)
-                }
-            }
-        } finally {
-            pitchJob.cancel()
-        }
-
-        // Need at least 3 measured beats for a reliable median
-        return if (offsets.size >= 3) offsets else null
-    }
-
-    fun updateEditedInputDelay(text: String) {
-        _state.update { it.copy(editedInputDelay = text) }
-    }
-
-    fun saveInputDelayAndContinue() {
-        val delayMs = _state.value.editedInputDelay.toIntOrNull()
-            ?: _state.value.inputDelayMs ?: return
-        val device = _state.value.inputDevice ?: return
-
-        viewModelScope.launch {
-            if (device.type == AudioInputDeviceType.BUILTIN) {
-                // For built-in mic: compute and store offset relative to measured base
-                val measuredPipeline = audioCaptureService.measuredPipelineDelayMs.value
-                val measuredBase = if (measuredPipeline != null) {
-                    (measuredPipeline + AudioCaptureService.ALGORITHM_OFFSET_MS).toInt()
-                } else {
-                    0
-                }
-                val offset = delayMs - measuredBase
-                audioInputDelayRepository.setBuiltinOffset(offset)
-            } else {
-                audioInputDelayRepository.setDelayForDevice(device.deviceKey, delayMs)
-            }
-
-            _state.update { it.copy(phase = CalibrationPhase.OUTPUT_OFFER) }
-        }
-    }
-
-    // --- Output calibration: auto play & detect ---
-
-    fun startOutputCalibration() {
+    fun startRoundTripMeasurement() {
         if (!melodySynthesizer.isReady) return
 
         _state.update {
             it.copy(
-                phase = CalibrationPhase.OUTPUT_CALIBRATING,
+                phase = CalibrationPhase.MEASURING_ROUNDTRIP,
                 tonesPlayed = 0,
                 tonesDetected = 0,
                 error = null
@@ -312,21 +121,31 @@ class CalibrationViewModel @Inject constructor(
         }
 
         calibrationJob = viewModelScope.launch {
-            val outputDelayMs = measureOutputDelay()
+            val totalMs = measureRoundTrip()
 
-            if (outputDelayMs != null) {
+            if (totalMs != null) {
+                // Compute initial split.
+                // If we have a stored delay for one device, use that as the pre-fill.
+                val outputDevice = _state.value.outputDevice
+                val inputDevice = _state.value.inputDevice
+                val initialOutput = computeInitialOutputDelay(totalMs, outputDevice, inputDevice)
+                val initialInput = totalMs - initialOutput
+
                 _state.update {
                     it.copy(
-                        phase = CalibrationPhase.OUTPUT_RESULT,
-                        outputDelayMs = outputDelayMs,
-                        editedOutputDelay = outputDelayMs.toString()
+                        phase = CalibrationPhase.ADJUSTING_SPLIT,
+                        totalDelayMs = totalMs,
+                        outputDelayMs = initialOutput,
+                        inputDelayMs = initialInput
                     )
                 }
+
+                startSplitLoop()
             } else {
                 _state.update {
                     it.copy(
-                        phase = CalibrationPhase.OUTPUT_OFFER,
-                        error = "Could not detect enough tones. Ensure the microphone can hear the speaker and the environment is quiet."
+                        phase = CalibrationPhase.INSTRUCTIONS,
+                        error = "Could not detect enough tones. Ensure the environment is quiet and the microphone can hear the speaker."
                     )
                 }
             }
@@ -334,12 +153,10 @@ class CalibrationViewModel @Inject constructor(
     }
 
     /**
-     * Measures output delay by playing tones and detecting them.
-     * output_delay = detection_time - play_time - input_delay
-     *
-     * Returns the median output delay in ms, or null if not enough tones detected.
+     * Plays [NUM_TONES] tones and measures the round-trip time for each (play→detect).
+     * Returns the median round-trip in ms, or null if not enough tones were detected.
      */
-    private suspend fun measureOutputDelay(): Int? {
+    private suspend fun measureRoundTrip(): Int? {
         val detections = mutableListOf<Pair<Long, Float>>()
 
         val pitchJob = viewModelScope.launch {
@@ -352,40 +169,44 @@ class CalibrationViewModel @Inject constructor(
 
         delay(300) // Mic settling
 
-        val outputDelays = mutableListOf<Long>()
-        val inputDelay = currentInputDelayMs.toLong()
+        val roundTrips = mutableListOf<Long>()
 
         try {
-            for (i in 0 until OUTPUT_NUM_TONES) {
+            for (i in 0 until NUM_TONES) {
                 if (!currentCoroutineContext().isActive) break
 
                 val playTime = System.currentTimeMillis()
-                melodySynthesizer.noteOn(0, OUTPUT_MIDI_NOTE, OUTPUT_MIDI_VELOCITY)
-                delay(OUTPUT_TONE_DURATION_MS)
-                melodySynthesizer.noteOff(0, OUTPUT_MIDI_NOTE)
+                melodySynthesizer.noteOn(0, MIDI_NOTE, MIDI_VELOCITY)
+                delay(TONE_DURATION_MS)
+                melodySynthesizer.noteOff(0, MIDI_NOTE)
 
                 _state.update { it.copy(tonesPlayed = i + 1) }
 
-                val deadline = playTime + OUTPUT_MAX_DETECTION_WINDOW_MS
+                // Wait for detection window to close
+                val deadline = playTime + MAX_DETECTION_WINDOW_MS
                 val remaining = deadline - System.currentTimeMillis()
                 if (remaining > 0) delay(remaining)
 
+                // Find the first matching detection after playTime
                 val detection = detections.firstOrNull { (time, freq) ->
                     time >= playTime &&
-                        time <= playTime + OUTPUT_MAX_DETECTION_WINDOW_MS &&
-                        kotlin.math.abs(freq - OUTPUT_TARGET_FREQ) < OUTPUT_FREQ_TOLERANCE
+                        time <= playTime + MAX_DETECTION_WINDOW_MS &&
+                        kotlin.math.abs(freq - TARGET_FREQ) < FREQ_TOLERANCE
                 }
 
                 if (detection != null) {
-                    // output_delay = round_trip - input_delay
                     val roundTrip = detection.first - playTime
-                    val outputDelay = roundTrip - inputDelay
-                    outputDelays.add(outputDelay)
-                    _state.update { it.copy(tonesDetected = outputDelays.size) }
+                    roundTrips.add(roundTrip)
+                    _state.update { it.copy(tonesDetected = roundTrips.size) }
                 }
 
+                // Clear used detections to avoid double-counting
+                val cutoff = playTime + MAX_DETECTION_WINDOW_MS
+                detections.removeAll { (time, _) -> time <= cutoff }
+
+                // Wait for next tone spacing
                 val elapsed = System.currentTimeMillis() - playTime
-                val gap = OUTPUT_TONE_SPACING_MS - elapsed
+                val gap = TONE_SPACING_MS - elapsed
                 if (gap > 0) delay(gap)
             }
         } finally {
@@ -393,42 +214,149 @@ class CalibrationViewModel @Inject constructor(
             melodySynthesizer.allNotesOff()
         }
 
-        if (outputDelays.size < 3) return null
+        if (roundTrips.size < 3) return null
 
-        // Use median for robustness against outliers
-        val sorted = outputDelays.sorted()
-        return sorted[sorted.size / 2].toInt().coerceIn(0, 500)
+        val sorted = roundTrips.sorted()
+        return sorted[sorted.size / 2].toInt().coerceIn(0, 1000)
     }
 
-    fun updateEditedOutputDelay(text: String) {
-        _state.update { it.copy(editedOutputDelay = text) }
+    /**
+     * Computes the initial output delay for the slider.
+     * If one device has a stored delay, pre-fill using that.
+     * Otherwise, use [AudioDelayRepository.DEFAULT_OUTPUT_SPLIT].
+     */
+    private suspend fun computeInitialOutputDelay(
+        totalMs: Int,
+        outputDevice: AudioOutputDevice?,
+        inputDevice: AudioInputDevice?
+    ): Int {
+        // Try to use stored output delay
+        if (outputDevice != null) {
+            val profile = audioDelayRepository.getProfile(outputDevice.deviceKey).first()
+            if (profile != null) {
+                return profile.outputDelayMs.coerceIn(0, totalMs)
+            }
+        }
+        // Try to use stored input delay to derive output
+        if (inputDevice != null) {
+            val profile = audioDelayRepository.getProfile(inputDevice.deviceKey).first()
+            if (profile != null) {
+                return (totalMs - profile.inputDelayMs).coerceIn(0, totalMs)
+            }
+        }
+        // Default: even split
+        return (totalMs * AudioDelayRepository.DEFAULT_OUTPUT_SPLIT).toInt()
     }
 
-    fun saveOutputDelayAndFinish() {
-        val delayMs = _state.value.editedOutputDelay.toIntOrNull()
-            ?: _state.value.outputDelayMs ?: return
-        val device = _state.value.outputDevice ?: return
+    // --- Phase 2: Split adjustment with audio+visual loop ---
+
+    /**
+     * Called when the user moves the slider.
+     * Updates output/input split and restarts the tone loop with new timing.
+     */
+    fun updateSplitSlider(outputDelayMs: Int) {
+        val total = _state.value.totalDelayMs
+        val clamped = outputDelayMs.coerceIn(0, total)
+        _state.update {
+            it.copy(
+                outputDelayMs = clamped,
+                inputDelayMs = total - clamped
+            )
+        }
+    }
+
+    /**
+     * Starts the tone + visual pulse loop for split adjustment.
+     * Plays a tone `outputDelayMs` before each visual pulse.
+     */
+    private fun startSplitLoop() {
+        stopSplitLoop()
+        _state.update {
+            it.copy(
+                splitActive = true,
+                splitStartTimeMs = System.currentTimeMillis()
+            )
+        }
+
+        splitLoopJob = viewModelScope.launch {
+            while (isActive) {
+                val outputDelay = _state.value.outputDelayMs.toLong()
+
+                // Play tone first (outputDelay ms before the visual pulse)
+                melodySynthesizer.noteOn(0, MIDI_NOTE, MIDI_VELOCITY)
+                delay(PULSE_ON_MS)
+                melodySynthesizer.noteOff(0, MIDI_NOTE)
+
+                // After the tone ends, we need to wait for the visual pulse to start,
+                // then the visual will be on for PULSE_ON_MS, then off for PULSE_OFF_MS.
+                // But the visual pulse starts `outputDelay` after the tone started.
+                //
+                // Timeline per cycle:
+                //   t=0:               tone starts
+                //   t=PULSE_ON_MS:     tone ends
+                //   t=outputDelay:     visual pulse starts
+                //   t=outputDelay+PULSE_ON_MS: visual pulse ends
+                //   t=outputDelay+PULSE_CYCLE_MS: next cycle starts
+                //
+                // Wait between tone end and next cycle:
+                val cycleTotal = outputDelay + PULSE_CYCLE_MS
+                val elapsed = PULSE_ON_MS
+                val remaining = cycleTotal - elapsed
+                if (remaining > 0) delay(remaining) else delay(PULSE_OFF_MS)
+            }
+        }
+    }
+
+    private fun stopSplitLoop() {
+        splitLoopJob?.cancel()
+        splitLoopJob = null
+        if (melodySynthesizer.isReady) {
+            melodySynthesizer.allNotesOff()
+        }
+        _state.update { it.copy(splitActive = false) }
+    }
+
+    // --- Save and finish ---
+
+    fun saveAndFinish() {
+        val s = _state.value
+        val inputDevice = s.inputDevice ?: return
+        val outputDevice = s.outputDevice ?: return
+
+        stopSplitLoop()
 
         viewModelScope.launch {
-            audioDelayProfileRepository.setDelayForDevice(device.deviceKey, delayMs)
+            // Save for input device
+            audioDelayRepository.saveCalibration(
+                deviceKey = inputDevice.deviceKey,
+                inputDelayMs = s.inputDelayMs,
+                outputDelayMs = s.outputDelayMs,
+                totalDelayMs = s.totalDelayMs
+            )
+            // Save for output device (same calibration data, keyed differently)
+            audioDelayRepository.saveCalibration(
+                deviceKey = outputDevice.deviceKey,
+                inputDelayMs = s.inputDelayMs,
+                outputDelayMs = s.outputDelayMs,
+                totalDelayMs = s.totalDelayMs
+            )
+
             _state.update { it.copy(phase = CalibrationPhase.DONE, saved = true) }
         }
     }
 
-    fun skipOutputCalibration() {
-        _state.update { it.copy(phase = CalibrationPhase.DONE, saved = true) }
-    }
-
     fun stopCalibration() {
         calibrationJob?.cancel()
-        if (melodySynthesizer.isReady) {
-            melodySynthesizer.allNotesOff()
-        }
-        goToInputInstructions()
+        stopSplitLoop()
+        goToInstructions()
     }
 
     override fun onCleared() {
         super.onCleared()
         calibrationJob?.cancel()
+        splitLoopJob?.cancel()
+        if (melodySynthesizer.isReady) {
+            melodySynthesizer.allNotesOff()
+        }
     }
 }
