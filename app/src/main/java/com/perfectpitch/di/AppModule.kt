@@ -83,9 +83,8 @@ object AppModule {
     @Singleton
     fun provideAudioDelayProfileRepository(
         @ApplicationContext context: Context,
-        audioDeviceMonitor: AudioDeviceMonitor,
-        melodySynthesizer: MelodySynthesizer
-    ): AudioDelayProfileRepository = AudioDelayProfileRepository(context, audioDeviceMonitor, melodySynthesizer)
+        audioDeviceMonitor: AudioDeviceMonitor
+    ): AudioDelayProfileRepository = AudioDelayProfileRepository(context, audioDeviceMonitor)
 
     @Provides
     @Singleton

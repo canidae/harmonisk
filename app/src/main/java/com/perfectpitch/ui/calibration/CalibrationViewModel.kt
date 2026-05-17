@@ -48,7 +48,7 @@ class CalibrationViewModel @Inject constructor(
     /**
      * Two-phase calibration flow:
      *
-     * INIT → INPUT_INSTRUCTIONS → INPUT_READY → INPUT_CALIBRATING → INPUT_RESULT
+     * INIT → INPUT_INSTRUCTIONS → INPUT_CALIBRATING → INPUT_RESULT
      *      → OUTPUT_OFFER → OUTPUT_CALIBRATING → OUTPUT_RESULT → DONE
      *
      * Output phase can be skipped from OUTPUT_OFFER.
@@ -56,7 +56,6 @@ class CalibrationViewModel @Inject constructor(
     enum class CalibrationPhase {
         INIT,
         INPUT_INSTRUCTIONS,
-        INPUT_READY,
         INPUT_CALIBRATING,
         INPUT_RESULT,
         OUTPUT_OFFER,
@@ -76,7 +75,6 @@ class CalibrationViewModel @Inject constructor(
         val currentBeat: Int = 0,
         val isWarmup: Boolean = true,
         val beatsDetected: Int = 0,
-        val metronomeActive: Boolean = false,
         /** Wall-clock time when input calibration started (for UI animation). */
         val calibrationStartTimeMs: Long = 0L,
         // Input calibration result
@@ -142,10 +140,6 @@ class CalibrationViewModel @Inject constructor(
         _state.update { it.copy(phase = CalibrationPhase.INPUT_INSTRUCTIONS, error = null) }
     }
 
-    fun confirmInputReady() {
-        _state.update { it.copy(phase = CalibrationPhase.INPUT_READY, error = null) }
-    }
-
     // --- Input calibration: metronome sync ---
 
     fun startInputCalibration() {
@@ -155,7 +149,6 @@ class CalibrationViewModel @Inject constructor(
                 currentBeat = 0,
                 isWarmup = true,
                 beatsDetected = 0,
-                metronomeActive = true,
                 error = null
             )
         }
@@ -174,7 +167,6 @@ class CalibrationViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         phase = CalibrationPhase.INPUT_RESULT,
-                        metronomeActive = false,
                         inputDelayMs = adjustedDelay,
                         editedInputDelay = adjustedDelay.toString()
                     )
@@ -182,8 +174,7 @@ class CalibrationViewModel @Inject constructor(
             } else {
                 _state.update {
                     it.copy(
-                        phase = CalibrationPhase.INPUT_READY,
-                        metronomeActive = false,
+                        phase = CalibrationPhase.INPUT_INSTRUCTIONS,
                         error = "Could not detect enough sounds. Try making louder or clearer sounds (clap, hum, or play a note) in sync with each pulse."
                     )
                 }
@@ -419,19 +410,7 @@ class CalibrationViewModel @Inject constructor(
         val device = _state.value.outputDevice ?: return
 
         viewModelScope.launch {
-            if (device.type == AudioOutputDeviceType.SPEAKER) {
-                // For built-in speaker: compute and store offset relative to measured delay
-                val measuredOutput = melodySynthesizer.measuredOutputDelayMs.value
-                if (measuredOutput != null) {
-                    val offset = delayMs - measuredOutput.toInt()
-                    audioDelayProfileRepository.setBuiltinOffset(offset)
-                } else {
-                    audioDelayProfileRepository.setDelayForDevice(device.deviceKey, delayMs)
-                }
-            } else {
-                audioDelayProfileRepository.setDelayForDevice(device.deviceKey, delayMs)
-            }
-
+            audioDelayProfileRepository.setDelayForDevice(device.deviceKey, delayMs)
             _state.update { it.copy(phase = CalibrationPhase.DONE, saved = true) }
         }
     }
@@ -445,7 +424,6 @@ class CalibrationViewModel @Inject constructor(
         if (melodySynthesizer.isReady) {
             melodySynthesizer.allNotesOff()
         }
-        _state.update { it.copy(metronomeActive = false) }
         goToInputInstructions()
     }
 

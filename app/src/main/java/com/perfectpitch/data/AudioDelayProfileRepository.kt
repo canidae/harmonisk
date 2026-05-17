@@ -8,7 +8,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.perfectpitch.audio.AudioDeviceMonitor
 import com.perfectpitch.audio.AudioOutputDeviceType
-import com.perfectpitch.audio.MelodySynthesizer
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -21,19 +20,15 @@ private val Context.audioDelayStore: DataStore<Preferences> by preferencesDataSt
 /**
  * Stores per-device audio delay profiles.
  *
- * For built-in speaker: uses live measurements from [MelodySynthesizer.measuredOutputDelayMs]
- * plus a user-adjustable offset. Falls back to stored/default values.
- *
- * For external devices (wired/BT): uses calibrated values from DataStore.
+ * All devices (built-in and external) store absolute calibrated delay values.
+ * Values are set via the calibration wizard or manually in Settings.
  */
 class AudioDelayProfileRepository(
     private val context: Context,
-    private val audioDeviceMonitor: AudioDeviceMonitor,
-    private val melodySynthesizer: MelodySynthesizer
+    private val audioDeviceMonitor: AudioDeviceMonitor
 ) {
     companion object {
         private val PROFILES_KEY = stringPreferencesKey("delay_profiles_json")
-        private const val BUILTIN_OFFSET_KEY = "__builtin_output_offset"
 
         fun defaultDelay(type: AudioOutputDeviceType): Int = when (type) {
             AudioOutputDeviceType.SPEAKER -> 0
@@ -48,21 +43,13 @@ class AudioDelayProfileRepository(
 
     /**
      * Emits the delay (ms) for the currently active audio output device.
-     *
-     * For built-in speaker: uses live measured output delay + user offset when synth is running.
-     * For external devices: uses calibrated/default values.
+     * Uses the calibrated/stored value, or a type-based default if uncalibrated.
      */
     val activeDelay: Flow<Int> = combine(
         audioDeviceMonitor.currentDevice,
-        profilesFlow,
-        melodySynthesizer.measuredOutputDelayMs
-    ) { device, profiles, measuredDelay ->
-        if (device.type == AudioOutputDeviceType.SPEAKER && measuredDelay != null) {
-            val userOffset = profiles[BUILTIN_OFFSET_KEY] ?: 0
-            measuredDelay.toInt() + userOffset
-        } else {
-            profiles[device.deviceKey] ?: defaultDelay(device.type)
-        }
+        profilesFlow
+    ) { device, profiles ->
+        profiles[device.deviceKey] ?: defaultDelay(device.type)
     }
 
     /** Get the stored delay for a specific device key, or the smart default. */
@@ -80,21 +67,6 @@ class AudioDelayProfileRepository(
             prefs[PROFILES_KEY] = serializeProfiles(current)
         }
     }
-
-    /**
-     * Store a user offset (ms) for the built-in speaker.
-     * The total delay = measured_output_delay + this offset.
-     */
-    suspend fun setBuiltinOffset(offsetMs: Int) {
-        context.audioDelayStore.edit { prefs ->
-            val current = parseProfiles(prefs[PROFILES_KEY]).toMutableMap()
-            current[BUILTIN_OFFSET_KEY] = offsetMs.coerceIn(-200, 200)
-            prefs[PROFILES_KEY] = serializeProfiles(current)
-        }
-    }
-
-    /** Get the current built-in speaker user offset (ms). */
-    fun getBuiltinOffset(): Flow<Int> = profilesFlow.map { it[BUILTIN_OFFSET_KEY] ?: 0 }
 
     /** Get all stored profiles as a snapshot. */
     val allProfiles: Flow<Map<String, Int>> = profilesFlow

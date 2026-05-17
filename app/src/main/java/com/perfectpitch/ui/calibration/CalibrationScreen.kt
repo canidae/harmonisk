@@ -95,10 +95,6 @@ fun CalibrationScreen(
 
                 CalibrationPhase.INPUT_INSTRUCTIONS -> InputInstructionsContent(
                     inputDeviceName = state.inputDevice?.name ?: "microphone",
-                    onReady = { viewModel.confirmInputReady() }
-                )
-
-                CalibrationPhase.INPUT_READY -> InputReadyContent(
                     onStart = { viewModel.startInputCalibration() }
                 )
 
@@ -155,7 +151,7 @@ fun CalibrationScreen(
 @Composable
 private fun InputInstructionsContent(
     inputDeviceName: String,
-    onReady: () -> Unit
+    onStart: () -> Unit
 ) {
     Icon(
         Icons.Filled.MicExternalOn,
@@ -188,32 +184,6 @@ private fun InputInstructionsContent(
     }
 
     Spacer(modifier = Modifier.height(8.dp))
-
-    Button(
-        onClick = onReady,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
-        shape = MaterialTheme.shapes.large
-    ) {
-        Text("I'm Ready", style = MaterialTheme.typography.titleMedium)
-    }
-}
-
-@Composable
-private fun InputReadyContent(
-    onStart: () -> Unit
-) {
-    Text(
-        text = "Ready to Calibrate",
-        style = MaterialTheme.typography.titleLarge
-    )
-
-    Text(
-        text = "Press Start, then make a sound when the bar hits the line.",
-        style = MaterialTheme.typography.bodyLarge,
-        textAlign = TextAlign.Center
-    )
-
-    Spacer(modifier = Modifier.height(16.dp))
 
     Button(
         onClick = onStart,
@@ -251,16 +221,18 @@ private fun InputCalibratingContent(
 
     Spacer(modifier = Modifier.height(8.dp))
 
-    // Falling bar canvas
-    val barHeightDp = 20.dp
-    val lineThicknessDp = 3.dp
-    val hitLineYFraction = 0.85f
+    // How many full cycles (bar+silence) are visible in the canvas at once
+    val visibleCycles = 3f
+    val visibleMs = visibleCycles * cycleMs
 
-    // Animate continuously for smooth bar movement
+    val lineThicknessDp = 3.dp
+    // Hit line near the bottom
+    val hitLineYFraction = 0.90f
+
     var elapsedMs by remember { mutableLongStateOf(0L) }
     LaunchedEffect(calibrationStartTimeMs) {
         while (true) {
-            withFrameNanos { frameTimeNanos ->
+            withFrameNanos {
                 elapsedMs = System.currentTimeMillis() - calibrationStartTimeMs
             }
         }
@@ -269,16 +241,22 @@ private fun InputCalibratingContent(
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
-            .height(280.dp)
+            .height(320.dp)
             .background(surfaceVariant, MaterialTheme.shapes.medium)
     ) {
         val canvasHeight = size.height
         val canvasWidth = size.width
         val hitLineY = canvasHeight * hitLineYFraction
-        val barHeight = barHeightDp.toPx()
         val lineThickness = lineThicknessDp.toPx()
         val barWidth = canvasWidth * 0.4f
         val barLeft = (canvasWidth - barWidth) / 2f
+
+        // Each cycle has 2 beats: bar phase + silence phase.
+        // Pixels per millisecond of the scrolling timeline.
+        val pxPerMs = hitLineY / visibleMs
+
+        // Bar height = 1 beat interval worth of pixels
+        val barHeight = beatIntervalMs * pxPerMs
 
         // Draw the hit line
         drawLine(
@@ -288,23 +266,29 @@ private fun InputCalibratingContent(
             strokeWidth = lineThickness
         )
 
-        // Compute which bar is falling and its position
         val elapsed = elapsedMs.toFloat()
-        val cycleMsF = cycleMs.toFloat()
-        val beatMsF = beatIntervalMs.toFloat()
 
-        // Current cycle index (0-based)
-        val currentCycle = (elapsed / cycleMsF).toInt()
-        val timeInCycle = elapsed - currentCycle * cycleMsF
+        // Draw bars for all cycles that could be visible.
+        // A bar for cycle i occupies time [i*cycleMs, i*cycleMs + beatIntervalMs].
+        // Its bottom edge hits the line at time i*cycleMs + beatIntervalMs.
+        // At elapsed time `t`, the bar bottom Y = hitLineY - (hitTime - t) * pxPerMs
+        // where hitTime = i*cycleMs + beatIntervalMs.
+        //
+        // A bar is visible if its top edge is below 0 and its bottom edge is above 0.
+        // We iterate a generous range of cycles.
+        val currentCycle = (elapsed / cycleMs).toInt()
+        val startCycle = (currentCycle - 1).coerceAtLeast(0)
+        val endCycle = (currentCycle + visibleCycles.toInt() + 2).coerceAtMost(totalBeats)
 
-        // Bar is visible during the first beat of the cycle (falling phase)
-        if (currentCycle < totalBeats && timeInCycle < beatMsF) {
-            val progress = timeInCycle / beatMsF  // 0.0 → 1.0
-            // Bar falls from above the canvas to the hit line
-            val barBottomY = hitLineY * progress
+        for (i in startCycle until endCycle) {
+            val hitTime = i.toFloat() * cycleMs + beatIntervalMs
+            val barBottomY = hitLineY - (hitTime - elapsed) * pxPerMs
             val barTopY = barBottomY - barHeight
 
-            val barColor = if (currentCycle < warmupBeats) warmupColor else measuredColor
+            // Skip if entirely off-screen
+            if (barBottomY < 0f || barTopY > canvasHeight) continue
+
+            val barColor = if (i < warmupBeats) warmupColor else measuredColor
 
             drawRoundRect(
                 color = barColor.copy(alpha = 0.85f),

@@ -60,15 +60,7 @@ class SettingsViewModel @Inject constructor(
     fun saveDelay(ms: Int) {
         val device = audioDeviceMonitor.currentDevice.value
         viewModelScope.launch {
-            if (device.type == com.perfectpitch.audio.AudioOutputDeviceType.SPEAKER) {
-                // For built-in speaker: save as offset relative to measured delay
-                val currentTotal = activeDelay.value
-                val measuredBase = currentTotal - (audioDelayProfileRepository.getBuiltinOffset().first())
-                val newOffset = ms - measuredBase
-                audioDelayProfileRepository.setBuiltinOffset(newOffset)
-            } else {
-                audioDelayProfileRepository.setDelayForDevice(device.deviceKey, ms)
-            }
+            audioDelayProfileRepository.setDelayForDevice(device.deviceKey, ms)
         }
     }
 
