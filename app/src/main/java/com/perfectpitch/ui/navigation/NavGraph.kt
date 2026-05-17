@@ -54,6 +54,7 @@ fun NavGraph() {
                 val viewModel: MelodyViewModel = hiltViewModel(parentEntry)
                 MelodyPlayScreen(
                     onBack = { navController.popBackStack() },
+                    onNavigateToCalibration = { navController.navigate("calibration") },
                     viewModel = viewModel
                 )
             }

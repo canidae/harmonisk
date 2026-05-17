@@ -40,15 +40,18 @@ private val OVERLAY_BUTTON_SIZE = 40.dp
 @Composable
 fun MelodyPlayScreen(
     onBack: () -> Unit,
+    onNavigateToCalibration: () -> Unit = {},
     viewModel: MelodyViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
     val continuousPitchLine by viewModel.continuousPitchLine.collectAsState()
+    val uncalibratedDevice by viewModel.uncalibratedDevicePrompt.collectAsState()
     val density = LocalDensity.current
     val context = LocalContext.current
     val rightPaddingPx = with(density) { BUTTON_AREA_WIDTH.toPx() }
     var showResultsModal by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     KeepScreenOn()
 
@@ -67,7 +70,25 @@ fun MelodyPlayScreen(
         }
     }
 
+    // Show calibration prompt for uncalibrated devices
+    LaunchedEffect(uncalibratedDevice) {
+        val deviceName = uncalibratedDevice
+        if (deviceName != null && viewModel.shouldShowCalibrationPrompt()) {
+            val result = snackbarHostState.showSnackbar(
+                message = "$deviceName is not calibrated",
+                actionLabel = "Calibrate",
+                duration = SnackbarDuration.Long
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.stop()
+                onNavigateToCalibration()
+            }
+            viewModel.dismissCalibrationPrompt()
+        }
+    }
+
     RequireMicPermission {
+        Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -282,6 +303,15 @@ fun MelodyPlayScreen(
                                 },
                                 onClick = { viewModel.setPlayMelodyAudio(!state.playMelodyAudio) }
                             )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("Calibrate audio") },
+                                onClick = {
+                                    showConfigMenu = false
+                                    viewModel.stop()
+                                    onNavigateToCalibration()
+                                }
+                            )
                         }
                     }
 
@@ -398,6 +428,11 @@ fun MelodyPlayScreen(
                     }
                 }
             }
+        }
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 

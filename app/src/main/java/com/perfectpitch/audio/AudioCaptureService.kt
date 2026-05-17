@@ -35,8 +35,12 @@ class AudioCaptureService(
          */
         private const val AUDIO_SOURCE = MediaRecorder.AudioSource.VOICE_PERFORMANCE
 
-        /** Half of a 1024-sample read chunk (~11.6ms). Used as algorithm offset. */
-        const val ALGORITHM_OFFSET_MS = 12f
+        /**
+         * Algorithm offset: accounts for the fact that the detected pitch corresponds to
+         * the center of the 4096-sample analysis window, not the latest sample.
+         * Center = 2048 samples before the end of the window = 2048 / 44100 ≈ 46.4ms.
+         */
+        const val ALGORITHM_OFFSET_MS = 46f
 
         /** Number of measurements to average for pipeline delay smoothing. */
         private const val DELAY_WINDOW_SIZE = 10

@@ -3,6 +3,8 @@ package com.perfectpitch.ui.melody
 import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.perfectpitch.audio.AudioDeviceMonitor
+import com.perfectpitch.audio.AudioInputDeviceType
 import com.perfectpitch.audio.MelodyPlayer
 import com.perfectpitch.audio.MelodySynthesizer
 import com.perfectpitch.audio.PitchProcessor
@@ -31,7 +33,8 @@ class MelodyViewModel @Inject constructor(
     private val melodySynthesizer: MelodySynthesizer,
     private val melodyPlayer: MelodyPlayer,
     private val audioDelayProfileRepository: AudioDelayProfileRepository,
-    private val audioInputDelayRepository: AudioInputDelayRepository
+    private val audioInputDelayRepository: AudioInputDelayRepository,
+    private val audioDeviceMonitor: AudioDeviceMonitor
 ) : ViewModel() {
 
     companion object {
@@ -93,6 +96,36 @@ class MelodyViewModel @Inject constructor(
     val continuousPitchLine: StateFlow<Boolean> = settingsRepository.settings
         .map { it.continuousPitchLine }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    /** Emits a device name when an uncalibrated device is detected, null otherwise. */
+    val uncalibratedDevicePrompt: StateFlow<String?> = combine(
+        audioDeviceMonitor.currentInputDevice,
+        audioInputDelayRepository.allProfiles,
+        audioDeviceMonitor.currentDevice,
+        audioDelayProfileRepository.allProfiles
+    ) { inputDevice, inputProfiles, outputDevice, outputProfiles ->
+        // Check if the current input device has a stored calibration
+        if (inputDevice.type != AudioInputDeviceType.BUILTIN &&
+            !inputProfiles.containsKey(inputDevice.deviceKey)
+        ) {
+            return@combine inputDevice.name
+        }
+        // Check if the current output device has a stored calibration
+        if (outputDevice.type != com.perfectpitch.audio.AudioOutputDeviceType.SPEAKER &&
+            !outputProfiles.containsKey(outputDevice.deviceKey)
+        ) {
+            return@combine outputDevice.name
+        }
+        null
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private var calibrationPromptDismissed = false
+
+    fun dismissCalibrationPrompt() {
+        calibrationPromptDismissed = true
+    }
+
+    fun shouldShowCalibrationPrompt(): Boolean = !calibrationPromptDismissed
 
     fun getAvailableMelodies(): List<MelodyRepository.MelodyInfo> {
         return melodyRepository.getAvailableMelodies()

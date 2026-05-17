@@ -1,22 +1,29 @@
 package com.perfectpitch.ui.calibration
 
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MicExternalOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.perfectpitch.ui.calibration.CalibrationViewModel.CalibrationStep
+import com.perfectpitch.ui.calibration.CalibrationViewModel.CalibrationPhase
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +41,7 @@ fun CalibrationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Audio Delay Calibration") },
+                title = { Text("Audio Calibration") },
                 navigationIcon = {
                     IconButton(onClick = {
                         viewModel.stopCalibration()
@@ -63,7 +70,7 @@ fun CalibrationScreen(
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center
                 )
-            } else if (!state.synthReady) {
+            } else if (!state.synthReady && state.phase == CalibrationPhase.INIT) {
                 CircularProgressIndicator(modifier = Modifier.size(32.dp))
                 Text("Initializing audio…", style = MaterialTheme.typography.bodySmall)
             }
@@ -86,113 +93,58 @@ fun CalibrationScreen(
                 }
             }
 
-            when (state.step) {
-                CalibrationStep.INIT -> {
-                    // Waiting for init
-                }
+            when (state.phase) {
+                CalibrationPhase.INIT -> { /* Waiting for init */ }
 
-                CalibrationStep.BUILTIN_INFO -> BuiltinInfoContent(
-                    measuredPipelineDelayMs = state.measuredPipelineDelayMs,
-                    algorithmOffsetMs = com.perfectpitch.audio.AudioCaptureService.ALGORITHM_OFFSET_MS,
-                    onBack = {
-                        viewModel.stopCalibration()
-                        onBack()
-                    }
+                CalibrationPhase.INPUT_INSTRUCTIONS -> InputInstructionsContent(
+                    inputDeviceName = state.inputDevice?.name ?: "microphone",
+                    onReady = { viewModel.confirmInputReady() }
                 )
 
-                CalibrationStep.BASELINE_NEEDED -> BaselineNeededContent(
-                    externalOutputName = state.externalOutputName,
-                    externalInputName = state.externalInputName,
-                    onReady = { viewModel.confirmBaselineReady() }
+                CalibrationPhase.INPUT_READY -> InputReadyContent(
+                    onStart = { viewModel.startInputCalibration() }
                 )
 
-                CalibrationStep.BASELINE_READY -> BaselineReadyContent(
-                    synthReady = state.synthReady,
-                    isRecalibration = state.hasBaseline,
-                    onStart = { viewModel.startCalibration() }
-                )
-
-                CalibrationStep.BASELINE_CALIBRATING -> CalibratingContent(
-                    title = "Measuring baseline delay…",
-                    description = "Playing tones through built-in speaker and listening via built-in microphone.",
-                    tonesPlayed = state.tonesPlayed,
-                    tonesDetected = state.tonesDetected,
+                CalibrationPhase.INPUT_CALIBRATING -> InputCalibratingContent(
+                    currentBeat = state.currentBeat,
+                    totalBeats = CalibrationViewModel.TOTAL_BEATS,
+                    warmupBeats = CalibrationViewModel.WARMUP_BEATS,
+                    isWarmup = state.isWarmup,
+                    beatsDetected = state.beatsDetected,
                     onStop = { viewModel.stopCalibration() }
                 )
 
-                CalibrationStep.BASELINE_RESULT -> BaselineResultContent(
-                    roundTripMs = state.baselineRoundTripMs ?: 0,
-                    inputDelayMs = state.baselineInputDelayMs ?: 0,
-                    estimatedOutputLatencyMs = state.estimatedOutputLatencyMs,
-                    editedDelay = state.editedBaselineInputDelay,
-                    onEditDelay = { viewModel.updateEditedBaselineDelay(it) },
-                    onSaveAndContinue = { viewModel.saveBaselineAndContinue() },
-                    onRetry = { viewModel.startCalibration() },
-                    hasMoreSteps = state.hasExternalOutput || state.hasExternalInput
-                )
-
-                CalibrationStep.DEVICE_OUTPUT_INSTRUCTIONS -> DeviceInstructionsContent(
-                    deviceName = state.externalOutputName,
-                    deviceType = "speaker/headphones",
-                    onReady = { viewModel.confirmDeviceOutputReady() }
-                )
-
-                CalibrationStep.DEVICE_OUTPUT_READY -> DeviceReadyContent(
-                    deviceName = state.externalOutputName,
-                    synthReady = state.synthReady,
-                    onStart = { viewModel.startCalibration() }
-                )
-
-                CalibrationStep.DEVICE_OUTPUT_CALIBRATING -> CalibratingContent(
-                    title = "Measuring output delay for ${state.externalOutputName}…",
-                    description = "Playing tones through external speaker and listening via built-in microphone.",
-                    tonesPlayed = state.tonesPlayed,
-                    tonesDetected = state.tonesDetected,
-                    onStop = { viewModel.stopCalibration() }
-                )
-
-                CalibrationStep.DEVICE_OUTPUT_RESULT -> DeviceOutputResultContent(
-                    deviceName = state.externalOutputName,
-                    roundTripMs = state.deviceOutputRoundTripMs ?: 0,
-                    outputDelayMs = state.deviceOutputDelayMs ?: 0,
-                    editedDelay = state.editedOutputDelay,
-                    onEditDelay = { viewModel.updateEditedOutputDelay(it) },
-                    onSaveAndContinue = { viewModel.saveOutputDelayAndContinue() },
-                    onRetry = { viewModel.startCalibration() },
-                    hasMoreSteps = state.hasExternalInput
-                )
-
-                CalibrationStep.DEVICE_INPUT_INSTRUCTIONS -> DeviceInstructionsContent(
-                    deviceName = state.externalInputName,
-                    deviceType = "microphone",
-                    onReady = { viewModel.confirmDeviceInputReady() }
-                )
-
-                CalibrationStep.DEVICE_INPUT_READY -> DeviceReadyContent(
-                    deviceName = state.externalInputName,
-                    synthReady = state.synthReady,
-                    onStart = { viewModel.startCalibration() }
-                )
-
-                CalibrationStep.DEVICE_INPUT_CALIBRATING -> CalibratingContent(
-                    title = "Measuring input delay for ${state.externalInputName}…",
-                    description = "Playing tones through built-in speaker and listening via external microphone.",
-                    tonesPlayed = state.tonesPlayed,
-                    tonesDetected = state.tonesDetected,
-                    onStop = { viewModel.stopCalibration() }
-                )
-
-                CalibrationStep.DEVICE_INPUT_RESULT -> DeviceInputResultContent(
-                    deviceName = state.externalInputName,
-                    roundTripMs = state.deviceInputRoundTripMs ?: 0,
-                    inputDelayMs = state.deviceInputDelayMs ?: 0,
+                CalibrationPhase.INPUT_RESULT -> InputResultContent(
+                    inputDelayMs = state.inputDelayMs ?: 0,
                     editedDelay = state.editedInputDelay,
                     onEditDelay = { viewModel.updateEditedInputDelay(it) },
-                    onSaveAndFinish = { viewModel.saveInputDelayAndFinish() },
-                    onRetry = { viewModel.startCalibration() }
+                    onSaveAndContinue = { viewModel.saveInputDelayAndContinue() },
+                    onRetry = { viewModel.startInputCalibration() }
                 )
 
-                CalibrationStep.DONE -> DoneContent(onBack = onBack)
+                CalibrationPhase.OUTPUT_OFFER -> OutputOfferContent(
+                    outputDeviceName = state.outputDevice?.name ?: "speaker",
+                    synthReady = state.synthReady,
+                    onStart = { viewModel.startOutputCalibration() },
+                    onSkip = { viewModel.skipOutputCalibration() }
+                )
+
+                CalibrationPhase.OUTPUT_CALIBRATING -> OutputCalibratingContent(
+                    tonesPlayed = state.tonesPlayed,
+                    tonesDetected = state.tonesDetected,
+                    onStop = { viewModel.stopCalibration() }
+                )
+
+                CalibrationPhase.OUTPUT_RESULT -> OutputResultContent(
+                    outputDeviceName = state.outputDevice?.name ?: "speaker",
+                    outputDelayMs = state.outputDelayMs ?: 0,
+                    editedDelay = state.editedOutputDelay,
+                    onEditDelay = { viewModel.updateEditedOutputDelay(it) },
+                    onSaveAndFinish = { viewModel.saveOutputDelayAndFinish() },
+                    onRetry = { viewModel.startOutputCalibration() }
+                )
+
+                CalibrationPhase.DONE -> DoneContent(onBack = onBack)
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -200,136 +152,73 @@ fun CalibrationScreen(
     }
 }
 
+// --- Phase 1: Input Calibration ---
+
 @Composable
-private fun BuiltinInfoContent(
-    measuredPipelineDelayMs: Float?,
-    algorithmOffsetMs: Float,
-    onBack: () -> Unit
+private fun InputInstructionsContent(
+    inputDeviceName: String,
+    onReady: () -> Unit
 ) {
+    Icon(
+        Icons.Filled.MicExternalOn,
+        contentDescription = null,
+        modifier = Modifier.size(48.dp),
+        tint = MaterialTheme.colorScheme.primary
+    )
+
     Text(
-        text = "Audio Delay Info",
+        text = "Calibrate Audio Input",
         style = MaterialTheme.typography.titleLarge
     )
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Built-in microphone delay is measured automatically — no calibration needed.",
-                style = MaterialTheme.typography.bodyLarge
+                text = "Input device: $inputDeviceName",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
             )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (measuredPipelineDelayMs != null) {
-                val totalMs = measuredPipelineDelayMs + algorithmOffsetMs
-                Text(
-                    text = "Measured pipeline delay: ${String.format("%.1f", measuredPipelineDelayMs)}ms",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "Algorithm offset: ${String.format("%.0f", algorithmOffsetMs)}ms",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "Total input delay: ${String.format("%.0f", totalMs)}ms",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            } else {
-                Text(
-                    text = "Pipeline delay: measuring…",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "Start playing or use Free Play to begin measurement.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Connect an external speaker or microphone to calibrate those devices.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "A pulsing circle will beat at a steady rhythm. " +
+                    "Make a sound (play a note, hum, or clap) in sync with each pulse.\n\n" +
+                    "The first 4 beats are warm-up — get into the groove. " +
+                    "The next 8 beats will be measured for calibration.",
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }
 
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Button(
-        onClick = onBack,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
-        shape = MaterialTheme.shapes.large
-    ) {
-        Text("Done", style = MaterialTheme.typography.titleMedium)
-    }
-}
-
-@Composable
-private fun BaselineNeededContent(
-    externalOutputName: String,
-    externalInputName: String,
-    onReady: () -> Unit
-) {
-    Text(
-        text = "Baseline Calibration Required",
-        style = MaterialTheme.typography.titleLarge
-    )
-
-    val devices = listOfNotNull(
-        externalOutputName.takeIf { it.isNotBlank() },
-        externalInputName.takeIf { it.isNotBlank() }
-    ).joinToString(", ")
-
-    Text(
-        text = "External device(s) detected: $devices\n\n" +
-            "First, we need to calibrate the built-in speaker and microphone as a baseline. " +
-            "Please disconnect all external audio devices, then press Continue.",
-        style = MaterialTheme.typography.bodyLarge,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.padding(horizontal = 8.dp)
-    )
-
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(8.dp))
 
     Button(
         onClick = onReady,
         modifier = Modifier.fillMaxWidth().height(56.dp),
         shape = MaterialTheme.shapes.large
     ) {
-        Text("Continue", style = MaterialTheme.typography.titleMedium)
+        Text("I'm Ready", style = MaterialTheme.typography.titleMedium)
     }
 }
 
 @Composable
-private fun BaselineReadyContent(
-    synthReady: Boolean,
-    isRecalibration: Boolean,
+private fun InputReadyContent(
     onStart: () -> Unit
 ) {
     Text(
-        text = if (isRecalibration) "Recalibrate Baseline" else "Baseline Calibration",
+        text = "Ready to Calibrate",
         style = MaterialTheme.typography.titleLarge
     )
 
     Text(
-        text = "This measures the round-trip delay using the built-in speaker and microphone. " +
-            "Make sure the environment is quiet.",
+        text = "Press Start and make a sound on each pulse.",
         style = MaterialTheme.typography.bodyLarge,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.padding(horizontal = 8.dp)
+        textAlign = TextAlign.Center
     )
 
     Spacer(modifier = Modifier.height(16.dp))
 
     Button(
         onClick = onStart,
-        enabled = synthReady,
         modifier = Modifier.fillMaxWidth().height(56.dp),
         shape = MaterialTheme.shapes.large
     ) {
@@ -338,32 +227,115 @@ private fun BaselineReadyContent(
 }
 
 @Composable
-private fun CalibratingContent(
-    title: String,
-    description: String,
-    tonesPlayed: Int,
-    tonesDetected: Int,
+private fun InputCalibratingContent(
+    currentBeat: Int,
+    totalBeats: Int,
+    warmupBeats: Int,
+    isWarmup: Boolean,
+    beatsDetected: Int,
     onStop: () -> Unit
 ) {
-    Text(text = title, style = MaterialTheme.typography.titleMedium)
+    val beatIntervalMs = CalibrationViewModel.BEAT_INTERVAL_MS.toInt()
 
+    // Pulsing animation — beats at the metronome BPM
+    val infiniteTransition = rememberInfiniteTransition(label = "metronome")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = beatIntervalMs
+                1.0f at 0 using LinearEasing
+                0.6f at (beatIntervalMs * 0.3).toInt() using FastOutSlowInEasing
+                0.6f at beatIntervalMs using LinearEasing
+            },
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pulse"
+    )
+
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = beatIntervalMs
+                1.0f at 0 using LinearEasing
+                0.3f at (beatIntervalMs * 0.3).toInt() using FastOutSlowInEasing
+                0.3f at beatIntervalMs using LinearEasing
+            },
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "alpha"
+    )
+
+    val pulseColor = if (isWarmup) {
+        MaterialTheme.colorScheme.tertiary
+    } else {
+        MaterialTheme.colorScheme.primary
+    }
+
+    Text(
+        text = if (isWarmup) "Warm-up — Get into the rhythm!" else "Measuring — Make a sound on each pulse!",
+        style = MaterialTheme.typography.titleMedium,
+        textAlign = TextAlign.Center,
+        color = if (isWarmup) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
+    )
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    // Pulsing circle
+    Box(
+        modifier = Modifier.size(160.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Outer glow
+        Box(
+            modifier = Modifier
+                .size(160.dp)
+                .scale(pulseScale * 1.2f)
+                .background(
+                    pulseColor.copy(alpha = pulseAlpha * 0.2f),
+                    CircleShape
+                )
+        )
+        // Inner circle
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .scale(pulseScale)
+                .background(
+                    pulseColor.copy(alpha = pulseAlpha * 0.8f),
+                    CircleShape
+                )
+        )
+        // Beat number in center
+        Text(
+            text = "$currentBeat",
+            style = MaterialTheme.typography.headlineLarge,
+            color = Color.White
+        )
+    }
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    // Progress bar
     LinearProgressIndicator(
-        progress = { tonesPlayed.toFloat() / CalibrationViewModel.NUM_TONES },
+        progress = { currentBeat.toFloat() / totalBeats },
         modifier = Modifier.fillMaxWidth().height(8.dp),
         trackColor = MaterialTheme.colorScheme.surfaceVariant
     )
 
+    val measuredBeats = if (currentBeat > warmupBeats) currentBeat - warmupBeats else 0
+    val totalMeasured = totalBeats - warmupBeats
     Text(
-        text = "$tonesPlayed / ${CalibrationViewModel.NUM_TONES} tones played, $tonesDetected detected",
+        text = if (isWarmup) {
+            "Warm-up: beat $currentBeat of $warmupBeats"
+        } else {
+            "Measuring: $measuredBeats / $totalMeasured beats ($beatsDetected detected)"
+        },
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-
-    Text(
-        text = description,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center
     )
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -371,34 +343,26 @@ private fun CalibratingContent(
 }
 
 @Composable
-private fun BaselineResultContent(
-    roundTripMs: Int,
+private fun InputResultContent(
     inputDelayMs: Int,
-    estimatedOutputLatencyMs: Int,
     editedDelay: String,
     onEditDelay: (String) -> Unit,
     onSaveAndContinue: () -> Unit,
-    onRetry: () -> Unit,
-    hasMoreSteps: Boolean
+    onRetry: () -> Unit
 ) {
-    Text(text = "Baseline Result", style = MaterialTheme.typography.titleLarge)
+    Text(text = "Input Calibration Result", style = MaterialTheme.typography.titleLarge)
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Round-trip delay: ${roundTripMs}ms",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "Calibrated input delay: ${inputDelayMs}ms",
+                style = MaterialTheme.typography.titleMedium
             )
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Estimated speaker output delay: ~${estimatedOutputLatencyMs}ms",
+                text = "This is how far back detected sounds are shifted to match when you actually played them.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Computed built-in mic input delay: ${inputDelayMs}ms",
-                style = MaterialTheme.typography.titleMedium
             )
         }
     }
@@ -419,58 +383,50 @@ private fun BaselineResultContent(
             onClick = onSaveAndContinue,
             enabled = editedDelay.toIntOrNull() != null
         ) {
-            Text(if (hasMoreSteps) "Save & Continue" else "Save")
+            Text("Save & Continue")
         }
     }
 }
 
-@Composable
-private fun DeviceInstructionsContent(
-    deviceName: String,
-    deviceType: String,
-    onReady: () -> Unit
-) {
-    Text(
-        text = "Calibrate $deviceName",
-        style = MaterialTheme.typography.titleLarge
-    )
-
-    Text(
-        text = "Please reconnect your $deviceType ($deviceName), then press Continue.",
-        style = MaterialTheme.typography.bodyLarge,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.padding(horizontal = 8.dp)
-    )
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Button(
-        onClick = onReady,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
-        shape = MaterialTheme.shapes.large
-    ) {
-        Text("Continue", style = MaterialTheme.typography.titleMedium)
-    }
-}
+// --- Phase 2: Output Calibration ---
 
 @Composable
-private fun DeviceReadyContent(
-    deviceName: String,
+private fun OutputOfferContent(
+    outputDeviceName: String,
     synthReady: Boolean,
-    onStart: () -> Unit
+    onStart: () -> Unit,
+    onSkip: () -> Unit
 ) {
+    Icon(
+        Icons.AutoMirrored.Filled.VolumeUp,
+        contentDescription = null,
+        modifier = Modifier.size(48.dp),
+        tint = MaterialTheme.colorScheme.primary
+    )
+
     Text(
-        text = "Calibrate $deviceName",
+        text = "Calibrate Audio Output",
         style = MaterialTheme.typography.titleLarge
     )
 
-    Text(
-        text = "Ready to measure delay. Make sure the environment is quiet.",
-        style = MaterialTheme.typography.bodyLarge,
-        textAlign = TextAlign.Center
-    )
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Output device: $outputDeviceName",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "The app will play a series of tones and measure how long it takes to detect them. " +
+                    "This determines the output delay for your current speaker/headphones.\n\n" +
+                    "Make sure the environment is quiet and the microphone can hear the speaker.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
 
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(8.dp))
 
     Button(
         onClick = onStart,
@@ -478,34 +434,76 @@ private fun DeviceReadyContent(
         modifier = Modifier.fillMaxWidth().height(56.dp),
         shape = MaterialTheme.shapes.large
     ) {
-        Text("Start Calibration", style = MaterialTheme.typography.titleMedium)
+        Text("Start Output Calibration", style = MaterialTheme.typography.titleMedium)
+    }
+
+    TextButton(onClick = onSkip) {
+        Text("Skip — I don't need output calibration")
     }
 }
 
 @Composable
-private fun DeviceOutputResultContent(
-    deviceName: String,
-    roundTripMs: Int,
+private fun OutputCalibratingContent(
+    tonesPlayed: Int,
+    tonesDetected: Int,
+    onStop: () -> Unit
+) {
+    Text(
+        text = "Measuring Output Delay…",
+        style = MaterialTheme.typography.titleMedium
+    )
+
+    LinearProgressIndicator(
+        progress = { tonesPlayed.toFloat() / CalibrationViewModel.OUTPUT_NUM_TONES },
+        modifier = Modifier.fillMaxWidth().height(8.dp),
+        trackColor = MaterialTheme.colorScheme.surfaceVariant
+    )
+
+    Text(
+        text = "$tonesPlayed / ${CalibrationViewModel.OUTPUT_NUM_TONES} tones played, $tonesDetected detected",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+
+    Text(
+        text = "Playing tones and listening for them…",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+    TextButton(onClick = onStop) { Text("Cancel") }
+}
+
+@Composable
+private fun OutputResultContent(
+    outputDeviceName: String,
     outputDelayMs: Int,
     editedDelay: String,
     onEditDelay: (String) -> Unit,
-    onSaveAndContinue: () -> Unit,
-    onRetry: () -> Unit,
-    hasMoreSteps: Boolean
+    onSaveAndFinish: () -> Unit,
+    onRetry: () -> Unit
 ) {
-    Text(text = "Output Delay: $deviceName", style = MaterialTheme.typography.titleLarge)
+    Text(text = "Output Calibration Result", style = MaterialTheme.typography.titleLarge)
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Round-trip delay: ${roundTripMs}ms",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "Device: $outputDeviceName",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Computed output delay: ${outputDelayMs}ms",
+                text = "Calibrated output delay: ${outputDelayMs}ms",
                 style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Audio will be played this much earlier to compensate for speaker/headphone latency.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -523,54 +521,6 @@ private fun DeviceOutputResultContent(
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedButton(onClick = onRetry) { Text("Retry") }
         Button(
-            onClick = onSaveAndContinue,
-            enabled = editedDelay.toIntOrNull() != null
-        ) {
-            Text(if (hasMoreSteps) "Save & Continue" else "Save")
-        }
-    }
-}
-
-@Composable
-private fun DeviceInputResultContent(
-    deviceName: String,
-    roundTripMs: Int,
-    inputDelayMs: Int,
-    editedDelay: String,
-    onEditDelay: (String) -> Unit,
-    onSaveAndFinish: () -> Unit,
-    onRetry: () -> Unit
-) {
-    Text(text = "Input Delay: $deviceName", style = MaterialTheme.typography.titleLarge)
-
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Round-trip delay: ${roundTripMs}ms",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Computed input delay: ${inputDelayMs}ms",
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
-    }
-
-    OutlinedTextField(
-        value = editedDelay,
-        onValueChange = onEditDelay,
-        label = { Text("Input delay (ms)") },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        singleLine = true,
-        modifier = Modifier.width(200.dp),
-        supportingText = { Text("Fine-tune if needed") }
-    )
-
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(onClick = onRetry) { Text("Retry") }
-        Button(
             onClick = onSaveAndFinish,
             enabled = editedDelay.toIntOrNull() != null
         ) {
@@ -578,6 +528,8 @@ private fun DeviceInputResultContent(
         }
     }
 }
+
+// --- Done ---
 
 @Composable
 private fun DoneContent(onBack: () -> Unit) {
