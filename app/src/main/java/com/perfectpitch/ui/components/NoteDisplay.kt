@@ -10,11 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.perfectpitch.ui.theme.*
-import kotlin.math.abs
 
-/**
- * Large note name display with octave number and sharp/flat indicators.
- */
 @Composable
 fun NoteDisplay(
     noteName: String,
@@ -39,10 +35,7 @@ fun NoteDisplay(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             )
         } else {
-            Row(
-                verticalAlignment = Alignment.Bottom
-            ) {
-                // Flat indicator
+            Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     text = if (centsOff < -5f) "♭" else " ",
                     style = MaterialTheme.typography.headlineLarge,
@@ -50,28 +43,16 @@ fun NoteDisplay(
                     modifier = Modifier.width(32.dp),
                     textAlign = TextAlign.Center
                 )
-
-                // Note name
                 Text(
                     text = noteName,
                     style = MaterialTheme.typography.displayLarge,
-                    color = when {
-                        abs(centsOff) <= 5f -> Green80
-                        abs(centsOff) <= 10f -> Green80
-                        abs(centsOff) <= 30f -> Yellow80
-                        abs(centsOff) <= 50f -> Orange80
-                        else -> Red80
-                    }
+                    color = centsColor(centsOff)
                 )
-
-                // Octave number
                 Text(
                     text = "$octave",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
-
-                // Sharp indicator
                 Text(
                     text = if (centsOff > 5f) "♯" else " ",
                     style = MaterialTheme.typography.headlineLarge,

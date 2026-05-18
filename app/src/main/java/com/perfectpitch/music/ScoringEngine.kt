@@ -29,9 +29,6 @@ class ScoringEngine {
         const val DURATION_WEIGHT = 0.4f
     }
 
-    /**
-     * Score a single note performance.
-     */
     fun scoreNote(result: NotePerformance): NoteScore {
         val pitchScore = scorePitch(result.centsOff)
         val durationScore = scoreDuration(result.actualDurationMs, result.expectedDurationMs)
@@ -49,9 +46,6 @@ class ScoringEngine {
         )
     }
 
-    /**
-     * Score pitch accuracy based on cents offset.
-     */
     private fun scorePitch(centsOff: Float): Float {
         val absCents = abs(centsOff)
         return when {
@@ -74,18 +68,12 @@ class ScoringEngine {
         }
     }
 
-    /**
-     * Score duration accuracy as a ratio of actual vs expected.
-     */
     private fun scoreDuration(actualMs: Long, expectedMs: Long): Float {
         if (expectedMs <= 0) return 100f
         val ratio = min(actualMs, expectedMs).toFloat() / max(actualMs, expectedMs).toFloat()
         return ratio * 100f
     }
 
-    /**
-     * Calculate the overall melody score from individual note scores.
-     */
     fun calculateMelodyScore(noteScores: List<NoteScore>): MelodyScore {
         if (noteScores.isEmpty()) return MelodyScore.EMPTY
 

@@ -20,20 +20,12 @@ class AudioDeviceMonitor(context: Context) {
 
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-    /**
-     * Estimated output latency (ms) for the built-in speaker path, derived from the
-     * device's native buffer size. This accounts for the AudioTrack → HAL → speaker
-     * pipeline latency. Used to split calibrated round-trip into output + input.
-     *
-     * Estimation: `framesPerBuffer * 2 / nativeSampleRate * 1000` (double-buffering).
-     * Clamped to [10, 200] to avoid nonsense from devices that report weird values.
-     */
+    // Estimated output latency: framesPerBuffer × 2 / nativeSampleRate × 1000ms (double-buffered), clamped to [10, 200].
     val estimatedOutputLatencyMs: Int by lazy {
         val nativeSrStr = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)
         val nativeFpbStr = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER)
         val nativeSr = nativeSrStr?.toIntOrNull() ?: 48000
         val nativeFpb = nativeFpbStr?.toIntOrNull() ?: 256
-        // Double-buffering: at least 2 buffer periods of latency
         val estimateMs = (nativeFpb.toLong() * 2 * 1000 / nativeSr).toInt()
         estimateMs.coerceIn(10, 200)
     }
@@ -67,7 +59,6 @@ class AudioDeviceMonitor(context: Context) {
     private fun resolveActiveOutputDevice(): AudioOutputDevice {
         val outputs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
 
-        // Pick the highest-priority connected output device
         val bluetooth = outputs.firstOrNull { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP }
         if (bluetooth != null) {
             val name = bluetooth.productName?.toString()?.takeIf { it.isNotBlank() } ?: "Bluetooth"

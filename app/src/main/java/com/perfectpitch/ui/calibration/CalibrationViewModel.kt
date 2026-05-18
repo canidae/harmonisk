@@ -101,8 +101,6 @@ class CalibrationViewModel @Inject constructor(
         _state.update { it.copy(phase = CalibrationPhase.INSTRUCTIONS, error = null) }
     }
 
-    // --- Phase 1: Measure total round-trip delay ---
-
     fun startRoundTripMeasurement() {
         if (!melodySynthesizer.isReady) return
 
@@ -203,16 +201,11 @@ class CalibrationViewModel @Inject constructor(
         return sorted[sorted.size / 2].toInt().coerceIn(0, 1000)
     }
 
-    /**
-     * Computes the initial split percentage (0–100).
-     * Uses stored profile if available, otherwise defaults to 50%.
-     */
     private suspend fun computeInitialSplitPercent(
         totalMs: Int,
         outputDevice: AudioOutputDevice?,
         inputDevice: AudioInputDevice?
     ): Int {
-        // Use stored split if any device has a profile
         if (outputDevice != null) {
             val profile = audioDelayRepository.getProfile(outputDevice.deviceKey).first()
             if (profile != null) {
@@ -228,21 +221,11 @@ class CalibrationViewModel @Inject constructor(
         return (AudioDelayRepository.DEFAULT_OUTPUT_SPLIT * 100).toInt()
     }
 
-    // --- Phase 2: Split adjustment with audio+visual loop ---
-
     fun updateSplitPercent(percent: Int) {
         _state.update { it.copy(splitPercent = percent.coerceIn(0, 100)) }
     }
 
-    /**
-     * Continuously plays tone cycles. Each cycle:
-     *   t=0: tone starts → toneStartTimeMs updated
-     *   t=PULSE_ON_MS: tone ends
-     *   t=PULSE_ON_MS + gap: next cycle (gap = outputDelay + PULSE_OFF_MS)
-     *
-     * The loop does NOT restart on slider change. It reads the current outputDelay
-     * each cycle to compute the gap before the next tone.
-     */
+    // Tone cycle: play for PULSE_ON_MS, then wait outputDelay + PULSE_OFF_MS before the next.
     private fun startSplitLoop() {
         stopSplitLoop()
         _state.update { it.copy(splitActive = true) }
@@ -251,13 +234,11 @@ class CalibrationViewModel @Inject constructor(
             while (isActive) {
                 val outputDelay = _state.value.outputDelayMs.toLong()
 
-                // Play tone
                 _state.update { it.copy(toneStartTimeMs = System.currentTimeMillis()) }
                 melodySynthesizer.noteOn(0, MIDI_NOTE, MIDI_VELOCITY)
                 delay(PULSE_ON_MS)
                 melodySynthesizer.noteOff(0, MIDI_NOTE)
 
-                // Wait: outputDelay (before visual) + PULSE_OFF_MS (after visual ends)
                 val gap = outputDelay + PULSE_OFF_MS
                 if (gap > 0) delay(gap)
             }
@@ -272,8 +253,6 @@ class CalibrationViewModel @Inject constructor(
         }
         _state.update { it.copy(splitActive = false) }
     }
-
-    // --- Save and finish ---
 
     fun saveAndFinish() {
         val s = _state.value

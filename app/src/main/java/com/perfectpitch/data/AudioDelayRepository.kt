@@ -19,12 +19,7 @@ private val Context.audioDelayStore: DataStore<Preferences> by preferencesDataSt
 )
 
 /**
- * Unified audio delay storage. Stores calibrated total round-trip delay and the
- * output/input split percentage per device pair.
- *
- * - **totalDelayMs**: measured round-trip delay (output pipeline + propagation + input pipeline)
- * - **splitPercent**: fraction of total attributed to output (0.0–1.0)
- *
+ * Stores calibrated audio round-trip delay and output/input split per device pair.
  * Output and input delays are derived: `output = total * split`, `input = total * (1 - split)`.
  */
 class AudioDelayRepository(
@@ -57,14 +52,10 @@ class AudioDelayRepository(
         val inputDelayMs: Int get() = totalDelayMs - outputDelayMs
     }
 
-    // --- Internal storage ---
-
     private val profilesFlow: Flow<Map<String, DelayProfile>> =
         context.audioDelayStore.data.map { prefs ->
             parseProfiles(prefs[PROFILES_KEY])
         }
-
-    // --- Public flows ---
 
     val activeOutputDelay: Flow<Int> = combine(
         audioDeviceMonitor.currentDevice,
@@ -96,19 +87,12 @@ class AudioDelayRepository(
 
     val allProfiles: Flow<Map<String, DelayProfile>> = profilesFlow
 
-    // --- Queries ---
-
     fun getProfile(deviceKey: String): Flow<DelayProfile?> =
         profilesFlow.map { it[deviceKey] }
 
     fun isCalibrated(deviceKey: String): Flow<Boolean> =
         profilesFlow.map { it.containsKey(deviceKey) }
 
-    // --- Mutations ---
-
-    /**
-     * Save calibration results for a device pair.
-     */
     suspend fun saveCalibration(
         deviceKey: String,
         totalDelayMs: Int,
@@ -124,9 +108,6 @@ class AudioDelayRepository(
         }
     }
 
-    /**
-     * Set total delay for a device, keeping the existing split percentage.
-     */
     suspend fun setTotalDelay(deviceKey: String, totalDelayMs: Int) {
         context.audioDelayStore.edit { prefs ->
             val current = parseProfiles(prefs[PROFILES_KEY]).toMutableMap()
@@ -140,9 +121,6 @@ class AudioDelayRepository(
         }
     }
 
-    /**
-     * Set split percentage for a device, keeping the existing total delay.
-     */
     suspend fun setSplitPercent(deviceKey: String, splitPercent: Float) {
         context.audioDelayStore.edit { prefs ->
             val current = parseProfiles(prefs[PROFILES_KEY]).toMutableMap()
@@ -155,8 +133,6 @@ class AudioDelayRepository(
             prefs[PROFILES_KEY] = serializeProfiles(current)
         }
     }
-
-    // --- Serialization ---
 
     private fun parseProfiles(json: String?): Map<String, DelayProfile> {
         if (json.isNullOrBlank()) return emptyMap()

@@ -150,9 +150,7 @@ class MelodyViewModel @Inject constructor(
         if (track != null) {
             originalMelodyTrack = track
             currentMelodyId = info.id
-            val range = track.noteRange
-            val viewMin = (range.first - NOTE_RANGE_PADDING).toFloat().coerceAtLeast(21f)
-            val viewMax = (range.last + NOTE_RANGE_PADDING).toFloat().coerceAtMost(108f)
+            val (viewMin, viewMax) = viewRangeFor(track)
             _state.update {
                 it.copy(
                     melodyTrack = track,
@@ -187,9 +185,7 @@ class MelodyViewModel @Inject constructor(
         val track = melodyRepository.loadFromUri(uri, "Imported MIDI")
         if (track != null) {
             originalMelodyTrack = track
-            val range = track.noteRange
-            val viewMin = (range.first - NOTE_RANGE_PADDING).toFloat().coerceAtLeast(21f)
-            val viewMax = (range.last + NOTE_RANGE_PADDING).toFloat().coerceAtMost(108f)
+            val (viewMin, viewMax) = viewRangeFor(track)
             _state.update {
                 it.copy(
                     melodyTrack = track,
@@ -223,9 +219,7 @@ class MelodyViewModel @Inject constructor(
         val clamped = semitones.coerceIn(-36, 36)
         val base = originalMelodyTrack ?: return
         val transposed = base.transpose(clamped)
-        val range = transposed.noteRange
-        val viewMin = (range.first - NOTE_RANGE_PADDING).toFloat().coerceAtLeast(21f)
-        val viewMax = (range.last + NOTE_RANGE_PADDING).toFloat().coerceAtMost(108f)
+        val (viewMin, viewMax) = viewRangeFor(transposed)
         _state.update {
             it.copy(
                 melodyTrack = transposed,
@@ -235,6 +229,14 @@ class MelodyViewModel @Inject constructor(
             )
         }
         saveMelodySettings()
+    }
+
+    private fun viewRangeFor(track: MelodyTrack): Pair<Float, Float> {
+        val range = track.noteRange
+        return Pair(
+            (range.first - NOTE_RANGE_PADDING).toFloat().coerceAtLeast(21f),
+            (range.last + NOTE_RANGE_PADDING).toFloat().coerceAtMost(108f)
+        )
     }
 
     private fun saveMelodySettings() {

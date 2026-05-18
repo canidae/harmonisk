@@ -28,17 +28,11 @@ class MelodyRepository(
     /**
      * Get list of available melodies (bundled + user-imported).
      */
-    fun getAvailableMelodies(): List<MelodyInfo> {
-        return getBundledMelodies()
-    }
-
-    private fun getBundledMelodies(): List<MelodyInfo> {
-        return listOf(
-            MelodyInfo("scale_c_major", "C Major Scale", true, rawResId = getRawResId("scale_c_major")),
-            MelodyInfo("twinkle_twinkle", "Twinkle Twinkle Little Star", true, rawResId = getRawResId("twinkle_twinkle")),
-            MelodyInfo("ode_to_joy", "Ode to Joy", true, rawResId = getRawResId("ode_to_joy"))
-        ).filter { it.rawResId != null && it.rawResId != 0 }
-    }
+    fun getAvailableMelodies(): List<MelodyInfo> = listOf(
+        MelodyInfo("scale_c_major", "C Major Scale", true, rawResId = getRawResId("scale_c_major")),
+        MelodyInfo("twinkle_twinkle", "Twinkle Twinkle Little Star", true, rawResId = getRawResId("twinkle_twinkle")),
+        MelodyInfo("ode_to_joy", "Ode to Joy", true, rawResId = getRawResId("ode_to_joy"))
+    ).filter { it.rawResId != null && it.rawResId != 0 }
 
     private fun getRawResId(name: String): Int? {
         val resId = context.resources.getIdentifier(name, "raw", context.packageName)

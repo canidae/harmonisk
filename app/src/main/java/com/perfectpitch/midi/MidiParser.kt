@@ -2,17 +2,9 @@ package com.perfectpitch.midi
 
 import java.io.InputStream
 
-/**
- * Parser for Standard MIDI File (SMF) format.
- * Supports Type 0 (single track) and Type 1 (multi-track).
- */
+/** Parser for Standard MIDI File (SMF) format 0 and 1. */
 class MidiParser {
 
-    /**
-     * Parse a MIDI file from an InputStream.
-     *
-     * @return MelodyTrack containing the melody notes and tempo information
-     */
     fun parse(inputStream: InputStream, name: String = "Unknown"): MelodyTrack {
         val data = inputStream.readBytes()
         var pos = 0
@@ -68,7 +60,6 @@ class MidiParser {
                 var statusByte = data[pos].toInt() and 0xFF
 
                 if (statusByte < 0x80) {
-                    // Running status - use previous status byte
                     statusByte = runningStatus
                 } else {
                     pos++
@@ -164,13 +155,8 @@ class MidiParser {
             pos = trackEnd
         }
 
-        // Sort notes by start time
         allNotes.sortBy { it.startTick }
-
-        // If no tempo was specified, use default 120 BPM
-        if (allTempos.isEmpty()) {
-            allTempos.add(TempoEvent(0, 500_000))
-        }
+        if (allTempos.isEmpty()) allTempos.add(TempoEvent(0, 500_000))
 
         return MelodyTrack(
             name = name,
@@ -181,21 +167,8 @@ class MidiParser {
         )
     }
 
-    /**
-     * Select the most likely melody track from a multi-track MIDI file.
-     * Heuristic: pick the track with the most notes in the middle pitch range.
-     */
-    fun selectMelodyTrack(tracks: List<MelodyTrack>): MelodyTrack {
-        if (tracks.size <= 1) return tracks.first()
-
-        return tracks.maxByOrNull { track ->
-            track.notes.count { it.noteNumber in 48..84 } // C3 to C6
-        } ?: tracks.first()
-    }
-
-    private fun readString(data: ByteArray, pos: Int, length: Int): String {
-        return String(data, pos, length, Charsets.US_ASCII)
-    }
+    private fun readString(data: ByteArray, pos: Int, length: Int): String =
+        String(data, pos, length, Charsets.US_ASCII)
 
     private fun readInt32(data: ByteArray, pos: Int): Int {
         return ((data[pos].toInt() and 0xFF) shl 24) or

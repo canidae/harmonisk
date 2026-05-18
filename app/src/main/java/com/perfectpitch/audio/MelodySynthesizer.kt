@@ -46,9 +46,6 @@ class MelodySynthesizer {
 
     private enum class EnvelopeStage { ATTACK, DECAY, SUSTAIN, RELEASE, DONE }
 
-    /**
-     * Create the AudioTrack and start the rendering thread.
-     */
     @Suppress("UNUSED_PARAMETER")
     suspend fun open(context: android.content.Context? = null) {
         if (isReady) return
@@ -159,7 +156,6 @@ class MelodySynthesizer {
             var sample = 0f
             synchronized(noteLock) {
                 for ((note, state) in activeNotes) {
-                    // Advance envelope
                     when (state.stage) {
                         EnvelopeStage.ATTACK -> {
                             state.envelope += attackDelta
@@ -201,7 +197,6 @@ class MelodySynthesizer {
                 toRemove.clear()
             }
 
-            // Soft clip and convert to 16-bit
             val clipped = sample.coerceIn(-1f, 1f)
             buffer[i] = (clipped * Short.MAX_VALUE).toInt().toShort()
         }

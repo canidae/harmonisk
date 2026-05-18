@@ -57,12 +57,11 @@ fun MelodyPlayScreen(
     var showResultsModal by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Back gesture / button exits the screen (same as the removed close button)
     BackHandler { viewModel.stop(); onBack() }
 
     KeepScreenOn()
 
-    // Initialize synthesizer; enter READY phase (don't auto-start)
+    // Initialize synthesizer; don't auto-start
     LaunchedEffect(Unit) {
         viewModel.initSynthesizer(context)
         if (state.phase == PlayPhase.NOT_STARTED) {
@@ -70,14 +69,12 @@ fun MelodyPlayScreen(
         }
     }
 
-    // Show results modal when finished
     LaunchedEffect(state.phase) {
         if (state.phase == PlayPhase.FINISHED) {
             showResultsModal = true
         }
     }
 
-    // Show calibration prompt for uncalibrated devices
     LaunchedEffect(uncalibratedDevice) {
         val deviceName = uncalibratedDevice
         if (deviceName != null && viewModel.shouldShowCalibrationPrompt()) {
@@ -125,7 +122,6 @@ fun MelodyPlayScreen(
             val track = state.melodyTrack
 
             if (track != null) {
-                // Canvas
                 SharedNoteCanvas(
                     mode = CanvasMode.Melody(
                         melodyTrack = track,
@@ -146,7 +142,6 @@ fun MelodyPlayScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Countdown overlay
                 if (state.phase == PlayPhase.COUNTDOWN) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -160,7 +155,6 @@ fun MelodyPlayScreen(
                     }
                 }
 
-                // Center play button (READY / PAUSED)
                 if (state.phase == PlayPhase.READY || state.phase == PlayPhase.PAUSED) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -186,7 +180,6 @@ fun MelodyPlayScreen(
                     }
                 }
 
-                // Top-left: progress info
                 if (state.phase == PlayPhase.PLAYING || state.phase == PlayPhase.PAUSED || state.phase == PlayPhase.WAITING_FOR_NOTE) {
                     Row(
                         modifier = Modifier.padding(start = 12.dp, top = 8.dp),
@@ -216,7 +209,6 @@ fun MelodyPlayScreen(
                     }
                 }
 
-                // Right-side button column (above piano)
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -224,7 +216,6 @@ fun MelodyPlayScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // Config dropdown
                     var showConfigMenu by remember { mutableStateOf(false) }
                     Box {
                         IconButton(
@@ -311,7 +302,6 @@ fun MelodyPlayScreen(
                                 onClick = { viewModel.setPlayMelodyAudio(!state.playMelodyAudio) }
                             )
                             HorizontalDivider()
-                            // Audio delay split slider (same as main Settings page)
                             DropdownMenuItem(
                                 text = {
                                     val splitPct = (splitPercent * 100).roundToInt()
@@ -385,7 +375,6 @@ fun MelodyPlayScreen(
                         }
                     }
 
-                    // Show Results button (reopen modal)
                     if (state.phase == PlayPhase.FINISHED) {
                         IconButton(
                             onClick = { showResultsModal = true },
@@ -402,7 +391,6 @@ fun MelodyPlayScreen(
                         }
                     }
 
-                    // Play Again button
                     if (state.phase == PlayPhase.FINISHED) {
                         IconButton(
                             onClick = { viewModel.startPlaying() },
@@ -447,7 +435,6 @@ fun MelodyPlayScreen(
         }
     }
 
-    // Results modal
     if (showResultsModal && state.melodyScore != null) {
         ScoreResultModal(
             melodyScore = state.melodyScore!!,

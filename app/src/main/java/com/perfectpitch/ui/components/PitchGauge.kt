@@ -18,16 +18,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.perfectpitch.ui.theme.Green80
-import com.perfectpitch.ui.theme.Orange80
-import com.perfectpitch.ui.theme.Red80
-import com.perfectpitch.ui.theme.Yellow80
-import kotlin.math.abs
+import com.perfectpitch.ui.theme.centsColor
 
-/**
- * Semi-circular pitch gauge showing cents offset from -50 to +50.
- * Needle moves smoothly, color transitions from red→yellow→green.
- */
+/** Semi-circular pitch gauge showing cents offset from -50 to +50. */
 @Composable
 fun PitchGauge(
     centsOff: Float,
@@ -42,13 +35,7 @@ fun PitchGauge(
     )
 
     val gaugeColor by animateColorAsState(
-        targetValue = when {
-            abs(centsOff) <= 5f -> Green80
-            abs(centsOff) <= 10f -> Green80.copy(alpha = 0.8f)
-            abs(centsOff) <= 30f -> Yellow80
-            abs(centsOff) <= 50f -> Orange80
-            else -> Red80
-        },
+        targetValue = centsColor(centsOff),
         animationSpec = tween(durationMillis = 200),
         label = "gauge_color"
     )
@@ -57,64 +44,47 @@ fun PitchGauge(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp)
-        ) {
+        Canvas(modifier = Modifier.fillMaxWidth().height(120.dp)) {
             val arcWidth = size.width * 0.8f
             val arcHeight = size.height * 1.5f
             val arcLeft = (size.width - arcWidth) / 2
             val arcTop = size.height * 0.1f
 
-            // Background arc
             drawArc(
                 color = Color.Gray.copy(alpha = 0.3f),
-                startAngle = 180f,
-                sweepAngle = 180f,
-                useCenter = false,
+                startAngle = 180f, sweepAngle = 180f, useCenter = false,
                 topLeft = Offset(arcLeft, arcTop),
                 size = Size(arcWidth, arcHeight),
                 style = Stroke(width = 12f, cap = StrokeCap.Round)
             )
 
-            // Colored indicator arc (center portion)
             val indicatorSweep = 60f
-            val indicatorStart = 180f + 90f - indicatorSweep / 2
             drawArc(
                 color = gaugeColor.copy(alpha = 0.4f),
-                startAngle = indicatorStart,
-                sweepAngle = indicatorSweep,
-                useCenter = false,
+                startAngle = 180f + 90f - indicatorSweep / 2,
+                sweepAngle = indicatorSweep, useCenter = false,
                 topLeft = Offset(arcLeft, arcTop),
                 size = Size(arcWidth, arcHeight),
                 style = Stroke(width = 12f, cap = StrokeCap.Round)
             )
 
-            // Needle
             val needleAngle = 180f + normalizedPosition * 180f
             val needleRadians = Math.toRadians(needleAngle.toDouble())
             val needleLength = arcWidth / 2 * 0.7f
             val centerX = size.width / 2
             val centerY = arcTop + arcHeight / 2
 
-            val needleEndX = centerX + (needleLength * kotlin.math.cos(needleRadians)).toFloat()
-            val needleEndY = centerY + (needleLength * kotlin.math.sin(needleRadians)).toFloat()
-
             drawLine(
                 color = gaugeColor,
                 start = Offset(centerX, centerY),
-                end = Offset(needleEndX, needleEndY),
+                end = Offset(
+                    centerX + (needleLength * kotlin.math.cos(needleRadians)).toFloat(),
+                    centerY + (needleLength * kotlin.math.sin(needleRadians)).toFloat()
+                ),
                 strokeWidth = 4f,
                 cap = StrokeCap.Round
             )
-
-            // Center dot
-            drawCircle(
-                color = gaugeColor,
-                radius = 8f,
-                center = Offset(centerX, centerY)
-            )
+            drawCircle(color = gaugeColor, radius = 8f, center = Offset(centerX, centerY))
         }
 
         Row(

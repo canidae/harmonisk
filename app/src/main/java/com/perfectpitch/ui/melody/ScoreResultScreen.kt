@@ -36,7 +36,6 @@ fun ScoreResultModal(
             shape = MaterialTheme.shapes.extraLarge
         ) {
             Box(modifier = Modifier.fillMaxWidth()) {
-                // Dismiss button top-right
                 IconButton(
                     onClick = onDismiss,
                     modifier = Modifier.align(Alignment.TopEnd)
@@ -50,14 +49,12 @@ fun ScoreResultModal(
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Score
                     Text(
                         text = "${"%.0f".format(animatedScore)}",
                         style = enthusiasm.scoreStyle(),
                         color = scoreColor(score)
                     )
 
-                    // Encouraging message
                     if (melodyScore.encouragingMessage.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -70,7 +67,6 @@ fun ScoreResultModal(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Stats row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly

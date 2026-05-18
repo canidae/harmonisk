@@ -4,15 +4,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
-/**
- * YIN pitch detection algorithm with FFT-based O(n log n) autocorrelation.
- *
- * Based on: "YIN, a fundamental frequency estimator for speech and music"
- * by Alain de Cheveigné and Hideki Kawahara (2002).
- *
- * The difference function is computed via FFT-based autocorrelation instead of
- * the naive O(n²) approach: d(τ) = r(0) + r_shifted(0) - 2·r(τ)
- */
+// YIN pitch detection with FFT-based O(n log n) autocorrelation.
 data class PitchDetectionResult(
     val frequency: Float,
     val confidence: Float
@@ -30,7 +22,6 @@ class PitchDetector {
     }
 
     // Pre-allocated FFT work arrays, lazily sized on first call.
-    // Since ANALYSIS_WINDOW_SIZE is constant, these are effectively fixed-size singletons.
     private var fftWorkSize = 0
     private var workAre = DoubleArray(0)
     private var workAim = DoubleArray(0)
@@ -56,13 +47,8 @@ class PitchDetector {
 
     /**
      * Detect the fundamental frequency of the audio buffer.
-     *
-     * @param buffer Audio samples (float, -1.0 to 1.0)
-     * @param sampleRate Sample rate in Hz
-     * @param threshold YIN threshold (lower = stricter, typically 0.10-0.20)
-     * @param minFreq Minimum detectable frequency in Hz (default C2 ≈ 65 Hz)
-     * @param maxFreq Maximum detectable frequency in Hz (default ≈ C7 ≈ 2100 Hz)
-     * @return PitchDetectionResult with frequency and confidence
+     * @param threshold YIN threshold — lower is stricter (0.10–0.20 typical)
+     * @param minFreq / maxFreq detectable frequency range in Hz
      */
     fun detectPitch(
         buffer: FloatArray,
@@ -78,18 +64,15 @@ class PitchDetector {
         val tauMax = (sampleRate / minFreq).toInt().coerceAtMost(halfLen - 1)
         if (tauMin >= tauMax) return PitchDetectionResult.NONE
 
-        // Step 1 & 2: FFT-based difference function + cumulative mean normalization
         val yinBuffer = FloatArray(halfLen)
         cumulativeMeanNormalizedDifference(buffer, yinBuffer)
 
-        // Step 3: Absolute threshold — find first valley below threshold in [tauMin, tauMax]
+        // Find first valley below threshold, then descend to its minimum
         var tauEstimate = -1
         var tau = tauMin
         while (tau <= tauMax) {
             if (yinBuffer[tau] < threshold) {
-                while (tau + 1 <= tauMax && yinBuffer[tau + 1] < yinBuffer[tau]) {
-                    tau++
-                }
+                while (tau + 1 <= tauMax && yinBuffer[tau + 1] < yinBuffer[tau]) tau++
                 tauEstimate = tau
                 break
             }
@@ -98,9 +81,7 @@ class PitchDetector {
 
         if (tauEstimate == -1) return PitchDetectionResult.NONE
 
-        // Step 4: Parabolic interpolation for sub-sample accuracy
         val betterTau = parabolicInterpolation(yinBuffer, tauEstimate)
-
         val frequency = if (betterTau > 0f) sampleRate / betterTau else -1f
         if (frequency <= 0f) return PitchDetectionResult.NONE
 
@@ -108,17 +89,6 @@ class PitchDetector {
         return PitchDetectionResult(frequency, confidence)
     }
 
-    /**
-     * Compute cumulative mean normalized difference via FFT-based cross-correlation.
-     *
-     * The difference function d(τ) = Σ_{i=0}^{W-1} (x[i] - x[i+τ])² expands to:
-     *   d(τ) = energy_0 + energy_τ - 2·xcorr(τ)
-     * where energy_0 = Σ_{i=0}^{W-1} x[i]², energy_τ = Σ_{i=0}^{W-1} x[i+τ]²,
-     * and xcorr(τ) = Σ_{i=0}^{W-1} x[i]·x[i+τ].
-     *
-     * The cross-correlation is computed as IFFT(conj(FFT(a)) · FFT(b)) where
-     * a = first W samples and b = full buffer (both zero-padded).
-     */
     private fun cumulativeMeanNormalizedDifference(
         buffer: FloatArray,
         yinBuffer: FloatArray
@@ -129,21 +99,16 @@ class PitchDetector {
         ensureWorkArrays(n)
         val fftSize = fftWorkSize
 
-        // Signal a: first half of buffer (zero-padded) — clear and fill
+        // Signal a: first half (zero-padded)
         workAre.fill(0.0)
         workAim.fill(0.0)
-        for (i in 0 until halfLen) {
-            workAre[i] = buffer[i].toDouble()
-        }
+        for (i in 0 until halfLen) workAre[i] = buffer[i].toDouble()
 
-        // Signal b: full buffer (zero-padded) — clear and fill
+        // Signal b: full buffer (zero-padded)
         workBre.fill(0.0)
         workBim.fill(0.0)
-        for (i in 0 until n) {
-            workBre[i] = buffer[i].toDouble()
-        }
+        for (i in 0 until n) workBre[i] = buffer[i].toDouble()
 
-        // Forward FFT both signals
         fft(workAre, workAim, forward = true)
         fft(workBre, workBim, forward = true)
 
@@ -153,11 +118,8 @@ class PitchDetector {
             workCim[i] = workAre[i] * workBim[i] - workAim[i] * workBre[i]
         }
 
-        // Inverse FFT to get cross-correlation
         fft(workCre, workCim, forward = false)
-        // workCre[τ] = Σ_{i=0}^{W-1} x[i]·x[i+τ]
 
-        // Precompute cumulative energy: energyPrefix[i] = Σ_{j=0}^{i-1} x[j]²
         workEnergyPrefix[0] = 0.0
         for (i in 0 until n) {
             workEnergyPrefix[i + 1] = workEnergyPrefix[i] + buffer[i].toDouble() * buffer[i].toDouble()
@@ -172,20 +134,11 @@ class PitchDetector {
             val diff = energy0 + energyTau - 2.0 * workCre[tau]
 
             runningSum += diff
-            yinBuffer[tau] = if (runningSum != 0.0) {
-                (diff * tau / runningSum).toFloat()
-            } else {
-                1.0f
-            }
+            yinBuffer[tau] = if (runningSum != 0.0) (diff * tau / runningSum).toFloat() else 1.0f
         }
     }
 
-    /**
-     * In-place radix-2 Cooley-Tukey FFT (or inverse FFT).
-     * @param re Real part array (length must be power of 2)
-     * @param im Imaginary part array (same length)
-     * @param forward true for forward FFT, false for inverse FFT
-     */
+    // In-place radix-2 Cooley-Tukey FFT.
     private fun fft(re: DoubleArray, im: DoubleArray, forward: Boolean) {
         val n = re.size
         // Bit-reversal permutation
@@ -255,10 +208,6 @@ class PitchDetector {
         return n + 1
     }
 
-    /**
-     * Parabolic interpolation to refine the tau estimate.
-     * Fits a parabola through (tau-1, tau, tau+1) and finds the minimum.
-     */
     private fun parabolicInterpolation(yinBuffer: FloatArray, tau: Int): Float {
         if (tau <= 0 || tau >= yinBuffer.size - 1) {
             return tau.toFloat()
@@ -274,26 +223,5 @@ class PitchDetector {
         } else {
             tau + (s2 - s0) / denominator
         }
-    }
-
-    /**
-     * Calculate the RMS (Root Mean Square) of the buffer.
-     * Used to detect silence.
-     */
-    fun rms(buffer: FloatArray): Float {
-        if (buffer.isEmpty()) return 0f
-        var sum = 0.0f
-        for (sample in buffer) {
-            sum += sample * sample
-        }
-        return kotlin.math.sqrt(sum / buffer.size)
-    }
-
-    /**
-     * Convert RMS to decibels.
-     */
-    fun rmsToDb(rms: Float): Float {
-        return if (rms <= 0f) -100f
-        else 20f * kotlin.math.log10(rms)
     }
 }

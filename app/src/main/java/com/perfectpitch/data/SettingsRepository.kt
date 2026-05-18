@@ -38,10 +38,6 @@ class SettingsRepository(
         context.dataStore.edit { it[CONCERT_PITCH] = pitch }
     }
 
-    suspend fun updateYinThreshold(threshold: Float) {
-        context.dataStore.edit { it[YIN_THRESHOLD] = threshold }
-    }
-
     suspend fun updateSilenceThreshold(db: Float) {
         context.dataStore.edit { it[SILENCE_THRESHOLD_DB] = db }
     }

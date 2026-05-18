@@ -21,7 +21,6 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 
-// region Colors
 private val CANVAS_BG = Color(0xFF0D0D1A)
 private val BLACK_COLUMN_BG = Color(0xFF151520)
 private val NOTE_COLOR_UPCOMING = Color(0xBB7C4DFF)
@@ -33,22 +32,13 @@ private val OVERLAY_GREAT = Color(0xFF81C784)
 private val OVERLAY_GOOD = Color(0xFFFFC107)
 private val OVERLAY_OK = Color(0xFFFF9800)
 private val OVERLAY_MISS = Color(0xFFF44336)
-// endregion
 
-// region Constants
 private const val BAR_GAP_PX = 2f
 private const val INDICATOR_HEIGHT_PX = 8f
 private const val CENTS_THRESHOLD_PERFECT = 10f
 private const val CENTS_THRESHOLD_CLOSE = 25f
 private const val CORNER_RADIUS_DP = 4f
-// endregion
 
-// region Data model
-
-/**
- * Sealed interface representing the two canvas operation modes.
- * Each mode carries all the data needed to render its note bars.
- */
 sealed interface CanvasMode {
     data class FreePlay(
         val notes: List<PlayedNote>,
@@ -72,17 +62,8 @@ sealed interface CanvasMode {
     ) : CanvasMode
 }
 
-// endregion
-
 /**
  * A unified note canvas used by both Free Play and Melody Play modes.
- *
- * @param mode The mode-specific data (FreePlay or Melody).
- * @param pianoAtBottom If true, piano is at the bottom (Melody style); if false, piano is at the top (Free Play style).
- * @param viewMinMidi The lowest visible MIDI note (fractional).
- * @param viewMaxMidi The highest visible MIDI note (fractional).
- * @param rightPaddingPx Extra right padding in pixels (for UI elements overlapping the canvas).
- * @param modifier Compose modifier.
  */
 @OptIn(ExperimentalTextApi::class)
 @Composable

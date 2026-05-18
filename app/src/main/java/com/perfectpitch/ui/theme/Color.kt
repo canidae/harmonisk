@@ -1,6 +1,8 @@
 package com.perfectpitch.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import com.perfectpitch.music.ScoringEngine
+import kotlin.math.abs
 
 // In-tune / success colors
 val Green80 = Color(0xFFA5D6A7)
@@ -31,3 +33,14 @@ val DarkBackground = Color(0xFF121218)
 val DarkSurface = Color(0xFF1E1E2A)
 val LightBackground = Color(0xFFFFFBFE)
 val LightSurface = Color(0xFFF5F5F5)
+
+/** Maps a cents-off value to a tuning accuracy color using the scoring engine thresholds. */
+fun centsColor(centsOff: Float): Color {
+    val abs = abs(centsOff)
+    return when {
+        abs <= ScoringEngine.PERFECT_CENTS -> Green80
+        abs <= ScoringEngine.GREAT_CENTS   -> Yellow80
+        abs <= ScoringEngine.GOOD_CENTS    -> Orange80
+        else                               -> Red80
+    }
+}
