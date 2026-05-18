@@ -19,8 +19,6 @@ class PitchProcessor(
     private var referenceA4 = NoteUtils.DEFAULT_A4_FREQ
     private var yinThreshold = PitchDetector.DEFAULT_THRESHOLD
 
-    private val windowedBuffer = FloatArray(ANALYSIS_WINDOW_SIZE)
-
     fun setSilenceThreshold(db: Float) { silenceThresholdDb = db }
     fun setReferenceA4(freq: Float) { referenceA4 = freq }
     fun setYinThreshold(threshold: Float) { yinThreshold = threshold }
@@ -54,9 +52,11 @@ class PitchProcessor(
         val rmsDb = AudioUtils.linearToDb(AudioUtils.rms(buffer))
         if (rmsDb < silenceThresholdDb) return PitchResult.SILENT
 
-        AudioUtils.applyHannWindow(buffer, windowedBuffer)
+        // YIN operates on the raw time-domain signal — do NOT apply a Hann window here.
+        // Windowing the buffer distorts the CMND energy normalization terms (energy0 / energyTau),
+        // introducing systematic pitch bias that grows at larger τ (lower notes).
         val result = pitchDetector.detectPitch(
-            buffer = windowedBuffer,
+            buffer = buffer,
             sampleRate = AudioCaptureService.SAMPLE_RATE,
             threshold = yinThreshold
         )
@@ -75,3 +75,4 @@ class PitchProcessor(
         )
     }
 }
+

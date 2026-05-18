@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.math.abs
+import kotlin.math.log2
+import kotlin.math.pow
 
 @HiltViewModel
 class TunerViewModel @Inject constructor(
@@ -23,14 +25,17 @@ class TunerViewModel @Inject constructor(
 
     companion object {
         const val HOLD_DURATION_MS = 10_000L
-        const val EMA_ALPHA = 0.3f
         const val IN_TUNE_CENTS = 10
 
-        /** Circular buffer size (~250ms at 23ms/frame). Median of this many frequency
-         *  readings robustly identifies the center pitch even through wide vibrato. */
-        const val VIBRATO_BUFFER_SIZE = 11
+        /**
+         * EMA alpha in semitone space.
+         * α = 0.2 at ~43 fps gives:
+         *   • 6 Hz vibrato attenuated to ~28% amplitude (±30 ct vibrato → ~±8.5 ct display)
+         *   • Note name switches after ~72 ms; 95% settled in ~325 ms
+         */
+        const val EMA_ALPHA = 0.2f
 
-        /** Consecutive in-tune frames required before showing "✓ In Tune". */
+        /** Consecutive in-tune frames before showing "✓ In Tune". */
         const val IN_TUNE_HOLD_FRAMES = 5
     }
 
@@ -40,17 +45,9 @@ class TunerViewModel @Inject constructor(
     private var listeningJob: Job? = null
     private var holdJob: Job? = null
 
-    // Vibrato-resistant frequency buffer
-    private val freqBuffer = FloatArray(VIBRATO_BUFFER_SIZE)
-    private var bufferWriteIdx = 0
-    private var bufferCount = 0
-
-    // EMA state
-    private var smoothedCents: Float = 0f
-
-    // Note-change detection (for EMA reset)
-    private var lastDisplayedNote: String? = null
-    private var lastDisplayedOctave: Int = 0
+    // EMA state in semitone space (semitones relative to A4)
+    private var smoothedSemitones: Double = 0.0
+    private var isFirstValidFrame = true
 
     // Stable "In Tune" counter
     private var inTuneConsecutiveCount = 0
@@ -86,26 +83,21 @@ class TunerViewModel @Inject constructor(
             holdJob?.cancel()
             holdJob = null
 
-            // Push frequency into circular buffer
-            freqBuffer[bufferWriteIdx] = result.frequency
-            bufferWriteIdx = (bufferWriteIdx + 1) % VIBRATO_BUFFER_SIZE
-            if (bufferCount < VIBRATO_BUFFER_SIZE) bufferCount++
-
-            // Derive note from median frequency (vibrato peaks cancel out)
-            val medianFreq = medianFrequency()
-            val noteInfo = noteUtils.frequencyToNote(medianFreq, referenceA4)
-
-            // Reset EMA when the displayed note genuinely changes
-            if (noteInfo.name != lastDisplayedNote || noteInfo.octave != lastDisplayedOctave) {
-                smoothedCents = noteInfo.centsOff
-                lastDisplayedNote = noteInfo.name
-                lastDisplayedOctave = noteInfo.octave
+            // Apply EMA in semitone space — vibrato oscillates symmetrically, so the
+            // smoothed value converges to the player's intended pitch regardless of amplitude.
+            val rawSemitones = 12.0 * log2(result.frequency / referenceA4.toDouble())
+            if (isFirstValidFrame) {
+                smoothedSemitones = rawSemitones
+                isFirstValidFrame = false
             } else {
-                smoothedCents = EMA_ALPHA * noteInfo.centsOff + (1f - EMA_ALPHA) * smoothedCents
+                smoothedSemitones = EMA_ALPHA * rawSemitones + (1.0 - EMA_ALPHA) * smoothedSemitones
             }
 
-            // Stable "In Tune" — only light up after consecutive in-tune frames
-            if (abs(smoothedCents) <= IN_TUNE_CENTS) {
+            val smoothedFreq = (referenceA4 * 2.0.pow(smoothedSemitones / 12.0)).toFloat()
+            val noteInfo = noteUtils.frequencyToNote(smoothedFreq, referenceA4)
+
+            // Count consecutive frames within the in-tune window for the stable indicator
+            if (abs(noteInfo.centsOff) <= IN_TUNE_CENTS) {
                 inTuneConsecutiveCount++
             } else {
                 inTuneConsecutiveCount = 0
@@ -113,6 +105,7 @@ class TunerViewModel @Inject constructor(
             val isInTune = inTuneConsecutiveCount >= IN_TUNE_HOLD_FRAMES
 
             val displayResult = result.copy(
+                frequency = smoothedFreq,
                 noteName = noteInfo.name,
                 octave = noteInfo.octave,
                 centsOff = noteInfo.centsOff,
@@ -122,20 +115,21 @@ class TunerViewModel @Inject constructor(
             _state.update {
                 it.copy(
                     displayedResult = displayResult,
-                    smoothedCentsOff = smoothedCents,
+                    smoothedCentsOff = noteInfo.centsOff,
                     isHeld = false,
                     isInTune = isInTune
                 )
             }
         } else {
-            // Silence — reset buffer so stale readings don't contaminate the next note
-            resetBuffer()
-            inTuneConsecutiveCount = 0
-
+            // Brief silence: don't reset the EMA — hold the current smoothed value so that
+            // transient quiet moments (e.g., a breath) don't destabilise the display.
             if (_state.value.displayedResult.isValid && holdJob?.isActive != true) {
+                inTuneConsecutiveCount = 0
                 _state.update { it.copy(isHeld = true, isInTune = false) }
                 holdJob = viewModelScope.launch {
                     delay(HOLD_DURATION_MS)
+                    // Hold expired — player truly stopped. Reset so the next note starts fresh.
+                    isFirstValidFrame = true
                     _state.update {
                         it.copy(
                             displayedResult = PitchResult.SILENT,
@@ -144,23 +138,9 @@ class TunerViewModel @Inject constructor(
                             isInTune = false
                         )
                     }
-                    lastDisplayedNote = null
                 }
             }
         }
-    }
-
-    private fun medianFrequency(): Float {
-        val count = bufferCount
-        if (count == 1) return freqBuffer[0]
-        val sorted = freqBuffer.copyOf(count).also { it.sort() }
-        return sorted[count / 2]
-    }
-
-    private fun resetBuffer() {
-        bufferWriteIdx = 0
-        bufferCount = 0
-        lastDisplayedNote = null
     }
 
     fun stopListening() {
