@@ -17,7 +17,7 @@ class PitchProcessor(
     companion object {
         const val SILENCE_THRESHOLD_DB = -50f
         /** Full analysis window size for YIN — preserves low-frequency detection. */
-        const val ANALYSIS_WINDOW_SIZE = 4096
+        const val ANALYSIS_WINDOW_SIZE = 2048
     }
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB

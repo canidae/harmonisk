@@ -322,7 +322,7 @@ private fun DrawScope.drawContinuousPitchLine(
         val y = pianoEdgeY - relativeTimeMs * pxPerMs
 
         val hasGap = prevTimeMs != Long.MIN_VALUE && (frame.timeMs - prevTimeMs) > maxGapMs
-        val hasJump = prevMidiNote >= 0 && abs(frame.midiNote - prevMidiNote) > 1
+        val hasJump = prevMidiNote >= 0 && abs(frame.midiNote - prevMidiNote) > 0
 
         if (!pathStarted || hasGap || hasJump) {
             path.moveTo(x, y)

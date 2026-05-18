@@ -436,7 +436,7 @@ class MelodyViewModel @Inject constructor(
                     val graceElapsed = SystemClock.elapsedRealtime() - waitGraceStartTime
                     if (graceElapsed >= waitGraceDurationMs) {
                         // Grace expired — actually freeze time
-                        delay(33)
+                        delay(16)
                         continue
                     }
                     // Still in grace period — keep time moving (fall through)
@@ -472,7 +472,7 @@ class MelodyViewModel @Inject constructor(
                     melodyPlayer.updateGameTime(currentTime, track)
                 }
 
-                delay(33)
+                delay(16)
             }
         }
     }
