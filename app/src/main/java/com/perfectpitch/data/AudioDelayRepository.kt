@@ -34,11 +34,7 @@ class AudioDelayRepository(
     companion object {
         private val PROFILES_KEY = stringPreferencesKey("delay_profiles_json")
 
-        /**
-         * Default fraction of total round-trip delay attributed to output.
-         * 2/3 = output typically dominates (speaker/headphone pipeline > microphone pipeline).
-         */
-        const val DEFAULT_OUTPUT_SPLIT = 2f / 3f
+        const val DEFAULT_OUTPUT_SPLIT = 0.9f
 
         fun defaultOutputDelay(type: AudioOutputDeviceType): Int = when (type) {
             AudioOutputDeviceType.SPEAKER -> 0
