@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.SettingsRepository
+import com.perfectpitch.music.NoteUtils
 import com.perfectpitch.music.PitchResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -11,17 +12,26 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.abs
 
 @HiltViewModel
 class TunerViewModel @Inject constructor(
     private val pitchProcessor: PitchProcessor,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val noteUtils: NoteUtils
 ) : ViewModel() {
 
     companion object {
         const val HOLD_DURATION_MS = 10_000L
-        const val NOTE_LOCK_FRAMES = 3
         const val EMA_ALPHA = 0.3f
+        const val IN_TUNE_CENTS = 10
+
+        /** Circular buffer size (~250ms at 23ms/frame). Median of this many frequency
+         *  readings robustly identifies the center pitch even through wide vibrato. */
+        const val VIBRATO_BUFFER_SIZE = 11
+
+        /** Consecutive in-tune frames required before showing "✓ In Tune". */
+        const val IN_TUNE_HOLD_FRAMES = 5
     }
 
     private val _state = MutableStateFlow(TunerState())
@@ -30,27 +40,31 @@ class TunerViewModel @Inject constructor(
     private var listeningJob: Job? = null
     private var holdJob: Job? = null
 
-    // Note lock state
-    private var lockedNoteName: String? = null
-    private var lockedOctave: Int = 0
-    private var candidateNoteName: String? = null
-    private var candidateOctave: Int = 0
-    private var candidateCount: Int = 0
+    // Vibrato-resistant frequency buffer
+    private val freqBuffer = FloatArray(VIBRATO_BUFFER_SIZE)
+    private var bufferWriteIdx = 0
+    private var bufferCount = 0
 
     // EMA state
     private var smoothedCents: Float = 0f
 
+    // Note-change detection (for EMA reset)
+    private var lastDisplayedNote: String? = null
+    private var lastDisplayedOctave: Int = 0
+
+    // Stable "In Tune" counter
+    private var inTuneConsecutiveCount = 0
+
+    private var referenceA4 = NoteUtils.DEFAULT_A4_FREQ
+
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
+                referenceA4 = settings.concertPitch
                 pitchProcessor.setReferenceA4(settings.concertPitch)
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
                 pitchProcessor.setYinThreshold(settings.yinThreshold)
-                _state.update {
-                    it.copy(
-                        referenceFrequency = settings.concertPitch
-                    )
-                }
+                _state.update { it.copy(referenceFrequency = settings.concertPitch) }
             }
         }
     }
@@ -69,90 +83,84 @@ class TunerViewModel @Inject constructor(
         _state.update { it.copy(pitchResult = result) }
 
         if (result.isValid) {
-            // Cancel any hold timeout — we have active audio
             holdJob?.cancel()
             holdJob = null
 
-            // Apply note lock hysteresis
-            val displayNote = applyNoteLock(result)
+            // Push frequency into circular buffer
+            freqBuffer[bufferWriteIdx] = result.frequency
+            bufferWriteIdx = (bufferWriteIdx + 1) % VIBRATO_BUFFER_SIZE
+            if (bufferCount < VIBRATO_BUFFER_SIZE) bufferCount++
 
-            // Apply EMA smoothing on cents
-            smoothedCents = if (lockedNoteName == null) {
-                result.centsOff
+            // Derive note from median frequency (vibrato peaks cancel out)
+            val medianFreq = medianFrequency()
+            val noteInfo = noteUtils.frequencyToNote(medianFreq, referenceA4)
+
+            // Reset EMA when the displayed note genuinely changes
+            if (noteInfo.name != lastDisplayedNote || noteInfo.octave != lastDisplayedOctave) {
+                smoothedCents = noteInfo.centsOff
+                lastDisplayedNote = noteInfo.name
+                lastDisplayedOctave = noteInfo.octave
             } else {
-                EMA_ALPHA * result.centsOff + (1f - EMA_ALPHA) * smoothedCents
+                smoothedCents = EMA_ALPHA * noteInfo.centsOff + (1f - EMA_ALPHA) * smoothedCents
             }
+
+            // Stable "In Tune" — only light up after consecutive in-tune frames
+            if (abs(smoothedCents) <= IN_TUNE_CENTS) {
+                inTuneConsecutiveCount++
+            } else {
+                inTuneConsecutiveCount = 0
+            }
+            val isInTune = inTuneConsecutiveCount >= IN_TUNE_HOLD_FRAMES
+
+            val displayResult = result.copy(
+                noteName = noteInfo.name,
+                octave = noteInfo.octave,
+                centsOff = noteInfo.centsOff,
+                midiNoteNumber = noteInfo.midiNumber
+            )
 
             _state.update {
                 it.copy(
-                    displayedResult = displayNote,
+                    displayedResult = displayResult,
                     smoothedCentsOff = smoothedCents,
-                    isHeld = false
+                    isHeld = false,
+                    isInTune = isInTune
                 )
             }
         } else {
-            // Silence detected — start hold timer if we have a last valid note
+            // Silence — reset buffer so stale readings don't contaminate the next note
+            resetBuffer()
+            inTuneConsecutiveCount = 0
+
             if (_state.value.displayedResult.isValid && holdJob?.isActive != true) {
-                _state.update { it.copy(isHeld = true) }
+                _state.update { it.copy(isHeld = true, isInTune = false) }
                 holdJob = viewModelScope.launch {
                     delay(HOLD_DURATION_MS)
-                    // Hold expired — clear display
                     _state.update {
                         it.copy(
                             displayedResult = PitchResult.SILENT,
                             smoothedCentsOff = 0f,
-                            isHeld = false
+                            isHeld = false,
+                            isInTune = false
                         )
                     }
-                    lockedNoteName = null
-                    candidateNoteName = null
-                    candidateCount = 0
+                    lastDisplayedNote = null
                 }
             }
         }
     }
 
-    private fun applyNoteLock(result: PitchResult): PitchResult {
-        val newNote = result.noteName
-        val newOctave = result.octave
+    private fun medianFrequency(): Float {
+        val count = bufferCount
+        if (count == 1) return freqBuffer[0]
+        val sorted = freqBuffer.copyOf(count).also { it.sort() }
+        return sorted[count / 2]
+    }
 
-        if (lockedNoteName == null) {
-            // First detection — lock immediately
-            lockedNoteName = newNote
-            lockedOctave = newOctave
-            candidateNoteName = null
-            candidateCount = 0
-            return result
-        }
-
-        if (newNote == lockedNoteName && newOctave == lockedOctave) {
-            // Same note — reset candidate counter
-            candidateNoteName = null
-            candidateCount = 0
-            return result
-        }
-
-        // Different note detected
-        if (newNote == candidateNoteName && newOctave == candidateOctave) {
-            candidateCount++
-        } else {
-            candidateNoteName = newNote
-            candidateOctave = newOctave
-            candidateCount = 1
-        }
-
-        return if (candidateCount >= NOTE_LOCK_FRAMES) {
-            // Switch to new note
-            lockedNoteName = newNote
-            lockedOctave = newOctave
-            candidateNoteName = null
-            candidateCount = 0
-            smoothedCents = result.centsOff
-            result
-        } else {
-            // Keep showing locked note but with current cents relative to locked note
-            _state.value.displayedResult
-        }
+    private fun resetBuffer() {
+        bufferWriteIdx = 0
+        bufferCount = 0
+        lastDisplayedNote = null
     }
 
     fun stopListening() {

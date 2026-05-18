@@ -30,6 +30,10 @@ class FreePlayViewModel @Inject constructor(
         const val ABSOLUTE_MIN_MIDI = 21f  // A0
         const val ABSOLUTE_MAX_MIDI = 108f // A8
         const val MIN_AUTO_FIT_RANGE = 12f // One octave
+
+        /** Consecutive frames a new MIDI note must appear before switching the active bar.
+         *  Prevents vibrato-induced MIDI flips from fragmenting a note bar (~70ms). */
+        const val NEW_NOTE_DEBOUNCE_FRAMES = 3
     }
 
     private val _state = MutableStateFlow(FreePlayState())
@@ -39,6 +43,10 @@ class FreePlayViewModel @Inject constructor(
     private var currentNoteMidi: Int? = null
     private var currentNoteStartMs: Long = 0L
     private var centsSamples = mutableListOf<Float>()
+
+    // Debounce: require NEW_NOTE_DEBOUNCE_FRAMES consecutive frames on a new MIDI before switching
+    private var candidateNoteMidi: Int? = null
+    private var candidateNoteCount: Int = 0
 
     // Virtual time tracking: always used for note timestamps and canvas rendering.
     // When timeProgressionEnabled is true, virtual time advances every frame.
@@ -105,6 +113,8 @@ class FreePlayViewModel @Inject constructor(
         listeningJob?.cancel()
         listeningJob = null
         finalizeCurrentNote()
+        candidateNoteMidi = null
+        candidateNoteCount = 0
         _state.update { it.copy(isListening = false, activeNote = null) }
     }
 
@@ -226,15 +236,33 @@ class FreePlayViewModel @Inject constructor(
                 frequency = result.frequency
             )
 
-            if (currentNoteMidi == null || midi != currentNoteMidi) {
+            val isNewNote = currentNoteMidi == null || midi != currentNoteMidi
+
+            if (isNewNote) {
+                // Debounce: accumulate consecutive frames on the candidate MIDI before switching
+                if (midi == candidateNoteMidi) {
+                    candidateNoteCount++
+                } else {
+                    candidateNoteMidi = midi
+                    candidateNoteCount = 1
+                }
+
+                if (candidateNoteCount < NEW_NOTE_DEBOUNCE_FRAMES) {
+                    // Not yet confirmed — keep accumulating the pitch trace but don't switch bars
+                    _state.update { it.copy(pitchTrace = trimTrace(it.pitchTrace + traceFrame)) }
+                    return
+                }
+
+                // Debounce threshold reached — commit to the new note
+                candidateNoteMidi = null
+                candidateNoteCount = 0
+
                 val wasInSilence = currentNoteMidi == null
                 finalizeCurrentNote()
                 currentNoteMidi = midi
                 centsSamples.clear()
                 centsSamples.add(result.centsOff)
 
-                // When time progression is disabled and resuming after silence,
-                // snap start time to previous note's end for zero-gap bars.
                 val noteStart = if (!_state.value.timeProgressionEnabled && wasInSilence && lastFinalizedNoteEndMs > 0L) {
                     virtualNowMs = lastFinalizedNoteEndMs
                     lastFinalizedNoteEndMs
@@ -261,6 +289,10 @@ class FreePlayViewModel @Inject constructor(
                     )
                 }
             } else {
+                // Continuing same note — reset debounce candidate
+                candidateNoteMidi = null
+                candidateNoteCount = 0
+
                 centsSamples.add(result.centsOff)
                 val avgCents = centsSamples.average().toFloat()
                 _state.update { current ->
@@ -279,6 +311,8 @@ class FreePlayViewModel @Inject constructor(
                 finalizeCurrentNote()
                 _state.update { it.copy(activeNote = null, pitchResult = result) }
             }
+            candidateNoteMidi = null
+            candidateNoteCount = 0
         }
     }
 
@@ -342,6 +376,8 @@ class FreePlayViewModel @Inject constructor(
 
     fun resetSession() {
         finalizeCurrentNote()
+        candidateNoteMidi = null
+        candidateNoteCount = 0
         _state.update {
             FreePlayState(isListening = it.isListening)
         }

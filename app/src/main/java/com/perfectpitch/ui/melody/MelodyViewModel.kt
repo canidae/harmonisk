@@ -554,22 +554,21 @@ class MelodyViewModel @Inject constructor(
 
         val expectedNote = track.notes[noteIndex]
         val expectedMidi = expectedNote.noteNumber
-        val detectedMidi = result.midiNoteNumber
 
         val expectedFreq = noteUtils.midiToFrequency(expectedMidi)
         val centsOff = noteUtils.frequencyToCents(result.frequency, expectedFreq)
 
-        // Accumulate cents-off when player is on the correct MIDI note
-        if (detectedMidi == expectedMidi) {
+        // Count frames where the detected frequency is within the acceptance window of the
+        // expected note. Using centsOff (relative to the expected note) as the sole gate means
+        // vibrato peaks that round to a neighbouring MIDI number are still counted correctly,
+        // instead of being dropped by a strict MIDI equality check.
+        if (abs(centsOff) <= 50f) {
             centsOffSum += abs(centsOff)
             centsOffCount++
-            // Count frames where pitch is within non-MISS range for duration scoring
-            if (abs(centsOff) <= 50f) {
-                correctPitchFrameCount++
-            }
+            correctPitchFrameCount++
         }
 
-        val isCorrectNote = detectedMidi == expectedMidi && abs(centsOff) <= 50f
+        val isCorrectNote = abs(centsOff) <= 50f
 
         if (isWaitingForNote) {
             if (isCorrectNote) {
