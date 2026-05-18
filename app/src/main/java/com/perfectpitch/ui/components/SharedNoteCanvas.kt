@@ -290,10 +290,16 @@ private fun DrawScope.drawContinuousPitchLine(
 
     // Time range visible on screen, plus a generous margin so lines
     // entering/leaving the viewport stay connected.
+    // Derive bounds from the Y formula (y = pianoEdgeY - relativeTimeMs * pxPerMs):
+    //   relativeTimeMs = (pianoEdgeY - y) / pxPerMs
+    // FreePlay (piano at top): past frames go downward → minRelTime = -(height - pianoEdgeY)/pxPerMs
+    // Melody  (piano at bottom): future notes go upward → maxRelTime = pianoEdgeY/pxPerMs
     val visibleSpanMs = ((visibleBottom - visibleTop) / pxPerMs).toLong()
     val marginMs = visibleSpanMs / 2
-    val minTimeMs = viewTimeMs - marginMs
-    val maxTimeMs = viewTimeMs + visibleSpanMs + marginMs
+    val minRelTimeMs = ((pianoEdgeY - visibleBottom) / pxPerMs).toLong()
+    val maxRelTimeMs = ((pianoEdgeY - visibleTop) / pxPerMs).toLong()
+    val minTimeMs = viewTimeMs + minRelTimeMs - marginMs
+    val maxTimeMs = viewTimeMs + maxRelTimeMs + marginMs
 
     val path = Path()
     var pathStarted = false

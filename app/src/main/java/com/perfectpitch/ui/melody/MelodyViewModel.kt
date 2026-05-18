@@ -414,7 +414,7 @@ class MelodyViewModel @Inject constructor(
                     val graceElapsed = SystemClock.elapsedRealtime() - waitGraceStartTime
                     if (graceElapsed >= waitGraceDurationMs) {
                         // Grace expired — actually freeze time
-                        delay(16)
+                        delay(33)
                         continue
                     }
                     // Still in grace period — keep time moving (fall through)
@@ -447,7 +447,7 @@ class MelodyViewModel @Inject constructor(
                     }
                 }
 
-                delay(16)
+                delay(33)
             }
         }
     }
@@ -483,7 +483,8 @@ class MelodyViewModel @Inject constructor(
 
     private fun updateCurrentNote(currentTime: Double) {
         val track = _state.value.melodyTrack ?: return
-        val adjustedTime = currentTime
+        // Backdate by input delay to match the audio being evaluated right now
+        val adjustedTime = currentTime - audioInputDelayMs / 1000.0
 
         // Find the note that should be active at the latency-adjusted time
         val noteIndex = track.notes.indexOfFirst { note ->
@@ -586,8 +587,10 @@ class MelodyViewModel @Inject constructor(
     private fun scoreCurrentNote(expectedNote: com.perfectpitch.midi.NoteEvent, noteIndex: Int) {
         val track = _state.value.melodyTrack ?: return
         val expectedDurationMs = (track.noteDurationSeconds(expectedNote) * 1000).toLong()
-        // Duration = time player held correct pitch (each frame ≈ 93ms)
-        val actualDurationMs = correctPitchFrameCount * 93L
+        // Duration = time player held correct pitch, derived from the actual audio chunk size
+        val frameDurationMs = com.perfectpitch.audio.AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000L /
+            com.perfectpitch.audio.AudioCaptureService.SAMPLE_RATE
+        val actualDurationMs = correctPitchFrameCount * frameDurationMs
 
         val effectiveCentsOff = if (centsOffCount > 0) centsOffSum / centsOffCount else 100f
 

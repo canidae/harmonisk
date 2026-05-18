@@ -45,7 +45,7 @@ fun FreePlayScreen(
     LaunchedEffect(Unit) {
         while (true) {
             frameTime = System.currentTimeMillis()
-            kotlinx.coroutines.delay(16L)
+            kotlinx.coroutines.delay(33L)
         }
     }
 

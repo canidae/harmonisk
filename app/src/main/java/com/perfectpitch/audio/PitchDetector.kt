@@ -29,6 +29,31 @@ class PitchDetector {
         const val DEFAULT_SAMPLE_RATE = 44100
     }
 
+    // Pre-allocated FFT work arrays, lazily sized on first call.
+    // Since ANALYSIS_WINDOW_SIZE is constant, these are effectively fixed-size singletons.
+    private var fftWorkSize = 0
+    private var workAre = DoubleArray(0)
+    private var workAim = DoubleArray(0)
+    private var workBre = DoubleArray(0)
+    private var workBim = DoubleArray(0)
+    private var workCre = DoubleArray(0)
+    private var workCim = DoubleArray(0)
+    private var workEnergyPrefix = DoubleArray(0)
+
+    private fun ensureWorkArrays(bufferSize: Int) {
+        val required = nextPowerOf2(2 * bufferSize)
+        if (required != fftWorkSize) {
+            fftWorkSize = required
+            workAre = DoubleArray(required)
+            workAim = DoubleArray(required)
+            workBre = DoubleArray(required)
+            workBim = DoubleArray(required)
+            workCre = DoubleArray(required)
+            workCim = DoubleArray(required)
+            workEnergyPrefix = DoubleArray(bufferSize + 1)
+        }
+    }
+
     /**
      * Detect the fundamental frequency of the audio buffer.
      *
@@ -101,52 +126,50 @@ class PitchDetector {
         val halfLen = yinBuffer.size
         val n = buffer.size
 
-        // FFT size: next power of 2 >= 2 * bufferSize for linear cross-correlation
-        val fftSize = nextPowerOf2(2 * n)
+        ensureWorkArrays(n)
+        val fftSize = fftWorkSize
 
-        // Signal a: first half of buffer (zero-padded)
-        val aRe = DoubleArray(fftSize)
-        val aIm = DoubleArray(fftSize)
+        // Signal a: first half of buffer (zero-padded) — clear and fill
+        workAre.fill(0.0)
+        workAim.fill(0.0)
         for (i in 0 until halfLen) {
-            aRe[i] = buffer[i].toDouble()
+            workAre[i] = buffer[i].toDouble()
         }
 
-        // Signal b: full buffer (zero-padded)
-        val bRe = DoubleArray(fftSize)
-        val bIm = DoubleArray(fftSize)
+        // Signal b: full buffer (zero-padded) — clear and fill
+        workBre.fill(0.0)
+        workBim.fill(0.0)
         for (i in 0 until n) {
-            bRe[i] = buffer[i].toDouble()
+            workBre[i] = buffer[i].toDouble()
         }
 
         // Forward FFT both signals
-        fft(aRe, aIm, forward = true)
-        fft(bRe, bIm, forward = true)
+        fft(workAre, workAim, forward = true)
+        fft(workBre, workBim, forward = true)
 
         // Cross-power spectrum: conj(A) · B
-        val cRe = DoubleArray(fftSize)
-        val cIm = DoubleArray(fftSize)
         for (i in 0 until fftSize) {
-            cRe[i] = aRe[i] * bRe[i] + aIm[i] * bIm[i]
-            cIm[i] = aRe[i] * bIm[i] - aIm[i] * bRe[i]
+            workCre[i] = workAre[i] * workBre[i] + workAim[i] * workBim[i]
+            workCim[i] = workAre[i] * workBim[i] - workAim[i] * workBre[i]
         }
 
         // Inverse FFT to get cross-correlation
-        fft(cRe, cIm, forward = false)
-        // cRe[τ] = Σ_{i=0}^{W-1} x[i]·x[i+τ]
+        fft(workCre, workCim, forward = false)
+        // workCre[τ] = Σ_{i=0}^{W-1} x[i]·x[i+τ]
 
         // Precompute cumulative energy: energyPrefix[i] = Σ_{j=0}^{i-1} x[j]²
-        val energyPrefix = DoubleArray(n + 1)
+        workEnergyPrefix[0] = 0.0
         for (i in 0 until n) {
-            energyPrefix[i + 1] = energyPrefix[i] + buffer[i].toDouble() * buffer[i].toDouble()
+            workEnergyPrefix[i + 1] = workEnergyPrefix[i] + buffer[i].toDouble() * buffer[i].toDouble()
         }
 
         yinBuffer[0] = 1.0f
         var runningSum = 0.0
 
         for (tau in 1 until halfLen) {
-            val energy0 = energyPrefix[halfLen]
-            val energyTau = energyPrefix[halfLen + tau] - energyPrefix[tau]
-            val diff = energy0 + energyTau - 2.0 * cRe[tau]
+            val energy0 = workEnergyPrefix[halfLen]
+            val energyTau = workEnergyPrefix[halfLen + tau] - workEnergyPrefix[tau]
+            val diff = energy0 + energyTau - 2.0 * workCre[tau]
 
             runningSum += diff
             yinBuffer[tau] = if (runningSum != 0.0) {

@@ -7,17 +7,37 @@ import kotlin.math.sqrt
  */
 object AudioUtils {
 
+    // Cached Hann window multipliers, keyed by buffer size.
+    // Since buffer size is always ANALYSIS_WINDOW_SIZE (constant), this is effectively
+    // a one-entry cache that avoids recomputing the cosine table on every call.
+    private val hannWindowCache = HashMap<Int, FloatArray>()
+
+    private fun getHannWindow(size: Int): FloatArray =
+        hannWindowCache.getOrPut(size) {
+            FloatArray(size) { i ->
+                0.5f * (1f - kotlin.math.cos(2f * Math.PI.toFloat() * i / (size - 1)))
+            }
+        }
+
     /**
-     * Apply a Hann window to the buffer to reduce spectral leakage.
+     * Apply a Hann window to [buffer], writing results into [output].
+     * Both arrays must have the same size.
+     * The window multipliers are cached after the first call for a given size.
+     */
+    fun applyHannWindow(buffer: FloatArray, output: FloatArray) {
+        val window = getHannWindow(buffer.size)
+        for (i in buffer.indices) {
+            output[i] = buffer[i] * window[i]
+        }
+    }
+
+    /**
+     * Apply a Hann window and return a new array (convenience overload, allocates).
      */
     fun applyHannWindow(buffer: FloatArray): FloatArray {
-        val windowed = FloatArray(buffer.size)
-        val n = buffer.size
-        for (i in buffer.indices) {
-            val multiplier = 0.5f * (1f - kotlin.math.cos(2f * Math.PI.toFloat() * i / (n - 1)))
-            windowed[i] = buffer[i] * multiplier
-        }
-        return windowed
+        val out = FloatArray(buffer.size)
+        applyHannWindow(buffer, out)
+        return out
     }
 
     /**

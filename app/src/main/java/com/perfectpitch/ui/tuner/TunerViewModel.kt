@@ -48,8 +48,7 @@ class TunerViewModel @Inject constructor(
                 pitchProcessor.setYinThreshold(settings.yinThreshold)
                 _state.update {
                     it.copy(
-                        referenceFrequency = settings.concertPitch,
-                        inTuneCents = settings.inTuneCents
+                        referenceFrequency = settings.concertPitch
                     )
                 }
             }

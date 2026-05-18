@@ -45,10 +45,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.updateConcertPitch(pitch) }
     }
 
-    fun updateInTuneCents(cents: Int) {
-        viewModelScope.launch { settingsRepository.updateInTuneCents(cents) }
-    }
-
     fun updateSilenceThreshold(db: Float) {
         viewModelScope.launch { settingsRepository.updateSilenceThreshold(db) }
     }

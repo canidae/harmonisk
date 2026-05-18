@@ -12,10 +12,10 @@ class ScoringEngine {
 
     companion object {
         // Pitch scoring thresholds (cents)
-        const val PERFECT_CENTS = 5f
-        const val GREAT_CENTS = 10f
+        const val PERFECT_CENTS = 10f
+        const val GREAT_CENTS = 20f
         const val GOOD_CENTS = 30f
-        const val OK_CENTS = 50f
+        const val OK_CENTS = 40f
 
         // Point values per tier
         const val PERFECT_POINTS = 100

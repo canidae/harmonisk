@@ -15,7 +15,6 @@ class SettingsRepository(
     companion object {
         val CONCERT_PITCH = floatPreferencesKey("concert_pitch")
         val YIN_THRESHOLD = floatPreferencesKey("yin_threshold")
-        val IN_TUNE_CENTS = intPreferencesKey("in_tune_cents")
         val DARK_THEME = booleanPreferencesKey("dark_theme")
         val SILENCE_THRESHOLD_DB = floatPreferencesKey("silence_threshold_db")
         val CONTINUOUS_PITCH_LINE = booleanPreferencesKey("continuous_pitch_line")
@@ -27,7 +26,6 @@ class SettingsRepository(
         AppSettings(
             concertPitch = prefs[CONCERT_PITCH] ?: 440f,
             yinThreshold = prefs[YIN_THRESHOLD] ?: 0.15f,
-            inTuneCents = prefs[IN_TUNE_CENTS] ?: 10,
             darkTheme = prefs[DARK_THEME] ?: true,
             silenceThresholdDb = prefs[SILENCE_THRESHOLD_DB] ?: -50f,
             continuousPitchLine = prefs[CONTINUOUS_PITCH_LINE] ?: true,
@@ -42,10 +40,6 @@ class SettingsRepository(
 
     suspend fun updateYinThreshold(threshold: Float) {
         context.dataStore.edit { it[YIN_THRESHOLD] = threshold }
-    }
-
-    suspend fun updateInTuneCents(cents: Int) {
-        context.dataStore.edit { it[IN_TUNE_CENTS] = cents }
     }
 
     suspend fun updateSilenceThreshold(db: Float) {
@@ -68,7 +62,6 @@ class SettingsRepository(
 data class AppSettings(
     val concertPitch: Float = 440f,
     val yinThreshold: Float = 0.15f,
-    val inTuneCents: Int = 10,
     val darkTheme: Boolean = true,
     val silenceThresholdDb: Float = -50f,
     val continuousPitchLine: Boolean = true,

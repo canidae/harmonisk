@@ -24,6 +24,10 @@ class PitchProcessor(
     private var referenceA4 = NoteUtils.DEFAULT_A4_FREQ
     private var yinThreshold = PitchDetector.DEFAULT_THRESHOLD
 
+    // Pre-allocated buffer for the Hann-windowed signal, avoiding a FloatArray allocation
+    // on every pitch detection call.
+    private val windowedBuffer = FloatArray(ANALYSIS_WINDOW_SIZE)
+
     fun setSilenceThreshold(db: Float) { silenceThresholdDb = db }
     fun setReferenceA4(freq: Float) { referenceA4 = freq }
     fun setYinThreshold(threshold: Float) { yinThreshold = threshold }
@@ -82,7 +86,8 @@ class PitchProcessor(
             return PitchResult.SILENT
         }
 
-        val windowed = AudioUtils.applyHannWindow(buffer)
+        val windowed = windowedBuffer
+        AudioUtils.applyHannWindow(buffer, windowed)
 
         val result = pitchDetector.detectPitch(
             buffer = windowed,

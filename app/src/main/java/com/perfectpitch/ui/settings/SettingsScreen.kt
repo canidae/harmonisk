@@ -65,24 +65,6 @@ fun SettingsScreen(
                 }
             }
 
-            // In-tune sensitivity
-            SettingSection(title = "In-Tune Sensitivity") {
-                val options = listOf(5 to "Strict (±5¢)", 10 to "Normal (±10¢)", 20 to "Relaxed (±20¢)")
-                options.forEach { (cents, label) ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = settings.inTuneCents == cents,
-                            onClick = { viewModel.updateInTuneCents(cents) }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(label, style = MaterialTheme.typography.bodyLarge)
-                    }
-                }
-            }
-
             // Microphone sensitivity
             SettingSection(title = "Microphone Sensitivity") {
                 Text(
@@ -185,11 +167,6 @@ fun SettingsScreen(
                 ) {
                     Text("Calibrate Audio Delays")
                 }
-                Text(
-                    text = "Automatic calibration for connected audio devices",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))

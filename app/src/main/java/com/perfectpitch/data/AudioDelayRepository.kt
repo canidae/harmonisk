@@ -36,9 +36,9 @@ class AudioDelayRepository(
 
         /**
          * Default fraction of total round-trip delay attributed to output.
-         * 0.5 = even split. Adjust if measurements suggest a different typical ratio.
+         * 2/3 = output typically dominates (speaker/headphone pipeline > microphone pipeline).
          */
-        const val DEFAULT_OUTPUT_SPLIT = 0.5f
+        const val DEFAULT_OUTPUT_SPLIT = 2f / 3f
 
         fun defaultOutputDelay(type: AudioOutputDeviceType): Int = when (type) {
             AudioOutputDeviceType.SPEAKER -> 0
