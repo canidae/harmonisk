@@ -68,6 +68,8 @@ class MelodyViewModel @Inject constructor(
     private var synthOpenJob: Job? = null
     // Input delay for backdating pitch detection timestamps
     private var audioInputDelayMs: Int = 0
+    // Output delay for firing melody audio early enough to compensate for speaker latency
+    private var audioOutputDelayMs: Int = 0
 
     init {
         viewModelScope.launch {
@@ -79,6 +81,7 @@ class MelodyViewModel @Inject constructor(
         // Observe per-device audio output delay and update the melody player
         viewModelScope.launch {
             audioDelayRepository.activeOutputDelay.collect { delayMs ->
+                audioOutputDelayMs = delayMs
                 melodyPlayer.setAudioOutputDelay(delayMs.toLong())
             }
         }
@@ -93,6 +96,16 @@ class MelodyViewModel @Inject constructor(
     val continuousPitchLine: StateFlow<Boolean> = settingsRepository.settings
         .map { it.continuousPitchLine }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    // Exposed for the in-menu audio delay split slider
+    val activeSplitPercent: StateFlow<Float> = audioDelayRepository.activeSplitPercent
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AudioDelayRepository.DEFAULT_OUTPUT_SPLIT)
+
+    val activeOutputDelay: StateFlow<Int> = audioDelayRepository.activeOutputDelay
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     /** Emits a device name when an uncalibrated device is detected, null otherwise. */
     val uncalibratedDevicePrompt: StateFlow<String?> = combine(
@@ -118,6 +131,15 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun shouldShowCalibrationPrompt(): Boolean = !calibrationPromptDismissed
+
+    fun saveSplitPercent(percent: Float) {
+        val outputDevice = audioDeviceMonitor.currentDevice.value
+        val inputDevice = audioDeviceMonitor.currentInputDevice.value
+        viewModelScope.launch {
+            audioDelayRepository.setSplitPercent(outputDevice.deviceKey, percent)
+            audioDelayRepository.setSplitPercent(inputDevice.deviceKey, percent)
+        }
+    }
 
     fun getAvailableMelodies(): List<MelodyRepository.MelodyInfo> {
         return melodyRepository.getAvailableMelodies()
@@ -440,11 +462,14 @@ class MelodyViewModel @Inject constructor(
                 // Only track notes once we're past the countdown
                 if (currentTime >= 0.0) {
                     updateCurrentNote(currentTime)
+                }
 
-                    // Feed melody audio to synthesizer if enabled
-                    if (_state.value.playMelodyAudio && melodySynthesizer.isReady) {
-                        melodyPlayer.updateGameTime(currentTime, track)
-                    }
+                // Feed melody audio earlier than t=0 to compensate for output latency.
+                // updateGameTime uses lookahead internally, so we must call it
+                // starting at currentTime = -outputDelay so the first note fires on time.
+                if (_state.value.playMelodyAudio && melodySynthesizer.isReady &&
+                    currentTime >= -(audioOutputDelayMs / 1000.0)) {
+                    melodyPlayer.updateGameTime(currentTime, track)
                 }
 
                 delay(33)

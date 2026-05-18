@@ -1,12 +1,12 @@
 package com.perfectpitch.ui.melody
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -31,6 +31,7 @@ import com.perfectpitch.ui.components.KeepScreenOn
 import com.perfectpitch.ui.components.PIANO_HEIGHT_DP
 import com.perfectpitch.ui.components.RequireMicPermission
 import com.perfectpitch.ui.components.SharedNoteCanvas
+import kotlin.math.roundToInt
 
 private val BUTTON_AREA_WIDTH = 52.dp
 private val OVERLAY_BG = Color(0xAA1A1A2E)
@@ -47,11 +48,17 @@ fun MelodyPlayScreen(
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
     val continuousPitchLine by viewModel.continuousPitchLine.collectAsState()
     val uncalibratedDevice by viewModel.uncalibratedDevicePrompt.collectAsState()
+    val splitPercent by viewModel.activeSplitPercent.collectAsState()
+    val outputDelay by viewModel.activeOutputDelay.collectAsState()
+    val inputDelay by viewModel.activeInputDelay.collectAsState()
     val density = LocalDensity.current
     val context = LocalContext.current
     val rightPaddingPx = with(density) { BUTTON_AREA_WIDTH.toPx() }
     var showResultsModal by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Back gesture / button exits the screen (same as the removed close button)
+    BackHandler { viewModel.stop(); onBack() }
 
     KeepScreenOn()
 
@@ -304,14 +311,30 @@ fun MelodyPlayScreen(
                                 onClick = { viewModel.setPlayMelodyAudio(!state.playMelodyAudio) }
                             )
                             HorizontalDivider()
+                            // Audio delay split slider (same as main Settings page)
                             DropdownMenuItem(
-                                text = { Text("Calibrate audio") },
-                                onClick = {
-                                    showConfigMenu = false
-                                    viewModel.stop()
-                                    onNavigateToCalibration()
-                                }
+                                text = {
+                                    val splitPct = (splitPercent * 100).roundToInt()
+                                    Text("Audio delay split: $splitPct% output")
+                                },
+                                onClick = { }
                             )
+                            Slider(
+                                value = (splitPercent * 100).roundToInt().toFloat(),
+                                onValueChange = { viewModel.saveSplitPercent(it / 100f) },
+                                valueRange = 0f..100f,
+                                steps = 99,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Out: ${outputDelay}ms", style = MaterialTheme.typography.labelSmall)
+                                Text("In: ${inputDelay}ms", style = MaterialTheme.typography.labelSmall)
+                            }
                         }
                     }
 
@@ -335,8 +358,11 @@ fun MelodyPlayScreen(
                         }
                     }
 
-                    // Scroll button
-                    if (state.songTimeOffsetSeconds != 0.0) {
+                    // Scroll button: visible when scrolled away from live (active phases) or
+                    // not yet at the beginning (FINISHED phase).
+                    val showScrollButton = if (state.phase == PlayPhase.FINISHED) !state.isAtScrollStart
+                                          else state.songTimeOffsetSeconds != 0.0
+                    if (showScrollButton) {
                         IconButton(
                             onClick = {
                                 if (state.phase == PlayPhase.FINISHED) {
@@ -391,21 +417,6 @@ fun MelodyPlayScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                         }
-                    }
-
-                    // Close button
-                    IconButton(
-                        onClick = { viewModel.stop(); onBack() },
-                        modifier = Modifier
-                            .size(OVERLAY_BUTTON_SIZE)
-                            .background(OVERLAY_BG, CircleShape)
-                    ) {
-                        Icon(
-                            Icons.Filled.Close,
-                            contentDescription = "Close",
-                            tint = OVERLAY_ICON_TINT,
-                            modifier = Modifier.size(20.dp)
-                        )
                     }
                 }
 

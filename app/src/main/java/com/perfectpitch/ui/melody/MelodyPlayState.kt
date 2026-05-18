@@ -34,6 +34,17 @@ data class MelodyPlayState(
     /** Countdown display value derived from currentTimeSeconds (3, 2, 1) */
     val countdownValue: Int
         get() = kotlin.math.ceil(-currentTimeSeconds).toInt().coerceIn(1, countdownDurationSeconds.toInt())
+
+    /**
+     * True when the view is already scrolled to (or before) the first note.
+     * Used in FINISHED state to hide the "Scroll to start" button once there.
+     */
+    val isAtScrollStart: Boolean
+        get() {
+            val track = melodyTrack ?: return true
+            val firstNoteStart = track.notes.firstOrNull()?.let { track.noteStartSeconds(it) } ?: 0.0
+            return currentTimeSeconds + songTimeOffsetSeconds <= firstNoteStart + 0.05
+        }
 }
 
 enum class PlayPhase {
