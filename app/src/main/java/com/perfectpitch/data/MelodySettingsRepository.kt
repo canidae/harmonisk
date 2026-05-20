@@ -30,7 +30,8 @@ class MelodySettingsRepository(
         val allowWrongNotes: Boolean = false,
         val tempoMultiplier: Float = 1.0f,
         val transposeSemitones: Int = 0,
-        val playMelodyAudio: Boolean = false
+        val playMelodyAudio: Boolean = false,
+        val fallSpeedPxPerSec: Float = 150f
     )
 
     private val allSettingsFlow: Flow<Map<String, MelodySettings>> =
@@ -64,7 +65,8 @@ class MelodySettingsRepository(
                     allowWrongNotes = obj.optBoolean("allowWrongNotes", false),
                     tempoMultiplier = obj.optDouble("tempoMultiplier", 1.0).toFloat(),
                     transposeSemitones = obj.optInt("transposeSemitones", 0),
-                    playMelodyAudio = obj.optBoolean("playMelodyAudio", false)
+                    playMelodyAudio = obj.optBoolean("playMelodyAudio", false),
+                    fallSpeedPxPerSec = obj.optDouble("fallSpeedPxPerSec", 150.0).toFloat()
                 )
             }
             map
@@ -82,6 +84,7 @@ class MelodySettingsRepository(
             obj.put("tempoMultiplier", settings.tempoMultiplier.toDouble())
             obj.put("transposeSemitones", settings.transposeSemitones)
             obj.put("playMelodyAudio", settings.playMelodyAudio)
+            obj.put("fallSpeedPxPerSec", settings.fallSpeedPxPerSec.toDouble())
             root.put(id, obj)
         }
         return root.toString()

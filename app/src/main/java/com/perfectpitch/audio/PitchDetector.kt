@@ -81,17 +81,6 @@ class PitchDetector {
 
         if (tauEstimate == -1) return PitchDetectionResult.NONE
 
-        // Octave-error correction: YIN's "first valley" approach can latch onto a harmonic
-        // instead of the true fundamental for instruments with a weak fundamental (cello,
-        // bassoon, oboe). Check if τ×2 (one octave lower) also passes the threshold.
-        // If so, prefer it — it is the true fundamental.
-        val tauOctaveDown = tauEstimate * 2
-        if (tauOctaveDown <= tauMax && yinBuffer[tauOctaveDown] < threshold) {
-            var tDown = tauOctaveDown
-            while (tDown + 1 <= tauMax && yinBuffer[tDown + 1] < yinBuffer[tDown]) tDown++
-            tauEstimate = tDown
-        }
-
         val betterTau = parabolicInterpolation(yinBuffer, tauEstimate)
         val frequency = if (betterTau > 0f) sampleRate / betterTau else -1f
         if (frequency <= 0f) return PitchDetectionResult.NONE

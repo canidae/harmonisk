@@ -3,23 +3,37 @@ package com.perfectpitch.ui.freeplay
 import com.perfectpitch.music.PitchResult
 import com.perfectpitch.ui.components.PitchFrame
 
+enum class NoteEditMode { NONE, EDIT }
+
 data class FreePlayState(
     val pitchResult: PitchResult = PitchResult.SILENT,
     val isListening: Boolean = false,
     val playedNotes: List<PlayedNote> = emptyList(),
     val activeNote: PlayedNote? = null,
-    // Auto-expanding range based on notes played
     val detectedMinMidi: Int = 60,
     val detectedMaxMidi: Int = 72,
-    // View controls (user-adjustable via gestures)
     val viewMinMidi: Float = 60f,
     val viewMaxMidi: Float = 72f,
     val fallSpeedPxPerSec: Float = 150f,
     val timeOffsetMs: Long = 0,
-    // When false, time only advances while a note is being detected
     val timeProgressionEnabled: Boolean = true,
-    // Continuous pitch trace independent of note bars
-    val pitchTrace: List<PitchFrame> = emptyList()
+    val pitchTrace: List<PitchFrame> = emptyList(),
+    val beatsPerBar: Int = 4,
+    val bpm: Float = 120f,
+    val minNoteDivision: Int = 16,
+    val snapEnabled: Boolean = true,
+    // Time base for session-relative bar numbers and loop positions.
+    // All bar/loop calculations use (virtualNowMs - sessionStartMs) to avoid
+    // the Unix-epoch offset making bar numbers enormous.
+    val sessionStartMs: Long = 0L,
+    val activeVoiceIndex: Int = 0,
+    val voiceCount: Int = 1,
+    val loopStartBar: Int? = null,
+    val loopEndBar: Int? = null,
+    val isLooping: Boolean = false,
+    val editMode: NoteEditMode = NoteEditMode.NONE,
+    val selectedNoteId: String? = null,
+    val undoStack: List<List<PlayedNote>> = emptyList()
 )
 
 data class PlayedNote(
@@ -29,11 +43,12 @@ data class PlayedNote(
     val startTimeMs: Long,
     val endTimeMs: Long? = null,
     val averageCentsOff: Float = 0f,
-    val centsHistory: List<Float> = emptyList()
+    val centsHistory: List<Float> = emptyList(),
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val voiceIndex: Int = 0
 ) {
     val isActive: Boolean get() = endTimeMs == null
 
     val durationMs: Long
         get() = (endTimeMs ?: System.currentTimeMillis()) - startTimeMs
 }
-

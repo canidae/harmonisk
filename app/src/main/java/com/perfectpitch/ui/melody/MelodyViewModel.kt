@@ -168,7 +168,8 @@ class MelodyViewModel @Inject constructor(
                             waitMode = saved.waitMode,
                             allowWrongNotes = saved.allowWrongNotes,
                             tempoMultiplier = saved.tempoMultiplier,
-                            playMelodyAudio = saved.playMelodyAudio
+                            playMelodyAudio = saved.playMelodyAudio,
+                            fallSpeedPxPerSec = saved.fallSpeedPxPerSec
                         )
                     }
                     if (saved.transposeSemitones != 0) {
@@ -216,7 +217,7 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun setTranspose(semitones: Int) {
-        val clamped = semitones.coerceIn(-36, 36)
+        val clamped = semitones.coerceIn(-24, 24)
         val base = originalMelodyTrack ?: return
         val transposed = base.transpose(clamped)
         val (viewMin, viewMax) = viewRangeFor(transposed)
@@ -248,7 +249,8 @@ class MelodyViewModel @Inject constructor(
                 allowWrongNotes = s.allowWrongNotes,
                 tempoMultiplier = s.tempoMultiplier,
                 transposeSemitones = s.transposeSemitones,
-                playMelodyAudio = s.playMelodyAudio
+                playMelodyAudio = s.playMelodyAudio,
+                fallSpeedPxPerSec = s.fallSpeedPxPerSec
             ))
         }
     }
@@ -351,7 +353,7 @@ class MelodyViewModel @Inject constructor(
         pauseOffset = _state.value.currentTimeSeconds
         playbackJob?.cancel()
         pitchJob?.cancel()
-        // Let currently playing notes finish naturally (no allNotesOff)
+        melodyPlayer.resetGameSync()
         wasWaitingForNote = isWaitingForNote
         isWaitingForNote = false
         _state.update { it.copy(phase = PlayPhase.PAUSED, isListening = false) }
@@ -400,6 +402,7 @@ class MelodyViewModel @Inject constructor(
                 .coerceIn(MIN_FALL_SPEED, MAX_FALL_SPEED)
             current.copy(fallSpeedPxPerSec = newSpeed)
         }
+        saveMelodySettings()
     }
 
     fun onVerticalScroll(deltaSeconds: Double) {
@@ -683,18 +686,14 @@ class MelodyViewModel @Inject constructor(
         val noteScores = _state.value.noteScores
         val melodyScore = scoringEngine.calculateMelodyScore(noteScores)
 
-        // Auto-zoom to fit entire melody and scroll to beginning
+        // Scroll to beginning without changing zoom level
         val firstNoteStart = track.notes.firstOrNull()?.let { track.noteStartSeconds(it) } ?: 0.0
-        val songDuration = track.durationSeconds
-        val fitSpeed = if (songDuration > 0) (700.0 / songDuration).toFloat() else MIN_FALL_SPEED
-        val clampedSpeed = fitSpeed.coerceIn(MIN_FALL_SPEED, MAX_FALL_SPEED)
 
         _state.update {
             it.copy(
                 phase = PlayPhase.FINISHED,
                 melodyScore = melodyScore,
                 isListening = false,
-                fallSpeedPxPerSec = clampedSpeed,
                 songTimeOffsetSeconds = firstNoteStart - it.currentTimeSeconds
             )
         }

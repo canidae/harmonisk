@@ -142,6 +142,25 @@ fun MelodyPlayScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
+                // Tempo / time signature chip (top-left)
+                val currentTick = track.secondsToTick(state.currentTimeSeconds.coerceAtLeast(0.0))
+                val currentBpm = track.bpmAt(currentTick).roundToInt()
+                val currentTimeSig = track.timeSignatureAt(currentTick)
+                Surface(
+                    color = Color(0xCC1A1A2E),
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(start = 8.dp, top = 8.dp)
+                ) {
+                    Text(
+                        text = "$currentBpm BPM  ${currentTimeSig.numerator}/${currentTimeSig.denominator}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+
                 if (state.phase == PlayPhase.COUNTDOWN) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -285,8 +304,8 @@ fun MelodyPlayScreen(
                             Slider(
                                 value = state.transposeSemitones.toFloat(),
                                 onValueChange = { viewModel.setTranspose(it.toInt()) },
-                                valueRange = -36f..36f,
-                                steps = 71,
+                                valueRange = -24f..24f,
+                                steps = 47,
                                 modifier = Modifier.padding(horizontal = 16.dp)
                             )
                             HorizontalDivider()
