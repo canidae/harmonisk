@@ -95,6 +95,13 @@ fun FreePlayScreen(
     val loopStartMs = state.loopStartBar?.let { (state.sessionStartMs + it * barMs).toLong() }
     val loopEndMs   = state.loopEndBar?.let   { (state.sessionStartMs + it * barMs).toLong() }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        viewModel.warnings.collect { msg ->
+            snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Long)
+        }
+    }
+
     // File pickers
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("audio/midi")
@@ -248,7 +255,8 @@ fun FreePlayScreen(
                     loopStartMs = if (state.isLooping || state.loopStartBar != null) loopStartMs else null,
                     loopEndMs = if (state.isLooping || state.loopEndBar != null) loopEndMs else null,
                     selectedNoteId = state.selectedNoteId,
-                    editMode = state.editMode
+                    editMode = state.editMode,
+                    replayMode = state.replayMode
                 ),
                 pianoAtBottom = false,
                 viewMinMidi = state.viewMinMidi,
@@ -648,5 +656,10 @@ fun FreePlayScreen(
                 )
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
