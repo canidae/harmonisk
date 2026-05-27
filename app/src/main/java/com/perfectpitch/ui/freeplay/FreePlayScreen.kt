@@ -16,7 +16,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.FileOpen
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Loop
 import androidx.compose.material.icons.filled.Settings
@@ -220,8 +224,9 @@ fun FreePlayScreen(
                 }
             }
     ) {
-        RequireMicPermission {
+        RequireMicPermission(skip = state.midiInputEnabled) {
             LaunchedEffect(Unit) {
+                viewModel.initSynthesizer(context)
                 viewModel.startListening()
             }
 
@@ -498,6 +503,80 @@ fun FreePlayScreen(
                         Icons.AutoMirrored.Filled.Undo,
                         contentDescription = "Undo",
                         tint = OVERLAY_ICON_TINT,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // MIDI input source chip
+            if (state.midiAvailable) {
+                IconButton(
+                    onClick = { viewModel.toggleMidiInput() },
+                    modifier = Modifier
+                        .size(OVERLAY_BUTTON_SIZE)
+                        .background(
+                            if (state.midiInputEnabled) Color(0xFF7E57C2).copy(alpha = 0.4f) else OVERLAY_BG,
+                            CircleShape
+                        )
+                        .then(
+                            if (state.midiInputEnabled) Modifier.border(1.dp, Color(0xFF7E57C2), CircleShape)
+                            else Modifier
+                        )
+                ) {
+                    Icon(
+                        if (state.midiInputEnabled) Icons.Filled.MusicNote else Icons.Filled.Mic,
+                        contentDescription = if (state.midiInputEnabled) "MIDI input (tap for mic)" else "Mic input (tap for MIDI)",
+                        tint = if (state.midiInputEnabled) Color(0xFF7E57C2) else OVERLAY_ICON_TINT,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // MIDI output / replay button
+            if (state.midiAvailable || state.playedNotes.isNotEmpty()) {
+                IconButton(
+                    onClick = {
+                        if (state.isReplaying) viewModel.stopReplay() else viewModel.replayNotes()
+                    },
+                    modifier = Modifier
+                        .size(OVERLAY_BUTTON_SIZE)
+                        .background(
+                            if (state.isReplaying) Color(0xFF26A69A).copy(alpha = 0.4f) else OVERLAY_BG,
+                            CircleShape
+                        )
+                        .then(
+                            if (state.isReplaying) Modifier.border(1.dp, Color(0xFF26A69A), CircleShape)
+                            else Modifier
+                        )
+                ) {
+                    Icon(
+                        if (state.isReplaying) Icons.Filled.Stop else Icons.Filled.PlayArrow,
+                        contentDescription = if (state.isReplaying) "Stop replay" else "Replay notes",
+                        tint = if (state.isReplaying) Color(0xFF26A69A) else OVERLAY_ICON_TINT,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // MIDI output toggle (only when device available)
+            if (state.midiAvailable) {
+                IconButton(
+                    onClick = { viewModel.toggleMidiOutput() },
+                    modifier = Modifier
+                        .size(OVERLAY_BUTTON_SIZE)
+                        .background(
+                            if (state.midiOutputEnabled) Color(0xFF7E57C2).copy(alpha = 0.4f) else OVERLAY_BG,
+                            CircleShape
+                        )
+                        .then(
+                            if (state.midiOutputEnabled) Modifier.border(1.dp, Color(0xFF7E57C2), CircleShape)
+                            else Modifier
+                        )
+                ) {
+                    Icon(
+                        Icons.Filled.MusicNote,
+                        contentDescription = if (state.midiOutputEnabled) "MIDI output on" else "MIDI output off",
+                        tint = if (state.midiOutputEnabled) Color(0xFF7E57C2) else OVERLAY_ICON_TINT,
                         modifier = Modifier.size(20.dp)
                     )
                 }

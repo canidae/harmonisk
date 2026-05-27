@@ -16,8 +16,13 @@ import android.content.pm.PackageManager
 
 @Composable
 fun RequireMicPermission(
+    skip: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    if (skip) {
+        content()
+        return
+    }
     val context = LocalContext.current
     var hasPermission by remember {
         mutableStateOf(

@@ -6,12 +6,17 @@ import androidx.lifecycle.viewModelScope
 import com.perfectpitch.audio.AudioDeviceMonitor
 import com.perfectpitch.audio.MelodyPlayer
 import com.perfectpitch.audio.MelodySynthesizer
+import com.perfectpitch.audio.NotePlayer
 import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.AudioDelayRepository
 import com.perfectpitch.data.MelodyRepository
 import com.perfectpitch.data.MelodySettingsRepository
 import com.perfectpitch.data.SettingsRepository
 import com.perfectpitch.midi.MelodyTrack
+import com.perfectpitch.midi.MidiDeviceManager
+import com.perfectpitch.midi.MidiInputReceiver
+import com.perfectpitch.midi.MidiNoteEvent
+import com.perfectpitch.midi.MidiOutputSender
 import com.perfectpitch.music.*
 import com.perfectpitch.ui.components.PitchFrame
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,7 +36,10 @@ class MelodyViewModel @Inject constructor(
     private val melodySynthesizer: MelodySynthesizer,
     private val melodyPlayer: MelodyPlayer,
     private val audioDelayRepository: AudioDelayRepository,
-    private val audioDeviceMonitor: AudioDeviceMonitor
+    private val audioDeviceMonitor: AudioDeviceMonitor,
+    private val midiDeviceManager: MidiDeviceManager,
+    private val midiInputReceiver: MidiInputReceiver,
+    private val midiOutputSender: MidiOutputSender
 ) : ViewModel() {
 
     companion object {
@@ -91,6 +99,26 @@ class MelodyViewModel @Inject constructor(
                 audioInputDelayMs = delayMs
             }
         }
+        // Observe MIDI availability
+        viewModelScope.launch {
+            midiDeviceManager.isMidiInputAvailable.collect { available ->
+                _state.update { it.copy(midiAvailable = available) }
+            }
+        }
+        // Observe effective MIDI input enabled state
+        viewModelScope.launch {
+            midiDeviceManager.effectiveMidiInputEnabled.collect { enabled ->
+                _state.update { it.copy(midiInputEnabled = enabled) }
+            }
+        }
+        // Observe effective MIDI output enabled state — switch NotePlayer accordingly
+        viewModelScope.launch {
+            midiDeviceManager.effectiveMidiOutputEnabled.collect { enabled ->
+                _state.update { it.copy(midiOutputEnabled = enabled) }
+                val player: NotePlayer = if (enabled && midiOutputSender.isReady) midiOutputSender else melodySynthesizer
+                melodyPlayer.setNotePlayer(player)
+            }
+        }
     }
 
     val continuousPitchLine: StateFlow<Boolean> = settingsRepository.settings
@@ -131,6 +159,29 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun shouldShowCalibrationPrompt(): Boolean = !calibrationPromptDismissed
+
+    fun toggleMidiInput() {
+        val current = midiDeviceManager.inputOverride.value
+        val effective = _state.value.midiInputEnabled
+        // If currently auto-enabled, force off; if off (auto or forced), force on; if force-on, return to auto
+        val newOverride: Boolean? = when {
+            current == true -> null  // force-on → back to auto
+            effective -> false       // auto-on → force off
+            else -> true             // off → force on
+        }
+        midiDeviceManager.setInputOverride(newOverride)
+    }
+
+    fun toggleMidiOutput() {
+        val current = midiDeviceManager.outputOverride.value
+        val effective = _state.value.midiOutputEnabled
+        val newOverride: Boolean? = when {
+            current == true -> null
+            effective -> false
+            else -> true
+        }
+        midiDeviceManager.setOutputOverride(newOverride)
+    }
 
     fun saveSplitPercent(percent: Float) {
         val outputDevice = audioDeviceMonitor.currentDevice.value
@@ -482,14 +533,54 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
+    private fun pitchResultFromMidi(midiNote: Int): PitchResult {
+        val noteIndex = ((midiNote % 12) + 12) % 12
+        val octave = (midiNote / 12) - 1
+        return PitchResult(
+            frequency = noteUtils.midiToFrequency(midiNote),
+            noteName = NoteUtils.NOTE_NAMES[noteIndex],
+            octave = octave,
+            centsOff = 0f,
+            midiNoteNumber = midiNote,
+            confidence = 1.0f,
+            rmsDb = -20f,
+            isSilent = false
+        )
+    }
+
     private fun startPitchDetection() {
         pitchJob = viewModelScope.launch {
             _state.update { it.copy(isListening = true) }
-            pitchProcessor.pitchFlow().collect { result ->
-                _state.update { it.copy(pitchResult = result) }
-                if (result.isValid) {
-                    recordPitchFrame(result)
-                    evaluateNote(result)
+            if (_state.value.midiInputEnabled) {
+                // MIDI input: convert note events to PitchResult
+                val heldNotes = mutableSetOf<Int>()
+                midiInputReceiver.midiEventFlow().collect { event ->
+                    when (event) {
+                        is MidiNoteEvent.NoteOn -> {
+                            heldNotes.add(event.midiNote)
+                            val result = pitchResultFromMidi(event.midiNote)
+                            _state.update { it.copy(pitchResult = result) }
+                            recordPitchFrame(result)
+                            evaluateNote(result)
+                        }
+                        is MidiNoteEvent.NoteOff -> {
+                            heldNotes.remove(event.midiNote)
+                            if (heldNotes.isEmpty()) {
+                                _state.update { it.copy(pitchResult = PitchResult.SILENT) }
+                            } else {
+                                val result = pitchResultFromMidi(heldNotes.last())
+                                _state.update { it.copy(pitchResult = result) }
+                            }
+                        }
+                    }
+                }
+            } else {
+                pitchProcessor.pitchFlow().collect { result ->
+                    _state.update { it.copy(pitchResult = result) }
+                    if (result.isValid) {
+                        recordPitchFrame(result)
+                        evaluateNote(result)
+                    }
                 }
             }
         }

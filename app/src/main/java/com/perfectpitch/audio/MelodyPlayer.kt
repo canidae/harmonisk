@@ -6,10 +6,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** Plays a [MelodyTrack] through a [MelodySynthesizer] in standalone or game-synced mode. */
+/** Plays a [MelodyTrack] through a [NotePlayer] in standalone or game-synced mode. */
 class MelodyPlayer(
     private val synthesizer: MelodySynthesizer
 ) {
+    @Volatile private var notePlayer: NotePlayer = synthesizer
     private var playJob: Job? = null
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
@@ -17,6 +18,15 @@ class MelodyPlayer(
     private var lastNoteOnIndex: Int = -1
     private var lastNoteOnMidi: Int = -1
     private var audioOutputDelayMs: Long = 0L
+
+    /**
+     * Switch the backend at runtime. Silences the current player before switching.
+     * Used to toggle between internal synthesizer and MIDI device output.
+     */
+    fun setNotePlayer(player: NotePlayer) {
+        notePlayer.allNotesOff()
+        notePlayer = player
+    }
 
     /** Plays a melody with absolute timing. More accurate than sequential playback. */
     fun playWithTiming(
@@ -47,11 +57,11 @@ class MelodyPlayer(
                     if (!isActive) break
                     val waitMs = startTimeMs + event.timeMs - System.currentTimeMillis()
                     if (waitMs > 0) delay(waitMs)
-                    if (event.isOn) synthesizer.noteOn(0, event.noteNumber, event.velocity)
-                    else synthesizer.noteOff(0, event.noteNumber)
+                    if (event.isOn) notePlayer.noteOn(0, event.noteNumber, event.velocity)
+                    else notePlayer.noteOff(0, event.noteNumber)
                 }
             } finally {
-                synthesizer.allNotesOff()
+                notePlayer.allNotesOff()
                 _isPlaying.value = false
             }
         }
@@ -62,7 +72,7 @@ class MelodyPlayer(
      * Fires notes ahead by [audioOutputDelayMs] to compensate for speaker latency.
      */
     fun updateGameTime(gameTimeSeconds: Double, track: MelodyTrack) {
-        if (!synthesizer.isReady) return
+        if (!notePlayer.isReady) return
 
         val effectiveTime = gameTimeSeconds + audioOutputDelayMs / 1000.0
         val noteIndex = track.notes.indexOfFirst { note ->
@@ -71,13 +81,13 @@ class MelodyPlayer(
         }
 
         if (noteIndex >= 0 && noteIndex != lastNoteOnIndex) {
-            if (lastNoteOnMidi >= 0) synthesizer.noteOff(0, lastNoteOnMidi)
+            if (lastNoteOnMidi >= 0) notePlayer.noteOff(0, lastNoteOnMidi)
             val note = track.notes[noteIndex]
-            synthesizer.noteOn(0, note.noteNumber, note.velocity.coerceIn(1, 127))
+            notePlayer.noteOn(0, note.noteNumber, note.velocity.coerceIn(1, 127))
             lastNoteOnIndex = noteIndex
             lastNoteOnMidi = note.noteNumber
         } else if (noteIndex < 0 && lastNoteOnMidi >= 0) {
-            synthesizer.noteOff(0, lastNoteOnMidi)
+            notePlayer.noteOff(0, lastNoteOnMidi)
             lastNoteOnIndex = -1
             lastNoteOnMidi = -1
         }
@@ -93,13 +103,12 @@ class MelodyPlayer(
         _isPlaying.value = false
         lastNoteOnIndex = -1
         lastNoteOnMidi = -1
-        if (synthesizer.isReady) synthesizer.allNotesOff()
+        if (notePlayer.isReady) notePlayer.allNotesOff()
     }
 
     fun resetGameSync() {
         lastNoteOnIndex = -1
         lastNoteOnMidi = -1
-        if (synthesizer.isReady) synthesizer.allNotesOff()
+        if (notePlayer.isReady) notePlayer.allNotesOff()
     }
 }
-

@@ -5,9 +5,15 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.perfectpitch.audio.MelodySynthesizer
+import com.perfectpitch.audio.NotePlayer
 import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.SettingsRepository
+import com.perfectpitch.midi.MidiDeviceManager
 import com.perfectpitch.midi.MidiImporter
+import com.perfectpitch.midi.MidiInputReceiver
+import com.perfectpitch.midi.MidiNoteEvent
+import com.perfectpitch.midi.MidiOutputSender
 import com.perfectpitch.midi.MidiWriter
 import com.perfectpitch.music.NoteUtils
 import com.perfectpitch.music.PitchResult
@@ -15,6 +21,7 @@ import com.perfectpitch.ui.components.PitchFrame
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -24,7 +31,11 @@ import kotlin.math.min
 @HiltViewModel
 class FreePlayViewModel @Inject constructor(
     private val pitchProcessor: PitchProcessor,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val midiDeviceManager: MidiDeviceManager,
+    private val midiInputReceiver: MidiInputReceiver,
+    private val midiOutputSender: MidiOutputSender,
+    private val melodySynthesizer: MelodySynthesizer
 ) : ViewModel() {
 
     companion object {
@@ -51,6 +62,11 @@ class FreePlayViewModel @Inject constructor(
     val state: StateFlow<FreePlayState> = _state.asStateFlow()
 
     private var listeningJob: Job? = null
+    private var midiListeningJob: Job? = null
+    private var replayJob: Job? = null
+    private var synthOpenJob: Job? = null
+
+    // Mic input tracking
     private var currentNoteMidi: Int? = null
     private var currentNoteStartMs: Long = 0L
     private var centsSamples = mutableListOf<Float>()
@@ -58,6 +74,9 @@ class FreePlayViewModel @Inject constructor(
     private var candidateNoteCount: Int = 0
     private var lastRealTimeMs: Long = virtualNowMs
     private var lastFinalizedNoteEndMs: Long = 0L
+
+    // MIDI input tracking (polyphonic: key = MIDI note number, value = active PlayedNote)
+    private val activeMidiNotes = mutableMapOf<Int, PlayedNote>()
 
     // Edit state
     private var editingNoteIdForUndo: String? = null
@@ -84,6 +103,51 @@ class FreePlayViewModel @Inject constructor(
                 }
             }
         }
+        // Observe MIDI device availability and switch input source automatically
+        viewModelScope.launch {
+            combine(
+                midiDeviceManager.effectiveMidiInputEnabled,
+                midiDeviceManager.effectiveMidiOutputEnabled,
+                midiDeviceManager.isMidiInputAvailable
+            ) { inputEnabled, outputEnabled, available ->
+                Triple(inputEnabled, outputEnabled, available)
+            }.collect { (inputEnabled, outputEnabled, available) ->
+                val wasListening = _state.value.isListening
+                _state.update {
+                    it.copy(
+                        midiAvailable = available,
+                        midiInputEnabled = inputEnabled,
+                        midiOutputEnabled = outputEnabled
+                    )
+                }
+                // Re-start listening with the correct source if already active
+                if (wasListening) {
+                    stopListeningInternal()
+                    startListeningInternal()
+                }
+            }
+        }
+    }
+
+    /** Open the synthesizer for replay fallback. Call from the Composable where context is available. */
+    fun initSynthesizer(context: Context) {
+        if (melodySynthesizer.isReady || synthOpenJob?.isActive == true) return
+        synthOpenJob = viewModelScope.launch {
+            try { melodySynthesizer.open(context) } catch (_: Exception) {}
+        }
+    }
+
+    fun toggleMidiInput() {
+        val current = midiDeviceManager.inputOverride.value
+        val effective = _state.value.midiInputEnabled
+        // Cycle: auto → forced opposite → auto
+        midiDeviceManager.setInputOverride(if (current == null) !effective else null)
+    }
+
+    fun toggleMidiOutput() {
+        val current = midiDeviceManager.outputOverride.value
+        val effective = _state.value.midiOutputEnabled
+        midiDeviceManager.setOutputOverride(if (current == null) !effective else null)
     }
 
     val continuousPitchLine: StateFlow<Boolean> = settingsRepository.settings
@@ -93,7 +157,7 @@ class FreePlayViewModel @Inject constructor(
     fun getEffectiveTime(realTimeMs: Long): Long {
         val delta = (realTimeMs - lastRealTimeMs).coerceAtLeast(0L)
         lastRealTimeMs = realTimeMs
-        val shouldAdvance = _state.value.timeProgressionEnabled || currentNoteMidi != null
+        val shouldAdvance = _state.value.timeProgressionEnabled || currentNoteMidi != null || activeMidiNotes.isNotEmpty()
         if (shouldAdvance) {
             virtualNowMs += delta
             val s = _state.value
@@ -111,18 +175,46 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun startListening() {
-        if (listeningJob?.isActive == true) return
+        if (listeningJob?.isActive == true || midiListeningJob?.isActive == true) return
         _state.update { it.copy(isListening = true) }
-        listeningJob = viewModelScope.launch {
-            pitchProcessor.pitchFlow().collect { result ->
-                processResult(result)
+        startListeningInternal()
+    }
+
+    private fun startListeningInternal() {
+        if (_state.value.midiInputEnabled) {
+            midiListeningJob = viewModelScope.launch {
+                midiInputReceiver.midiEventFlow().collect { event ->
+                    processMidiEvent(event)
+                }
+            }
+        } else {
+            listeningJob = viewModelScope.launch {
+                pitchProcessor.pitchFlow().collect { result ->
+                    processResult(result)
+                }
             }
         }
     }
 
-    fun stopListening() {
+    private fun stopListeningInternal() {
         listeningJob?.cancel()
         listeningJob = null
+        midiListeningJob?.cancel()
+        midiListeningJob = null
+        // Finalize any open MIDI notes
+        activeMidiNotes.values.forEach { note ->
+            val finalized = note.copy(endTimeMs = virtualNowMs)
+            _state.update { current ->
+                current.copy(
+                    playedNotes = current.playedNotes.map { if (it.id == note.id) finalized else it }
+                )
+            }
+        }
+        activeMidiNotes.clear()
+    }
+
+    fun stopListening() {
+        stopListeningInternal()
         finalizeCurrentNote()
         candidateNoteMidi = null
         candidateNoteCount = 0
@@ -397,7 +489,10 @@ class FreePlayViewModel @Inject constructor(
                         snapEnabled = current.snapEnabled,
                         minNoteDivision = current.minNoteDivision,
                         viewMinMidi = viewMin,
-                        viewMaxMidi = viewMax
+                        viewMaxMidi = viewMax,
+                        midiAvailable = current.midiAvailable,
+                        midiInputEnabled = current.midiInputEnabled,
+                        midiOutputEnabled = current.midiOutputEnabled
                     )
                 }
             } catch (e: Exception) {
@@ -612,6 +707,128 @@ class FreePlayViewModel @Inject constructor(
         centsSamples.clear()
     }
 
+    /**
+     * Handles a MIDI note event from a connected device.
+     * NoteOn starts a [PlayedNote] (immediately added to playedNotes unfinalized).
+     * NoteOff finalizes it.
+     */
+    private fun processMidiEvent(event: MidiNoteEvent) {
+        when (event) {
+            is MidiNoteEvent.NoteOn -> {
+                val midiNote = event.midiNote
+                // Ignore duplicate note-on for an already-held note
+                if (activeMidiNotes.containsKey(midiNote)) return
+
+                val noteIndex = ((midiNote % 12) + 12) % 12
+                val octave = (midiNote / 12) - 1
+                val noteName = NoteUtils.NOTE_NAMES[noteIndex]
+                expandRange(midiNote)
+
+                val note = PlayedNote(
+                    noteName = noteName,
+                    octave = octave,
+                    midiNumber = midiNote,
+                    startTimeMs = virtualNowMs,
+                    voiceIndex = _state.value.activeVoiceIndex
+                )
+                activeMidiNotes[midiNote] = note
+                _state.update { current ->
+                    current.copy(
+                        playedNotes = current.playedNotes + note,
+                        activeNote = note
+                    )
+                }
+            }
+
+            is MidiNoteEvent.NoteOff -> {
+                val midiNote = event.midiNote
+                val activeNote = activeMidiNotes.remove(midiNote) ?: return
+                val endMs = virtualNowMs
+                val duration = endMs - activeNote.startTimeMs
+
+                if (duration < MIN_NOTE_DURATION_MS) {
+                    // Too short — discard
+                    _state.update { current ->
+                        current.copy(
+                            playedNotes = current.playedNotes.filter { it.id != activeNote.id },
+                            activeNote = activeMidiNotes.values.lastOrNull()
+                        )
+                    }
+                } else {
+                    val finalized = activeNote.copy(endTimeMs = endMs)
+                    _state.update { current ->
+                        current.copy(
+                            playedNotes = current.playedNotes.map {
+                                if (it.id == activeNote.id) finalized else it
+                            },
+                            activeNote = activeMidiNotes.values.lastOrNull()
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Replay all finalized [PlayedNote]s through MIDI output or internal synthesizer.
+     * Uses MIDI output when [FreePlayState.midiOutputEnabled] is true and the sender is ready;
+     * falls back to the internal synthesizer otherwise.
+     */
+    fun replayNotes() {
+        val notes = _state.value.playedNotes
+            .filter { it.endTimeMs != null }
+            .sortedBy { it.startTimeMs }
+        if (notes.isEmpty()) return
+
+        replayJob?.cancel()
+        _state.update { it.copy(isReplaying = true) }
+
+        replayJob = viewModelScope.launch {
+            val job = this.coroutineContext[kotlinx.coroutines.Job]!!
+            val player: NotePlayer = if (_state.value.midiOutputEnabled && midiOutputSender.isReady) {
+                midiOutputSender
+            } else {
+                melodySynthesizer
+            }
+            if (!player.isReady) {
+                _state.update { it.copy(isReplaying = false) }
+                return@launch
+            }
+
+            data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean, val velocity: Int)
+
+            val firstMs = notes.first().startTimeMs
+            val events = notes.flatMap { note ->
+                listOf(
+                    Event(note.startTimeMs - firstMs, note.midiNumber, true, 80),
+                    Event(note.endTimeMs!! - firstMs, note.midiNumber, false, 0)
+                )
+            }.sortedBy { it.timeMs }
+
+            val startWall = System.currentTimeMillis()
+            for (ev in events) {
+                if (!job.isActive) break
+                val waitMs = startWall + ev.timeMs - System.currentTimeMillis()
+                if (waitMs > 0) delay(waitMs)
+                if (!job.isActive) break
+                if (ev.isOn) player.noteOn(0, ev.midiNote, ev.velocity)
+                else player.noteOff(0, ev.midiNote)
+            }
+
+            player.allNotesOff()
+            _state.update { it.copy(isReplaying = false) }
+        }
+    }
+
+    fun stopReplay() {
+        replayJob?.cancel()
+        replayJob = null
+        midiOutputSender.allNotesOff()
+        if (melodySynthesizer.isReady) melodySynthesizer.allNotesOff()
+        _state.update { it.copy(isReplaying = false) }
+    }
+
+
     private fun expandRange(midi: Int) {
         _state.update { current ->
             val newDetectedMin = min(current.detectedMinMidi, midi - RANGE_PADDING)
@@ -627,6 +844,8 @@ class FreePlayViewModel @Inject constructor(
         candidateNoteMidi = null
         candidateNoteCount = 0
         editingNoteIdForUndo = null
+        stopReplay()
+        activeMidiNotes.clear()
         val newBase = System.currentTimeMillis()
         sessionBaseMs = newBase
         virtualNowMs = newBase
@@ -640,7 +859,10 @@ class FreePlayViewModel @Inject constructor(
                 beatsPerBar = current.beatsPerBar,
                 bpm = current.bpm,
                 minNoteDivision = current.minNoteDivision,
-                snapEnabled = current.snapEnabled
+                snapEnabled = current.snapEnabled,
+                midiAvailable = current.midiAvailable,
+                midiInputEnabled = current.midiInputEnabled,
+                midiOutputEnabled = current.midiOutputEnabled
             )
         }
     }
@@ -648,5 +870,6 @@ class FreePlayViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         stopListening()
+        replayJob?.cancel()
     }
 }

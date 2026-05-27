@@ -14,7 +14,7 @@ import kotlin.math.sin
  * Supports polyphony (multiple simultaneous notes) and a simple ADSR envelope
  * to avoid clicks on note-on/off transitions.
  */
-class MelodySynthesizer {
+class MelodySynthesizer : NotePlayer {
 
     companion object {
         private const val TAG = "MelodySynthesizer"
@@ -33,7 +33,7 @@ class MelodySynthesizer {
     private val activeNotes = mutableMapOf<Int, NoteState>()
     private val noteLock = Any()
 
-    val isReady: Boolean get() = audioTrack != null && running
+    override val isReady: Boolean get() = audioTrack != null && running
 
     private data class NoteState(
         val frequency: Float,
@@ -92,7 +92,7 @@ class MelodySynthesizer {
         Log.d(TAG, "Sine wave synthesizer opened")
     }
 
-    fun noteOn(channel: Int, note: Int, velocity: Int) {
+    override fun noteOn(channel: Int, note: Int, velocity: Int) {
         val freq = midiToFrequency(note)
         val vel = (velocity.coerceIn(0, 127)) / 127f
         synchronized(noteLock) {
@@ -107,7 +107,7 @@ class MelodySynthesizer {
         }
     }
 
-    fun noteOff(channel: Int, note: Int) {
+    override fun noteOff(channel: Int, note: Int) {
         synchronized(noteLock) {
             activeNotes[note]?.let {
                 it.releasing = true
@@ -116,7 +116,7 @@ class MelodySynthesizer {
         }
     }
 
-    fun allNotesOff(channel: Int = 0) {
+    override fun allNotesOff() {
         synchronized(noteLock) {
             activeNotes.values.forEach {
                 it.releasing = true

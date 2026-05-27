@@ -2,11 +2,13 @@ package com.perfectpitch.ui.melody
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -91,7 +93,7 @@ fun MelodyPlayScreen(
         }
     }
 
-    RequireMicPermission {
+    RequireMicPermission(skip = state.midiInputEnabled) {
         Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
@@ -421,6 +423,56 @@ fun MelodyPlayScreen(
                                 Icons.Filled.Refresh,
                                 contentDescription = "Play Again",
                                 tint = OVERLAY_ICON_TINT,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    // MIDI input toggle (shown when device available)
+                    if (state.midiAvailable) {
+                        val isMidi = state.midiInputEnabled
+                        IconButton(
+                            onClick = { viewModel.toggleMidiInput() },
+                            modifier = Modifier
+                                .size(OVERLAY_BUTTON_SIZE)
+                                .background(
+                                    if (isMidi) Color(0xFF7E57C2).copy(alpha = 0.4f) else OVERLAY_BG,
+                                    CircleShape
+                                )
+                                .then(
+                                    if (isMidi) Modifier.border(1.dp, Color(0xFF7E57C2), CircleShape)
+                                    else Modifier
+                                )
+                        ) {
+                            Icon(
+                                if (isMidi) Icons.Filled.MusicNote else Icons.Filled.Mic,
+                                contentDescription = if (isMidi) "MIDI input active" else "Mic input active",
+                                tint = if (isMidi) Color(0xFF7E57C2) else OVERLAY_ICON_TINT,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    // MIDI output toggle (shown when device available)
+                    if (state.midiAvailable) {
+                        val isMidi = state.midiOutputEnabled
+                        IconButton(
+                            onClick = { viewModel.toggleMidiOutput() },
+                            modifier = Modifier
+                                .size(OVERLAY_BUTTON_SIZE)
+                                .background(
+                                    if (isMidi) Color(0xFF7E57C2).copy(alpha = 0.4f) else OVERLAY_BG,
+                                    CircleShape
+                                )
+                                .then(
+                                    if (isMidi) Modifier.border(1.dp, Color(0xFF7E57C2), CircleShape)
+                                    else Modifier
+                                )
+                        ) {
+                            Icon(
+                                Icons.Filled.MusicNote,
+                                contentDescription = if (isMidi) "MIDI output active" else "MIDI output off",
+                                tint = if (isMidi) Color(0xFF7E57C2) else OVERLAY_ICON_TINT,
                                 modifier = Modifier.size(20.dp)
                             )
                         }

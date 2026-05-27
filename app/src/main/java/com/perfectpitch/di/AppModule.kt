@@ -11,6 +11,9 @@ import com.perfectpitch.data.AudioDelayRepository
 import com.perfectpitch.data.MelodyRepository
 import com.perfectpitch.data.MelodySettingsRepository
 import com.perfectpitch.data.SettingsRepository
+import com.perfectpitch.midi.MidiDeviceManager
+import com.perfectpitch.midi.MidiInputReceiver
+import com.perfectpitch.midi.MidiOutputSender
 import com.perfectpitch.music.NoteUtils
 import com.perfectpitch.music.ScoringEngine
 import dagger.Module
@@ -90,4 +93,24 @@ object AppModule {
     fun provideMelodyPlayer(
         synthesizer: MelodySynthesizer
     ): MelodyPlayer = MelodyPlayer(synthesizer)
+
+    @Provides
+    @Singleton
+    fun provideMidiDeviceManager(
+        @ApplicationContext context: Context
+    ): MidiDeviceManager = MidiDeviceManager(context)
+
+    @Provides
+    @Singleton
+    fun provideMidiInputReceiver(
+        @ApplicationContext context: Context,
+        midiDeviceManager: MidiDeviceManager
+    ): MidiInputReceiver = MidiInputReceiver(context, midiDeviceManager)
+
+    @Provides
+    @Singleton
+    fun provideMidiOutputSender(
+        @ApplicationContext context: Context,
+        midiDeviceManager: MidiDeviceManager
+    ): MidiOutputSender = MidiOutputSender(context, midiDeviceManager)
 }

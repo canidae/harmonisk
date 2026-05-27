@@ -29,7 +29,11 @@ data class MelodyPlayState(
     val viewMinMidi: Float = 60f,
     val viewMaxMidi: Float = 72f,
     // Continuous pitch trace recorded during playback
-    val pitchTrace: List<PitchFrame> = emptyList()
+    val pitchTrace: List<PitchFrame> = emptyList(),
+    // MIDI device state
+    val midiAvailable: Boolean = false,
+    val midiInputEnabled: Boolean = false,
+    val midiOutputEnabled: Boolean = false
 ) {
     /** Countdown display value derived from currentTimeSeconds (3, 2, 1) */
     val countdownValue: Int
