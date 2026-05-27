@@ -73,6 +73,7 @@ class FreePlayViewModel @Inject constructor(
     // Replay state flags
     private var replayControlsTime = false
     private var feedbackWarningShown = false
+    private var seekToMs: Long? = null
     val warnings = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1)
 
     // Mic input tracking
@@ -102,7 +103,6 @@ class FreePlayViewModel @Inject constructor(
             settingsRepository.settings.first().let { settings ->
                 _state.update {
                     it.copy(
-                        timeProgressionEnabled = settings.timeProgressionEnabled,
                         fallSpeedPxPerSec = settings.freeplayFallSpeed,
                         beatsPerBar = settings.freeplayBeatsPerBar,
                         bpm = settings.freeplayBpm,
@@ -167,19 +167,10 @@ class FreePlayViewModel @Inject constructor(
         val delta = (realTimeMs - lastRealTimeMs).coerceAtLeast(0L)
         lastRealTimeMs = realTimeMs
         if (replayControlsTime) return virtualNowMs
-        val shouldAdvance = _state.value.timeProgressionEnabled || currentNoteMidi != null || activeMidiNotes.isNotEmpty()
+        // Time advances when an active mic/MIDI note is detected
+        val shouldAdvance = currentNoteMidi != null || activeMidiNotes.isNotEmpty()
         if (shouldAdvance) {
             virtualNowMs += delta
-            val s = _state.value
-            if (s.isLooping && s.loopStartBar != null && s.loopEndBar != null) {
-                val barMs = s.beatsPerBar * (60000.0 / s.bpm)
-                // Loop positions are relative to sessionBaseMs
-                val lStartMs = sessionBaseMs + (s.loopStartBar * barMs).toLong()
-                val lEndMs   = sessionBaseMs + (s.loopEndBar   * barMs).toLong()
-                if (lEndMs > lStartMs && virtualNowMs >= lEndMs) {
-                    virtualNowMs = lStartMs + (virtualNowMs - lEndMs)
-                }
-            }
         }
         return virtualNowMs
     }
@@ -231,10 +222,8 @@ class FreePlayViewModel @Inject constructor(
         _state.update { it.copy(isListening = false, activeNote = null) }
     }
 
-    fun toggleTimeProgression() {
-        val newValue = !_state.value.timeProgressionEnabled
-        _state.update { it.copy(timeProgressionEnabled = newValue) }
-        viewModelScope.launch { settingsRepository.updateTimeProgressionEnabled(newValue) }
+    fun toggleRecording() {
+        _state.update { it.copy(isRecording = !it.isRecording) }
     }
 
     fun setBeatsPerBar(beats: Int) {
@@ -494,7 +483,6 @@ class FreePlayViewModel @Inject constructor(
                         bpm = importedBpm,
                         beatsPerBar = importedBeatsPerBar,
                         voiceCount = voiceCount,
-                        timeProgressionEnabled = current.timeProgressionEnabled,
                         fallSpeedPxPerSec = current.fallSpeedPxPerSec,
                         snapEnabled = current.snapEnabled,
                         minNoteDivision = current.minNoteDivision,
@@ -603,8 +591,17 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun onVerticalScroll(deltaMs: Long) {
-        _state.update { current ->
-            current.copy(timeOffsetMs = (current.timeOffsetMs + deltaMs).coerceAtLeast(0L))
+        if (deltaMs > 0L && _state.value.isReplaying) {
+            // Seek during playback: signal the replay coroutine to jump
+            seekToMs = (virtualNowMs - deltaMs).coerceAtLeast(sessionBaseMs)
+        } else {
+            _state.update { current ->
+                current.copy(timeOffsetMs = (current.timeOffsetMs + deltaMs).coerceAtLeast(0L))
+            }
+            // Auto-play when scrolling back and there are notes to play
+            if (deltaMs > 0L && !_state.value.isReplaying && _state.value.playedNotes.any { it.endTimeMs != null }) {
+                replayNotes()
+            }
         }
     }
 
@@ -632,26 +629,25 @@ class FreePlayViewModel @Inject constructor(
                 currentNoteMidi = midi
                 centsSamples.clear()
                 centsSamples.add(result.centsOff)
-                val noteStart = if (!_state.value.timeProgressionEnabled && wasInSilence && lastFinalizedNoteEndMs > 0L) {
-                    virtualNowMs = lastFinalizedNoteEndMs
-                    lastFinalizedNoteEndMs
-                } else {
-                    virtualNowMs
-                }
+                val noteStart = virtualNowMs
                 val snappedStart = if (_state.value.snapEnabled) snapToGrid(noteStart) else noteStart
                 currentNoteStartMs = snappedStart
                 expandRange(midi)
-                val note = PlayedNote(
-                    noteName = result.noteName,
-                    octave = result.octave,
-                    midiNumber = midi,
-                    startTimeMs = snappedStart,
-                    averageCentsOff = result.centsOff,
-                    centsHistory = listOf(result.centsOff),
-                    voiceIndex = _state.value.activeVoiceIndex
-                )
-                _state.update {
-                    it.copy(activeNote = note, pitchResult = result, pitchTrace = trimTrace(it.pitchTrace + traceFrame.copy(timeMs = snappedStart)))
+                if (_state.value.isRecording) {
+                    val note = PlayedNote(
+                        noteName = result.noteName,
+                        octave = result.octave,
+                        midiNumber = midi,
+                        startTimeMs = snappedStart,
+                        averageCentsOff = result.centsOff,
+                        centsHistory = listOf(result.centsOff),
+                        voiceIndex = _state.value.activeVoiceIndex
+                    )
+                    _state.update {
+                        it.copy(activeNote = note, pitchResult = result, pitchTrace = trimTrace(it.pitchTrace + traceFrame.copy(timeMs = snappedStart)))
+                    }
+                } else {
+                    _state.update { it.copy(pitchResult = result, pitchTrace = trimTrace(it.pitchTrace + traceFrame)) }
                 }
             } else {
                 candidateNoteMidi = null
@@ -723,6 +719,7 @@ class FreePlayViewModel @Inject constructor(
      * NoteOff finalizes it.
      */
     private fun processMidiEvent(event: MidiNoteEvent) {
+        val isRecording = _state.value.isRecording
         when (event) {
             is MidiNoteEvent.NoteOn -> {
                 val midiNote = event.midiNote
@@ -734,19 +731,32 @@ class FreePlayViewModel @Inject constructor(
                 val noteName = NoteUtils.NOTE_NAMES[noteIndex]
                 expandRange(midiNote)
 
-                val note = PlayedNote(
-                    noteName = noteName,
-                    octave = octave,
-                    midiNumber = midiNote,
-                    startTimeMs = virtualNowMs,
-                    voiceIndex = _state.value.activeVoiceIndex
-                )
-                activeMidiNotes[midiNote] = note
-                _state.update { current ->
-                    current.copy(
-                        playedNotes = current.playedNotes + note,
-                        activeNote = note
+                if (isRecording) {
+                    val note = PlayedNote(
+                        noteName = noteName,
+                        octave = octave,
+                        midiNumber = midiNote,
+                        startTimeMs = virtualNowMs,
+                        voiceIndex = _state.value.activeVoiceIndex
                     )
+                    activeMidiNotes[midiNote] = note
+                    _state.update { current ->
+                        current.copy(
+                            playedNotes = current.playedNotes + note,
+                            activeNote = note
+                        )
+                    }
+                } else {
+                    // Still track for activeNote display but don't write to score
+                    val note = PlayedNote(
+                        noteName = noteName,
+                        octave = octave,
+                        midiNumber = midiNote,
+                        startTimeMs = virtualNowMs,
+                        voiceIndex = _state.value.activeVoiceIndex
+                    )
+                    activeMidiNotes[midiNote] = note
+                    _state.update { it.copy(activeNote = note) }
                 }
             }
 
@@ -755,6 +765,11 @@ class FreePlayViewModel @Inject constructor(
                 val activeNote = activeMidiNotes.remove(midiNote) ?: return
                 val endMs = virtualNowMs
                 val duration = endMs - activeNote.startTimeMs
+
+                if (!isRecording) {
+                    _state.update { it.copy(activeNote = activeMidiNotes.values.lastOrNull()) }
+                    return
+                }
 
                 if (duration < MIN_NOTE_DURATION_MS) {
                     // Too short — discard
@@ -795,9 +810,21 @@ class FreePlayViewModel @Inject constructor(
             _state.update { it.copy(timeOffsetMs = 0) }
         }
 
-        val notes = _state.value.playedNotes
+        val allNotes = _state.value.playedNotes
             .filter { it.endTimeMs != null }
             .sortedBy { it.startTimeMs }
+
+        if (allNotes.isEmpty()) {
+            return
+        }
+
+        val firstNoteMs = allNotes.first().startTimeMs
+
+        // If all notes are in the past (or we're past the last note), rewind to start
+        val lastNoteEndMs = allNotes.maxOf { it.endTimeMs!! }
+        if (virtualNowMs >= lastNoteEndMs) {
+            virtualNowMs = firstNoteMs
+        }
 
         replayControlsTime = true
         _state.update { it.copy(isReplaying = true) }
@@ -815,7 +842,6 @@ class FreePlayViewModel @Inject constructor(
 
         replayJob = viewModelScope.launch {
             val job = coroutineContext[kotlinx.coroutines.Job]!!
-            val startTime = virtualNowMs
 
             val player: NotePlayer = if (_state.value.midiOutputEnabled && midiOutputSender.isReady) {
                 midiOutputSender
@@ -823,39 +849,68 @@ class FreePlayViewModel @Inject constructor(
                 melodySynthesizer
             }
 
+            val s = _state.value
+            val barMs = s.beatsPerBar * (60000.0 / s.bpm).toLong()
+            // Determine loop boundary: end-loop if set, else lastNoteEndMs + 4 bars
+            val loopEndMs = if (s.loopEndBar != null) {
+                sessionBaseMs + s.loopEndBar * barMs
+            } else {
+                lastNoteEndMs + 4 * barMs
+            }
+            val loopStartMs = if (s.loopStartBar != null) {
+                sessionBaseMs + s.loopStartBar * barMs
+            } else {
+                firstNoteMs
+            }
+
             data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean)
 
-            // Build events relative to startTime; fire NoteOn immediately for in-progress notes
-            val events = mutableListOf<Event>()
-            for (note in notes) {
-                val endMs = note.endTimeMs!!
-                if (endMs <= startTime) continue  // entirely in the past
-                val onTime = if (note.startTimeMs <= startTime) startTime else note.startTimeMs
-                events.add(Event(onTime, note.midiNumber, true))
-                events.add(Event(endMs, note.midiNumber, false))
-            }
-            events.sortBy { it.timeMs }
-
-            if (events.isEmpty()) {
-                replayControlsTime = false
-                lastRealTimeMs = System.currentTimeMillis()
-                _state.update { it.copy(isReplaying = false) }
-                return@launch
+            fun buildEvents(startTime: Long): List<Event> {
+                val evts = mutableListOf<Event>()
+                for (note in allNotes) {
+                    val endMs = note.endTimeMs!!
+                    if (endMs <= startTime) continue
+                    val onTime = if (note.startTimeMs <= startTime) startTime else note.startTimeMs
+                    evts.add(Event(onTime, note.midiNumber, true))
+                    evts.add(Event(endMs, note.midiNumber, false))
+                }
+                evts.sortBy { it.timeMs }
+                return evts
             }
 
-            val lastEventMs = events.last().timeMs
+            var events = buildEvents(virtualNowMs)
             var eventIndex = 0
             var lastWallMs = System.currentTimeMillis()
 
-            while (job.isActive && virtualNowMs <= lastEventMs + 500L) {
+            while (job.isActive) {
+                // Handle seek request from scroll
+                seekToMs?.let { target ->
+                    seekToMs = null
+                    player.allNotesOff()
+                    virtualNowMs = target.coerceAtLeast(firstNoteMs)
+                    events = buildEvents(virtualNowMs)
+                    eventIndex = 0
+                    lastWallMs = System.currentTimeMillis()
+                }
+
                 val wallNow = System.currentTimeMillis()
                 virtualNowMs += (wallNow - lastWallMs).coerceAtLeast(0L)
                 lastWallMs = wallNow
 
+                // Fire due events
                 while (eventIndex < events.size && events[eventIndex].timeMs <= virtualNowMs) {
                     val ev = events[eventIndex++]
                     if (ev.isOn) player.noteOn(0, ev.midiNote, 80)
                     else player.noteOff(0, ev.midiNote)
+                }
+
+                // Loop-at-end: reached loopEndMs or ran past last note by 4 bars
+                if (virtualNowMs >= loopEndMs) {
+                    player.allNotesOff()
+                    virtualNowMs = loopStartMs
+                    events = buildEvents(virtualNowMs)
+                    eventIndex = 0
+                    lastWallMs = System.currentTimeMillis()
                 }
 
                 delay(16L)
@@ -905,7 +960,6 @@ class FreePlayViewModel @Inject constructor(
             FreePlayState(
                 isListening = current.isListening,
                 sessionStartMs = newBase,
-                timeProgressionEnabled = current.timeProgressionEnabled,
                 fallSpeedPxPerSec = current.fallSpeedPxPerSec,
                 beatsPerBar = current.beatsPerBar,
                 bpm = current.bpm,

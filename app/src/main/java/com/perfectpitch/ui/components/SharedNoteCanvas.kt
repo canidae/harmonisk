@@ -222,6 +222,16 @@ fun SharedNoteCanvas(
         when (mode) {
             is CanvasMode.FreePlay -> {
                 drawBarLines(mode, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
+                // Piano drawn before notes so note bars visually pass through the piano strip
+                val slimHeight = SLIM_PIANO_HEIGHT_DP * density
+                drawCenteredPianoKeyboard(
+                    textMeasurer = textMeasurer,
+                    layout = layout,
+                    pianoHeight = slimHeight,
+                    minMidi = minMidi,
+                    maxMidi = maxMidi,
+                    centerY = pianoEdgeY
+                )
                 drawFreePlayNotes(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density, continuousPitchLine)
                 if (continuousPitchLine) {
                     val viewTimeMs = mode.currentTimeMs - mode.timeOffsetMs
@@ -240,18 +250,8 @@ fun SharedNoteCanvas(
             }
         }
 
-        // Draw piano keyboard
-        if (mode is CanvasMode.FreePlay) {
-            val slimHeight = SLIM_PIANO_HEIGHT_DP * density
-            drawCenteredPianoKeyboard(
-                textMeasurer = textMeasurer,
-                layout = layout,
-                pianoHeight = slimHeight,
-                minMidi = minMidi,
-                maxMidi = maxMidi,
-                centerY = pianoEdgeY
-            )
-        } else {
+        // Draw piano keyboard for non-FreePlay modes
+        if (mode !is CanvasMode.FreePlay) {
             drawPianoKeyboard(
                 textMeasurer = textMeasurer,
                 layout = layout,
@@ -281,10 +281,11 @@ private fun DrawScope.drawBarLines(
 
     val beatDurationMs = 60_000.0 / mode.bpm
 
-    val visibleTop = minOf(pianoEdgeY, canvasFarEdgeY)
-    val visibleBottom = maxOf(pianoEdgeY, canvasFarEdgeY)
+    // FreePlay always uses full canvas height (centered piano; both past and future visible)
+    val visibleTop = 0f
+    val visibleBottom = size.height
 
-    val visibleRangeMs = (visibleBottom - visibleTop) / pxPerMs
+    val visibleRangeMs = visibleBottom / pxPerMs
 
     // Draw loop region if active
     val loopStartMs = mode.loopStartMs

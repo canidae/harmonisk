@@ -14,10 +14,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Stop
@@ -313,18 +315,6 @@ fun FreePlayScreen(
                     offset = DpOffset((-180).dp, 0.dp)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Time progression") },
-                        trailingIcon = {
-                            Switch(
-                                checked = state.timeProgressionEnabled,
-                                onCheckedChange = { viewModel.toggleTimeProgression() },
-                                modifier = Modifier.height(20.dp)
-                            )
-                        },
-                        onClick = { viewModel.toggleTimeProgression() }
-                    )
-                    HorizontalDivider()
-                    DropdownMenuItem(
                         text = { Text("Tempo: ${state.bpm.roundToInt()} BPM") },
                         onClick = {}
                     )
@@ -539,7 +529,29 @@ fun FreePlayScreen(
                 }
             }
 
-            // MIDI output / replay button
+            // Record toggle button
+            IconButton(
+                onClick = { viewModel.toggleRecording() },
+                modifier = Modifier
+                    .size(OVERLAY_BUTTON_SIZE)
+                    .background(
+                        if (state.isRecording) Color(0xFFEF5350).copy(alpha = 0.4f) else OVERLAY_BG,
+                        CircleShape
+                    )
+                    .then(
+                        if (state.isRecording) Modifier.border(1.dp, Color(0xFFEF5350), CircleShape)
+                        else Modifier
+                    )
+            ) {
+                Icon(
+                    Icons.Filled.FiberManualRecord,
+                    contentDescription = if (state.isRecording) "Recording (tap to stop recording)" else "Not recording (tap to record)",
+                    tint = if (state.isRecording) Color(0xFFEF5350) else OVERLAY_ICON_TINT,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Play/Pause / replay button
             if (state.midiAvailable || state.playedNotes.isNotEmpty()) {
                 IconButton(
                     onClick = {
@@ -557,8 +569,8 @@ fun FreePlayScreen(
                         )
                 ) {
                     Icon(
-                        if (state.isReplaying) Icons.Filled.Stop else Icons.Filled.PlayArrow,
-                        contentDescription = if (state.isReplaying) "Stop replay" else "Replay notes",
+                        if (state.isReplaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = if (state.isReplaying) "Pause replay" else "Play notes",
                         tint = if (state.isReplaying) Color(0xFF26A69A) else OVERLAY_ICON_TINT,
                         modifier = Modifier.size(20.dp)
                     )

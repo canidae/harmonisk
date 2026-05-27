@@ -18,7 +18,6 @@ class SettingsRepository(
         val DARK_THEME = booleanPreferencesKey("dark_theme")
         val SILENCE_THRESHOLD_DB = floatPreferencesKey("silence_threshold_db")
         val CONTINUOUS_PITCH_LINE = booleanPreferencesKey("continuous_pitch_line")
-        val TIME_PROGRESSION_ENABLED = booleanPreferencesKey("time_progression_enabled")
         val FREEPLAY_FALL_SPEED = floatPreferencesKey("freeplay_fall_speed")
         val FREEPLAY_BEATS_PER_BAR = intPreferencesKey("freeplay_beats_per_bar")
         val FREEPLAY_BPM = floatPreferencesKey("freeplay_bpm")
@@ -33,7 +32,6 @@ class SettingsRepository(
             darkTheme = prefs[DARK_THEME] ?: true,
             silenceThresholdDb = prefs[SILENCE_THRESHOLD_DB] ?: -50f,
             continuousPitchLine = prefs[CONTINUOUS_PITCH_LINE] ?: true,
-            timeProgressionEnabled = prefs[TIME_PROGRESSION_ENABLED] ?: true,
             freeplayFallSpeed = prefs[FREEPLAY_FALL_SPEED] ?: 150f,
             freeplayBeatsPerBar = prefs[FREEPLAY_BEATS_PER_BAR] ?: 4,
             freeplayBpm = prefs[FREEPLAY_BPM] ?: 120f,
@@ -48,10 +46,6 @@ class SettingsRepository(
 
     suspend fun updateSilenceThreshold(db: Float) {
         context.dataStore.edit { it[SILENCE_THRESHOLD_DB] = db }
-    }
-
-    suspend fun updateTimeProgressionEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[TIME_PROGRESSION_ENABLED] = enabled }
     }
 
     suspend fun updateFreeplayFallSpeed(speed: Float) {
@@ -85,7 +79,6 @@ data class AppSettings(
     val darkTheme: Boolean = true,
     val silenceThresholdDb: Float = -50f,
     val continuousPitchLine: Boolean = true,
-    val timeProgressionEnabled: Boolean = true,
     val freeplayFallSpeed: Float = 150f,
     val freeplayBeatsPerBar: Int = 4,
     val freeplayBpm: Float = 120f,

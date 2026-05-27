@@ -8,6 +8,7 @@ enum class NoteEditMode { NONE, EDIT }
 data class FreePlayState(
     val pitchResult: PitchResult = PitchResult.SILENT,
     val isListening: Boolean = false,
+    val isRecording: Boolean = true,
     val playedNotes: List<PlayedNote> = emptyList(),
     val activeNote: PlayedNote? = null,
     val detectedMinMidi: Int = 60,
@@ -16,15 +17,12 @@ data class FreePlayState(
     val viewMaxMidi: Float = 72f,
     val fallSpeedPxPerSec: Float = 150f,
     val timeOffsetMs: Long = 0,
-    val timeProgressionEnabled: Boolean = true,
     val pitchTrace: List<PitchFrame> = emptyList(),
     val beatsPerBar: Int = 4,
     val bpm: Float = 120f,
     val minNoteDivision: Int = 16,
     val snapEnabled: Boolean = true,
     // Time base for session-relative bar numbers and loop positions.
-    // All bar/loop calculations use (virtualNowMs - sessionStartMs) to avoid
-    // the Unix-epoch offset making bar numbers enormous.
     val sessionStartMs: Long = 0L,
     val activeVoiceIndex: Int = 0,
     val voiceCount: Int = 1,
