@@ -38,8 +38,7 @@ data class FreePlayState(
     val midiAvailable: Boolean = false,
     val midiInputEnabled: Boolean = false,
     val midiOutputEnabled: Boolean = false,
-    val isReplaying: Boolean = false,
-    val replayMode: Boolean = false
+    val isReplaying: Boolean = false
 )
 
 data class PlayedNote(

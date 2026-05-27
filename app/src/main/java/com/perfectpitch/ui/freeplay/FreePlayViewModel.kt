@@ -780,28 +780,30 @@ class FreePlayViewModel @Inject constructor(
     }
 
     /**
-     * Replay all finalized [PlayedNote]s through MIDI output or internal synthesizer.
-     * Uses MIDI output when [FreePlayState.midiOutputEnabled] is true and the sender is ready;
-     * falls back to the internal synthesizer otherwise.
+     * Start advancing time and playing back notes through the synthesizer/MIDI output.
+     * Time advances from the current visual position (honoring [FreePlayState.timeOffsetMs]).
+     * Notes already past the playhead are skipped; in-progress notes fire NoteOn immediately.
+     * Overdub recording (new notes via mic/MIDI) remains active during playback.
      */
     fun replayNotes() {
+        replayJob?.cancel()
+
+        // Commit visual scroll offset so playback starts from where the user is looking
+        val offset = _state.value.timeOffsetMs
+        if (offset > 0L) {
+            virtualNowMs = (virtualNowMs - offset).coerceAtLeast(sessionBaseMs)
+            _state.update { it.copy(timeOffsetMs = 0) }
+        }
+
         val notes = _state.value.playedNotes
             .filter { it.endTimeMs != null }
             .sortedBy { it.startTimeMs }
-        if (notes.isEmpty()) return
 
-        replayJob?.cancel()
-
-        val firstNoteMs = notes.first().startTimeMs
-        val lastNoteMs = notes.maxOf { it.endTimeMs!! }
-
-        virtualNowMs = firstNoteMs
-        lastRealTimeMs = System.currentTimeMillis()
         replayControlsTime = true
-        _state.update { it.copy(isReplaying = true, replayMode = true) }
+        _state.update { it.copy(isReplaying = true) }
 
-        // Feedback warning: mic input + built-in speaker
-        if (_state.value.midiInputEnabled.not() && !feedbackWarningShown) {
+        // One-time feedback warning: mic input + built-in speaker
+        if (!_state.value.midiInputEnabled && !feedbackWarningShown) {
             val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val hasBuiltinSpeaker = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
                 .any { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
@@ -813,6 +815,7 @@ class FreePlayViewModel @Inject constructor(
 
         replayJob = viewModelScope.launch {
             val job = coroutineContext[kotlinx.coroutines.Job]!!
+            val startTime = virtualNowMs
 
             val player: NotePlayer = if (_state.value.midiOutputEnabled && midiOutputSender.isReady) {
                 midiOutputSender
@@ -820,27 +823,38 @@ class FreePlayViewModel @Inject constructor(
                 melodySynthesizer
             }
 
-            data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean, val velocity: Int)
+            data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean)
 
-            val events = notes.flatMap { note ->
-                listOf(
-                    Event(note.startTimeMs, note.midiNumber, true, 80),
-                    Event(note.endTimeMs!!, note.midiNumber, false, 0)
-                )
-            }.sortedBy { it.timeMs }
+            // Build events relative to startTime; fire NoteOn immediately for in-progress notes
+            val events = mutableListOf<Event>()
+            for (note in notes) {
+                val endMs = note.endTimeMs!!
+                if (endMs <= startTime) continue  // entirely in the past
+                val onTime = if (note.startTimeMs <= startTime) startTime else note.startTimeMs
+                events.add(Event(onTime, note.midiNumber, true))
+                events.add(Event(endMs, note.midiNumber, false))
+            }
+            events.sortBy { it.timeMs }
 
+            if (events.isEmpty()) {
+                replayControlsTime = false
+                lastRealTimeMs = System.currentTimeMillis()
+                _state.update { it.copy(isReplaying = false) }
+                return@launch
+            }
+
+            val lastEventMs = events.last().timeMs
             var eventIndex = 0
             var lastWallMs = System.currentTimeMillis()
 
-            while (job.isActive && virtualNowMs <= lastNoteMs + 1500L) {
+            while (job.isActive && virtualNowMs <= lastEventMs + 500L) {
                 val wallNow = System.currentTimeMillis()
-                val delta = (wallNow - lastWallMs).coerceAtLeast(0L)
+                virtualNowMs += (wallNow - lastWallMs).coerceAtLeast(0L)
                 lastWallMs = wallNow
-                virtualNowMs += delta
 
                 while (eventIndex < events.size && events[eventIndex].timeMs <= virtualNowMs) {
                     val ev = events[eventIndex++]
-                    if (ev.isOn) player.noteOn(0, ev.midiNote, ev.velocity)
+                    if (ev.isOn) player.noteOn(0, ev.midiNote, 80)
                     else player.noteOff(0, ev.midiNote)
                 }
 
@@ -849,9 +863,8 @@ class FreePlayViewModel @Inject constructor(
 
             player.allNotesOff()
             replayControlsTime = false
-            virtualNowMs = lastNoteMs + 500L
             lastRealTimeMs = System.currentTimeMillis()
-            _state.update { it.copy(isReplaying = false, replayMode = false) }
+            _state.update { it.copy(isReplaying = false) }
         }
     }
 
@@ -859,15 +872,10 @@ class FreePlayViewModel @Inject constructor(
         replayJob?.cancel()
         replayJob = null
         replayControlsTime = false
-        val notes = _state.value.playedNotes.filter { it.endTimeMs != null }
-        if (notes.isNotEmpty()) {
-            val lastNoteMs = notes.maxOf { it.endTimeMs!! }
-            virtualNowMs = lastNoteMs + 500L
-        }
         lastRealTimeMs = System.currentTimeMillis()
         midiOutputSender.allNotesOff()
         if (melodySynthesizer.isReady) melodySynthesizer.allNotesOff()
-        _state.update { it.copy(isReplaying = false, replayMode = false) }
+        _state.update { it.copy(isReplaying = false) }
     }
 
 

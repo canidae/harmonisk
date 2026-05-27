@@ -255,8 +255,7 @@ fun FreePlayScreen(
                     loopStartMs = if (state.isLooping || state.loopStartBar != null) loopStartMs else null,
                     loopEndMs = if (state.isLooping || state.loopEndBar != null) loopEndMs else null,
                     selectedNoteId = state.selectedNoteId,
-                    editMode = state.editMode,
-                    replayMode = state.replayMode
+                    editMode = state.editMode
                 ),
                 pianoAtBottom = false,
                 viewMinMidi = state.viewMinMidi,
@@ -274,7 +273,7 @@ fun FreePlayScreen(
             shape = MaterialTheme.shapes.small,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(start = 8.dp, top = PIANO_HEIGHT_DP.dp + 6.dp)
+                .padding(start = 8.dp, top = 8.dp)
         ) {
             Text(
                 text = "${state.bpm.roundToInt()} BPM  ${state.beatsPerBar}/4  Bar ${currentBarNum + 1}",
@@ -284,11 +283,11 @@ fun FreePlayScreen(
             )
         }
 
-        // Right-side button column (below piano keys)
+        // Right-side button column
         Column(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
+                .padding(top = 8.dp, end = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {

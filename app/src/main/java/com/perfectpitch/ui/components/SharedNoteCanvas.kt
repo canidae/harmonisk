@@ -76,8 +76,7 @@ sealed interface CanvasMode {
         val loopStartMs: Long? = null,
         val loopEndMs: Long? = null,
         val selectedNoteId: String? = null,
-        val editMode: NoteEditMode = NoteEditMode.NONE,
-        val replayMode: Boolean = false
+        val editMode: NoteEditMode = NoteEditMode.NONE
     ) : CanvasMode
 
     data class Melody(
@@ -141,8 +140,7 @@ fun SharedNoteCanvas(
     // Compute and emit note rects for edit mode hit testing
     if (onNoteRects != null && mode is CanvasMode.FreePlay && canvasSize != IntSize.Zero) {
         val width = canvasSize.width.toFloat()
-        val pianoHeight = PIANO_HEIGHT_DP * density
-        val pianoEdgeY = pianoHeight
+        val pianoEdgeY = canvasSize.height / 2f
         val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
         val now = mode.currentTimeMs - mode.timeOffsetMs
         val effectiveViewMaxMidi = if (rightPaddingPx > 0f && width > rightPaddingPx) {
@@ -176,8 +174,8 @@ fun SharedNoteCanvas(
         // Piano edge and far edge Y coordinates
         val pianoEdgeY: Float
         val canvasFarEdgeY: Float
-        val replayMode = mode is CanvasMode.FreePlay && mode.replayMode
-        if (replayMode) {
+        if (mode is CanvasMode.FreePlay) {
+            // FreePlay always shows centered piano: past notes below, future notes above
             pianoEdgeY = height / 2f
             canvasFarEdgeY = height
         } else if (pianoAtBottom) {
@@ -195,8 +193,8 @@ fun SharedNoteCanvas(
         for (midi in minMidi..maxMidi) {
             val key = layout[midi] ?: continue
             if (key.isBlack) {
-                val colTop = if (replayMode) 0f else if (pianoAtBottom) canvasFarEdgeY else pianoEdgeY
-                val colHeight = if (replayMode) height else if (pianoAtBottom) pianoEdgeY else canvasFarEdgeY - pianoEdgeY
+                val colTop = if (mode is CanvasMode.FreePlay) 0f else if (pianoAtBottom) canvasFarEdgeY else pianoEdgeY
+                val colHeight = if (mode is CanvasMode.FreePlay) height else if (pianoAtBottom) pianoEdgeY else canvasFarEdgeY - pianoEdgeY
                 drawRect(
                     color = BLACK_COLUMN_BG,
                     topLeft = Offset(key.x, colTop),
@@ -209,8 +207,8 @@ fun SharedNoteCanvas(
         for (midi in minMidi..maxMidi) {
             val key = layout[midi] ?: continue
             if (!key.isBlack) {
-                val lineTop = if (replayMode) 0f else if (pianoAtBottom) canvasFarEdgeY else pianoEdgeY
-                val lineBottom = if (replayMode) height else if (pianoAtBottom) pianoEdgeY else canvasFarEdgeY
+                val lineTop = if (mode is CanvasMode.FreePlay) 0f else if (pianoAtBottom) canvasFarEdgeY else pianoEdgeY
+                val lineBottom = if (mode is CanvasMode.FreePlay) height else if (pianoAtBottom) pianoEdgeY else canvasFarEdgeY
                 drawLine(
                     color = Color(0x18FFFFFF),
                     start = Offset(key.x, lineTop),
@@ -224,7 +222,7 @@ fun SharedNoteCanvas(
         when (mode) {
             is CanvasMode.FreePlay -> {
                 drawBarLines(mode, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
-                drawFreePlayNotes(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density, continuousPitchLine, replayMode)
+                drawFreePlayNotes(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density, continuousPitchLine)
                 if (continuousPitchLine) {
                     val viewTimeMs = mode.currentTimeMs - mode.timeOffsetMs
                     drawContinuousPitchLine(mode.pitchTrace, viewTimeMs, mode.fallSpeedPxPerSec, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
@@ -243,7 +241,7 @@ fun SharedNoteCanvas(
         }
 
         // Draw piano keyboard
-        if (replayMode) {
+        if (mode is CanvasMode.FreePlay) {
             val slimHeight = SLIM_PIANO_HEIGHT_DP * density
             drawCenteredPianoKeyboard(
                 textMeasurer = textMeasurer,
@@ -419,8 +417,7 @@ private fun DrawScope.drawFreePlayNotes(
     canvasFarEdgeY: Float,
     pianoAtBottom: Boolean,
     density: Float,
-    continuousPitchLine: Boolean,
-    replayMode: Boolean = false
+    continuousPitchLine: Boolean
 ) {
     val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
     val now = mode.currentTimeMs - mode.timeOffsetMs
@@ -459,8 +456,8 @@ private fun DrawScope.drawFreePlayNotes(
                 blue = barColor.blue * 0.75f
             )
         }
-        // In replay mode, dim upcoming (future) notes
-        if (replayMode && ageOfStartMs < 0) {
+        // Dim upcoming (future) notes — they appear above the centered piano
+        if (ageOfStartMs < 0) {
             barColor = barColor.copy(alpha = barColor.alpha * 0.45f)
         }
 
@@ -479,7 +476,7 @@ private fun DrawScope.drawFreePlayNotes(
             borderAlpha = borderAlpha,
             centsHistory = if (continuousPitchLine) emptyList() else note.centsHistory,
             density = density,
-            replayMode = replayMode
+            replayMode = true
         )
 
         // Draw selection highlight and handles
