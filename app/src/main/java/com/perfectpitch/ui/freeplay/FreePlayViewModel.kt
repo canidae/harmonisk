@@ -84,7 +84,6 @@ class FreePlayViewModel @Inject constructor(
     private var candidateNoteMidi: Int? = null
     private var candidateNoteCount: Int = 0
     private var lastRealTimeMs: Long = virtualNowMs
-    private var lastFinalizedNoteEndMs: Long = 0L
 
     // MIDI input tracking (polyphonic: key = MIDI note number, value = active PlayedNote)
     private val activeMidiNotes = mutableMapOf<Int, PlayedNote>()
@@ -277,26 +276,6 @@ class FreePlayViewModel @Inject constructor(
         }
     }
 
-    fun removeCurrentVoice() {
-        _state.update { current ->
-            if (current.voiceCount <= 1) return@update current
-            val voiceToRemove = current.activeVoiceIndex
-            val remappedNotes = current.playedNotes
-                .filter { it.voiceIndex != voiceToRemove }
-                .map { note ->
-                    if (note.voiceIndex > voiceToRemove) note.copy(voiceIndex = note.voiceIndex - 1)
-                    else note
-                }
-            val newVoiceCount = current.voiceCount - 1
-            val newActiveVoice = current.activeVoiceIndex.coerceAtMost(newVoiceCount - 1)
-            current.copy(
-                voiceCount = newVoiceCount,
-                activeVoiceIndex = newActiveVoice,
-                playedNotes = remappedNotes
-            )
-        }
-    }
-
     // endregion
 
     // region Loop
@@ -321,18 +300,9 @@ class FreePlayViewModel @Inject constructor(
         _state.update { it.copy(isLooping = !it.isLooping) }
     }
 
-    fun clearLoop() {
-        _state.update { it.copy(loopStartBar = null, loopEndBar = null, isLooping = false) }
-    }
-
     // endregion
 
     // region Edit mode
-
-    fun setEditMode(mode: NoteEditMode) {
-        _state.update { it.copy(editMode = mode, selectedNoteId = null) }
-        editingNoteIdForUndo = null
-    }
 
     fun selectNote(id: String?) {
         _state.update { it.copy(selectedNoteId = id) }
@@ -568,15 +538,20 @@ class FreePlayViewModel @Inject constructor(
         }
     }
 
+    fun setPianoVisibility(v: PianoVisibility) {
+        _state.update { it.copy(pianoVisibility = v) }
+    }
+
     fun onVerticalScroll(deltaMs: Long) {
+        val barMs = (_state.value.beatsPerBar * 60_000.0 / _state.value.bpm).toLong()
+        val minNowMs = sessionBaseMs - 2 * barMs
+        val maxTimeOffset = (virtualNowMs - minNowMs).coerceAtLeast(0L)
         if (deltaMs > 0L && _state.value.isReplaying) {
-            // Seek during playback: signal the replay coroutine to jump
-            seekToMs = (virtualNowMs - deltaMs).coerceAtLeast(sessionBaseMs)
+            seekToMs = (virtualNowMs - _state.value.timeOffsetMs - deltaMs).coerceAtLeast(minNowMs)
         } else {
             _state.update { current ->
-                current.copy(timeOffsetMs = (current.timeOffsetMs + deltaMs).coerceAtLeast(0L))
+                current.copy(timeOffsetMs = (current.timeOffsetMs + deltaMs).coerceIn(0L, maxTimeOffset))
             }
-            // Auto-play when scrolling back and there are notes to play
             if (deltaMs > 0L && !_state.value.isReplaying && _state.value.playedNotes.any { it.endTimeMs != null }) {
                 replayNotes()
             }
@@ -670,7 +645,6 @@ class FreePlayViewModel @Inject constructor(
                     if (rawSnapped <= activeNote.startTimeMs) activeNote.startTimeMs + interval else rawSnapped
                 } else now
                 val finalNote = activeNote.copy(endTimeMs = snappedEnd, averageCentsOff = centsSamples.average().toFloat())
-                lastFinalizedNoteEndMs = snappedEnd
 
                 // Re-record: delete notes in same voice that overlap the new note
                 val voice = finalNote.voiceIndex
@@ -914,39 +888,9 @@ class FreePlayViewModel @Inject constructor(
 
     private fun expandRange(midi: Int) {
         _state.update { current ->
-            val newDetectedMin = min(current.detectedMinMidi, midi - RANGE_PADDING)
-            val newDetectedMax = max(current.detectedMaxMidi, midi + RANGE_PADDING)
             val newViewMin = min(current.viewMinMidi, midi.toFloat() - RANGE_PADDING).coerceAtLeast(ABSOLUTE_MIN_MIDI)
             val newViewMax = max(current.viewMaxMidi, midi.toFloat() + RANGE_PADDING).coerceAtMost(ABSOLUTE_MAX_MIDI)
-            current.copy(detectedMinMidi = newDetectedMin, detectedMaxMidi = newDetectedMax, viewMinMidi = newViewMin, viewMaxMidi = newViewMax)
-        }
-    }
-
-    fun resetSession() {
-        finalizeCurrentNote()
-        candidateNoteMidi = null
-        candidateNoteCount = 0
-        editingNoteIdForUndo = null
-        stopReplay()
-        activeMidiNotes.clear()
-        feedbackWarningShown = false
-        val newBase = System.currentTimeMillis()
-        sessionBaseMs = newBase
-        virtualNowMs = newBase
-        lastRealTimeMs = newBase
-        _state.update { current ->
-            FreePlayState(
-                isListening = current.isListening,
-                sessionStartMs = newBase,
-                fallSpeedPxPerSec = current.fallSpeedPxPerSec,
-                beatsPerBar = current.beatsPerBar,
-                bpm = current.bpm,
-                minNoteDivision = current.minNoteDivision,
-                snapEnabled = current.snapEnabled,
-                midiAvailable = current.midiAvailable,
-                midiInputEnabled = current.midiInputEnabled,
-                midiOutputEnabled = current.midiOutputEnabled
-            )
+            current.copy(viewMinMidi = newViewMin, viewMaxMidi = newViewMax)
         }
     }
 

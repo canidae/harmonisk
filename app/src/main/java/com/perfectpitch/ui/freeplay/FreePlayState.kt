@@ -3,7 +3,7 @@ package com.perfectpitch.ui.freeplay
 import com.perfectpitch.music.PitchResult
 import com.perfectpitch.ui.components.PitchFrame
 
-enum class NoteEditMode { NONE, EDIT }
+enum class PianoVisibility { NONE, UPPER_ONLY, LOWER_ONLY, BOTH }
 
 data class FreePlayState(
     val pitchResult: PitchResult = PitchResult.SILENT,
@@ -11,8 +11,6 @@ data class FreePlayState(
     val isRecording: Boolean = true,
     val playedNotes: List<PlayedNote> = emptyList(),
     val activeNote: PlayedNote? = null,
-    val detectedMinMidi: Int = 60,
-    val detectedMaxMidi: Int = 72,
     val viewMinMidi: Float = 60f,
     val viewMaxMidi: Float = 72f,
     val fallSpeedPxPerSec: Float = 150f,
@@ -29,7 +27,6 @@ data class FreePlayState(
     val loopStartBar: Int? = null,
     val loopEndBar: Int? = null,
     val isLooping: Boolean = false,
-    val editMode: NoteEditMode = NoteEditMode.NONE,
     val selectedNoteId: String? = null,
     val undoStack: List<List<PlayedNote>> = emptyList(),
     // MIDI state
@@ -38,7 +35,9 @@ data class FreePlayState(
     val midiOutputEnabled: Boolean = false,
     val midiInputDeviceName: String? = null,
     val midiOutputDeviceName: String? = null,
-    val isReplaying: Boolean = false
+    val isReplaying: Boolean = false,
+    // Piano visibility
+    val pianoVisibility: PianoVisibility = PianoVisibility.BOTH
 )
 
 data class PlayedNote(

@@ -20,7 +20,6 @@ private const val C4_MIDI = 60
 private const val C4_DOT_RADIUS_DP = 2.5f
 
 val BLACK_KEY_INDICES = setOf(1, 3, 6, 8, 10)
-private val WHITE_KEY_INDICES = setOf(0, 2, 4, 5, 7, 9, 11)
 
 data class KeyLayout(
     val x: Float,
