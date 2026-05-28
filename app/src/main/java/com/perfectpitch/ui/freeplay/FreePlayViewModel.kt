@@ -88,9 +88,6 @@ class FreePlayViewModel @Inject constructor(
     // MIDI input tracking (polyphonic: key = MIDI note number, value = active PlayedNote)
     private val activeMidiNotes = mutableMapOf<Int, PlayedNote>()
 
-    // Edit state
-    private var editingNoteIdForUndo: String? = null
-
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
@@ -311,7 +308,6 @@ class FreePlayViewModel @Inject constructor(
 
     fun setEditMode(mode: NoteEditMode) {
         _state.update { it.copy(editMode = mode, selectedNoteId = null) }
-        editingNoteIdForUndo = null
         if (mode == NoteEditMode.EDIT) stopReplay()
     }
 
@@ -320,20 +316,21 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun deleteNote(id: String) {
-        pushUndo()
         _state.update { current ->
+            val note = current.playedNotes.find { it.id == id }
+            val endMs = note?.endTimeMs
+            val newTrace = if (note != null && endMs != null) {
+                current.pitchTrace.filter { it.timeMs < note.startTimeMs || it.timeMs > endMs }
+            } else current.pitchTrace
             current.copy(
                 playedNotes = current.playedNotes.filter { it.id != id },
+                pitchTrace = newTrace,
                 selectedNoteId = null
             )
         }
     }
 
     fun moveNote(id: String, deltaMidi: Int, deltaMs: Long) {
-        if (editingNoteIdForUndo != id) {
-            pushUndo()
-            editingNoteIdForUndo = id
-        }
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
             val newMidi = (note.midiNumber + deltaMidi).coerceIn(21, 108)
@@ -352,10 +349,6 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun extendNoteStart(id: String, deltaMs: Long) {
-        if (editingNoteIdForUndo != id) {
-            pushUndo()
-            editingNoteIdForUndo = id
-        }
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
             val endMs = note.endTimeMs ?: return@update current
@@ -366,10 +359,6 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun extendNoteEnd(id: String, deltaMs: Long) {
-        if (editingNoteIdForUndo != id) {
-            pushUndo()
-            editingNoteIdForUndo = id
-        }
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
             val newEnd = ((note.endTimeMs ?: 0L) + deltaMs).coerceAtLeast(note.startTimeMs + 1L)
@@ -379,7 +368,6 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun commitNoteEdit(id: String) {
-        editingNoteIdForUndo = null
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
             val endMs = note.endTimeMs ?: return@update current
@@ -389,25 +377,6 @@ class FreePlayViewModel @Inject constructor(
                 other.endTimeMs == null || other.endTimeMs <= note.startTimeMs || other.startTimeMs >= endMs
             }
             current.copy(playedNotes = filtered)
-        }
-    }
-
-    fun undo() {
-        _state.update { current ->
-            if (current.undoStack.isEmpty()) return@update current
-            val snapshot = current.undoStack.last()
-            current.copy(
-                playedNotes = snapshot,
-                undoStack = current.undoStack.dropLast(1),
-                selectedNoteId = null
-            )
-        }
-    }
-
-    private fun pushUndo() {
-        _state.update { current ->
-            val newStack = (current.undoStack + listOf(current.playedNotes)).takeLast(20)
-            current.copy(undoStack = newStack)
         }
     }
 
@@ -724,7 +693,7 @@ class FreePlayViewModel @Inject constructor(
                 val endMs = virtualNowMs
                 val duration = endMs - activeNote.startTimeMs
 
-                if (!isRecording) {
+                if (!isRecording || activeNote.startTimeMs < sessionBaseMs) {
                     _state.update { it.copy(activeNote = activeMidiNotes.values.lastOrNull()) }
                     return
                 }

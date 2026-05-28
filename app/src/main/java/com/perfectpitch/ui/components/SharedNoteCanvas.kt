@@ -246,7 +246,16 @@ fun SharedNoteCanvas(
                 drawFreePlayNotes(mode, layout, pianoEdgeY, noteAreaTop, noteAreaBottom, density, continuousPitchLine)
                 if (continuousPitchLine) {
                     val viewTimeMs = mode.currentTimeMs - mode.timeOffsetMs
-                    drawContinuousPitchLine(mode.pitchTrace, viewTimeMs, mode.fallSpeedPxPerSec, layout, pianoEdgeY, noteAreaTop, noteAreaBottom, density)
+                    // Only draw pitch line within finalized/active note ranges
+                    val allNotes = mode.notes + listOfNotNull(mode.activeNote)
+                    val filteredTrace = if (allNotes.isEmpty()) emptyList()
+                    else mode.pitchTrace.filter { frame ->
+                        allNotes.any { note ->
+                            frame.timeMs >= note.startTimeMs &&
+                            (note.endTimeMs == null || frame.timeMs <= note.endTimeMs)
+                        }
+                    }
+                    drawContinuousPitchLine(filteredTrace, viewTimeMs, mode.fallSpeedPxPerSec, layout, pianoEdgeY, noteAreaTop, noteAreaBottom, density)
                 }
                 // "Now" line — thin bright marker in the center
                 drawLine(
@@ -321,8 +330,12 @@ private fun DrawScope.drawBarLines(
     val visibleTop = noteAreaTop
     val visibleBottom = noteAreaBottom
 
-    // Compute how far back (past) we need to start
-    val pastRangeMs = (noteAreaBottom - nowY) / pxPerMs
+    // Clip all drawing to the playable area — nothing drawn below the bar-1 line
+    val bar1Y = (nowY + (now - mode.sessionStartMs) * pxPerMs).toFloat()
+    val clipBottom = bar1Y.coerceIn(visibleTop, visibleBottom)
+    if (clipBottom <= visibleTop) return
+
+    clipRect(left = 0f, top = visibleTop, right = size.width, bottom = clipBottom) {
 
     // Draw loop region if active
     val loopStartMs = mode.loopStartMs
@@ -345,7 +358,7 @@ private fun DrawScope.drawBarLines(
         }
     }
 
-    val earliestTimeMs = now - pastRangeMs * 1.1
+    val earliestTimeMs = now - (noteAreaBottom - nowY) / pxPerMs * 1.1
     val firstBeatIndex = kotlin.math.floor(earliestTimeMs / beatDurationMs).toLong() - 1L
 
     val barLabelStyle = TextStyle(
@@ -389,6 +402,7 @@ private fun DrawScope.drawBarLines(
         }
         beatIndex++
     }
+    } // end clipRect
 }
 
 private fun DrawScope.drawBarLines(

@@ -31,7 +31,6 @@ data class FreePlayState(
     val isLooping: Boolean = false,
     val editMode: NoteEditMode = NoteEditMode.NONE,
     val selectedNoteId: String? = null,
-    val undoStack: List<List<PlayedNote>> = emptyList(),
     // MIDI state
     val midiAvailable: Boolean = false,
     val midiInputEnabled: Boolean = false,

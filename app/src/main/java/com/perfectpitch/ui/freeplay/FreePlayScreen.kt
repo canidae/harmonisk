@@ -114,7 +114,7 @@ fun FreePlayScreen(
     var showBeatsMenu by remember { mutableStateOf(false) }
     var showDivisionMenu by remember { mutableStateOf(false) }
 
-    // ── Panel 1 content: I/O · Settings · Play · Record · Edit · Undo · ScrollTop ──
+    // ── Panel 1 content: I/O · Settings · Play · Record · Edit · ScrollTop ──
     val panel1Content: @Composable RowScope.() -> Unit = {
         // Input source dropdown
         Box {
@@ -256,16 +256,6 @@ fun FreePlayScreen(
                 .then(if (isEditing) Modifier.border(1.dp, Color(0xFFFFB74D), CircleShape) else Modifier)
         ) {
             Icon(Icons.Filled.Edit, null, modifier = Modifier.size(17.dp), tint = if (isEditing) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
-        }
-
-        // Undo (conditional)
-        if (state.undoStack.isNotEmpty()) {
-            IconButton(
-                onClick = { viewModel.undo() },
-                modifier = Modifier.size(PANEL_BTN_SIZE).background(OVERLAY_BG, CircleShape)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.Undo, null, modifier = Modifier.size(17.dp), tint = OVERLAY_ICON_TINT)
-            }
         }
 
         // Scroll-to-present (conditional)
