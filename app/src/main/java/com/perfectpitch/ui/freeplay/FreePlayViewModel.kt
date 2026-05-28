@@ -554,17 +554,13 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun onVerticalScroll(deltaMs: Long) {
-        val beatMs = (60_000.0 / _state.value.bpm).toLong()
-        val minNowMs = sessionBaseMs - 2 * beatMs
+        val minNowMs = sessionBaseMs - 2 * barDurationMs().toLong()
         val maxTimeOffset = (virtualNowMs - minNowMs).coerceAtLeast(0L)
         if (deltaMs > 0L && _state.value.isReplaying) {
             seekToMs = (virtualNowMs - _state.value.timeOffsetMs - deltaMs).coerceAtLeast(minNowMs)
         } else {
             _state.update { current ->
                 current.copy(timeOffsetMs = (current.timeOffsetMs + deltaMs).coerceIn(0L, maxTimeOffset))
-            }
-            if (deltaMs > 0L && !_state.value.isReplaying && _state.value.playedNotes.any { it.endTimeMs != null }) {
-                replayNotes()
             }
         }
     }
