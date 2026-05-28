@@ -467,12 +467,11 @@ class FreePlayViewModel @Inject constructor(
 
     private fun snapToGrid(timeMs: Long): Long {
         val interval = gridIntervalMs()
-        return ((timeMs.toDouble() / interval).toLong()) * interval
+        val relativeMs = timeMs - sessionBaseMs
+        val snappedRelative = (relativeMs.toDouble() / interval).toLong() * interval
+        return (sessionBaseMs + snappedRelative).coerceAtLeast(sessionBaseMs)
     }
 
-    fun scrollToTop() {
-        _state.update { it.copy(timeOffsetMs = 0) }
-    }
 
     fun onHorizontalZoom(scaleFactor: Float, focusFraction: Float) {
         _state.update { current ->

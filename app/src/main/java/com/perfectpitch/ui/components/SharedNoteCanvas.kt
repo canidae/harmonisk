@@ -359,7 +359,8 @@ private fun DrawScope.drawBarLines(
     }
 
     val earliestTimeMs = now - (noteAreaBottom - nowY) / pxPerMs * 1.1
-    val firstBeatIndex = kotlin.math.floor(earliestTimeMs / beatDurationMs).toLong() - 1L
+    val relativeEarliestMs = earliestTimeMs - mode.sessionStartMs
+    val firstBeatIndex = kotlin.math.floor(relativeEarliestMs / beatDurationMs).toLong() - 1L
 
     val barLabelStyle = TextStyle(
         color = Color.White.copy(alpha = 0.35f),
@@ -370,9 +371,9 @@ private fun DrawScope.drawBarLines(
     var beatIndex = firstBeatIndex
     var safetyCounter = 0
     while (safetyCounter++ < 2000) {
-        val beatTimeMs = beatIndex * beatDurationMs
+        val beatTimeMs = mode.sessionStartMs + beatIndex * beatDurationMs
         // Skip beats before session start (bar 1)
-        if (beatTimeMs < mode.sessionStartMs.toDouble()) {
+        if (beatIndex < 0) {
             beatIndex++
             continue
         }

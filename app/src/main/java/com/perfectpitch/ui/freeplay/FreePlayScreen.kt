@@ -15,7 +15,7 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Undo
+
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -258,15 +258,6 @@ fun FreePlayScreen(
             Icon(Icons.Filled.Edit, null, modifier = Modifier.size(17.dp), tint = if (isEditing) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
         }
 
-        // Scroll-to-present (conditional)
-        if (state.timeOffsetMs > 0L) {
-            IconButton(
-                onClick = { viewModel.scrollToTop() },
-                modifier = Modifier.size(PANEL_BTN_SIZE).background(OVERLAY_BG, CircleShape)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.Undo, null, modifier = Modifier.size(17.dp), tint = Color(0xFFFFF176))
-            }
-        }
     }
 
     // ── Panel 2 content: BPM · Meter · Voice · Loop ──────────────────────
