@@ -14,7 +14,6 @@ import kotlin.math.floor
 private val NOTE_NAMES = arrayOf("C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B")
 
 const val PIANO_HEIGHT_DP = 52f
-const val SLIM_PIANO_HEIGHT_DP = 40f
 private const val BLACK_KEY_HEIGHT_FRACTION = 0.62f
 private const val BLACK_KEY_WIDTH_FRACTION = 0.6f
 private const val C4_MIDI = 60
@@ -124,117 +123,6 @@ fun midiToPixelX(layout: Map<Int, KeyLayout>, fractionalMidi: Float): Float? {
 }
 
 
-/**
- * Draw a slim piano keyboard centered at [centerY].
- * White keys extend symmetrically above and below [centerY].
- * Black keys are shorter, also centered at [centerY].
- * Used during replay when the piano is positioned at the vertical center of the screen.
- */
-@OptIn(ExperimentalTextApi::class)
-fun DrawScope.drawCenteredPianoKeyboard(
-    textMeasurer: TextMeasurer,
-    layout: Map<Int, KeyLayout>,
-    pianoHeight: Float,
-    minMidi: Int,
-    maxMidi: Int,
-    centerY: Float
-) {
-    val halfWhite = pianoHeight / 2f
-    val blackKeyHeight = pianoHeight * 0.6f
-    val halfBlack = blackKeyHeight / 2f
-    val cornerRadius = CornerRadius(3f * density, 3f * density)
-    val pianoTop = centerY - halfWhite
-
-    // Background
-    drawRect(
-        color = Color(0xFF1A1A2E),
-        topLeft = Offset(0f, pianoTop),
-        size = Size(size.width, pianoHeight)
-    )
-
-    // White keys
-    for (midi in minMidi..maxMidi) {
-        val key = layout[midi] ?: continue
-        if (key.isBlack) continue
-
-        drawRoundRect(
-            color = Color(0xFFF5F5F5),
-            topLeft = Offset(key.x + 0.5f, pianoTop + 1f),
-            size = Size(key.width - 1f, pianoHeight - 2f),
-            cornerRadius = cornerRadius
-        )
-
-        drawLine(
-            color = Color(0xFFAAAAAA),
-            start = Offset(key.x, pianoTop),
-            end = Offset(key.x, pianoTop + pianoHeight),
-            strokeWidth = 1f
-        )
-
-        // C4 indicator dot centered on the key
-        if (midi == C4_MIDI) {
-            val dotRadius = C4_DOT_RADIUS_DP * density
-            drawCircle(
-                color = Color.Black,
-                radius = dotRadius,
-                center = Offset(key.x + key.width / 2f, centerY)
-            )
-        }
-
-        // Note label (only for wider keys)
-        val noteIndex = midi % 12
-        val noteName = NOTE_NAMES[noteIndex]
-        val fontSize = (key.width / density * 0.28f).coerceIn(6f, 11f)
-        if (key.width > 10f * density) {
-            val textLayout = textMeasurer.measure(
-                text = AnnotatedString(noteName),
-                style = TextStyle(
-                    color = Color(0xFF444444),
-                    fontSize = fontSize.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            )
-            if (textLayout.size.width < key.width - 2f) {
-                val textX = key.x + (key.width - textLayout.size.width) / 2f
-                val textY = centerY + halfWhite - textLayout.size.height - 3f * density
-                drawText(textLayout, topLeft = Offset(textX, textY))
-            }
-        }
-    }
-
-    // Black keys (centered at centerY, shorter than white)
-    for (midi in minMidi..maxMidi) {
-        val key = layout[midi] ?: continue
-        if (!key.isBlack) continue
-
-        val blackTop = centerY - halfBlack
-        drawRoundRect(
-            color = Color(0xFF1A1A1A),
-            topLeft = Offset(key.x + 0.5f, blackTop),
-            size = Size(key.width - 1f, blackKeyHeight),
-            cornerRadius = cornerRadius
-        )
-        drawRect(
-            color = Color(0xFF3A3A3A),
-            topLeft = Offset(key.x + 2f, blackTop),
-            size = Size(key.width - 4f, 2f * density)
-        )
-    }
-
-    // Center divider line
-    drawLine(
-        color = Color(0xFF333344),
-        start = Offset(0f, centerY - halfWhite),
-        end = Offset(size.width, centerY - halfWhite),
-        strokeWidth = 1.5f
-    )
-    drawLine(
-        color = Color(0xFF333344),
-        start = Offset(0f, centerY + halfWhite),
-        end = Offset(size.width, centerY + halfWhite),
-        strokeWidth = 1.5f
-    )
-}
 
 @OptIn(ExperimentalTextApi::class)
 fun DrawScope.drawPianoKeyboard(

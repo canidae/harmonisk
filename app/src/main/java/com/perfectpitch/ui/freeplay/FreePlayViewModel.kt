@@ -3,6 +3,7 @@ package com.perfectpitch.ui.freeplay
 import android.content.Context
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.media.midi.MidiDeviceInfo
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -136,6 +137,19 @@ class FreePlayViewModel @Inject constructor(
                 }
             }
         }
+        // Track connected MIDI device names for UI display
+        viewModelScope.launch {
+            midiDeviceManager.devices.collect { devices ->
+                val inputDevice = devices.firstOrNull { it.outputPortCount > 0 }
+                val outputDevice = devices.firstOrNull { it.inputPortCount > 0 }
+                _state.update {
+                    it.copy(
+                        midiInputDeviceName = inputDevice?.properties?.getString(MidiDeviceInfo.PROPERTY_NAME),
+                        midiOutputDeviceName = outputDevice?.properties?.getString(MidiDeviceInfo.PROPERTY_NAME)
+                    )
+                }
+            }
+        }
     }
 
     /** Open the synthesizer for replay fallback. Call from the Composable where context is available. */
@@ -146,17 +160,12 @@ class FreePlayViewModel @Inject constructor(
         }
     }
 
-    fun toggleMidiInput() {
-        val current = midiDeviceManager.inputOverride.value
-        val effective = _state.value.midiInputEnabled
-        // Cycle: auto → forced opposite → auto
-        midiDeviceManager.setInputOverride(if (current == null) !effective else null)
+    fun setMidiInputEnabled(useMidi: Boolean) {
+        midiDeviceManager.setInputOverride(useMidi)
     }
 
-    fun toggleMidiOutput() {
-        val current = midiDeviceManager.outputOverride.value
-        val effective = _state.value.midiOutputEnabled
-        midiDeviceManager.setOutputOverride(if (current == null) !effective else null)
+    fun setMidiOutputEnabled(useMidi: Boolean) {
+        midiDeviceManager.setOutputOverride(useMidi)
     }
 
     val continuousPitchLine: StateFlow<Boolean> = settingsRepository.settings
@@ -513,37 +522,6 @@ class FreePlayViewModel @Inject constructor(
 
     fun scrollToTop() {
         _state.update { it.copy(timeOffsetMs = 0) }
-    }
-
-    fun autoFit() {
-        _state.update { current ->
-            val allNotes = current.playedNotes + listOfNotNull(current.activeNote)
-            if (allNotes.isEmpty()) return@update current
-            val minNote = allNotes.minOf { it.midiNumber }.toFloat() - RANGE_PADDING
-            val maxNote = allNotes.maxOf { it.midiNumber }.toFloat() + RANGE_PADDING
-            var range = maxNote - minNote
-            var newMin: Float
-            var newMax: Float
-            if (range < MIN_AUTO_FIT_RANGE) {
-                val center = (minNote + maxNote) / 2f
-                newMin = center - MIN_AUTO_FIT_RANGE / 2f
-                newMax = center + MIN_AUTO_FIT_RANGE / 2f
-            } else {
-                newMin = minNote
-                newMax = maxNote
-            }
-            if (newMin < ABSOLUTE_MIN_MIDI) {
-                newMax += (ABSOLUTE_MIN_MIDI - newMin)
-                newMin = ABSOLUTE_MIN_MIDI
-            }
-            if (newMax > ABSOLUTE_MAX_MIDI) {
-                newMin -= (newMax - ABSOLUTE_MAX_MIDI)
-                newMax = ABSOLUTE_MAX_MIDI
-            }
-            newMin = newMin.coerceAtLeast(ABSOLUTE_MIN_MIDI)
-            newMax = newMax.coerceAtMost(ABSOLUTE_MAX_MIDI)
-            current.copy(viewMinMidi = newMin, viewMaxMidi = newMax)
-        }
     }
 
     fun onHorizontalZoom(scaleFactor: Float, focusFraction: Float) {

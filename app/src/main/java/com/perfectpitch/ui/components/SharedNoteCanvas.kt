@@ -172,47 +172,51 @@ fun SharedNoteCanvas(
         val maxMidi = ceil(effectiveViewMaxMidi).toInt()
 
         // Piano edge and far edge Y coordinates
-        val pianoEdgeY: Float
+        val pianoEdgeY: Float   // the "now" line or melody piano edge
         val canvasFarEdgeY: Float
+        // For FreePlay: two pianos (top + bottom), now-line at height/2
+        val noteAreaTop: Float  // top of the note drawing area (bottom of top piano)
+        val noteAreaBottom: Float  // bottom of the note drawing area (top of bottom piano)
         if (mode is CanvasMode.FreePlay) {
-            // FreePlay always shows centered piano: past notes below, future notes above
             pianoEdgeY = height / 2f
             canvasFarEdgeY = height
+            noteAreaTop = pianoHeight
+            noteAreaBottom = height - pianoHeight
         } else if (pianoAtBottom) {
             pianoEdgeY = height - pianoHeight
             canvasFarEdgeY = 0f
+            noteAreaTop = canvasFarEdgeY
+            noteAreaBottom = pianoEdgeY
         } else {
             pianoEdgeY = pianoHeight
             canvasFarEdgeY = height
+            noteAreaTop = pianoEdgeY
+            noteAreaBottom = canvasFarEdgeY
         }
 
         // Draw background
         drawRect(CANVAS_BG)
 
-        // Draw black-key column backgrounds
+        // Draw black-key column backgrounds (note area only)
         for (midi in minMidi..maxMidi) {
             val key = layout[midi] ?: continue
             if (key.isBlack) {
-                val colTop = if (mode is CanvasMode.FreePlay) 0f else if (pianoAtBottom) canvasFarEdgeY else pianoEdgeY
-                val colHeight = if (mode is CanvasMode.FreePlay) height else if (pianoAtBottom) pianoEdgeY else canvasFarEdgeY - pianoEdgeY
                 drawRect(
                     color = BLACK_COLUMN_BG,
-                    topLeft = Offset(key.x, colTop),
-                    size = Size(key.width, colHeight)
+                    topLeft = Offset(key.x, noteAreaTop),
+                    size = Size(key.width, noteAreaBottom - noteAreaTop)
                 )
             }
         }
 
-        // Draw subtle grid lines at white key boundaries
+        // Draw subtle grid lines at white key boundaries (note area only)
         for (midi in minMidi..maxMidi) {
             val key = layout[midi] ?: continue
             if (!key.isBlack) {
-                val lineTop = if (mode is CanvasMode.FreePlay) 0f else if (pianoAtBottom) canvasFarEdgeY else pianoEdgeY
-                val lineBottom = if (mode is CanvasMode.FreePlay) height else if (pianoAtBottom) pianoEdgeY else canvasFarEdgeY
                 drawLine(
                     color = Color(0x18FFFFFF),
-                    start = Offset(key.x, lineTop),
-                    end = Offset(key.x, lineBottom),
+                    start = Offset(key.x, noteAreaTop),
+                    end = Offset(key.x, noteAreaBottom),
                     strokeWidth = 1f
                 )
             }
@@ -221,22 +225,37 @@ fun SharedNoteCanvas(
         // Mode-specific rendering
         when (mode) {
             is CanvasMode.FreePlay -> {
-                drawBarLines(mode, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
-                // Piano drawn before notes so note bars visually pass through the piano strip
-                val slimHeight = SLIM_PIANO_HEIGHT_DP * density
-                drawCenteredPianoKeyboard(
-                    textMeasurer = textMeasurer,
-                    layout = layout,
-                    pianoHeight = slimHeight,
-                    minMidi = minMidi,
-                    maxMidi = maxMidi,
-                    centerY = pianoEdgeY
-                )
-                drawFreePlayNotes(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density, continuousPitchLine)
+                drawBarLines(mode, pianoEdgeY, noteAreaTop, noteAreaBottom, density)
+                drawFreePlayNotes(mode, layout, pianoEdgeY, noteAreaTop, noteAreaBottom, density, continuousPitchLine)
                 if (continuousPitchLine) {
                     val viewTimeMs = mode.currentTimeMs - mode.timeOffsetMs
-                    drawContinuousPitchLine(mode.pitchTrace, viewTimeMs, mode.fallSpeedPxPerSec, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
+                    drawContinuousPitchLine(mode.pitchTrace, viewTimeMs, mode.fallSpeedPxPerSec, layout, pianoEdgeY, noteAreaTop, noteAreaBottom, density)
                 }
+                // "Now" line — thin bright marker in the center
+                drawLine(
+                    color = Color.White.copy(alpha = 0.55f),
+                    start = Offset(0f, pianoEdgeY),
+                    end = Offset(width, pianoEdgeY),
+                    strokeWidth = 1.5f * density
+                )
+                // Top piano (pianoAtBottom=false → at top, black keys face down toward notes)
+                drawPianoKeyboard(
+                    textMeasurer = textMeasurer,
+                    layout = layout,
+                    pianoHeight = pianoHeight,
+                    minMidi = minMidi,
+                    maxMidi = maxMidi,
+                    pianoAtBottom = false
+                )
+                // Bottom piano (pianoAtBottom=true → at bottom, black keys face up toward notes)
+                drawPianoKeyboard(
+                    textMeasurer = textMeasurer,
+                    layout = layout,
+                    pianoHeight = pianoHeight,
+                    minMidi = minMidi,
+                    maxMidi = maxMidi,
+                    pianoAtBottom = true
+                )
             }
             is CanvasMode.Melody -> {
                 drawBarLines(mode, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
@@ -244,22 +263,19 @@ fun SharedNoteCanvas(
                 drawPitchTrace(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density, continuousPitchLine)
                 if (continuousPitchLine) {
                     val viewTimeMs = ((mode.currentTimeSeconds + mode.songTimeOffsetSeconds) * 1000).toLong()
-                    drawContinuousPitchLine(mode.pitchTrace, viewTimeMs, mode.fallSpeedPxPerSec, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
+                    drawContinuousPitchLine(mode.pitchTrace, viewTimeMs, mode.fallSpeedPxPerSec, layout, pianoEdgeY, noteAreaTop, noteAreaBottom, density)
                 }
                 drawPitchIndicator(mode, layout, pianoEdgeY, pianoAtBottom, density)
+                // Single piano for Melody mode
+                drawPianoKeyboard(
+                    textMeasurer = textMeasurer,
+                    layout = layout,
+                    pianoHeight = pianoHeight,
+                    minMidi = minMidi,
+                    maxMidi = maxMidi,
+                    pianoAtBottom = pianoAtBottom
+                )
             }
-        }
-
-        // Draw piano keyboard for non-FreePlay modes
-        if (mode !is CanvasMode.FreePlay) {
-            drawPianoKeyboard(
-                textMeasurer = textMeasurer,
-                layout = layout,
-                pianoHeight = pianoHeight,
-                minMidi = minMidi,
-                maxMidi = maxMidi,
-                pianoAtBottom = pianoAtBottom
-            )
         }
     }
 }
@@ -268,9 +284,9 @@ fun SharedNoteCanvas(
 
 private fun DrawScope.drawBarLines(
     mode: CanvasMode.FreePlay,
-    pianoEdgeY: Float,
-    canvasFarEdgeY: Float,
-    pianoAtBottom: Boolean,
+    nowY: Float,
+    noteAreaTop: Float,
+    noteAreaBottom: Float,
     density: Float
 ) {
     if (mode.bpm <= 0f) return
@@ -278,21 +294,20 @@ private fun DrawScope.drawBarLines(
     if (pxPerMs <= 0f) return
 
     val now = (mode.currentTimeMs - mode.timeOffsetMs).toDouble()
-
     val beatDurationMs = 60_000.0 / mode.bpm
 
-    // FreePlay always uses full canvas height (centered piano; both past and future visible)
-    val visibleTop = 0f
-    val visibleBottom = size.height
+    val visibleTop = noteAreaTop
+    val visibleBottom = noteAreaBottom
 
-    val visibleRangeMs = visibleBottom / pxPerMs
+    // Compute how far back (past) we need to start
+    val pastRangeMs = (noteAreaBottom - nowY) / pxPerMs
 
     // Draw loop region if active
     val loopStartMs = mode.loopStartMs
     val loopEndMs = mode.loopEndMs
     if (loopStartMs != null && loopEndMs != null && loopEndMs > loopStartMs) {
-        val loopBandTop = (pianoEdgeY + (now - loopEndMs) * pxPerMs).toFloat().coerceIn(visibleTop, visibleBottom)
-        val loopBandBottom = (pianoEdgeY + (now - loopStartMs) * pxPerMs).toFloat().coerceIn(visibleTop, visibleBottom)
+        val loopBandTop = (nowY + (now - loopEndMs) * pxPerMs).toFloat().coerceIn(visibleTop, visibleBottom)
+        val loopBandBottom = (nowY + (now - loopStartMs) * pxPerMs).toFloat().coerceIn(visibleTop, visibleBottom)
         if (loopBandBottom > loopBandTop) {
             drawRect(
                 color = Color(0x33FFB74D),
@@ -309,14 +324,15 @@ private fun DrawScope.drawBarLines(
         }
     }
 
-    val earliestTimeMs = now - visibleRangeMs * 1.1
+    val earliestTimeMs = now - pastRangeMs * 1.1
     val firstBeatIndex = kotlin.math.floor(earliestTimeMs / beatDurationMs).toLong() - 1L
 
     var beatIndex = firstBeatIndex
-    while (true) {
+    var safetyCounter = 0
+    while (safetyCounter++ < 2000) {
         val beatTimeMs = beatIndex * beatDurationMs
         val ageMs = now - beatTimeMs
-        val y = (pianoEdgeY + ageMs * pxPerMs).toFloat()
+        val y = (nowY + ageMs * pxPerMs).toFloat()
         if (y < visibleTop - 2f) break
         if (y <= visibleBottom + 2f) {
             val isBar = beatIndex % mode.beatsPerBar == 0L
@@ -328,7 +344,6 @@ private fun DrawScope.drawBarLines(
             )
         }
         beatIndex++
-        if (beatTimeMs > now + visibleRangeMs * 0.1) break
     }
 }
 
@@ -415,8 +430,8 @@ private fun DrawScope.drawFreePlayNotes(
     mode: CanvasMode.FreePlay,
     layout: Map<Int, KeyLayout>,
     pianoEdgeY: Float,
-    canvasFarEdgeY: Float,
-    pianoAtBottom: Boolean,
+    noteAreaTop: Float,
+    noteAreaBottom: Float,
     density: Float,
     continuousPitchLine: Boolean
 ) {
@@ -436,15 +451,9 @@ private fun DrawScope.drawFreePlayNotes(
         val ageOfEndMs = now - noteEndMs
         val ageOfStartMs = now - note.startTimeMs
 
-        val rawTopY: Float
-        val rawBottomY: Float
-        if (pianoAtBottom) {
-            rawBottomY = pianoEdgeY - (ageOfEndMs * pxPerMs)
-            rawTopY = pianoEdgeY - (ageOfStartMs * pxPerMs)
-        } else {
-            rawTopY = pianoEdgeY + ageOfEndMs * pxPerMs
-            rawBottomY = pianoEdgeY + ageOfStartMs * pxPerMs
-        }
+        // Notes fall downward: past (positive age) → below now-line, future (negative age) → above
+        val rawTopY = pianoEdgeY + ageOfEndMs * pxPerMs
+        val rawBottomY = pianoEdgeY + ageOfStartMs * pxPerMs
 
         // Color based on voice
         val baseVoiceColor = VOICE_COLORS[note.voiceIndex % VOICE_COLORS.size]
@@ -457,7 +466,7 @@ private fun DrawScope.drawFreePlayNotes(
                 blue = barColor.blue * 0.75f
             )
         }
-        // Dim upcoming (future) notes — they appear above the centered piano
+        // Dim upcoming (future) notes — they appear above the now-line
         if (ageOfStartMs < 0) {
             barColor = barColor.copy(alpha = barColor.alpha * 0.45f)
         }
@@ -470,23 +479,19 @@ private fun DrawScope.drawFreePlayNotes(
             barW = key.width - BAR_GAP_PX * 2f,
             rawTopY = rawTopY,
             rawBottomY = rawBottomY,
-            pianoEdgeY = pianoEdgeY,
-            canvasFarEdgeY = canvasFarEdgeY,
-            pianoAtBottom = pianoAtBottom,
+            visibleTop = noteAreaTop,
+            visibleBottom = noteAreaBottom,
             color = barColor,
             borderAlpha = borderAlpha,
             centsHistory = if (continuousPitchLine) emptyList() else note.centsHistory,
-            density = density,
-            replayMode = true
+            density = density
         )
 
         // Draw selection highlight and handles
         if (isSelected && note.endTimeMs != null) {
             val centerX = key.x + key.width / 2f
-            val visibleTop = minOf(pianoEdgeY, canvasFarEdgeY)
-            val visibleBottom = maxOf(pianoEdgeY, canvasFarEdgeY)
-            val clampedTopY = rawTopY.coerceIn(visibleTop, visibleBottom)
-            val clampedBottomY = rawBottomY.coerceIn(visibleTop, visibleBottom)
+            val clampedTopY = rawTopY.coerceIn(noteAreaTop, noteAreaBottom)
+            val clampedBottomY = rawBottomY.coerceIn(noteAreaTop, noteAreaBottom)
 
             // End handle (top = more recent time)
             drawCircle(
@@ -524,8 +529,8 @@ private fun DrawScope.drawContinuousPitchLine(
     fallSpeedPxPerSec: Float,
     layout: Map<Int, KeyLayout>,
     pianoEdgeY: Float,
-    canvasFarEdgeY: Float,
-    pianoAtBottom: Boolean,
+    visibleTop: Float,
+    visibleBottom: Float,
     density: Float
 ) {
     if (trace.isEmpty()) return
@@ -533,8 +538,6 @@ private fun DrawScope.drawContinuousPitchLine(
     val pxPerMs = fallSpeedPxPerSec * density / 1000f
     if (pxPerMs <= 0f) return
 
-    val visibleTop = minOf(pianoEdgeY, canvasFarEdgeY)
-    val visibleBottom = maxOf(pianoEdgeY, canvasFarEdgeY)
     val maxGapMs = 150L
 
     val visibleSpanMs = ((visibleBottom - visibleTop) / pxPerMs).toLong()
@@ -649,13 +652,13 @@ private fun DrawScope.drawMelodyNotes(
             barW = barW,
             rawTopY = rawTopY,
             rawBottomY = rawBottomY,
-            pianoEdgeY = pianoEdgeY,
-            canvasFarEdgeY = canvasFarEdgeY,
-            pianoAtBottom = pianoAtBottom,
+            visibleTop = visibleTop,
+            visibleBottom = visibleBottom,
             color = noteColor,
             borderAlpha = 0.15f,
             centsHistory = emptyList(),
-            density = density
+            density = density,
+            wigglyPianoAtBottom = pianoAtBottom
         )
     }
 }
@@ -722,13 +725,13 @@ private fun DrawScope.drawPitchTrace(
             barW = traceWidth,
             rawTopY = rawTopY,
             rawBottomY = rawBottomY,
-            pianoEdgeY = pianoEdgeY,
-            canvasFarEdgeY = canvasFarEdgeY,
-            pianoAtBottom = pianoAtBottom,
+            visibleTop = visibleTop,
+            visibleBottom = visibleBottom,
             color = baseColor.copy(alpha = 0.75f),
             borderAlpha = 0.25f,
             centsHistory = if (suppressWigglyLine) emptyList() else segmentCents,
-            density = density
+            density = density,
+            wigglyPianoAtBottom = pianoAtBottom
         )
 
         segStart = segEnd + 1
@@ -774,19 +777,15 @@ private fun DrawScope.drawNoteBar(
     barW: Float,
     rawTopY: Float,
     rawBottomY: Float,
-    pianoEdgeY: Float,
-    canvasFarEdgeY: Float,
-    pianoAtBottom: Boolean,
+    visibleTop: Float,
+    visibleBottom: Float,
     color: Color,
     borderAlpha: Float,
     centsHistory: List<Float>,
     density: Float,
-    replayMode: Boolean = false
+    wigglyPianoAtBottom: Boolean = false
 ) {
     if (barW < 2f) return
-
-    val visibleTop = if (replayMode) 0f else minOf(pianoEdgeY, canvasFarEdgeY)
-    val visibleBottom = if (replayMode) size.height else maxOf(pianoEdgeY, canvasFarEdgeY)
 
     if (rawTopY > visibleBottom || rawBottomY < visibleTop) return
 
@@ -798,14 +797,9 @@ private fun DrawScope.drawNoteBar(
 
     val r = CORNER_RADIUS_DP * density
 
-    val topIsPianoSide = !pianoAtBottom && !replayMode
-    val bottomIsPianoSide = pianoAtBottom && !replayMode
-
-    val topClippedAtPiano = topIsPianoSide && rawTopY <= pianoEdgeY
-    val topR = if (topClippedAtPiano) 0f else r
-
-    val bottomClippedAtPiano = bottomIsPianoSide && rawBottomY >= pianoEdgeY
-    val bottomR = if (bottomClippedAtPiano) 0f else r
+    // Square corners when the bar is clipped at an edge (continuous with the boundary)
+    val topR = if (rawTopY <= visibleTop) 0f else r
+    val bottomR = if (rawBottomY >= visibleBottom) 0f else r
 
     val roundRect = RoundRect(
         left = barX,
@@ -829,7 +823,7 @@ private fun DrawScope.drawNoteBar(
             clippedTop = clippedTop,
             clippedHeight = barHeight,
             centsHistory = centsHistory,
-            pianoAtBottom = pianoAtBottom,
+            pianoAtBottom = wigglyPianoAtBottom,
             density = density
         )
     }

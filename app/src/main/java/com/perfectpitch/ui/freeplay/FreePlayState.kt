@@ -36,6 +36,8 @@ data class FreePlayState(
     val midiAvailable: Boolean = false,
     val midiInputEnabled: Boolean = false,
     val midiOutputEnabled: Boolean = false,
+    val midiInputDeviceName: String? = null,
+    val midiOutputDeviceName: String? = null,
     val isReplaying: Boolean = false
 )
 
