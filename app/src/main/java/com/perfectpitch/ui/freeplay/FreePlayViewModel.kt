@@ -240,6 +240,11 @@ class FreePlayViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.updateFreeplayBeatsPerBar(clamped) }
     }
 
+    fun setBarDivision(division: Int) {
+        val valid = listOf(2, 4, 8, 16, 32)
+        if (division in valid) _state.update { it.copy(barDivision = division) }
+    }
+
     fun setBpm(bpm: Float) {
         val clamped = bpm.coerceIn(20f, 300f)
         _state.update { it.copy(bpm = clamped) }
@@ -307,6 +312,7 @@ class FreePlayViewModel @Inject constructor(
     fun setEditMode(mode: NoteEditMode) {
         _state.update { it.copy(editMode = mode, selectedNoteId = null) }
         editingNoteIdForUndo = null
+        if (mode == NoteEditMode.EDIT) stopReplay()
     }
 
     fun selectNote(id: String?) {
@@ -548,8 +554,8 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun onVerticalScroll(deltaMs: Long) {
-        val barMs = barDurationMs().toLong()
-        val minNowMs = sessionBaseMs - 2 * barMs
+        val beatMs = (60_000.0 / _state.value.bpm).toLong()
+        val minNowMs = sessionBaseMs - 2 * beatMs
         val maxTimeOffset = (virtualNowMs - minNowMs).coerceAtLeast(0L)
         if (deltaMs > 0L && _state.value.isReplaying) {
             seekToMs = (virtualNowMs - _state.value.timeOffsetMs - deltaMs).coerceAtLeast(minNowMs)
@@ -590,7 +596,7 @@ class FreePlayViewModel @Inject constructor(
                 val snappedStart = if (_state.value.snapEnabled) snapToGrid(noteStart) else noteStart
                 currentNoteStartMs = snappedStart
                 expandRange(midi)
-                if (_state.value.isRecording) {
+                if (_state.value.isRecording && virtualNowMs >= sessionBaseMs) {
                     val note = PlayedNote(
                         noteName = result.noteName,
                         octave = result.octave,
@@ -687,7 +693,7 @@ class FreePlayViewModel @Inject constructor(
                 val noteName = NoteUtils.NOTE_NAMES[noteIndex]
                 expandRange(midiNote)
 
-                if (isRecording) {
+                if (isRecording && virtualNowMs >= sessionBaseMs) {
                     val note = PlayedNote(
                         noteName = noteName,
                         octave = octave,
@@ -887,6 +893,11 @@ class FreePlayViewModel @Inject constructor(
         midiOutputSender.allNotesOff()
         if (melodySynthesizer.isReady) melodySynthesizer.allNotesOff()
         _state.update { it.copy(isReplaying = false) }
+    }
+
+    fun toggleReplay() {
+        if (_state.value.isReplaying) stopReplay()
+        else if (_state.value.playedNotes.isNotEmpty()) replayNotes()
     }
 
 

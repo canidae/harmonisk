@@ -6,6 +6,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -109,6 +111,8 @@ fun FreePlayScreen(
     var showOutputMenu by remember { mutableStateOf(false) }
     var showConfigMenu by remember { mutableStateOf(false) }
     var showVoiceMenu by remember { mutableStateOf(false) }
+    var showBeatsMenu by remember { mutableStateOf(false) }
+    var showDivisionMenu by remember { mutableStateOf(false) }
 
     // ── Panel 1 content: I/O · Settings · Play · Record · Edit · Undo · ScrollTop ──
     val panel1Content: @Composable RowScope.() -> Unit = {
@@ -233,18 +237,6 @@ fun FreePlayScreen(
             }
         }
 
-        // Play/Pause
-        if (state.playedNotes.isNotEmpty()) {
-            IconButton(
-                onClick = { if (state.isReplaying) viewModel.stopReplay() else viewModel.replayNotes() },
-                modifier = Modifier.size(PANEL_BTN_SIZE)
-                    .background(if (state.isReplaying) Color(0xFF26A69A).copy(alpha = 0.35f) else OVERLAY_BG, CircleShape)
-                    .then(if (state.isReplaying) Modifier.border(1.dp, Color(0xFF26A69A), CircleShape) else Modifier)
-            ) {
-                Icon(if (state.isReplaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, modifier = Modifier.size(17.dp), tint = if (state.isReplaying) Color(0xFF26A69A) else OVERLAY_ICON_TINT)
-            }
-        }
-
         // Record toggle
         IconButton(
             onClick = { viewModel.toggleRecording() },
@@ -287,29 +279,114 @@ fun FreePlayScreen(
         }
     }
 
-    // ── Panel 2 content: BPM · Beats/bar · Voice · Loop ─────────────────
+    // ── Panel 2 content: BPM · Meter · Voice · Loop ──────────────────────
     val panel2Content: @Composable RowScope.() -> Unit = {
-        Text("BPM", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
-        IconButton(onClick = { viewModel.setBpm((state.bpm - 1f).coerceAtLeast(20f)) }, modifier = Modifier.size(24.dp)) {
-            Text("−", fontSize = 12.sp, color = OVERLAY_ICON_TINT)
+        // BPM drag state
+        var bpmDragAccumPx by remember { mutableFloatStateOf(0f) }
+        var bpmDragging by remember { mutableStateOf(false) }
+
+        // While dragging, continuously apply BPM changes proportional to accumulated offset
+        LaunchedEffect(bpmDragging) {
+            if (!bpmDragging) return@LaunchedEffect
+            while (true) {
+                val off = bpmDragAccumPx
+                if (abs(off) > 1f) {
+                    val maxDistPx = with(density) { 120.dp.toPx() }
+                    val fraction = (off / maxDistPx).coerceIn(-1f, 1f)
+                    val deltaPerFrame = fraction * 10f * 16f / 1000f  // 10 BPM/sec at ~60fps
+                    viewModel.setBpm(viewModel.state.value.bpm + deltaPerFrame)
+                }
+                kotlinx.coroutines.delay(16L)
+            }
         }
-        Text(text = state.bpm.roundToInt().toString(), fontSize = 13.sp, color = Color.White, modifier = Modifier.widthIn(min = 28.dp))
-        IconButton(onClick = { viewModel.setBpm((state.bpm + 1f).coerceAtMost(300f)) }, modifier = Modifier.size(24.dp)) {
-            Text("+", fontSize = 12.sp, color = OVERLAY_ICON_TINT)
+
+        // BPM label + value — draggable vertically
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    bpmDragAccumPx = 0f
+                    bpmDragging = true
+                    val startY = down.position.y
+                    try {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!change.pressed) break
+                            bpmDragAccumPx = startY - change.position.y
+                            change.consume()
+                        }
+                    } finally {
+                        bpmDragging = false
+                        bpmDragAccumPx = 0f
+                    }
+                }
+            }
+        ) {
+            Text(
+                "BPM",
+                fontSize = 10.sp,
+                color = Color.White.copy(alpha = if (bpmDragging) 0.9f else 0.5f)
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = state.bpm.roundToInt().toString(),
+                fontSize = 13.sp,
+                color = if (bpmDragging) Color(0xFF7E57C2) else Color.White,
+                modifier = Modifier.widthIn(min = 28.dp)
+            )
         }
 
         Spacer(Modifier.width(8.dp))
 
-        Text("Beats/bar", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
-        IconButton(onClick = { viewModel.setBeatsPerBar((state.beatsPerBar - 1).coerceAtLeast(1)) }, modifier = Modifier.size(24.dp)) {
-            Text("−", fontSize = 12.sp, color = OVERLAY_ICON_TINT)
-        }
-        Text(text = "${state.beatsPerBar}/4", fontSize = 13.sp, color = Color.White, modifier = Modifier.widthIn(min = 24.dp))
-        IconButton(onClick = { viewModel.setBeatsPerBar((state.beatsPerBar + 1).coerceAtMost(16)) }, modifier = Modifier.size(24.dp)) {
-            Text("+", fontSize = 12.sp, color = OVERLAY_ICON_TINT)
-        }
+        // Meter (time signature) — two separate dropdowns
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Meter", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
+            Spacer(Modifier.width(4.dp))
 
-        Spacer(Modifier.width(8.dp))
+            // Beats (numerator) dropdown
+            Box {
+                Text(
+                    text = state.beatsPerBar.toString(),
+                    fontSize = 13.sp,
+                    color = Color.White,
+                    modifier = Modifier
+                        .pointerInput(Unit) { detectTapGestures { showBeatsMenu = true } }
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                )
+                DropdownMenu(expanded = showBeatsMenu, onDismissRequest = { showBeatsMenu = false }) {
+                    (2..12).forEach { beats ->
+                        DropdownMenuItem(
+                            text = { Text(beats.toString(), fontWeight = if (beats == state.beatsPerBar) FontWeight.Bold else FontWeight.Normal) },
+                            onClick = { viewModel.setBeatsPerBar(beats); showBeatsMenu = false }
+                        )
+                    }
+                }
+            }
+
+            Text("/", fontSize = 13.sp, color = Color.White.copy(alpha = 0.5f))
+
+            // Division (denominator) dropdown
+            Box {
+                Text(
+                    text = state.barDivision.toString(),
+                    fontSize = 13.sp,
+                    color = Color.White,
+                    modifier = Modifier
+                        .pointerInput(Unit) { detectTapGestures { showDivisionMenu = true } }
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                )
+                DropdownMenu(expanded = showDivisionMenu, onDismissRequest = { showDivisionMenu = false }) {
+                    listOf(2, 4, 8, 16, 32).forEach { div ->
+                        DropdownMenuItem(
+                            text = { Text(div.toString(), fontWeight = if (div == state.barDivision) FontWeight.Bold else FontWeight.Normal) },
+                            onClick = { viewModel.setBarDivision(div); showDivisionMenu = false }
+                        )
+                    }
+                }
+            }
+        }
 
         // Voice selector
         val voiceColor = VOICE_COLORS[state.activeVoiceIndex % VOICE_COLORS.size]
@@ -423,16 +500,20 @@ fun FreePlayScreen(
                     }
                 }
                 .pointerInput(state.editMode) {
-                    if (state.editMode == NoteEditMode.EDIT) {
-                        detectTapGestures(
-                            onDoubleTap = { offset ->
+                    detectTapGestures(
+                        onDoubleTap = { offset ->
+                            if (state.editMode == NoteEditMode.EDIT) {
                                 noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.let { (id, _) -> viewModel.deleteNote(id) }
-                            },
-                            onTap = { offset ->
-                                viewModel.selectNote(noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.first)
                             }
-                        )
-                    }
+                        },
+                        onTap = { offset ->
+                            if (state.editMode == NoteEditMode.EDIT) {
+                                viewModel.selectNote(noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.first)
+                            } else {
+                                viewModel.toggleReplay()
+                            }
+                        }
+                    )
                 }
                 .pointerInput(state.editMode) {
                     if (state.editMode == NoteEditMode.EDIT) {
@@ -516,6 +597,21 @@ fun FreePlayScreen(
                     onNoteRects = { rects -> noteRectsState.value = rects },
                     modifier = Modifier.fillMaxSize()
                 )
+            }
+
+            // Play overlay: shown when paused and not in edit mode and there are notes
+            if (!state.isReplaying && state.editMode == NoteEditMode.NONE && state.playedNotes.isNotEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.PlayArrow,
+                        contentDescription = "Tap to play",
+                        modifier = Modifier.size(72.dp),
+                        tint = Color.White.copy(alpha = 0.3f)
+                    )
+                }
             }
 
             SnackbarHost(
