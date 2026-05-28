@@ -67,10 +67,8 @@ sealed interface CanvasMode {
     data class FreePlay(
         val notes: List<PlayedNote>,
         val activeNote: PlayedNote?,
-        val currentTimeMs: Long,
-        val timeOffsetMs: Long,
+        val songPositionMs: Long,
         val fallSpeedPxPerSec: Float,
-        val pitchTrace: List<PitchFrame> = emptyList(),
         val bpm: Float = 120f,
         val beatsPerBar: Int = 4,
         val activeVoiceIndex: Int = 0,
@@ -78,7 +76,6 @@ sealed interface CanvasMode {
         val loopEndMs: Long? = null,
         val selectedNoteId: String? = null,
         val isEditMode: Boolean = false,
-        val sessionStartMs: Long = 0L,
         val pianoVisibility: PianoVisibility = PianoVisibility.BOTH
     ) : CanvasMode
 
@@ -86,7 +83,7 @@ sealed interface CanvasMode {
         val melodyTrack: MelodyTrack,
         val noteResults: Map<Int, NoteResultState>,
         val currentNoteIndex: Int,
-        val pitchTrace: List<PitchFrame>,
+        val noteCentsHistory: Map<Int, List<Float>> = emptyMap(),
         val currentTimeSeconds: Double,
         val songTimeOffsetSeconds: Double,
         val fallSpeedPxPerSec: Float,
@@ -132,7 +129,6 @@ fun SharedNoteCanvas(
     pianoAtBottom: Boolean,
     viewMinMidi: Float,
     viewMaxMidi: Float,
-    continuousPitchLine: Boolean = true,
     rightPaddingPx: Float = 0f,
     onNoteRects: ((List<Pair<String, Rect>>) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -146,7 +142,7 @@ fun SharedNoteCanvas(
         val w = canvasSize.width.toFloat()
         val pianoEdgeY = canvasSize.height / 2f
         val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
-        val now = mode.currentTimeMs - mode.timeOffsetMs
+        val now = mode.songPositionMs
         val effMax = if (rightPaddingPx > 0f && w > rightPaddingPx) {
             val midiPerPx = (viewMaxMidi - viewMinMidi) / (w - rightPaddingPx)
             viewMaxMidi + rightPaddingPx * midiPerPx
@@ -207,8 +203,8 @@ fun SharedNoteCanvas(
         // For FreePlay: compute playable-area bottom (before bar 1 = black, no columns/grid)
         val playableBottom: Float = if (mode is CanvasMode.FreePlay && mode.fallSpeedPxPerSec > 0f) {
             val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
-            val now = (mode.currentTimeMs - mode.timeOffsetMs).toDouble()
-            val bar1Y = (pianoEdgeY + (now - mode.sessionStartMs) * pxPerMs).toFloat()
+            val now = mode.songPositionMs.toDouble()
+            val bar1Y = (pianoEdgeY + now * pxPerMs).toFloat()
             bar1Y.coerceIn(noteAreaTop, noteAreaBottom)
         } else noteAreaBottom
 
@@ -243,20 +239,7 @@ fun SharedNoteCanvas(
         when (mode) {
             is CanvasMode.FreePlay -> {
                 drawBarLines(mode, pianoEdgeY, noteAreaTop, noteAreaBottom, density, textMeasurer)
-                drawFreePlayNotes(mode, layout, pianoEdgeY, noteAreaTop, noteAreaBottom, density, continuousPitchLine)
-                if (continuousPitchLine) {
-                    val viewTimeMs = mode.currentTimeMs - mode.timeOffsetMs
-                    // Only draw pitch line within finalized/active note ranges
-                    val allNotes = mode.notes + listOfNotNull(mode.activeNote)
-                    val filteredTrace = if (allNotes.isEmpty()) emptyList()
-                    else mode.pitchTrace.filter { frame ->
-                        allNotes.any { note ->
-                            frame.timeMs >= note.startTimeMs &&
-                            (note.endTimeMs == null || frame.timeMs <= note.endTimeMs)
-                        }
-                    }
-                    drawContinuousPitchLine(filteredTrace, viewTimeMs, mode.fallSpeedPxPerSec, layout, pianoEdgeY, noteAreaTop, noteAreaBottom, density)
-                }
+                drawFreePlayNotes(mode, layout, pianoEdgeY, noteAreaTop, noteAreaBottom, density)
                 // "Now" line — thin bright marker in the center
                 drawLine(
                     color = Color.White.copy(alpha = 0.55f),
@@ -288,11 +271,6 @@ fun SharedNoteCanvas(
             is CanvasMode.Melody -> {
                 drawBarLines(mode, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
                 drawMelodyNotes(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
-                drawPitchTrace(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density, continuousPitchLine)
-                if (continuousPitchLine) {
-                    val viewTimeMs = ((mode.currentTimeSeconds + mode.songTimeOffsetSeconds) * 1000).toLong()
-                    drawContinuousPitchLine(mode.pitchTrace, viewTimeMs, mode.fallSpeedPxPerSec, layout, pianoEdgeY, noteAreaTop, noteAreaBottom, density)
-                }
                 drawPitchIndicator(mode, layout, pianoEdgeY, pianoAtBottom, density)
                 // Single piano for Melody mode
                 drawPianoKeyboard(
@@ -323,7 +301,7 @@ private fun DrawScope.drawBarLines(
     val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
     if (pxPerMs <= 0f) return
 
-    val now = (mode.currentTimeMs - mode.timeOffsetMs).toDouble()
+    val now = mode.songPositionMs.toDouble()
     val beatDurationMs = 60_000.0 / mode.bpm
     val barDurationMs = mode.beatsPerBar * beatDurationMs
 
@@ -331,7 +309,7 @@ private fun DrawScope.drawBarLines(
     val visibleBottom = noteAreaBottom
 
     // Clip all drawing to the playable area — nothing drawn below the bar-1 line
-    val bar1Y = (nowY + (now - mode.sessionStartMs) * pxPerMs).toFloat()
+    val bar1Y = (nowY + now * pxPerMs).toFloat()
     val clipBottom = bar1Y.coerceIn(visibleTop, visibleBottom)
     if (clipBottom <= visibleTop) return
 
@@ -359,8 +337,7 @@ private fun DrawScope.drawBarLines(
     }
 
     val earliestTimeMs = now - (noteAreaBottom - nowY) / pxPerMs * 1.1
-    val relativeEarliestMs = earliestTimeMs - mode.sessionStartMs
-    val firstBeatIndex = kotlin.math.floor(relativeEarliestMs / beatDurationMs).toLong() - 1L
+    val firstBeatIndex = kotlin.math.floor(earliestTimeMs / beatDurationMs).toLong() - 1L
 
     val barLabelStyle = TextStyle(
         color = Color.White.copy(alpha = 0.35f),
@@ -371,7 +348,7 @@ private fun DrawScope.drawBarLines(
     var beatIndex = firstBeatIndex
     var safetyCounter = 0
     while (safetyCounter++ < 2000) {
-        val beatTimeMs = mode.sessionStartMs + beatIndex * beatDurationMs
+        val beatTimeMs = beatIndex * beatDurationMs
         // Skip beats before session start (bar 1)
         if (beatIndex < 0) {
             beatIndex++
@@ -390,7 +367,7 @@ private fun DrawScope.drawBarLines(
             )
             // Draw bar number at the left edge of each bar line
             if (isBar) {
-                val barNumber = ((beatTimeMs - mode.sessionStartMs.toDouble()) / barDurationMs).toLong() + 1
+                val barNumber = (beatTimeMs / barDurationMs).toLong() + 1
                 val label = textMeasurer.measure(
                     text = buildAnnotatedString { append(barNumber.toString()) },
                     style = barLabelStyle
@@ -491,11 +468,10 @@ private fun DrawScope.drawFreePlayNotes(
     pianoEdgeY: Float,
     noteAreaTop: Float,
     noteAreaBottom: Float,
-    density: Float,
-    continuousPitchLine: Boolean
+    density: Float
 ) {
     val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
-    val now = mode.currentTimeMs - mode.timeOffsetMs
+    val now = mode.songPositionMs
     val handleRadius = 12f * density
 
     val allNotes = buildList {
@@ -506,7 +482,7 @@ private fun DrawScope.drawFreePlayNotes(
     for (note in allNotes) {
         val key = layout[note.midiNumber] ?: continue
 
-        val noteEndMs = note.endTimeMs ?: mode.currentTimeMs
+        val noteEndMs = note.endTimeMs ?: mode.songPositionMs
         val ageOfEndMs = now - noteEndMs
         val ageOfStartMs = now - note.startTimeMs
 
@@ -542,7 +518,7 @@ private fun DrawScope.drawFreePlayNotes(
             visibleBottom = noteAreaBottom,
             color = barColor,
             borderAlpha = borderAlpha,
-            centsHistory = if (continuousPitchLine) emptyList() else note.centsHistory,
+            centsHistory = note.centsHistory,
             density = density
         )
 
@@ -569,73 +545,6 @@ private fun DrawScope.drawFreePlayNotes(
 
 // endregion
 
-// region Continuous pitch line (unified)
-
-private fun DrawScope.drawContinuousPitchLine(
-    trace: List<PitchFrame>,
-    viewTimeMs: Long,
-    fallSpeedPxPerSec: Float,
-    layout: Map<Int, KeyLayout>,
-    pianoEdgeY: Float,
-    visibleTop: Float,
-    visibleBottom: Float,
-    density: Float
-) {
-    if (trace.isEmpty()) return
-
-    val pxPerMs = fallSpeedPxPerSec * density / 1000f
-    if (pxPerMs <= 0f) return
-
-    val maxGapMs = 150L
-
-    val visibleSpanMs = ((visibleBottom - visibleTop) / pxPerMs).toLong()
-    val marginMs = visibleSpanMs / 2
-    val minRelTimeMs = ((pianoEdgeY - visibleBottom) / pxPerMs).toLong()
-    val maxRelTimeMs = ((pianoEdgeY - visibleTop) / pxPerMs).toLong()
-    val minTimeMs = viewTimeMs + minRelTimeMs - marginMs
-    val maxTimeMs = viewTimeMs + maxRelTimeMs + marginMs
-
-    val path = Path()
-    var pathStarted = false
-    var prevTimeMs = Long.MIN_VALUE
-    var prevMidiNote = -1
-
-    for (frame in trace) {
-        if (frame.timeMs < minTimeMs || frame.timeMs > maxTimeMs) {
-            if (pathStarted) pathStarted = false
-            prevTimeMs = frame.timeMs
-            prevMidiNote = frame.midiNote
-            continue
-        }
-
-        val fractionalMidi = frame.midiNote + frame.centsOff / 100f
-        val x = midiToPixelX(layout, fractionalMidi) ?: continue
-
-        val relativeTimeMs = frame.timeMs - viewTimeMs
-        val y = pianoEdgeY - relativeTimeMs * pxPerMs
-
-        val hasGap = prevTimeMs != Long.MIN_VALUE && (frame.timeMs - prevTimeMs) > maxGapMs
-        val hasJump = prevMidiNote >= 0 && abs(frame.midiNote - prevMidiNote) > 0
-
-        if (!pathStarted || hasGap || hasJump) {
-            path.moveTo(x, y)
-            pathStarted = true
-        } else {
-            path.lineTo(x, y)
-        }
-        prevTimeMs = frame.timeMs
-        prevMidiNote = frame.midiNote
-    }
-
-    if (path.isEmpty) return
-
-    clipRect(left = 0f, top = visibleTop, right = size.width, bottom = visibleBottom) {
-        drawGlowPath(path, density)
-    }
-}
-
-// endregion
-
 private fun DrawScope.drawMelodyNotes(
     mode: CanvasMode.Melody,
     layout: Map<Int, KeyLayout>,
@@ -648,7 +557,7 @@ private fun DrawScope.drawMelodyNotes(
     val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
     val minGapPx = 4f * density
 
-    for ((index, note) in mode.melodyTrack.notes.withIndex()) {
+    mode.melodyTrack.notes.forEachIndexed { index, note ->
         val noteStartTime = mode.melodyTrack.noteStartSeconds(note)
         val noteDuration = mode.melodyTrack.noteDurationSeconds(note)
         val noteEndTime = noteStartTime + noteDuration
@@ -668,12 +577,12 @@ private fun DrawScope.drawMelodyNotes(
 
         val visibleTop = if (pianoAtBottom) canvasFarEdgeY else pianoEdgeY
         val visibleBottom = if (pianoAtBottom) pianoEdgeY else canvasFarEdgeY
-        if (rawTopY > visibleBottom + 100f || rawBottomY < visibleTop - 100f) continue
+        if (rawTopY > visibleBottom + 100f || rawBottomY < visibleTop - 100f) return@forEachIndexed
 
-        val key = layout[note.noteNumber] ?: continue
+        val key = layout[note.noteNumber] ?: return@forEachIndexed
         val barX = key.x + BAR_GAP_PX
         val barW = key.width - BAR_GAP_PX * 2f
-        if (barW < 2f) continue
+        if (barW < 2f) return@forEachIndexed
 
         val noteColor = if (mode.noteResults[index] == NoteResultState.ACTIVE) {
             Color.White
@@ -690,85 +599,10 @@ private fun DrawScope.drawMelodyNotes(
             visibleBottom = visibleBottom,
             color = noteColor,
             borderAlpha = 0.15f,
-            centsHistory = emptyList(),
+            centsHistory = mode.noteCentsHistory[index] ?: emptyList(),
             density = density,
             wigglyPianoAtBottom = pianoAtBottom
         )
-    }
-}
-
-private fun DrawScope.drawPitchTrace(
-    mode: CanvasMode.Melody,
-    layout: Map<Int, KeyLayout>,
-    pianoEdgeY: Float,
-    canvasFarEdgeY: Float,
-    pianoAtBottom: Boolean,
-    density: Float,
-    suppressWigglyLine: Boolean
-) {
-    val trace = mode.pitchTrace
-    if (trace.isEmpty()) return
-
-    val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
-    val viewTimeMs = ((mode.currentTimeSeconds + mode.songTimeOffsetSeconds) * 1000).toLong()
-    val frameDurationMs = 23L
-
-    var segStart = 0
-    while (segStart < trace.size) {
-        val segMidi = trace[segStart].midiNote
-        var segEnd = segStart
-        while (segEnd + 1 < trace.size && trace[segEnd + 1].midiNote == segMidi) {
-            segEnd++
-        }
-
-        val key = layout[segMidi]
-        if (key == null) {
-            segStart = segEnd + 1
-            continue
-        }
-
-        val startTimeMs = trace[segStart].timeMs
-        val endTimeMs = trace[segEnd].timeMs + frameDurationMs
-
-        val relativeStartMs = startTimeMs - viewTimeMs
-        val relativeEndMs = endTimeMs - viewTimeMs
-
-        val rawBottomY = pianoEdgeY - relativeStartMs * pxPerMs
-        val rawTopY = pianoEdgeY - relativeEndMs * pxPerMs
-
-        val visibleTop = if (pianoAtBottom) canvasFarEdgeY else pianoEdgeY
-        val visibleBottom = if (pianoAtBottom) pianoEdgeY else canvasFarEdgeY
-        if (rawTopY > visibleBottom + 100f || rawBottomY < visibleTop - 100f) {
-            segStart = segEnd + 1
-            continue
-        }
-
-        val traceWidth = key.width * 0.6f
-        val traceX = key.x + (key.width - traceWidth) / 2f
-
-        val segmentCents = mutableListOf<Float>()
-        for (i in segStart..segEnd) {
-            segmentCents.add(trace[i].centsOff)
-        }
-
-        val avgCentsOff = segmentCents.map { abs(it) }.average().toFloat()
-        val baseColor = traceAccuracyColor(avgCentsOff)
-
-        drawNoteBar(
-            barX = traceX,
-            barW = traceWidth,
-            rawTopY = rawTopY,
-            rawBottomY = rawBottomY,
-            visibleTop = visibleTop,
-            visibleBottom = visibleBottom,
-            color = baseColor.copy(alpha = 0.75f),
-            borderAlpha = 0.25f,
-            centsHistory = if (suppressWigglyLine) emptyList() else segmentCents,
-            density = density,
-            wigglyPianoAtBottom = pianoAtBottom
-        )
-
-        segStart = segEnd + 1
     }
 }
 
@@ -909,17 +743,6 @@ private fun DrawScope.drawWigglyPitchLine(
 private fun DrawScope.drawGlowPath(path: Path, density: Float) {
     drawPath(path, Color.White.copy(alpha = 0.15f), style = Stroke(width = 4f * density, cap = StrokeCap.Round, join = StrokeJoin.Round))
     drawPath(path, Color.White.copy(alpha = 0.7f),  style = Stroke(width = 1.5f * density, cap = StrokeCap.Round, join = StrokeJoin.Round))
-}
-
-/** Discrete accuracy color (Melody mode trace) */
-private fun traceAccuracyColor(avgCentsOff: Float): Color {
-    return when {
-        avgCentsOff <= 5f -> OVERLAY_PERFECT
-        avgCentsOff <= 10f -> OVERLAY_GREAT
-        avgCentsOff <= 30f -> OVERLAY_GOOD
-        avgCentsOff <= 50f -> OVERLAY_OK
-        else -> OVERLAY_MISS
-    }
 }
 
 /** Color for the pitch indicator based on proximity to expected note */

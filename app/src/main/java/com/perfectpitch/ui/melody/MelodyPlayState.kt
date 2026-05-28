@@ -4,7 +4,6 @@ import com.perfectpitch.midi.MelodyTrack
 import com.perfectpitch.music.MelodyScore
 import com.perfectpitch.music.NoteScore
 import com.perfectpitch.music.PitchResult
-import com.perfectpitch.ui.components.PitchFrame
 
 data class MelodyPlayState(
     val phase: PlayPhase = PlayPhase.NOT_STARTED,
@@ -28,8 +27,8 @@ data class MelodyPlayState(
     val songTimeOffsetSeconds: Double = 0.0,
     val viewMinMidi: Float = 60f,
     val viewMaxMidi: Float = 72f,
-    // Continuous pitch trace recorded during playback
-    val pitchTrace: List<PitchFrame> = emptyList(),
+    // Per-note cents history for pitch wiggle rendering (key = note index in track)
+    val noteCentsHistory: Map<Int, List<Float>> = emptyMap(),
     // MIDI device state
     val midiAvailable: Boolean = false,
     val midiInputEnabled: Boolean = false,

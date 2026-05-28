@@ -1,7 +1,6 @@
 package com.perfectpitch.ui.freeplay
 
 import com.perfectpitch.music.PitchResult
-import com.perfectpitch.ui.components.PitchFrame
 
 enum class NoteEditMode { NONE, EDIT }
 
@@ -16,14 +15,11 @@ data class FreePlayState(
     val viewMinMidi: Float = 60f,
     val viewMaxMidi: Float = 72f,
     val fallSpeedPxPerSec: Float = 150f,
-    val timeOffsetMs: Long = 0,
-    val pitchTrace: List<PitchFrame> = emptyList(),
+    val songPositionMs: Long = 0L,
     val beatsPerBar: Int = 4,
     val bpm: Float = 120f,
     val minNoteDivision: Int = 16,
     val snapEnabled: Boolean = true,
-    // Time base for session-relative bar numbers and loop positions.
-    val sessionStartMs: Long = 0L,
     val activeVoiceIndex: Int = 0,
     val voiceCount: Int = 1,
     val loopStartBar: Int? = null,
@@ -37,7 +33,7 @@ data class FreePlayState(
     val midiOutputEnabled: Boolean = false,
     val midiInputDeviceName: String? = null,
     val midiOutputDeviceName: String? = null,
-    val isReplaying: Boolean = false,
+    val isPlaying: Boolean = false,
     // Piano visibility
     val pianoVisibility: PianoVisibility = PianoVisibility.UPPER_ONLY,
     // Meter denominator (time signature note value: 2, 4, 8, 16, 32)

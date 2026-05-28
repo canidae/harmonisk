@@ -17,7 +17,6 @@ class SettingsRepository(
         val YIN_THRESHOLD = floatPreferencesKey("yin_threshold")
         val DARK_THEME = booleanPreferencesKey("dark_theme")
         val SILENCE_THRESHOLD_DB = floatPreferencesKey("silence_threshold_db")
-        val CONTINUOUS_PITCH_LINE = booleanPreferencesKey("continuous_pitch_line")
         val FREEPLAY_FALL_SPEED = floatPreferencesKey("freeplay_fall_speed")
         val FREEPLAY_BEATS_PER_BAR = intPreferencesKey("freeplay_beats_per_bar")
         val FREEPLAY_BPM = floatPreferencesKey("freeplay_bpm")
@@ -31,7 +30,6 @@ class SettingsRepository(
             yinThreshold = prefs[YIN_THRESHOLD] ?: 0.15f,
             darkTheme = prefs[DARK_THEME] ?: true,
             silenceThresholdDb = prefs[SILENCE_THRESHOLD_DB] ?: -50f,
-            continuousPitchLine = prefs[CONTINUOUS_PITCH_LINE] ?: true,
             freeplayFallSpeed = prefs[FREEPLAY_FALL_SPEED] ?: 150f,
             freeplayBeatsPerBar = prefs[FREEPLAY_BEATS_PER_BAR] ?: 4,
             freeplayBpm = prefs[FREEPLAY_BPM] ?: 120f,
@@ -78,7 +76,6 @@ data class AppSettings(
     val yinThreshold: Float = 0.15f,
     val darkTheme: Boolean = true,
     val silenceThresholdDb: Float = -50f,
-    val continuousPitchLine: Boolean = true,
     val freeplayFallSpeed: Float = 150f,
     val freeplayBeatsPerBar: Int = 4,
     val freeplayBpm: Float = 120f,

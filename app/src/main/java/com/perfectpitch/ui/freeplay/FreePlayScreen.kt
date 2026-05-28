@@ -62,7 +62,6 @@ fun FreePlayScreen(
     viewModel: FreePlayViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    val continuousPitchLine by viewModel.continuousPitchLine.collectAsState()
     val density = LocalDensity.current
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
@@ -83,8 +82,8 @@ fun FreePlayScreen(
     val pxPerMs = state.fallSpeedPxPerSec * density.density / 1000f
 
     val barMs = state.beatsPerBar * (60000.0 / state.bpm)
-    val loopStartMs = state.loopStartBar?.let { (state.sessionStartMs + it * barMs).toLong() }
-    val loopEndMs   = state.loopEndBar?.let   { (state.sessionStartMs + it * barMs).toLong() }
+    val loopStartMs = state.loopStartBar?.let { (it * barMs).toLong() }
+    val loopEndMs   = state.loopEndBar?.let   { (it * barMs).toLong() }
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(Unit) {
@@ -491,7 +490,7 @@ fun FreePlayScreen(
                             if (state.editMode == NoteEditMode.EDIT) {
                                 viewModel.selectNote(noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.first)
                             } else {
-                                viewModel.toggleReplay()
+                                viewModel.togglePlaying()
                             }
                         }
                     )
@@ -556,10 +555,8 @@ fun FreePlayScreen(
                     mode = CanvasMode.FreePlay(
                         notes = state.playedNotes,
                         activeNote = state.activeNote,
-                        currentTimeMs = effectiveTime,
-                        timeOffsetMs = state.timeOffsetMs,
+                        songPositionMs = effectiveTime,
                         fallSpeedPxPerSec = state.fallSpeedPxPerSec,
-                        pitchTrace = state.pitchTrace,
                         bpm = state.bpm,
                         beatsPerBar = state.beatsPerBar,
                         activeVoiceIndex = state.activeVoiceIndex,
@@ -567,13 +564,11 @@ fun FreePlayScreen(
                         loopEndMs = if (state.isLooping || state.loopEndBar != null) loopEndMs else null,
                         selectedNoteId = state.selectedNoteId,
                         isEditMode = state.editMode == NoteEditMode.EDIT,
-                        sessionStartMs = state.sessionStartMs,
                         pianoVisibility = state.pianoVisibility
                     ),
                     pianoAtBottom = false,
                     viewMinMidi = state.viewMinMidi,
                     viewMaxMidi = state.viewMaxMidi,
-                    continuousPitchLine = continuousPitchLine,
                     rightPaddingPx = 0f,
                     onNoteRects = { rects -> noteRectsState.value = rects },
                     modifier = Modifier.fillMaxSize()
@@ -581,7 +576,7 @@ fun FreePlayScreen(
             }
 
             // Play overlay: shown when paused and not in edit mode and there are notes
-            if (!state.isReplaying && state.editMode == NoteEditMode.NONE && state.playedNotes.isNotEmpty()) {
+            if (!state.isPlaying && state.editMode == NoteEditMode.NONE && state.playedNotes.isNotEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center

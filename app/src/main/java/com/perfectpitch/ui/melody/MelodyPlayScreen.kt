@@ -48,7 +48,6 @@ fun MelodyPlayScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
-    val continuousPitchLine by viewModel.continuousPitchLine.collectAsState()
     val uncalibratedDevice by viewModel.uncalibratedDevicePrompt.collectAsState()
     val splitPercent by viewModel.activeSplitPercent.collectAsState()
     val outputDelay by viewModel.activeOutputDelay.collectAsState()
@@ -129,7 +128,7 @@ fun MelodyPlayScreen(
                         melodyTrack = track,
                         noteResults = state.noteResults,
                         currentNoteIndex = state.currentNoteIndex,
-                        pitchTrace = state.pitchTrace,
+                        noteCentsHistory = state.noteCentsHistory,
                         currentTimeSeconds = state.currentTimeSeconds,
                         songTimeOffsetSeconds = state.songTimeOffsetSeconds,
                         fallSpeedPxPerSec = state.fallSpeedPxPerSec,
@@ -139,7 +138,6 @@ fun MelodyPlayScreen(
                     pianoAtBottom = true,
                     viewMinMidi = state.viewMinMidi,
                     viewMaxMidi = state.viewMaxMidi,
-                    continuousPitchLine = continuousPitchLine,
                     rightPaddingPx = rightPaddingPx,
                     modifier = Modifier.fillMaxSize()
                 )

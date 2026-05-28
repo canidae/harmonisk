@@ -18,7 +18,6 @@ import com.perfectpitch.midi.MidiInputReceiver
 import com.perfectpitch.midi.MidiNoteEvent
 import com.perfectpitch.midi.MidiOutputSender
 import com.perfectpitch.music.*
-import com.perfectpitch.ui.components.PitchFrame
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -120,10 +119,6 @@ class MelodyViewModel @Inject constructor(
             }
         }
     }
-
-    val continuousPitchLine: StateFlow<Boolean> = settingsRepository.settings
-        .map { it.continuousPitchLine }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     // Exposed for the in-menu audio delay split slider
     val activeSplitPercent: StateFlow<Float> = audioDelayRepository.activeSplitPercent
@@ -378,7 +373,7 @@ class MelodyViewModel @Inject constructor(
                 currentNoteIndex = -1,
                 songTimeOffsetSeconds = 0.0,
                 melodyScore = null,
-                pitchTrace = emptyList()
+                noteCentsHistory = emptyMap()
             )
         }
 
@@ -440,7 +435,7 @@ class MelodyViewModel @Inject constructor(
                 currentTimeSeconds = 0.0,
                 isListening = false,
                 noteResults = emptyMap(),
-                pitchTrace = emptyList()
+                noteCentsHistory = emptyMap()
             )
         }
     }
@@ -560,7 +555,13 @@ class MelodyViewModel @Inject constructor(
                             heldNotes.add(event.midiNote)
                             val result = pitchResultFromMidi(event.midiNote)
                             _state.update { it.copy(pitchResult = result) }
-                            recordPitchFrame(result)
+                            val midiNoteIdx = _state.value.currentNoteIndex
+                            if (midiNoteIdx >= 0) {
+                                _state.update { current ->
+                                    val existing = current.noteCentsHistory[midiNoteIdx] ?: emptyList()
+                                    current.copy(noteCentsHistory = current.noteCentsHistory + (midiNoteIdx to existing + result.centsOff))
+                                }
+                            }
                             evaluateNote(result)
                         }
                         is MidiNoteEvent.NoteOff -> {
@@ -578,28 +579,18 @@ class MelodyViewModel @Inject constructor(
                 pitchProcessor.pitchFlow().collect { result ->
                     _state.update { it.copy(pitchResult = result) }
                     if (result.isValid) {
-                        recordPitchFrame(result)
+                        val micNoteIdx = _state.value.currentNoteIndex
+                        if (micNoteIdx >= 0) {
+                            _state.update { current ->
+                                val existing = current.noteCentsHistory[micNoteIdx] ?: emptyList()
+                                current.copy(noteCentsHistory = current.noteCentsHistory + (micNoteIdx to existing + result.centsOff))
+                            }
+                        }
                         evaluateNote(result)
                     }
                 }
             }
         }
-    }
-
-    private fun recordPitchFrame(result: PitchResult) {
-        val songTime = _state.value.currentTimeSeconds
-        if (_state.value.phase != PlayPhase.PLAYING && _state.value.phase != PlayPhase.WAITING_FOR_NOTE) return
-
-        // Backdate timestamp by input delay to align with when user actually sang
-        val adjustedTime = songTime - (audioInputDelayMs / 1000.0)
-
-        val frame = PitchFrame(
-            timeMs = (adjustedTime * 1000).toLong(),
-            midiNote = result.midiNoteNumber,
-            centsOff = result.centsOff,
-            frequency = result.frequency
-        )
-        _state.update { it.copy(pitchTrace = it.pitchTrace + frame) }
     }
 
     private fun updateCurrentNote(currentTime: Double) {
