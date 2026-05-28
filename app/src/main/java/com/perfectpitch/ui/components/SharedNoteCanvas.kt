@@ -3,9 +3,15 @@ package com.perfectpitch.ui.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
@@ -13,6 +19,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextMeasurer
@@ -69,6 +77,7 @@ sealed interface CanvasMode {
         val loopStartMs: Long? = null,
         val loopEndMs: Long? = null,
         val selectedNoteId: String? = null,
+        val isEditMode: Boolean = false,
         val sessionStartMs: Long = 0L,
         val pianoVisibility: PianoVisibility = PianoVisibility.BOTH
     ) : CanvasMode
@@ -86,6 +95,33 @@ sealed interface CanvasMode {
     ) : CanvasMode
 }
 
+internal fun computeFreePlayNoteRects(
+    notes: List<PlayedNote>,
+    now: Long,
+    pianoEdgeY: Float,
+    pxPerMs: Float,
+    layout: Map<Int, KeyLayout>
+): List<Pair<String, Rect>> {
+    val result = mutableListOf<Pair<String, Rect>>()
+    for (note in notes) {
+        val endTimeMs = note.endTimeMs ?: continue
+        val key = layout[note.midiNumber] ?: continue
+        val ageOfEndMs = now - endTimeMs
+        val ageOfStartMs = now - note.startTimeMs
+        val rawTopY = pianoEdgeY + ageOfEndMs * pxPerMs
+        val rawBottomY = pianoEdgeY + ageOfStartMs * pxPerMs
+        result.add(
+            note.id to Rect(
+                left = key.x + BAR_GAP_PX,
+                top = rawTopY,
+                right = key.x + key.width - BAR_GAP_PX,
+                bottom = rawBottomY
+            )
+        )
+    }
+    return result
+}
+
 /**
  * A unified note canvas used by both Free Play and Melody Play modes.
  */
@@ -98,12 +134,29 @@ fun SharedNoteCanvas(
     viewMaxMidi: Float,
     continuousPitchLine: Boolean = true,
     rightPaddingPx: Float = 0f,
+    onNoteRects: ((List<Pair<String, Rect>>) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current.density
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
-    Canvas(modifier = modifier.fillMaxSize()) {
+    // Emit note rects for edit-mode hit testing (FreePlay only)
+    if (onNoteRects != null && mode is CanvasMode.FreePlay && canvasSize != IntSize.Zero) {
+        val w = canvasSize.width.toFloat()
+        val pianoEdgeY = canvasSize.height / 2f
+        val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
+        val now = mode.currentTimeMs - mode.timeOffsetMs
+        val effMax = if (rightPaddingPx > 0f && w > rightPaddingPx) {
+            val midiPerPx = (viewMaxMidi - viewMinMidi) / (w - rightPaddingPx)
+            viewMaxMidi + rightPaddingPx * midiPerPx
+        } else viewMaxMidi
+        val layout = calculatePianoLayout(viewMinMidi, effMax, w)
+        val rects = computeFreePlayNoteRects(mode.notes, now, pianoEdgeY, pxPerMs, layout)
+        SideEffect { onNoteRects(rects) }
+    }
+
+    Canvas(modifier = modifier.fillMaxSize().onSizeChanged { canvasSize = it }) {
         val width = size.width
         val height = size.height
         val pianoHeight = PIANO_HEIGHT_DP * density
@@ -478,34 +531,23 @@ private fun DrawScope.drawFreePlayNotes(
             density = density
         )
 
-        // Draw selection highlight and handles
-        if (isSelected && note.endTimeMs != null) {
+        // Draw handles: large for selected note, small for all finalized notes in edit mode
+        if (note.endTimeMs != null && (isSelected || mode.isEditMode)) {
             val centerX = key.x + key.width / 2f
             val clampedTopY = rawTopY.coerceIn(noteAreaTop, noteAreaBottom)
             val clampedBottomY = rawBottomY.coerceIn(noteAreaTop, noteAreaBottom)
 
-            // End handle (top = more recent time)
-            drawCircle(
-                color = Color.White.copy(alpha = 0.9f),
-                radius = handleRadius,
-                center = Offset(centerX, clampedTopY)
-            )
-            drawCircle(
-                color = barColor,
-                radius = handleRadius - 3f * density,
-                center = Offset(centerX, clampedTopY)
-            )
-            // Start handle (bottom = older time)
-            drawCircle(
-                color = Color.White.copy(alpha = 0.9f),
-                radius = handleRadius,
-                center = Offset(centerX, clampedBottomY)
-            )
-            drawCircle(
-                color = barColor,
-                radius = handleRadius - 3f * density,
-                center = Offset(centerX, clampedBottomY)
-            )
+            val outerR = if (isSelected) handleRadius else 5f * density
+            val innerR = if (isSelected) handleRadius - 3f * density else 3f * density
+            val alpha  = if (isSelected) 0.9f else 0.45f
+            val iColor = if (isSelected) barColor else barColor.copy(alpha = 0.8f)
+
+            // End handle (top = note end = more recent)
+            drawCircle(color = Color.White.copy(alpha = alpha), radius = outerR, center = Offset(centerX, clampedTopY))
+            drawCircle(color = iColor, radius = innerR, center = Offset(centerX, clampedTopY))
+            // Start handle (bottom = note start = older)
+            drawCircle(color = Color.White.copy(alpha = alpha), radius = outerR, center = Offset(centerX, clampedBottomY))
+            drawCircle(color = iColor, radius = innerR, center = Offset(centerX, clampedBottomY))
         }
     }
 }
@@ -572,22 +614,8 @@ private fun DrawScope.drawContinuousPitchLine(
 
     if (path.isEmpty) return
 
-    clipRect(
-        left = 0f,
-        top = visibleTop,
-        right = size.width,
-        bottom = visibleBottom
-    ) {
-        drawPath(
-            path,
-            Color.White.copy(alpha = 0.15f),
-            style = Stroke(width = 4f * density, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        drawPath(
-            path,
-            Color.White.copy(alpha = 0.7f),
-            style = Stroke(width = 1.5f * density, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
+    clipRect(left = 0f, top = visibleTop, right = size.width, bottom = visibleBottom) {
+        drawGlowPath(path, density)
     }
 }
 
@@ -661,7 +689,7 @@ private fun DrawScope.drawPitchTrace(
     canvasFarEdgeY: Float,
     pianoAtBottom: Boolean,
     density: Float,
-    suppressWigglyLine: Boolean = false
+    suppressWigglyLine: Boolean
 ) {
     val trace = mode.pitchTrace
     if (trace.isEmpty()) return
@@ -855,21 +883,18 @@ private fun DrawScope.drawWigglyPitchLine(
         if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
     }
 
-    drawPath(
-        path,
-        Color.White.copy(alpha = 0.15f),
-        style = Stroke(width = 4f * density, cap = StrokeCap.Round, join = StrokeJoin.Round)
-    )
-    drawPath(
-        path,
-        Color.White.copy(alpha = 0.7f),
-        style = Stroke(width = 1.5f * density, cap = StrokeCap.Round, join = StrokeJoin.Round)
-    )
+    drawGlowPath(path, density)
 }
 
 // endregion
 
 // region Color helpers
+
+/** Two-pass glow stroke: wide translucent halo + narrow bright line. */
+private fun DrawScope.drawGlowPath(path: Path, density: Float) {
+    drawPath(path, Color.White.copy(alpha = 0.15f), style = Stroke(width = 4f * density, cap = StrokeCap.Round, join = StrokeJoin.Round))
+    drawPath(path, Color.White.copy(alpha = 0.7f),  style = Stroke(width = 1.5f * density, cap = StrokeCap.Round, join = StrokeJoin.Round))
+}
 
 /** Discrete accuracy color (Melody mode trace) */
 private fun traceAccuracyColor(avgCentsOff: Float): Color {

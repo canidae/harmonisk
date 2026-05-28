@@ -280,16 +280,16 @@ class FreePlayViewModel @Inject constructor(
 
     // region Loop
 
+    private fun barDurationMs(): Double = _state.value.beatsPerBar * (60000.0 / _state.value.bpm)
+
     fun setLoopStart() {
-        val s = _state.value
-        val barMs = s.beatsPerBar * (60000.0 / s.bpm)
+        val barMs = barDurationMs()
         val currentBar = ((virtualNowMs - sessionBaseMs) / barMs).toInt()
         _state.update { it.copy(loopStartBar = currentBar) }
     }
 
     fun setLoopEnd() {
-        val s = _state.value
-        val barMs = s.beatsPerBar * (60000.0 / s.bpm)
+        val barMs = barDurationMs()
         val currentBar = ((virtualNowMs - sessionBaseMs) / barMs).toInt() + 1
         _state.update { it.copy(loopEndBar = currentBar) }
     }
@@ -303,6 +303,11 @@ class FreePlayViewModel @Inject constructor(
     // endregion
 
     // region Edit mode
+
+    fun setEditMode(mode: NoteEditMode) {
+        _state.update { it.copy(editMode = mode, selectedNoteId = null) }
+        editingNoteIdForUndo = null
+    }
 
     fun selectNote(id: String?) {
         _state.update { it.copy(selectedNoteId = id) }
@@ -543,7 +548,7 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun onVerticalScroll(deltaMs: Long) {
-        val barMs = (_state.value.beatsPerBar * 60_000.0 / _state.value.bpm).toLong()
+        val barMs = barDurationMs().toLong()
         val minNowMs = sessionBaseMs - 2 * barMs
         val maxTimeOffset = (virtualNowMs - minNowMs).coerceAtLeast(0L)
         if (deltaMs > 0L && _state.value.isReplaying) {
@@ -577,7 +582,6 @@ class FreePlayViewModel @Inject constructor(
                 }
                 candidateNoteMidi = null
                 candidateNoteCount = 0
-                val wasInSilence = currentNoteMidi == null
                 finalizeCurrentNote()
                 currentNoteMidi = midi
                 centsSamples.clear()
@@ -802,7 +806,7 @@ class FreePlayViewModel @Inject constructor(
             }
 
             val s = _state.value
-            val barMs = s.beatsPerBar * (60000.0 / s.bpm).toLong()
+            val barMs = (s.beatsPerBar * (60000.0 / s.bpm)).toLong()
             // Determine loop boundary: end-loop if set, else lastNoteEndMs + 4 bars
             val loopEndMs = if (s.loopEndBar != null) {
                 sessionBaseMs + s.loopEndBar * barMs

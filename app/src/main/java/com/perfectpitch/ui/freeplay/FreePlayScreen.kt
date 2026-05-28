@@ -1,48 +1,47 @@
 package com.perfectpitch.ui.freeplay
 
+import android.content.res.Configuration
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.FiberManualRecord
-import androidx.compose.material.icons.filled.FileOpen
-import androidx.compose.material.icons.filled.Loop
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.perfectpitch.ui.components.CanvasMode
+import com.perfectpitch.ui.components.KeepScreenOn
 import com.perfectpitch.ui.components.RequireMicPermission
 import com.perfectpitch.ui.components.SharedNoteCanvas
 import com.perfectpitch.ui.components.VOICE_COLORS
-import com.perfectpitch.ui.components.KeepScreenOn
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private val OVERLAY_BG = Color(0xAA1A1A2E)
 private val OVERLAY_ICON_TINT = Color.White.copy(alpha = 0.9f)
 private val PANEL_BG = Color(0xDD0D0D1A)
+private val PANEL_ROW2_BG = Color(0xBB0D0D1A)
 private val PANEL_BTN_SIZE = 32.dp
 
 private val NOTE_DIVISIONS = listOf(4, 8, 16, 32, 64)
@@ -64,6 +63,8 @@ fun FreePlayScreen(
     val continuousPitchLine by viewModel.continuousPitchLine.collectAsState()
     val density = LocalDensity.current
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     KeepScreenOn()
 
@@ -77,6 +78,7 @@ fun FreePlayScreen(
 
     val effectiveTime = viewModel.getEffectiveTime(frameTime)
     val midiRange = state.viewMaxMidi - state.viewMinMidi
+    val pxPerMs = state.fallSpeedPxPerSec * density.density / 1000f
 
     val barMs = state.beatsPerBar * (60000.0 / state.bpm)
     val loopStartMs = state.loopStartBar?.let { (state.sessionStartMs + it * barMs).toLong() }
@@ -96,290 +98,313 @@ fun FreePlayScreen(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? -> uri?.let { viewModel.importFromMidi(it, context) } }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .systemBarsPadding()
-    ) {
-        // ── Panel row 1: I/O + all action buttons ─────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(PANEL_BG)
-                .padding(horizontal = 6.dp, vertical = 3.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            // Input source dropdown
-            var showInputMenu by remember { mutableStateOf(false) }
-            Box {
-                TextButton(
-                    onClick = { showInputMenu = true },
-                    contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
-                    modifier = Modifier.height(PANEL_BTN_SIZE)
-                ) {
-                    Icon(
-                        if (state.midiInputEnabled) Icons.Filled.MusicNote else Icons.Filled.Mic,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = if (state.midiInputEnabled) Color(0xFF7E57C2) else OVERLAY_ICON_TINT
-                    )
-                    Spacer(Modifier.width(3.dp))
-                    Text(
-                        text = if (state.midiInputEnabled) (state.midiInputDeviceName?.take(9) ?: "MIDI") else "Mic",
-                        fontSize = 11.sp,
-                        color = if (state.midiInputEnabled) Color(0xFF7E57C2) else OVERLAY_ICON_TINT,
-                        maxLines = 1
-                    )
-                    Icon(Icons.Filled.ArrowDropDown, null, modifier = Modifier.size(14.dp), tint = OVERLAY_ICON_TINT)
-                }
-                DropdownMenu(expanded = showInputMenu, onDismissRequest = { showInputMenu = false }) {
+    // Edit mode interaction state
+    val noteRectsState = remember { mutableStateOf<List<Pair<String, Rect>>>(emptyList()) }
+    var dragNoteId by remember { mutableStateOf<String?>(null) }
+    var dragHandleType by remember { mutableStateOf<String?>(null) }
+    val handleRadiusPx = with(density) { 18.dp.toPx() }
+
+    // ── Dropdown state (defined here so lambdas below can capture them) ──
+    var showInputMenu by remember { mutableStateOf(false) }
+    var showOutputMenu by remember { mutableStateOf(false) }
+    var showConfigMenu by remember { mutableStateOf(false) }
+    var showVoiceMenu by remember { mutableStateOf(false) }
+
+    // ── Panel 1 content: I/O · Settings · Play · Record · Edit · Undo · ScrollTop ──
+    val panel1Content: @Composable RowScope.() -> Unit = {
+        // Input source dropdown
+        Box {
+            TextButton(
+                onClick = { showInputMenu = true },
+                contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
+                modifier = Modifier.height(PANEL_BTN_SIZE)
+            ) {
+                Icon(
+                    if (state.midiInputEnabled) Icons.Filled.MusicNote else Icons.Filled.Mic,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = if (state.midiInputEnabled) Color(0xFF7E57C2) else OVERLAY_ICON_TINT
+                )
+                Spacer(Modifier.width(3.dp))
+                Text(
+                    text = if (state.midiInputEnabled) (state.midiInputDeviceName?.take(9) ?: "MIDI") else "Mic",
+                    fontSize = 11.sp,
+                    color = if (state.midiInputEnabled) Color(0xFF7E57C2) else OVERLAY_ICON_TINT,
+                    maxLines = 1
+                )
+                Icon(Icons.Filled.ArrowDropDown, null, modifier = Modifier.size(14.dp), tint = OVERLAY_ICON_TINT)
+            }
+            DropdownMenu(expanded = showInputMenu, onDismissRequest = { showInputMenu = false }) {
+                DropdownMenuItem(
+                    text = { Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Mic, null, Modifier.size(16.dp)); Text("Microphone") } },
+                    onClick = { viewModel.setMidiInputEnabled(false); showInputMenu = false }
+                )
+                val inputDeviceName = state.midiInputDeviceName
+                if (inputDeviceName != null) {
                     DropdownMenuItem(
-                        text = { Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Mic, null, Modifier.size(16.dp)); Text("Microphone") } },
-                        onClick = { viewModel.setMidiInputEnabled(false); showInputMenu = false }
+                        text = { Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.MusicNote, null, Modifier.size(16.dp), tint = Color(0xFF7E57C2)); Text(inputDeviceName) } },
+                        onClick = { viewModel.setMidiInputEnabled(true); showInputMenu = false }
                     )
-                    val inputDeviceName = state.midiInputDeviceName
-                    if (inputDeviceName != null) {
-                        DropdownMenuItem(
-                            text = { Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.MusicNote, null, Modifier.size(16.dp), tint = Color(0xFF7E57C2)); Text(inputDeviceName) } },
-                            onClick = { viewModel.setMidiInputEnabled(true); showInputMenu = false }
-                        )
-                    }
                 }
             }
+        }
 
-            // Output source dropdown
-            var showOutputMenu by remember { mutableStateOf(false) }
-            Box {
-                TextButton(
-                    onClick = { showOutputMenu = true },
-                    contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
-                    modifier = Modifier.height(PANEL_BTN_SIZE)
-                ) {
-                    Icon(
-                        Icons.Filled.MusicNote,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = if (state.midiOutputEnabled) Color(0xFF7E57C2) else OVERLAY_ICON_TINT
+        // Output source dropdown
+        Box {
+            TextButton(
+                onClick = { showOutputMenu = true },
+                contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
+                modifier = Modifier.height(PANEL_BTN_SIZE)
+            ) {
+                Icon(
+                    Icons.Filled.MusicNote,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = if (state.midiOutputEnabled) Color(0xFF7E57C2) else OVERLAY_ICON_TINT
+                )
+                Spacer(Modifier.width(3.dp))
+                Text(
+                    text = if (state.midiOutputEnabled) (state.midiOutputDeviceName?.take(9) ?: "MIDI") else "Synth",
+                    fontSize = 11.sp,
+                    color = if (state.midiOutputEnabled) Color(0xFF7E57C2) else OVERLAY_ICON_TINT,
+                    maxLines = 1
+                )
+                Icon(Icons.Filled.ArrowDropDown, null, modifier = Modifier.size(14.dp), tint = OVERLAY_ICON_TINT)
+            }
+            DropdownMenu(expanded = showOutputMenu, onDismissRequest = { showOutputMenu = false }) {
+                DropdownMenuItem(text = { Text("Internal synth") }, onClick = { viewModel.setMidiOutputEnabled(false); showOutputMenu = false })
+                val outputDeviceName = state.midiOutputDeviceName
+                if (outputDeviceName != null) {
+                    DropdownMenuItem(
+                        text = { Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.MusicNote, null, Modifier.size(16.dp), tint = Color(0xFF7E57C2)); Text(outputDeviceName) } },
+                        onClick = { viewModel.setMidiOutputEnabled(true); showOutputMenu = false }
                     )
-                    Spacer(Modifier.width(3.dp))
-                    Text(
-                        text = if (state.midiOutputEnabled) (state.midiOutputDeviceName?.take(9) ?: "MIDI") else "Synth",
-                        fontSize = 11.sp,
-                        color = if (state.midiOutputEnabled) Color(0xFF7E57C2) else OVERLAY_ICON_TINT,
-                        maxLines = 1
-                    )
-                    Icon(Icons.Filled.ArrowDropDown, null, modifier = Modifier.size(14.dp), tint = OVERLAY_ICON_TINT)
-                }
-                DropdownMenu(expanded = showOutputMenu, onDismissRequest = { showOutputMenu = false }) {
-                    DropdownMenuItem(text = { Text("Internal synth") }, onClick = { viewModel.setMidiOutputEnabled(false); showOutputMenu = false })
-                    val outputDeviceName = state.midiOutputDeviceName
-                    if (outputDeviceName != null) {
-                        DropdownMenuItem(
-                            text = { Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.MusicNote, null, Modifier.size(16.dp), tint = Color(0xFF7E57C2)); Text(outputDeviceName) } },
-                            onClick = { viewModel.setMidiOutputEnabled(true); showOutputMenu = false }
-                        )
-                    }
                 }
             }
+        }
 
-            Spacer(Modifier.weight(1f))
+        Spacer(Modifier.weight(1f))
 
-            // Settings
-            var showConfigMenu by remember { mutableStateOf(false) }
-            Box {
-                IconButton(
-                    onClick = { showConfigMenu = true },
-                    modifier = Modifier.size(PANEL_BTN_SIZE).background(OVERLAY_BG, CircleShape)
-                ) {
-                    Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
+        // Settings
+        Box {
+            IconButton(
+                onClick = { showConfigMenu = true },
+                modifier = Modifier.size(PANEL_BTN_SIZE).background(OVERLAY_BG, CircleShape)
+            ) {
+                Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
+            }
+            DropdownMenu(expanded = showConfigMenu, onDismissRequest = { showConfigMenu = false }, offset = DpOffset((-160).dp, 0.dp)) {
+                DropdownMenuItem(
+                    text = { Text("Snap notes") },
+                    trailingIcon = { Switch(checked = state.snapEnabled, onCheckedChange = { viewModel.toggleSnap() }, modifier = Modifier.height(20.dp)) },
+                    onClick = { viewModel.toggleSnap() }
+                )
+                if (state.snapEnabled) {
+                    val divIndex = NOTE_DIVISIONS.indexOf(state.minNoteDivision).takeIf { it >= 0 } ?: 2
+                    DropdownMenuItem(text = { Text("Min duration: ${NOTE_DIVISION_LABELS[state.minNoteDivision] ?: "${state.minNoteDivision}th"}") }, onClick = {})
+                    Slider(value = divIndex.toFloat(), onValueChange = { viewModel.setMinNoteDivision(NOTE_DIVISIONS[it.roundToInt()]) }, valueRange = 0f..4f, steps = 3, modifier = Modifier.padding(horizontal = 16.dp))
                 }
-                DropdownMenu(expanded = showConfigMenu, onDismissRequest = { showConfigMenu = false }, offset = DpOffset((-160).dp, 0.dp)) {
-                    // Snap
+                HorizontalDivider()
+                var showPianoVisMenu by remember { mutableStateOf(false) }
+                Box {
                     DropdownMenuItem(
-                        text = { Text("Snap notes") },
-                        trailingIcon = { Switch(checked = state.snapEnabled, onCheckedChange = { viewModel.toggleSnap() }, modifier = Modifier.height(20.dp)) },
-                        onClick = { viewModel.toggleSnap() }
+                        text = { Text("Piano: ${PIANO_VISIBILITY_LABELS[state.pianoVisibility]}") },
+                        trailingIcon = { Icon(Icons.Filled.ArrowDropDown, null, Modifier.size(16.dp)) },
+                        onClick = { showPianoVisMenu = true }
                     )
-                    if (state.snapEnabled) {
-                        val divIndex = NOTE_DIVISIONS.indexOf(state.minNoteDivision).takeIf { it >= 0 } ?: 2
-                        DropdownMenuItem(text = { Text("Min duration: ${NOTE_DIVISION_LABELS[state.minNoteDivision] ?: "${state.minNoteDivision}th"}") }, onClick = {})
-                        Slider(value = divIndex.toFloat(), onValueChange = { viewModel.setMinNoteDivision(NOTE_DIVISIONS[it.roundToInt()]) }, valueRange = 0f..4f, steps = 3, modifier = Modifier.padding(horizontal = 16.dp))
-                    }
-                    // Piano visibility
-                    HorizontalDivider()
-                    var showPianoVisMenu by remember { mutableStateOf(false) }
-                    Box {
-                        DropdownMenuItem(
-                            text = { Text("Piano: ${PIANO_VISIBILITY_LABELS[state.pianoVisibility]}") },
-                            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, null, Modifier.size(16.dp)) },
-                            onClick = { showPianoVisMenu = true }
-                        )
-                        DropdownMenu(expanded = showPianoVisMenu, onDismissRequest = { showPianoVisMenu = false }) {
-                            PianoVisibility.entries.forEach { vis ->
-                                DropdownMenuItem(
-                                    text = { Text(PIANO_VISIBILITY_LABELS[vis] ?: vis.name, fontWeight = if (vis == state.pianoVisibility) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal) },
-                                    onClick = { viewModel.setPianoVisibility(vis); showPianoVisMenu = false; showConfigMenu = false }
-                                )
-                            }
+                    DropdownMenu(expanded = showPianoVisMenu, onDismissRequest = { showPianoVisMenu = false }) {
+                        PianoVisibility.entries.forEach { vis ->
+                            DropdownMenuItem(
+                                text = { Text(PIANO_VISIBILITY_LABELS[vis] ?: vis.name, fontWeight = if (vis == state.pianoVisibility) FontWeight.Bold else FontWeight.Normal) },
+                                onClick = { viewModel.setPianoVisibility(vis); showPianoVisMenu = false; showConfigMenu = false }
+                            )
                         }
                     }
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.FileOpen, null, Modifier.size(18.dp)); Text("Import MIDI") } },
-                        onClick = { importLauncher.launch(arrayOf("audio/midi", "audio/x-midi", "*/*")); showConfigMenu = false }
-                    )
-                    DropdownMenuItem(
-                        text = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Save, null, Modifier.size(18.dp)); Text("Export MIDI") } },
-                        onClick = { exportLauncher.launch("session.mid"); showConfigMenu = false }
-                    )
                 }
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.FileOpen, null, Modifier.size(18.dp)); Text("Import MIDI") } },
+                    onClick = { importLauncher.launch(arrayOf("audio/midi", "audio/x-midi", "*/*")); showConfigMenu = false }
+                )
+                DropdownMenuItem(
+                    text = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Save, null, Modifier.size(18.dp)); Text("Export MIDI") } },
+                    onClick = { exportLauncher.launch("session.mid"); showConfigMenu = false }
+                )
             }
+        }
 
-            // Voice selector
-            val voiceColor = VOICE_COLORS[state.activeVoiceIndex % VOICE_COLORS.size]
-            var showVoiceMenu by remember { mutableStateOf(false) }
-            Box {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(PANEL_BTN_SIZE)
-                        .background(voiceColor.copy(alpha = 0.3f), CircleShape)
-                        .border(1.dp, voiceColor, CircleShape)
-                        .pointerInput(Unit) { detectTapGestures { showVoiceMenu = true } }
-                ) {
-                    Text("V${state.activeVoiceIndex + 1}", fontSize = 10.sp, color = voiceColor)
-                }
-                DropdownMenu(expanded = showVoiceMenu, onDismissRequest = { showVoiceMenu = false }, offset = DpOffset((-100).dp, 0.dp)) {
-                    for (v in 0 until state.voiceCount) {
-                        val vColor = VOICE_COLORS[v % VOICE_COLORS.size]
-                        DropdownMenuItem(
-                            text = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(10.dp).background(vColor, CircleShape)); Text("Voice ${v + 1}", fontWeight = if (v == state.activeVoiceIndex) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal) } },
-                            onClick = { viewModel.setActiveVoice(v); showVoiceMenu = false }
-                        )
-                    }
-                    if (state.voiceCount < 8) {
-                        HorizontalDivider()
-                        DropdownMenuItem(text = { Text("+ Add voice") }, onClick = { viewModel.addVoice(); showVoiceMenu = false })
-                    }
-                }
-            }
-
-            // Record toggle
+        // Play/Pause
+        if (state.playedNotes.isNotEmpty()) {
             IconButton(
-                onClick = { viewModel.toggleRecording() },
+                onClick = { if (state.isReplaying) viewModel.stopReplay() else viewModel.replayNotes() },
                 modifier = Modifier.size(PANEL_BTN_SIZE)
-                    .background(if (state.isRecording) Color(0xFFEF5350).copy(alpha = 0.35f) else OVERLAY_BG, CircleShape)
-                    .then(if (state.isRecording) Modifier.border(1.dp, Color(0xFFEF5350), CircleShape) else Modifier)
+                    .background(if (state.isReplaying) Color(0xFF26A69A).copy(alpha = 0.35f) else OVERLAY_BG, CircleShape)
+                    .then(if (state.isReplaying) Modifier.border(1.dp, Color(0xFF26A69A), CircleShape) else Modifier)
             ) {
-                Icon(Icons.Filled.FiberManualRecord, null, modifier = Modifier.size(17.dp), tint = if (state.isRecording) Color(0xFFEF5350) else OVERLAY_ICON_TINT)
-            }
-
-            // Play/Pause
-            if (state.playedNotes.isNotEmpty()) {
-                IconButton(
-                    onClick = { if (state.isReplaying) viewModel.stopReplay() else viewModel.replayNotes() },
-                    modifier = Modifier.size(PANEL_BTN_SIZE)
-                        .background(if (state.isReplaying) Color(0xFF26A69A).copy(alpha = 0.35f) else OVERLAY_BG, CircleShape)
-                        .then(if (state.isReplaying) Modifier.border(1.dp, Color(0xFF26A69A), CircleShape) else Modifier)
-                ) {
-                    Icon(if (state.isReplaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, modifier = Modifier.size(17.dp), tint = if (state.isReplaying) Color(0xFF26A69A) else OVERLAY_ICON_TINT)
-                }
-            }
-
-            // Undo
-            if (state.undoStack.isNotEmpty()) {
-                IconButton(
-                    onClick = { viewModel.undo() },
-                    modifier = Modifier.size(PANEL_BTN_SIZE).background(OVERLAY_BG, CircleShape)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Undo, null, modifier = Modifier.size(17.dp), tint = OVERLAY_ICON_TINT)
-                }
-            }
-
-            // Scroll-to-present
-            if (state.timeOffsetMs > 0L) {
-                IconButton(
-                    onClick = { viewModel.scrollToTop() },
-                    modifier = Modifier.size(PANEL_BTN_SIZE).background(OVERLAY_BG, CircleShape)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Undo, null, modifier = Modifier.size(17.dp), tint = Color(0xFFFFF176))
-                }
-            }
-
-            Spacer(Modifier.width(4.dp))
-
-            // Loop controls
-            TextButton(
-                onClick = { viewModel.setLoopStart() },
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                modifier = Modifier.height(PANEL_BTN_SIZE)
-            ) {
-                Text("S", fontSize = 10.sp, color = if (state.loopStartBar != null) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
-            }
-            TextButton(
-                onClick = { viewModel.setLoopEnd() },
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                modifier = Modifier.height(PANEL_BTN_SIZE)
-            ) {
-                Text("E", fontSize = 10.sp, color = if (state.loopEndBar != null) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
-            }
-            if (state.loopStartBar != null && state.loopEndBar != null) {
-                IconButton(
-                    onClick = { viewModel.toggleLoop() },
-                    modifier = Modifier.size(PANEL_BTN_SIZE)
-                        .then(if (state.isLooping) Modifier.border(1.dp, Color(0xFFFFB74D), CircleShape) else Modifier)
-                ) {
-                    Icon(Icons.Filled.Loop, null, modifier = Modifier.size(16.dp), tint = if (state.isLooping) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
-                }
+                Icon(if (state.isReplaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, modifier = Modifier.size(17.dp), tint = if (state.isReplaying) Color(0xFF26A69A) else OVERLAY_ICON_TINT)
             }
         }
 
-        // ── Panel row 2: BPM and beats per bar ────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xBB0D0D1A))
-                .padding(horizontal = 8.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        // Record toggle
+        IconButton(
+            onClick = { viewModel.toggleRecording() },
+            modifier = Modifier.size(PANEL_BTN_SIZE)
+                .background(if (state.isRecording) Color(0xFFEF5350).copy(alpha = 0.35f) else OVERLAY_BG, CircleShape)
+                .then(if (state.isRecording) Modifier.border(1.dp, Color(0xFFEF5350), CircleShape) else Modifier)
         ) {
-            Text("BPM", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
-            IconButton(
-                onClick = { viewModel.setBpm((state.bpm - 1f).coerceAtLeast(20f)) },
-                modifier = Modifier.size(24.dp)
-            ) { Text("−", fontSize = 12.sp, color = OVERLAY_ICON_TINT) }
-            Text(
-                text = state.bpm.roundToInt().toString(),
-                fontSize = 13.sp,
-                color = Color.White,
-                modifier = Modifier.widthIn(min = 28.dp),
-            )
-            IconButton(
-                onClick = { viewModel.setBpm((state.bpm + 1f).coerceAtMost(300f)) },
-                modifier = Modifier.size(24.dp)
-            ) { Text("+", fontSize = 12.sp, color = OVERLAY_ICON_TINT) }
-
-            Spacer(Modifier.width(12.dp))
-
-            Text("Beats/bar", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
-            IconButton(
-                onClick = { viewModel.setBeatsPerBar((state.beatsPerBar - 1).coerceAtLeast(1)) },
-                modifier = Modifier.size(24.dp)
-            ) { Text("−", fontSize = 12.sp, color = OVERLAY_ICON_TINT) }
-            Text(
-                text = "${state.beatsPerBar}/4",
-                fontSize = 13.sp,
-                color = Color.White,
-                modifier = Modifier.widthIn(min = 24.dp),
-            )
-            IconButton(
-                onClick = { viewModel.setBeatsPerBar((state.beatsPerBar + 1).coerceAtMost(16)) },
-                modifier = Modifier.size(24.dp)
-            ) { Text("+", fontSize = 12.sp, color = OVERLAY_ICON_TINT) }
+            Icon(Icons.Filled.FiberManualRecord, null, modifier = Modifier.size(17.dp), tint = if (state.isRecording) Color(0xFFEF5350) else OVERLAY_ICON_TINT)
         }
 
-        // ── Main canvas ───────────────────────────────────────────────────
+        // Edit mode toggle
+        val isEditing = state.editMode == NoteEditMode.EDIT
+        IconButton(
+            onClick = { viewModel.setEditMode(if (isEditing) NoteEditMode.NONE else NoteEditMode.EDIT) },
+            modifier = Modifier.size(PANEL_BTN_SIZE)
+                .background(if (isEditing) Color(0xFFFFB74D).copy(alpha = 0.35f) else OVERLAY_BG, CircleShape)
+                .then(if (isEditing) Modifier.border(1.dp, Color(0xFFFFB74D), CircleShape) else Modifier)
+        ) {
+            Icon(Icons.Filled.Edit, null, modifier = Modifier.size(17.dp), tint = if (isEditing) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
+        }
+
+        // Undo (conditional)
+        if (state.undoStack.isNotEmpty()) {
+            IconButton(
+                onClick = { viewModel.undo() },
+                modifier = Modifier.size(PANEL_BTN_SIZE).background(OVERLAY_BG, CircleShape)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.Undo, null, modifier = Modifier.size(17.dp), tint = OVERLAY_ICON_TINT)
+            }
+        }
+
+        // Scroll-to-present (conditional)
+        if (state.timeOffsetMs > 0L) {
+            IconButton(
+                onClick = { viewModel.scrollToTop() },
+                modifier = Modifier.size(PANEL_BTN_SIZE).background(OVERLAY_BG, CircleShape)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.Undo, null, modifier = Modifier.size(17.dp), tint = Color(0xFFFFF176))
+            }
+        }
+    }
+
+    // ── Panel 2 content: BPM · Beats/bar · Voice · Loop ─────────────────
+    val panel2Content: @Composable RowScope.() -> Unit = {
+        Text("BPM", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
+        IconButton(onClick = { viewModel.setBpm((state.bpm - 1f).coerceAtLeast(20f)) }, modifier = Modifier.size(24.dp)) {
+            Text("−", fontSize = 12.sp, color = OVERLAY_ICON_TINT)
+        }
+        Text(text = state.bpm.roundToInt().toString(), fontSize = 13.sp, color = Color.White, modifier = Modifier.widthIn(min = 28.dp))
+        IconButton(onClick = { viewModel.setBpm((state.bpm + 1f).coerceAtMost(300f)) }, modifier = Modifier.size(24.dp)) {
+            Text("+", fontSize = 12.sp, color = OVERLAY_ICON_TINT)
+        }
+
+        Spacer(Modifier.width(8.dp))
+
+        Text("Beats/bar", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
+        IconButton(onClick = { viewModel.setBeatsPerBar((state.beatsPerBar - 1).coerceAtLeast(1)) }, modifier = Modifier.size(24.dp)) {
+            Text("−", fontSize = 12.sp, color = OVERLAY_ICON_TINT)
+        }
+        Text(text = "${state.beatsPerBar}/4", fontSize = 13.sp, color = Color.White, modifier = Modifier.widthIn(min = 24.dp))
+        IconButton(onClick = { viewModel.setBeatsPerBar((state.beatsPerBar + 1).coerceAtMost(16)) }, modifier = Modifier.size(24.dp)) {
+            Text("+", fontSize = 12.sp, color = OVERLAY_ICON_TINT)
+        }
+
+        Spacer(Modifier.width(8.dp))
+
+        // Voice selector
+        val voiceColor = VOICE_COLORS[state.activeVoiceIndex % VOICE_COLORS.size]
+        Box {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(PANEL_BTN_SIZE)
+                    .background(voiceColor.copy(alpha = 0.3f), CircleShape)
+                    .border(1.dp, voiceColor, CircleShape)
+                    .pointerInput(Unit) { detectTapGestures { showVoiceMenu = true } }
+            ) {
+                Text("V${state.activeVoiceIndex + 1}", fontSize = 10.sp, color = voiceColor)
+            }
+            DropdownMenu(expanded = showVoiceMenu, onDismissRequest = { showVoiceMenu = false }, offset = DpOffset((-80).dp, 0.dp)) {
+                for (v in 0 until state.voiceCount) {
+                    val vColor = VOICE_COLORS[v % VOICE_COLORS.size]
+                    DropdownMenuItem(
+                        text = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(10.dp).background(vColor, CircleShape)); Text("Voice ${v + 1}", fontWeight = if (v == state.activeVoiceIndex) FontWeight.Bold else FontWeight.Normal) } },
+                        onClick = { viewModel.setActiveVoice(v); showVoiceMenu = false }
+                    )
+                }
+                if (state.voiceCount < 8) {
+                    HorizontalDivider()
+                    DropdownMenuItem(text = { Text("+ Add voice") }, onClick = { viewModel.addVoice(); showVoiceMenu = false })
+                }
+            }
+        }
+
+        Spacer(Modifier.width(8.dp))
+
+        // Loop controls
+        TextButton(
+            onClick = { viewModel.setLoopStart() },
+            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+            modifier = Modifier.height(PANEL_BTN_SIZE)
+        ) {
+            Text("S", fontSize = 10.sp, color = if (state.loopStartBar != null) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
+        }
+        TextButton(
+            onClick = { viewModel.setLoopEnd() },
+            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+            modifier = Modifier.height(PANEL_BTN_SIZE)
+        ) {
+            Text("E", fontSize = 10.sp, color = if (state.loopEndBar != null) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
+        }
+        if (state.loopStartBar != null && state.loopEndBar != null) {
+            IconButton(
+                onClick = { viewModel.toggleLoop() },
+                modifier = Modifier.size(PANEL_BTN_SIZE)
+                    .then(if (state.isLooping) Modifier.border(1.dp, Color(0xFFFFB74D), CircleShape) else Modifier)
+            ) {
+                Icon(Icons.Filled.Loop, null, modifier = Modifier.size(16.dp), tint = if (state.isLooping) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
+            }
+        }
+    }
+
+    // ── Main layout ───────────────────────────────────────────────────────
+    Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
+        if (isLandscape) {
+            // In landscape: both panels in a single horizontal bar to save vertical space
+            Row(
+                modifier = Modifier.fillMaxWidth().background(PANEL_BG).padding(horizontal = 6.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) { panel1Content() }
+                VerticalDivider(
+                    modifier = Modifier.height(PANEL_BTN_SIZE).padding(horizontal = 4.dp),
+                    color = Color.White.copy(alpha = 0.15f)
+                )
+                Row(
+                    modifier = Modifier.wrapContentWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) { panel2Content() }
+            }
+        } else {
+            // Portrait: two stacked rows
+            Row(
+                modifier = Modifier.fillMaxWidth().background(PANEL_BG).padding(horizontal = 6.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) { panel1Content() }
+            Row(
+                modifier = Modifier.fillMaxWidth().background(PANEL_ROW2_BG).padding(horizontal = 8.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) { panel2Content() }
+        }
+
+        // ── Main canvas ────────────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -395,6 +420,66 @@ fun FreePlayScreen(
                             viewModel.onHorizontalScroll(pan.x * (midiRange / canvasWidth))
                             viewModel.onVerticalScroll((-pan.y * (1000f / (state.fallSpeedPxPerSec * density.density))).toLong())
                         }
+                    }
+                }
+                .pointerInput(state.editMode) {
+                    if (state.editMode == NoteEditMode.EDIT) {
+                        detectTapGestures(
+                            onDoubleTap = { offset ->
+                                noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.let { (id, _) -> viewModel.deleteNote(id) }
+                            },
+                            onTap = { offset ->
+                                viewModel.selectNote(noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.first)
+                            }
+                        )
+                    }
+                }
+                .pointerInput(state.editMode) {
+                    if (state.editMode == NoteEditMode.EDIT) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { offset ->
+                                dragNoteId = noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.first
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                val id = dragNoteId ?: return@detectDragGesturesAfterLongPress
+                                viewModel.moveNote(
+                                    id,
+                                    (dragAmount.x * (midiRange / size.width.toFloat())).roundToInt(),
+                                    -(dragAmount.y / pxPerMs).toLong()
+                                )
+                            },
+                            onDragEnd = { dragNoteId?.let { viewModel.commitNoteEdit(it) }; dragNoteId = null },
+                            onDragCancel = { dragNoteId = null }
+                        )
+                    }
+                }
+                .pointerInput(state.editMode, state.selectedNoteId) {
+                    if (state.editMode == NoteEditMode.EDIT && state.selectedNoteId != null) {
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                val rect = noteRectsState.value.firstOrNull { (id, _) -> id == state.selectedNoteId }?.second
+                                if (rect != null) {
+                                    dragHandleType = when {
+                                        abs(offset.y - rect.top) <= handleRadiusPx * 2 -> "end"
+                                        abs(offset.y - rect.bottom) <= handleRadiusPx * 2 -> "start"
+                                        else -> null
+                                    }
+                                }
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                val handType = dragHandleType ?: return@detectDragGestures
+                                val selId = state.selectedNoteId ?: return@detectDragGestures
+                                val deltaMs = -(dragAmount.y / pxPerMs).toLong()
+                                when (handType) {
+                                    "end"   -> viewModel.extendNoteEnd(selId, deltaMs)
+                                    "start" -> viewModel.extendNoteStart(selId, deltaMs)
+                                }
+                            },
+                            onDragEnd = { dragHandleType?.let { state.selectedNoteId?.let { id -> viewModel.commitNoteEdit(id) } }; dragHandleType = null },
+                            onDragCancel = { dragHandleType = null }
+                        )
                     }
                 }
         ) {
@@ -419,6 +504,7 @@ fun FreePlayScreen(
                         loopStartMs = if (state.isLooping || state.loopStartBar != null) loopStartMs else null,
                         loopEndMs = if (state.isLooping || state.loopEndBar != null) loopEndMs else null,
                         selectedNoteId = state.selectedNoteId,
+                        isEditMode = state.editMode == NoteEditMode.EDIT,
                         sessionStartMs = state.sessionStartMs,
                         pianoVisibility = state.pianoVisibility
                     ),
@@ -427,6 +513,7 @@ fun FreePlayScreen(
                     viewMaxMidi = state.viewMaxMidi,
                     continuousPitchLine = continuousPitchLine,
                     rightPaddingPx = 0f,
+                    onNoteRects = { rects -> noteRectsState.value = rects },
                     modifier = Modifier.fillMaxSize()
                 )
             }
