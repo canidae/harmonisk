@@ -4,7 +4,25 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
-// YIN pitch detection with FFT-based O(n log n) autocorrelation.
+/**
+ * McLeod Pitch Method (MPM) — FFT-accelerated NSDF pitch detection.
+ *
+ * Algorithm: McLeod & Wyvill (2005) "A Smarter Way to Find Pitch", ICMC 2005.
+ *
+ * The Normalized Square Difference Function (NSDF) replaces YIN's Cumulative Mean Normalized
+ * Difference Function. Key advantages:
+ *   - Locally normalized: NSDF(τ) ∈ [-1, 1] — relative threshold adapts to signal level
+ *   - Peak-picking (maxima at period multiples) vs valley-picking (YIN): first peak above
+ *     k × global_max naturally prefers the fundamental over sub-harmonics
+ *   - No octave-correction post-processing needed for most signals
+ *
+ * NSDF(τ) = 2·r'(τ) / m'(τ)
+ *   r'(τ) = Σ_{j=0}^{W-1-τ} x[j]·x[j+τ]           (shrinking-window autocorrelation)
+ *   m'(τ) = Σ_{j=0}^{W-1-τ} (x[j]² + x[j+τ]²)     (per-lag energy, shrinking window)
+ *
+ * r'(τ) is computed via FFT autocorrelation of just the first W samples (zero-padded to 2W).
+ * m'(τ) is updated incrementally: m'(τ) = m'(τ-1) - x[τ-1]² - x[W-τ]²
+ */
 data class PitchDetectionResult(
     val frequency: Float,
     val confidence: Float
@@ -17,37 +35,40 @@ data class PitchDetectionResult(
 class PitchDetector {
 
     companion object {
-        const val DEFAULT_THRESHOLD = 0.15f
+        /** MPM relative threshold k — first key maximum above k × global_max is accepted. */
+        const val DEFAULT_THRESHOLD = 0.93f
         const val DEFAULT_SAMPLE_RATE = 44100
+
+        /**
+         * Absolute floor for the NSDF global maximum.
+         * If no peak exceeds this, the frame is considered too aperiodic (noise/silence/transition).
+         */
+        private const val SMALL_CUTOFF = 0.45f
     }
 
     // Pre-allocated FFT work arrays, lazily sized on first call.
     private var fftWorkSize = 0
     private var workAre = DoubleArray(0)
     private var workAim = DoubleArray(0)
-    private var workBre = DoubleArray(0)
-    private var workBim = DoubleArray(0)
     private var workCre = DoubleArray(0)
     private var workCim = DoubleArray(0)
-    private var workEnergyPrefix = DoubleArray(0)
 
-    private fun ensureWorkArrays(bufferSize: Int) {
-        val required = nextPowerOf2(2 * bufferSize)
+    private fun ensureWorkArrays(halfLen: Int) {
+        val required = nextPowerOf2(2 * halfLen)
         if (required != fftWorkSize) {
             fftWorkSize = required
             workAre = DoubleArray(required)
             workAim = DoubleArray(required)
-            workBre = DoubleArray(required)
-            workBim = DoubleArray(required)
             workCre = DoubleArray(required)
             workCim = DoubleArray(required)
-            workEnergyPrefix = DoubleArray(bufferSize + 1)
         }
     }
 
     /**
-     * Detect the fundamental frequency of the audio buffer.
-     * @param threshold YIN threshold — lower is stricter (0.10–0.20 typical)
+     * Detect the fundamental frequency using the McLeod Pitch Method (MPM).
+     *
+     * @param threshold MPM relative threshold k ∈ (0, 1) — first key maximum ≥ k × global_max
+     *                  is accepted. Default 0.93. Lower = more conservative (fewer octave errors).
      * @param minFreq / maxFreq detectable frequency range in Hz
      */
     fun detectPitch(
@@ -64,132 +85,118 @@ class PitchDetector {
         val tauMax = (sampleRate / minFreq).toInt().coerceAtMost(halfLen - 1)
         if (tauMin >= tauMax) return PitchDetectionResult.NONE
 
-        val yinBuffer = FloatArray(halfLen)
-        cumulativeMeanNormalizedDifference(buffer, yinBuffer)
+        val nsdfBuffer = FloatArray(halfLen)
+        normalizedSquareDifference(buffer, nsdfBuffer)
 
-        // Find first valley below threshold, then descend to its local minimum.
-        var tauEstimate = -1
-        var tau = tauMin
-        while (tau <= tauMax) {
-            if (yinBuffer[tau] < threshold) {
-                while (tau + 1 <= tauMax && yinBuffer[tau + 1] < yinBuffer[tau]) tau++
-                tauEstimate = tau
-                break
-            }
-            tau++
-        }
-
+        val tauEstimate = pickPeakMPM(nsdfBuffer, tauMin, tauMax, threshold)
         if (tauEstimate == -1) return PitchDetectionResult.NONE
 
-        // Octave correction: when the first valley below threshold is at 2τ₀ or 4τ₀
-        // (because d'(τ₀) was marginally above threshold), step back to the shorter period.
-        tauEstimate = correctOctaveDown(yinBuffer, tauEstimate, tauMin, threshold)
-
-        val betterTau = parabolicInterpolation(yinBuffer, tauEstimate)
+        val betterTau = parabolicInterpolation(nsdfBuffer, tauEstimate)
         val frequency = if (betterTau > 0f) sampleRate / betterTau else -1f
         if (frequency <= 0f) return PitchDetectionResult.NONE
 
-        val confidence = (1f - yinBuffer[tauEstimate]).coerceIn(0f, 1f)
+        val confidence = nsdfBuffer[tauEstimate].coerceIn(0f, 1f)
         return PitchDetectionResult(frequency, confidence)
     }
 
     /**
-     * Correct "octave too low" errors by iteratively preferring the half-period if it
-     * also has a local dip within a slightly loose tolerance.
+     * Compute the Normalized Square Difference Function (NSDF) via FFT.
      *
-     * Safety: since the first-valley scan works left-to-right (smallest τ first), any τ/2
-     * that was strictly below threshold would have been found *before* the current tauEstimate.
-     * Therefore d'(τ/2) ≥ threshold whenever this function is called. We only accept τ/2
-     * if it falls in the narrow gray zone [threshold, threshold + 0.05], i.e., it was a
-     * real near-miss due to threshold strictness — not a spurious harmonic dip.
+     * r'(τ) is the linear autocorrelation of x[0..W-1] computed as:
+     *   IFFT(|FFT(x[0..W-1])|²)[τ]   (zero-padded to 2W to prevent circular aliasing)
+     *
+     * m'(τ) is the per-lag energy sum, updated incrementally per the McLeod paper, Section 6:
+     *   m'(0) = 2·r'(0)
+     *   m'(τ) = m'(τ-1) − x[τ-1]² − x[W-τ]²
+     *
+     * NSDF(τ) = 2·r'(τ) / m'(τ)  ∈ [-1, 1]
      */
-    private fun correctOctaveDown(
-        yinBuffer: FloatArray,
-        tauEstimate: Int,
-        tauMin: Int,
-        threshold: Float
-    ): Int {
-        var tau = tauEstimate
-        val looseTolerance = threshold + 0.05f
-        for (i in 0 until 2) {  // up to 2 corrections: handles ×4 period (2 octaves down)
-            val half = tau / 2
-            if (half < tauMin) break
-            val (localTau, localVal) = localMinimumNear(yinBuffer, half, tauMin)
-            if (localVal < looseTolerance) {
-                tau = localTau
-            } else {
-                break
-            }
-        }
-        return tau
-    }
+    private fun normalizedSquareDifference(buffer: FloatArray, nsdfBuffer: FloatArray) {
+        val W = nsdfBuffer.size  // = halfLen = buffer.size / 2
+        ensureWorkArrays(W)
 
-    /** Find the local minimum within ±12.5% of [center], clamped to [tauMin, size-1]. */
-    private fun localMinimumNear(yinBuffer: FloatArray, center: Int, tauMin: Int): Pair<Int, Float> {
-        val window = maxOf(1, center / 8)
-        val start = maxOf(tauMin, center - window)
-        val end = minOf(yinBuffer.size - 1, center + window)
-        var bestTau = center.coerceIn(start, end)
-        var bestVal = yinBuffer[bestTau]
-        for (t in start..end) {
-            if (yinBuffer[t] < bestVal) {
-                bestVal = yinBuffer[t]
-                bestTau = t
-            }
-        }
-        return Pair(bestTau, bestVal)
-    }
-
-    private fun cumulativeMeanNormalizedDifference(
-        buffer: FloatArray,
-        yinBuffer: FloatArray
-    ) {
-        val halfLen = yinBuffer.size
-        val n = buffer.size
-
-        ensureWorkArrays(n)
-        val fftSize = fftWorkSize
-
-        // Signal a: first half (zero-padded)
+        // Forward FFT of x[0..W-1] zero-padded to fftWorkSize (≥ 2W)
         workAre.fill(0.0)
         workAim.fill(0.0)
-        for (i in 0 until halfLen) workAre[i] = buffer[i].toDouble()
-
-        // Signal b: full buffer (zero-padded)
-        workBre.fill(0.0)
-        workBim.fill(0.0)
-        for (i in 0 until n) workBre[i] = buffer[i].toDouble()
-
+        for (i in 0 until W) workAre[i] = buffer[i].toDouble()
         fft(workAre, workAim, forward = true)
-        fft(workBre, workBim, forward = true)
 
-        // Cross-power spectrum: conj(A) · B
-        for (i in 0 until fftSize) {
-            workCre[i] = workAre[i] * workBre[i] + workAim[i] * workBim[i]
-            workCim[i] = workAre[i] * workBim[i] - workAim[i] * workBre[i]
+        // Power spectrum: |FFT(x)|²
+        for (i in 0 until fftWorkSize) {
+            workCre[i] = workAre[i] * workAre[i] + workAim[i] * workAim[i]
+            workCim[i] = 0.0
         }
 
+        // IFFT → r'(τ) = linear autocorrelation of x[0..W-1] for τ = 0..W-1
         fft(workCre, workCim, forward = false)
+        // workCre[τ] = r'(τ) = Σ_{j=0}^{W-1-τ} x[j]·x[j+τ]
 
-        workEnergyPrefix[0] = 0.0
-        for (i in 0 until n) {
-            workEnergyPrefix[i + 1] = workEnergyPrefix[i] + buffer[i].toDouble() * buffer[i].toDouble()
+        // NSDF with incremental m'(τ)
+        nsdfBuffer[0] = 1.0f  // NSDF(0) = 2·r'(0) / 2·r'(0) = 1 by definition
+        var m = 2.0 * workCre[0]   // m'(0) = 2·r'(0) = 2·Σ x[j]²
+        for (tau in 1 until W) {
+            // m'(τ) = m'(τ-1) − x[τ-1]² − x[W-τ]²
+            val xtm1 = buffer[tau - 1].toDouble()
+            val xWmt = buffer[W - tau].toDouble()
+            m -= xtm1 * xtm1 + xWmt * xWmt
+            nsdfBuffer[tau] = if (m > 0.0) (2.0 * workCre[tau] / m).toFloat() else 0.0f
+        }
+    }
+
+    /**
+     * MPM key-maximum peak picker.
+     *
+     * A "key maximum" is the highest NSDF value within each positive run (sign changes from
+     * negative to positive and back). Only key maxima above k × global_max are accepted.
+     * The FIRST such key maximum (smallest τ = highest frequency) is the fundamental.
+     *
+     * If the global key maximum is below SMALL_CUTOFF, the signal is too aperiodic (noise
+     * or a note-transition frame) and we return -1 (no pitch).
+     *
+     * This naturally handles octave ambiguity: T₁ = τ₀ (fundamental) and T₂ = 2τ₀ both
+     * produce NSDF peaks of similar height. By scanning from small τ upward, T₁ is found first.
+     * YIN's CMND-based valley-picking can accidentally pick 2τ₀ or 4τ₀ if d'(τ₀) is just
+     * above the absolute threshold; MPM's relative threshold avoids this bias.
+     */
+    private fun pickPeakMPM(
+        nsdfBuffer: FloatArray,
+        tauMin: Int,
+        tauMax: Int,
+        relThreshold: Float
+    ): Int {
+        // Collect all key maxima (peak of each positive run)
+        val kmTaus = IntArray(128)
+        val kmVals = FloatArray(128)
+        var kmCount = 0
+        var globalKM = 0f
+
+        var i = tauMin
+        while (i <= tauMax && kmCount < 128) {
+            if (nsdfBuffer[i] > 0f) {
+                var peakTau = i
+                var peakVal = nsdfBuffer[i]
+                while (i + 1 <= tauMax && nsdfBuffer[i + 1] > 0f) {
+                    i++
+                    if (nsdfBuffer[i] > peakVal) {
+                        peakVal = nsdfBuffer[i]
+                        peakTau = i
+                    }
+                }
+                kmTaus[kmCount] = peakTau
+                kmVals[kmCount] = peakVal
+                if (peakVal > globalKM) globalKM = peakVal
+                kmCount++
+            }
+            i++
         }
 
-        yinBuffer[0] = 1.0f
-        var runningSum = 0.0
+        if (kmCount == 0 || globalKM < SMALL_CUTOFF) return -1
 
-        // energy0 is constant across all tau — compute once outside the loop.
-        val energy0 = workEnergyPrefix[halfLen]
-        for (tau in 1 until halfLen) {
-            val energyTau = workEnergyPrefix[halfLen + tau] - workEnergyPrefix[tau]
-            // Clamp to ≥ 0: in exact math this is always ≥ 0 (Cauchy-Schwarz), but
-            // floating-point cross-correlation can produce tiny negative values.
-            val diff = (energy0 + energyTau - 2.0 * workCre[tau]).coerceAtLeast(0.0)
-
-            runningSum += diff
-            yinBuffer[tau] = if (runningSum != 0.0) (diff * tau / runningSum).toFloat() else 1.0f
+        val k = relThreshold * globalKM
+        for (j in 0 until kmCount) {
+            if (kmVals[j] >= k) return kmTaus[j]
         }
+        return kmTaus[0]  // fallback: best key maximum
     }
 
     // In-place radix-2 Cooley-Tukey FFT.

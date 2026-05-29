@@ -60,7 +60,7 @@ class TunerViewModel @Inject constructor(
                 referenceA4 = settings.concertPitch
                 pitchProcessor.setReferenceA4(settings.concertPitch)
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
-                pitchProcessor.setYinThreshold(settings.yinThreshold)
+                pitchProcessor.setPitchThreshold(settings.pitchThreshold)
                 _state.update { it.copy(referenceFrequency = settings.concertPitch) }
             }
         }

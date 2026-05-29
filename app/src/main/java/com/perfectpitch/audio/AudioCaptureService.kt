@@ -21,8 +21,10 @@ class AudioCaptureService(
         const val SAMPLE_RATE = 44100
         const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_FLOAT
-        /** Read chunk size — smaller for lower latency. Analysis uses a larger sliding window. */
-        const val BUFFER_SIZE_SAMPLES = 1024
+        /** Read chunk size — smaller for lower latency. Analysis uses a larger sliding window.
+         *  512 samples = ~11.6ms per hop at 44100 Hz. Smaller hops mean the sliding window
+         *  refreshes more frequently, reducing the duration of transition/mixed-note frames. */
+        const val BUFFER_SIZE_SAMPLES = 512
 
         /**
          * VOICE_PERFORMANCE (API 29+): Designed for live performance / karaoke.

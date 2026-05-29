@@ -91,7 +91,7 @@ class FreePlayViewModel @Inject constructor(
                 referenceA4 = settings.concertPitch
                 pitchProcessor.setReferenceA4(settings.concertPitch)
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
-                pitchProcessor.setYinThreshold(settings.yinThreshold)
+                pitchProcessor.setPitchThreshold(settings.pitchThreshold)
             }
         }
         viewModelScope.launch {

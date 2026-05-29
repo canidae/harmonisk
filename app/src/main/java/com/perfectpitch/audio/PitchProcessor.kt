@@ -13,28 +13,52 @@ class PitchProcessor(
     companion object {
         const val SILENCE_THRESHOLD_DB = -50f
         const val ANALYSIS_WINDOW_SIZE = 2048
+
+        /**
+         * Energy rise (in dB) within one chunk that triggers an onset reset.
+         * On onset the sliding window is cleared so the first clean analysis frame
+         * reflects only the new note — reducing octave-ambiguity during transitions.
+         */
+        private const val ONSET_DB_THRESHOLD = 8f
     }
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB
     private var referenceA4 = NoteUtils.DEFAULT_A4_FREQ
-    private var yinThreshold = PitchDetector.DEFAULT_THRESHOLD
+    private var pitchThreshold = PitchDetector.DEFAULT_THRESHOLD
 
     fun setSilenceThreshold(db: Float) { silenceThresholdDb = db }
     fun setReferenceA4(freq: Float) { referenceA4 = freq }
-    fun setYinThreshold(threshold: Float) { yinThreshold = threshold }
+    fun setPitchThreshold(threshold: Float) { pitchThreshold = threshold }
 
     /**
-     * Sliding-window pitch flow: each new 1024-sample chunk shifts a 2048-sample window
-     * so YIN runs at ~23ms frames while preserving low-frequency resolution.
+     * Sliding-window pitch flow.
+     *
+     * Each incoming chunk shifts the 2048-sample analysis window. If the chunk's RMS rises
+     * by ≥ ONSET_DB_THRESHOLD dB relative to the previous chunk, an onset is detected and
+     * the window is reset — this prevents the old-note signal from polluting the new note's
+     * first analysis frames (particularly important for octave-related intervals like F4→F5).
      */
     fun pitchFlow(): Flow<PitchResult> {
         val slidingWindow = FloatArray(ANALYSIS_WINDOW_SIZE)
         var windowFilled = 0
+        var prevChunkRms = 0f
 
         return audioCaptureService.audioFlow()
             .map { chunk ->
                 val chunkSize = chunk.size.coerceAtMost(ANALYSIS_WINDOW_SIZE)
-                if (windowFilled >= ANALYSIS_WINDOW_SIZE) {
+                val chunkRms = AudioUtils.rms(chunk)
+                val prevDb = AudioUtils.linearToDb(prevChunkRms)
+                val currDb = AudioUtils.linearToDb(chunkRms)
+                val isOnset = currDb > (silenceThresholdDb + 6f) &&
+                        (currDb - prevDb) > ONSET_DB_THRESHOLD
+                prevChunkRms = chunkRms
+
+                if (isOnset) {
+                    // Reset window: discard old note, start fresh with new chunk
+                    slidingWindow.fill(0f)
+                    System.arraycopy(chunk, 0, slidingWindow, 0, chunkSize)
+                    windowFilled = chunkSize
+                } else if (windowFilled >= ANALYSIS_WINDOW_SIZE) {
                     System.arraycopy(slidingWindow, chunkSize, slidingWindow, 0, ANALYSIS_WINDOW_SIZE - chunkSize)
                     System.arraycopy(chunk, 0, slidingWindow, ANALYSIS_WINDOW_SIZE - chunkSize, chunkSize)
                 } else {
@@ -52,13 +76,13 @@ class PitchProcessor(
         val rmsDb = AudioUtils.linearToDb(AudioUtils.rms(buffer))
         if (rmsDb < silenceThresholdDb) return PitchResult.SILENT
 
-        // YIN operates on the raw time-domain signal — do NOT apply a Hann window here.
-        // Windowing the buffer distorts the CMND energy normalization terms (energy0 / energyTau),
-        // introducing systematic pitch bias that grows at larger τ (lower notes).
+        // MPM operates on the raw signal — do NOT apply a windowing function.
+        // The NSDF's per-lag energy normalization m'(τ) already handles edge effects
+        // (as stated in McLeod & Wyvill 2005, Section 4).
         val result = pitchDetector.detectPitch(
             buffer = buffer,
             sampleRate = AudioCaptureService.SAMPLE_RATE,
-            threshold = yinThreshold
+            threshold = pitchThreshold
         )
         if (result.frequency <= 0f) return PitchResult.SILENT
 
