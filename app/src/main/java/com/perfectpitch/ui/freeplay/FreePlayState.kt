@@ -6,10 +6,13 @@ enum class NoteEditMode { NONE, EDIT }
 
 enum class PianoVisibility { NONE, UPPER_ONLY, LOWER_ONLY, BOTH }
 
+/** Audio output routing for playback. */
+enum class OutputDevice { SYNTH, NONE, MIDI }
+
 data class FreePlayState(
     val pitchResult: PitchResult = PitchResult.SILENT,
     val isListening: Boolean = false,
-    val isRecording: Boolean = true,
+    val isRecording: Boolean = false,
     val playedNotes: List<PlayedNote> = emptyList(),
     val activeNote: PlayedNote? = null,
     val viewMinMidi: Float = 60f,
@@ -30,7 +33,7 @@ data class FreePlayState(
     // MIDI state
     val midiAvailable: Boolean = false,
     val midiInputEnabled: Boolean = false,
-    val midiOutputEnabled: Boolean = false,
+    val outputDevice: OutputDevice = OutputDevice.SYNTH,
     val midiInputDeviceName: String? = null,
     val midiOutputDeviceName: String? = null,
     val isPlaying: Boolean = false,

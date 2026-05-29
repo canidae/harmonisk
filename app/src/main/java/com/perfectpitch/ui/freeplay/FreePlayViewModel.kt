@@ -1,8 +1,6 @@
 package com.perfectpitch.ui.freeplay
 
 import android.content.Context
-import android.media.AudioDeviceInfo
-import android.media.AudioManager
 import android.media.midi.MidiDeviceInfo
 import android.net.Uri
 import android.util.Log
@@ -43,7 +41,7 @@ class FreePlayViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
-        const val MIN_NOTE_DURATION_MS = 80L
+        const val MIN_NOTE_DURATION_MS = 50L
         const val MIN_VISIBLE_KEYS = 5f
         const val MAX_VISIBLE_KEYS = 48f
         const val MIN_FALL_SPEED = 30f
@@ -52,7 +50,7 @@ class FreePlayViewModel @Inject constructor(
         const val ABSOLUTE_MIN_MIDI = 21f  // A0
         const val ABSOLUTE_MAX_MIDI = 108f // A8
         const val MIN_AUTO_FIT_RANGE = 12f
-        const val NEW_NOTE_DEBOUNCE_FRAMES = 3
+        const val NEW_NOTE_DEBOUNCE_FRAMES = 2
         private const val TAG = "FreePlayVM"
     }
 
@@ -68,7 +66,10 @@ class FreePlayViewModel @Inject constructor(
 
     // Replay state flag
     private var replayActive = false
-    private var feedbackWarningShown = false
+
+    // Output device saved before auto-switch on record start (null = no auto-switch done)
+    private var outputDeviceBeforeRecord: OutputDevice? = null
+
     val warnings = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1)
 
     // Mic input tracking
@@ -77,6 +78,8 @@ class FreePlayViewModel @Inject constructor(
     private var centsSamples = mutableListOf<Float>()
     private var candidateNoteMidi: Int? = null
     private var candidateNoteCount: Int = 0
+    // Song position captured at the first detection frame of a new candidate note
+    private var candidateStartSongMs: Long = 0L
 
     // MIDI input tracking (polyphonic: key = MIDI note number, value = active PlayedNote)
     private val activeMidiNotes = mutableMapOf<Int, PlayedNote>()
@@ -113,10 +116,15 @@ class FreePlayViewModel @Inject constructor(
             }.collect { (inputEnabled, outputEnabled, available) ->
                 val wasListening = _state.value.isListening
                 _state.update {
+                    val newOutputDevice = when {
+                        outputEnabled -> OutputDevice.MIDI
+                        it.outputDevice == OutputDevice.NONE -> OutputDevice.NONE
+                        else -> OutputDevice.SYNTH
+                    }
                     it.copy(
                         midiAvailable = available,
                         midiInputEnabled = inputEnabled,
-                        midiOutputEnabled = outputEnabled
+                        outputDevice = newOutputDevice
                     )
                 }
                 // Re-start listening with the correct source if already active
@@ -130,11 +138,11 @@ class FreePlayViewModel @Inject constructor(
         viewModelScope.launch {
             midiDeviceManager.devices.collect { devices ->
                 val inputDevice = devices.firstOrNull { it.outputPortCount > 0 }
-                val outputDevice = devices.firstOrNull { it.inputPortCount > 0 }
+                val midiOutputDevice = devices.firstOrNull { it.inputPortCount > 0 }
                 _state.update {
                     it.copy(
                         midiInputDeviceName = inputDevice?.properties?.getString(MidiDeviceInfo.PROPERTY_NAME),
-                        midiOutputDeviceName = outputDevice?.properties?.getString(MidiDeviceInfo.PROPERTY_NAME)
+                        midiOutputDeviceName = midiOutputDevice?.properties?.getString(MidiDeviceInfo.PROPERTY_NAME)
                     )
                 }
             }
@@ -153,8 +161,29 @@ class FreePlayViewModel @Inject constructor(
         midiDeviceManager.setInputOverride(useMidi)
     }
 
-    fun setMidiOutputEnabled(useMidi: Boolean) {
-        midiDeviceManager.setOutputOverride(useMidi)
+    fun setOutputDevice(device: OutputDevice) {
+        midiDeviceManager.setOutputOverride(device == OutputDevice.MIDI)
+        _state.update { it.copy(outputDevice = device) }
+    }
+
+    fun toggleRecording() {
+        if (_state.value.isRecording) stopRecording() else startRecording()
+    }
+
+    private fun startRecording() {
+        if (_state.value.outputDevice == OutputDevice.SYNTH) {
+            outputDeviceBeforeRecord = OutputDevice.SYNTH
+            setOutputDevice(OutputDevice.NONE)
+        }
+        _state.update { it.copy(isRecording = true) }
+    }
+
+    private fun stopRecording() {
+        _state.update { it.copy(isRecording = false) }
+        outputDeviceBeforeRecord?.let { previous ->
+            setOutputDevice(previous)
+            outputDeviceBeforeRecord = null
+        }
     }
 
     fun getEffectiveTime(realTimeMs: Long): Long {
@@ -214,10 +243,6 @@ class FreePlayViewModel @Inject constructor(
         candidateNoteMidi = null
         candidateNoteCount = 0
         _state.update { it.copy(isListening = false, activeNote = null) }
-    }
-
-    fun toggleRecording() {
-        _state.update { it.copy(isRecording = !it.isRecording) }
     }
 
     fun setBeatsPerBar(beats: Int) {
@@ -420,7 +445,8 @@ class FreePlayViewModel @Inject constructor(
                         viewMaxMidi = viewMax,
                         midiAvailable = current.midiAvailable,
                         midiInputEnabled = current.midiInputEnabled,
-                        midiOutputEnabled = current.midiOutputEnabled
+                        midiOutputDeviceName = current.midiOutputDeviceName,
+                        outputDevice = current.outputDevice
                     )
                 }
             } catch (e: Exception) {
@@ -509,6 +535,8 @@ class FreePlayViewModel @Inject constructor(
                 } else {
                     candidateNoteMidi = midi
                     candidateNoteCount = 1
+                    // Capture song position at first detection for accurate onset timestamp
+                    candidateStartSongMs = _state.value.songPositionMs
                 }
                 if (candidateNoteCount < NEW_NOTE_DEBOUNCE_FRAMES) {
                     return
@@ -519,11 +547,12 @@ class FreePlayViewModel @Inject constructor(
                 currentNoteMidi = midi
                 centsSamples.clear()
                 centsSamples.add(result.centsOff)
-                val noteStart = _state.value.songPositionMs
+                // Use candidateStartSongMs to correct for the debounce delay
+                val noteStart = candidateStartSongMs
                 val snappedStart = if (_state.value.snapEnabled) snapToGrid(noteStart) else noteStart
                 currentNoteStartMs = snappedStart
                 expandRange(midi)
-                if (_state.value.isRecording && _state.value.songPositionMs >= 0) {
+                if (_state.value.isRecording) {
                     val note = PlayedNote(
                         noteName = result.noteName,
                         octave = result.octave,
@@ -683,39 +712,23 @@ class FreePlayViewModel @Inject constructor(
             .filter { it.endTimeMs != null }
             .sortedBy { it.startTimeMs }
 
-        if (allNotes.isEmpty()) {
-            return
-        }
+        val firstNoteMs = allNotes.firstOrNull()?.startTimeMs ?: 0L
+        val lastNoteEndMs = allNotes.maxOfOrNull { it.endTimeMs!! } ?: 0L
 
-        val firstNoteMs = allNotes.first().startTimeMs
-        val lastNoteEndMs = allNotes.maxOf { it.endTimeMs!! }
-
-        // If past the last note, rewind to start
-        if (_state.value.songPositionMs >= lastNoteEndMs) {
+        if (allNotes.isNotEmpty() && _state.value.songPositionMs >= lastNoteEndMs) {
             _state.update { it.copy(songPositionMs = firstNoteMs) }
         }
 
         replayActive = true
         _state.update { it.copy(isPlaying = true) }
 
-        // One-time feedback warning: mic input + built-in speaker
-        if (!_state.value.midiInputEnabled && !feedbackWarningShown) {
-            val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            val hasBuiltinSpeaker = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-                .any { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-            if (hasBuiltinSpeaker) {
-                feedbackWarningShown = true
-                warnings.tryEmit("Using mic input with speaker output may cause feedback — use a headset or MIDI device for best results")
-            }
-        }
-
         replayJob = viewModelScope.launch {
             val job = coroutineContext[kotlinx.coroutines.Job]!!
 
-            val player: NotePlayer = if (_state.value.midiOutputEnabled && midiOutputSender.isReady) {
-                midiOutputSender
-            } else {
-                melodySynthesizer
+            val player: NotePlayer? = when (_state.value.outputDevice) {
+                OutputDevice.MIDI -> if (midiOutputSender.isReady) midiOutputSender else melodySynthesizer
+                OutputDevice.SYNTH -> melodySynthesizer
+                OutputDevice.NONE -> null
             }
 
             val s = _state.value
@@ -755,7 +768,7 @@ class FreePlayViewModel @Inject constructor(
                 // Detect external seek (from onVerticalScroll)
                 val statePosition = _state.value.songPositionMs
                 if (kotlin.math.abs(statePosition - replayPositionMs) > 100) {
-                    player.allNotesOff()
+                    player?.allNotesOff()
                     replayPositionMs = statePosition.coerceAtLeast(firstNoteMs)
                     events = buildEvents(replayPositionMs)
                     eventIndex = 0
@@ -770,13 +783,13 @@ class FreePlayViewModel @Inject constructor(
                 // Fire due events
                 while (eventIndex < events.size && events[eventIndex].timeMs <= replayPositionMs) {
                     val ev = events[eventIndex++]
-                    if (ev.isOn) player.noteOn(0, ev.midiNote, 80)
-                    else player.noteOff(0, ev.midiNote)
+                    if (ev.isOn) player?.noteOn(0, ev.midiNote, 80)
+                    else player?.noteOff(0, ev.midiNote)
                 }
 
                 // Loop-at-end
                 if (replayPositionMs >= loopEndMs) {
-                    player.allNotesOff()
+                    player?.allNotesOff()
                     replayPositionMs = loopStartMs
                     _state.update { it.copy(songPositionMs = replayPositionMs) }
                     events = buildEvents(replayPositionMs)
@@ -787,7 +800,7 @@ class FreePlayViewModel @Inject constructor(
                 delay(16L)
             }
 
-            player.allNotesOff()
+            player?.allNotesOff()
             replayActive = false
             lastAdvanceWallMs = System.currentTimeMillis()
             _state.update { it.copy(isPlaying = false) }
@@ -806,7 +819,7 @@ class FreePlayViewModel @Inject constructor(
 
     fun togglePlaying() {
         if (_state.value.isPlaying) stopPlaying()
-        else if (_state.value.playedNotes.isNotEmpty()) replayNotes()
+        else replayNotes()
     }
 
 

@@ -154,6 +154,12 @@ fun FreePlayScreen(
 
         // Output source dropdown
         Box {
+            val outputLabel = when (state.outputDevice) {
+                OutputDevice.MIDI -> state.midiOutputDeviceName?.take(9) ?: "MIDI"
+                OutputDevice.SYNTH -> "Synth"
+                OutputDevice.NONE -> "None"
+            }
+            val outputTint = if (state.outputDevice == OutputDevice.MIDI) Color(0xFF7E57C2) else OVERLAY_ICON_TINT
             TextButton(
                 onClick = { showOutputMenu = true },
                 contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
@@ -163,24 +169,26 @@ fun FreePlayScreen(
                     Icons.Filled.MusicNote,
                     contentDescription = null,
                     modifier = Modifier.size(14.dp),
-                    tint = if (state.midiOutputEnabled) Color(0xFF7E57C2) else OVERLAY_ICON_TINT
+                    tint = outputTint
                 )
                 Spacer(Modifier.width(3.dp))
-                Text(
-                    text = if (state.midiOutputEnabled) (state.midiOutputDeviceName?.take(9) ?: "MIDI") else "Synth",
-                    fontSize = 11.sp,
-                    color = if (state.midiOutputEnabled) Color(0xFF7E57C2) else OVERLAY_ICON_TINT,
-                    maxLines = 1
-                )
+                Text(text = outputLabel, fontSize = 11.sp, color = outputTint, maxLines = 1)
                 Icon(Icons.Filled.ArrowDropDown, null, modifier = Modifier.size(14.dp), tint = OVERLAY_ICON_TINT)
             }
             DropdownMenu(expanded = showOutputMenu, onDismissRequest = { showOutputMenu = false }) {
-                DropdownMenuItem(text = { Text("Internal synth") }, onClick = { viewModel.setMidiOutputEnabled(false); showOutputMenu = false })
+                DropdownMenuItem(
+                    text = { Text("Internal synth", fontWeight = if (state.outputDevice == OutputDevice.SYNTH) FontWeight.Bold else FontWeight.Normal) },
+                    onClick = { viewModel.setOutputDevice(OutputDevice.SYNTH); showOutputMenu = false }
+                )
+                DropdownMenuItem(
+                    text = { Text("None (silent)", fontWeight = if (state.outputDevice == OutputDevice.NONE) FontWeight.Bold else FontWeight.Normal) },
+                    onClick = { viewModel.setOutputDevice(OutputDevice.NONE); showOutputMenu = false }
+                )
                 val outputDeviceName = state.midiOutputDeviceName
                 if (outputDeviceName != null) {
                     DropdownMenuItem(
-                        text = { Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.MusicNote, null, Modifier.size(16.dp), tint = Color(0xFF7E57C2)); Text(outputDeviceName) } },
-                        onClick = { viewModel.setMidiOutputEnabled(true); showOutputMenu = false }
+                        text = { Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.MusicNote, null, Modifier.size(16.dp), tint = Color(0xFF7E57C2)); Text(outputDeviceName, fontWeight = if (state.outputDevice == OutputDevice.MIDI) FontWeight.Bold else FontWeight.Normal) } },
+                        onClick = { viewModel.setOutputDevice(OutputDevice.MIDI); showOutputMenu = false }
                     )
                 }
             }
@@ -204,8 +212,9 @@ fun FreePlayScreen(
                 )
                 if (state.snapEnabled) {
                     val divIndex = NOTE_DIVISIONS.indexOf(state.minNoteDivision).takeIf { it >= 0 } ?: 2
-                    DropdownMenuItem(text = { Text("Min duration: ${NOTE_DIVISION_LABELS[state.minNoteDivision] ?: "${state.minNoteDivision}th"}") }, onClick = {})
-                    Slider(value = divIndex.toFloat(), onValueChange = { viewModel.setMinNoteDivision(NOTE_DIVISIONS[it.roundToInt()]) }, valueRange = 0f..4f, steps = 3, modifier = Modifier.padding(horizontal = 16.dp))
+                    val reversedIndex = 4 - divIndex
+                    DropdownMenuItem(text = { Text("Min note duration: ${NOTE_DIVISION_LABELS[state.minNoteDivision] ?: "${state.minNoteDivision}th"}") }, onClick = {})
+                    Slider(value = reversedIndex.toFloat(), onValueChange = { viewModel.setMinNoteDivision(NOTE_DIVISIONS[4 - it.roundToInt()]) }, valueRange = 0f..4f, steps = 3, modifier = Modifier.padding(horizontal = 16.dp))
                 }
                 HorizontalDivider()
                 var showPianoVisMenu by remember { mutableStateOf(false) }
@@ -234,6 +243,21 @@ fun FreePlayScreen(
                     onClick = { exportLauncher.launch("session.mid"); showConfigMenu = false }
                 )
             }
+        }
+
+        // Play / Stop toggle
+        IconButton(
+            onClick = { viewModel.togglePlaying() },
+            modifier = Modifier.size(PANEL_BTN_SIZE)
+                .background(if (state.isPlaying) Color(0xFF66BB6A).copy(alpha = 0.35f) else OVERLAY_BG, CircleShape)
+                .then(if (state.isPlaying) Modifier.border(1.dp, Color(0xFF66BB6A), CircleShape) else Modifier)
+        ) {
+            Icon(
+                if (state.isPlaying) Icons.Filled.Stop else Icons.Filled.PlayArrow,
+                contentDescription = if (state.isPlaying) "Stop" else "Play",
+                modifier = Modifier.size(17.dp),
+                tint = if (state.isPlaying) Color(0xFF66BB6A) else OVERLAY_ICON_TINT
+            )
         }
 
         // Record toggle
@@ -575,8 +599,8 @@ fun FreePlayScreen(
                 )
             }
 
-            // Play overlay: shown when paused and not in edit mode and there are notes
-            if (!state.isPlaying && state.editMode == NoteEditMode.NONE && state.playedNotes.isNotEmpty()) {
+            // Play overlay: shown when paused and not in edit mode
+            if (!state.isPlaying && state.editMode == NoteEditMode.NONE) {
                 Box(
                     modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
