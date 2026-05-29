@@ -3,9 +3,9 @@ package com.perfectpitch.di
 import android.content.Context
 import com.perfectpitch.audio.AudioCaptureService
 import com.perfectpitch.audio.AudioDeviceMonitor
+import com.perfectpitch.audio.CrepePitchDetector
 import com.perfectpitch.audio.MelodyPlayer
 import com.perfectpitch.audio.MelodySynthesizer
-import com.perfectpitch.audio.PitchDetector
 import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.AudioDelayRepository
 import com.perfectpitch.data.MelodyRepository
@@ -35,7 +35,9 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun providePitchDetector(): PitchDetector = PitchDetector()
+    fun provideCrepePitchDetector(
+        @ApplicationContext context: Context
+    ): CrepePitchDetector = CrepePitchDetector(context)
 
     @Provides
     @Singleton
@@ -45,9 +47,9 @@ object AppModule {
     @Singleton
     fun providePitchProcessor(
         audioCaptureService: AudioCaptureService,
-        pitchDetector: PitchDetector,
+        crepeDetector: CrepePitchDetector,
         noteUtils: NoteUtils
-    ): PitchProcessor = PitchProcessor(audioCaptureService, pitchDetector, noteUtils)
+    ): PitchProcessor = PitchProcessor(audioCaptureService, crepeDetector, noteUtils)
 
     @Provides
     @Singleton

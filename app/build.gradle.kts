@@ -42,6 +42,10 @@ android {
     buildFeatures {
         compose = true
     }
+
+    aaptOptions {
+        noCompress += "tflite"
+    }
 }
 
 dependencies {
@@ -77,6 +81,9 @@ dependencies {
 
     // Core
     implementation("androidx.core:core-ktx:1.15.0")
+
+    // TensorFlow Lite — CREPE pitch detection model
+    implementation("org.tensorflow:tensorflow-lite:2.14.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

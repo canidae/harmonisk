@@ -7,50 +7,49 @@ import kotlinx.coroutines.flow.*
 
 class PitchProcessor(
     private val audioCaptureService: AudioCaptureService,
-    private val pitchDetector: PitchDetector,
+    private val crepeDetector: CrepePitchDetector,
     private val noteUtils: NoteUtils
 ) {
     companion object {
         const val SILENCE_THRESHOLD_DB = -50f
-        const val ANALYSIS_WINDOW_SIZE = 2048
+
+        /**
+         * Analysis window size in 44100 Hz samples.
+         * Must cover at least CREPE's required 64 ms window:
+         *   1024 samples @ 16 kHz = 64 ms → 44100 × 0.064 ≈ 2822 samples.
+         */
+        const val ANALYSIS_WINDOW_SIZE = 2822
 
         /**
          * Energy rise (in dB) within one chunk that triggers an onset reset.
-         * On onset the sliding window is cleared so the first clean analysis frame
-         * reflects only the new note — reducing octave-ambiguity during transitions.
+         * On onset the sliding window is cleared so the very first CREPE inference
+         * reflects only the new note's signal — reduces transition ambiguity.
          */
         private const val ONSET_DB_THRESHOLD = 8f
 
         /**
-         * After this many milliseconds of consecutive silence, the previous-note frequency hint
-         * is cleared. Prevents a note played before a long rest from biasing the next note.
+         * After this many milliseconds of consecutive silence, the prior-note frequency
+         * hint is cleared. Prevents a note before a long rest from biasing the next note.
          */
         private const val HINT_RESET_MS = 800L
     }
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB
     private var referenceA4 = NoteUtils.DEFAULT_A4_FREQ
-    private var pitchThreshold = PitchDetector.DEFAULT_THRESHOLD
 
-    /**
-     * Frequency of the most recently detected pitch (Hz), used as a hint for MPM candidate
-     * selection. Reset to 0 after [HINT_RESET_MS] ms of consecutive silence so rests do not
-     * cause the next note to be biased toward the pre-rest pitch.
-     */
+    /** Frequency of the most recently detected pitch, passed to CREPE as an octave-hint. */
     private var lastFrequency = 0f
     private var lastDetectedNano = 0L
 
     fun setSilenceThreshold(db: Float) { silenceThresholdDb = db }
     fun setReferenceA4(freq: Float) { referenceA4 = freq }
-    fun setPitchThreshold(threshold: Float) { pitchThreshold = threshold }
 
     /**
-     * Sliding-window pitch flow.
+     * Sliding-window pitch flow using CREPE for inference.
      *
-     * Each incoming chunk shifts the 2048-sample analysis window. If the chunk's RMS rises
-     * by ≥ ONSET_DB_THRESHOLD dB relative to the previous chunk, an onset is detected and
-     * the window is reset — this prevents the old-note signal from polluting the new note's
-     * first analysis frames (particularly important for octave-related intervals like F4→F5).
+     * Each incoming chunk (512 samples at 44100 Hz = ~11.6 ms) shifts the 2822-sample
+     * analysis window. On energy onset the window is reset so CREPE receives a clean frame
+     * for the new note as quickly as possible.
      */
     fun pitchFlow(): Flow<PitchResult> {
         val slidingWindow = FloatArray(ANALYSIS_WINDOW_SIZE)
@@ -68,7 +67,6 @@ class PitchProcessor(
                 prevChunkRms = chunkRms
 
                 if (isOnset) {
-                    // Reset window: discard old note, start fresh with new chunk
                     slidingWindow.fill(0f)
                     System.arraycopy(chunk, 0, slidingWindow, 0, chunkSize)
                     windowFilled = chunkSize
@@ -89,26 +87,13 @@ class PitchProcessor(
     private fun processBuffer(buffer: FloatArray): PitchResult {
         val rmsDb = AudioUtils.linearToDb(AudioUtils.rms(buffer))
         if (rmsDb < silenceThresholdDb) {
-            // Reset the frequency hint after prolonged silence so rests don't bias the next note.
-            if (System.nanoTime() - lastDetectedNano > HINT_RESET_MS * 1_000_000L) {
-                lastFrequency = 0f
-            }
+            if (System.nanoTime() - lastDetectedNano > HINT_RESET_MS * 1_000_000L) lastFrequency = 0f
             return PitchResult.SILENT
         }
 
-        // MPM operates on the raw signal — do NOT apply a windowing function.
-        // The NSDF's per-lag energy normalization m'(τ) already handles edge effects
-        // (as stated in McLeod & Wyvill 2005, Section 4).
-        val result = pitchDetector.detectPitch(
-            buffer = buffer,
-            sampleRate = AudioCaptureService.SAMPLE_RATE,
-            threshold = pitchThreshold,
-            hintFreq = lastFrequency
-        )
+        val result = crepeDetector.detectPitch(buffer = buffer, hintFreq = lastFrequency)
         if (result.frequency <= 0f) {
-            if (System.nanoTime() - lastDetectedNano > HINT_RESET_MS * 1_000_000L) {
-                lastFrequency = 0f
-            }
+            if (System.nanoTime() - lastDetectedNano > HINT_RESET_MS * 1_000_000L) lastFrequency = 0f
             return PitchResult.SILENT
         }
 
@@ -128,4 +113,3 @@ class PitchProcessor(
         )
     }
 }
-
