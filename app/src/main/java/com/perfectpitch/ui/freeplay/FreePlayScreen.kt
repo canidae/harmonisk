@@ -85,13 +85,6 @@ fun FreePlayScreen(
     val loopStartMs = state.loopStartBar?.let { (it * barMs).toLong() }
     val loopEndMs   = state.loopEndBar?.let   { (it * barMs).toLong() }
 
-    val snackbarHostState = remember { SnackbarHostState() }
-    LaunchedEffect(Unit) {
-        viewModel.warnings.collect { msg ->
-            snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Long)
-        }
-    }
-
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("audio/midi")
     ) { uri: Uri? -> uri?.let { viewModel.exportToMidi(it, context) } }
@@ -488,6 +481,8 @@ fun FreePlayScreen(
                         onTap = { offset ->
                             if (state.editMode == NoteEditMode.EDIT) {
                                 viewModel.selectNote(noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.first)
+                            } else if (state.isRecording) {
+                                viewModel.toggleRecording()
                             } else {
                                 viewModel.togglePlaying()
                             }
@@ -618,10 +613,21 @@ fun FreePlayScreen(
                 }
             }
 
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
+            // Recording overlay: tap anywhere to stop recording
+            if (state.isRecording) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.Stop,
+                        contentDescription = "Tap to stop recording",
+                        modifier = Modifier.size(72.dp),
+                        tint = Color(0xFFEF5350).copy(alpha = 0.4f)
+                    )
+                }
+            }
+
         }
     }
 }

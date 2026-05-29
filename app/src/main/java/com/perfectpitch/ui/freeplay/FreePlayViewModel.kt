@@ -71,7 +71,6 @@ class FreePlayViewModel @Inject constructor(
     // Output device saved before auto-switch on record start (null = no auto-switch done)
     private var outputDeviceBeforeRecord: OutputDevice? = null
 
-    val warnings = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1)
 
     // Mic input tracking — committed (currently held) note
     private var currentNoteMidi: Int? = null
@@ -197,11 +196,8 @@ class FreePlayViewModel @Inject constructor(
     fun getEffectiveTime(realTimeMs: Long): Long {
         val delta = (realTimeMs - lastAdvanceWallMs).coerceAtLeast(0L)
         lastAdvanceWallMs = realTimeMs
-        if (!replayActive) {
-            val shouldAdvance = recordingActive || currentNoteMidi != null || activeMidiNotes.isNotEmpty()
-            if (shouldAdvance) {
-                _state.update { it.copy(songPositionMs = it.songPositionMs + delta) }
-            }
+        if (!replayActive && recordingActive) {
+            _state.update { it.copy(songPositionMs = it.songPositionMs + delta) }
         }
         return _state.value.songPositionMs
     }
