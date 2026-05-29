@@ -2,6 +2,7 @@ package com.perfectpitch.audio
 
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.ln
 import kotlin.math.sin
 
 /**
@@ -41,9 +42,14 @@ class PitchDetector {
 
         /**
          * Absolute floor for the NSDF global maximum.
-         * If no peak exceeds this, the frame is considered too aperiodic (noise/silence/transition).
+         * Frames where no key maximum reaches this threshold are considered too aperiodic
+         * (noise, silence, or note-transition frames) and return NONE.
+         *
+         * 0.65 is empirically tighter than the academic default of 0.45 — real instrument/voice
+         * notes typically have NSDF peaks of 0.75–0.99, while semi-periodic room noise
+         * (HVAC, fan) and brief transition frames peak at 0.2–0.5.
          */
-        private const val SMALL_CUTOFF = 0.45f
+        private const val SMALL_CUTOFF = 0.65f
     }
 
     // Pre-allocated FFT work arrays, lazily sized on first call.
@@ -69,12 +75,20 @@ class PitchDetector {
      *
      * @param threshold MPM relative threshold k ∈ (0, 1) — first key maximum ≥ k × global_max
      *                  is accepted. Default 0.93. Lower = more conservative (fewer octave errors).
+     * @param hintFreq  Optional frequency of the previously confirmed note (Hz). When provided
+     *                  and MPM finds multiple key maxima above the threshold, the candidate whose
+     *                  frequency is closest to [hintFreq] is preferred over the default
+     *                  "smallest τ first" rule. This corrects octave aliasing in step-wise
+     *                  melodies: e.g. if the buffer is ambiguous between F3 and F4 and the
+     *                  prior note was C4, F4 (5 semitones away) wins over F3 (7 semitones away).
+     *                  Pass 0f (default) to use the standard MPM rule.
      * @param minFreq / maxFreq detectable frequency range in Hz
      */
     fun detectPitch(
         buffer: FloatArray,
         sampleRate: Int = DEFAULT_SAMPLE_RATE,
         threshold: Float = DEFAULT_THRESHOLD,
+        hintFreq: Float = 0f,
         minFreq: Float = 65f,
         maxFreq: Float = 2100f
     ): PitchDetectionResult {
@@ -88,8 +102,19 @@ class PitchDetector {
         val nsdfBuffer = FloatArray(halfLen)
         normalizedSquareDifference(buffer, nsdfBuffer)
 
-        val tauEstimate = pickPeakMPM(nsdfBuffer, tauMin, tauMax, threshold)
-        if (tauEstimate == -1) return PitchDetectionResult.NONE
+        val candidates = pickPeakMPM(nsdfBuffer, tauMin, tauMax, threshold)
+        if (candidates.isEmpty()) return PitchDetectionResult.NONE
+
+        // Select best candidate: prefer the one whose frequency is closest to hintFreq.
+        // If no hint (or only one candidate), fall back to smallest τ = highest freq = fundamental.
+        val tauEstimate = if (hintFreq > 0f && candidates.size > 1) {
+            candidates.minByOrNull { tau ->
+                val candFreq = sampleRate.toDouble() / tau
+                abs(ln(candFreq / hintFreq.toDouble()))
+            } ?: candidates[0]
+        } else {
+            candidates[0]
+        }
 
         val betterTau = parabolicInterpolation(nsdfBuffer, tauEstimate)
         val frequency = if (betterTau > 0f) sampleRate / betterTau else -1f
@@ -147,31 +172,28 @@ class PitchDetector {
      * MPM key-maximum peak picker.
      *
      * A "key maximum" is the highest NSDF value within each positive run (sign changes from
-     * negative to positive and back). Only key maxima above k × global_max are accepted.
-     * The FIRST such key maximum (smallest τ = highest frequency) is the fundamental.
+     * negative to positive and back). Returns ALL key maxima above k × global_max, ordered by
+     * τ ascending (highest frequency first).
      *
-     * If the global key maximum is below SMALL_CUTOFF, the signal is too aperiodic (noise
-     * or a note-transition frame) and we return -1 (no pitch).
+     * The caller uses the list to apply a "closest-to-previous-note" heuristic:
+     * if only one candidate exists, it is the fundamental. If multiple exist (τ₀, 2τ₀, …),
+     * the caller can prefer the one closest in frequency to a prior known pitch.
      *
-     * This naturally handles octave ambiguity: T₁ = τ₀ (fundamental) and T₂ = 2τ₀ both
-     * produce NSDF peaks of similar height. By scanning from small τ upward, T₁ is found first.
-     * YIN's CMND-based valley-picking can accidentally pick 2τ₀ or 4τ₀ if d'(τ₀) is just
-     * above the absolute threshold; MPM's relative threshold avoids this bias.
+     * Returns an empty array when the signal is too aperiodic (global key max < SMALL_CUTOFF).
      */
     private fun pickPeakMPM(
         nsdfBuffer: FloatArray,
         tauMin: Int,
         tauMax: Int,
         relThreshold: Float
-    ): Int {
-        // Collect all key maxima (peak of each positive run)
-        val kmTaus = IntArray(128)
-        val kmVals = FloatArray(128)
+    ): IntArray {
+        val kmTaus = IntArray(32)
+        val kmVals = FloatArray(32)
         var kmCount = 0
         var globalKM = 0f
 
         var i = tauMin
-        while (i <= tauMax && kmCount < 128) {
+        while (i <= tauMax && kmCount < 32) {
             if (nsdfBuffer[i] > 0f) {
                 var peakTau = i
                 var peakVal = nsdfBuffer[i]
@@ -190,13 +212,16 @@ class PitchDetector {
             i++
         }
 
-        if (kmCount == 0 || globalKM < SMALL_CUTOFF) return -1
+        if (kmCount == 0 || globalKM < SMALL_CUTOFF) return IntArray(0)
 
         val k = relThreshold * globalKM
+        val result = IntArray(kmCount)
+        var count = 0
         for (j in 0 until kmCount) {
-            if (kmVals[j] >= k) return kmTaus[j]
+            if (kmVals[j] >= k) result[count++] = kmTaus[j]
         }
-        return kmTaus[0]  // fallback: best key maximum
+        // result is already τ-ascending (tauMin…tauMax scan order)
+        return result.copyOf(count)
     }
 
     // In-place radix-2 Cooley-Tukey FFT.

@@ -20,11 +20,25 @@ class PitchProcessor(
          * reflects only the new note — reducing octave-ambiguity during transitions.
          */
         private const val ONSET_DB_THRESHOLD = 8f
+
+        /**
+         * After this many milliseconds of consecutive silence, the previous-note frequency hint
+         * is cleared. Prevents a note played before a long rest from biasing the next note.
+         */
+        private const val HINT_RESET_MS = 800L
     }
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB
     private var referenceA4 = NoteUtils.DEFAULT_A4_FREQ
     private var pitchThreshold = PitchDetector.DEFAULT_THRESHOLD
+
+    /**
+     * Frequency of the most recently detected pitch (Hz), used as a hint for MPM candidate
+     * selection. Reset to 0 after [HINT_RESET_MS] ms of consecutive silence so rests do not
+     * cause the next note to be biased toward the pre-rest pitch.
+     */
+    private var lastFrequency = 0f
+    private var lastDetectedNano = 0L
 
     fun setSilenceThreshold(db: Float) { silenceThresholdDb = db }
     fun setReferenceA4(freq: Float) { referenceA4 = freq }
@@ -74,7 +88,13 @@ class PitchProcessor(
 
     private fun processBuffer(buffer: FloatArray): PitchResult {
         val rmsDb = AudioUtils.linearToDb(AudioUtils.rms(buffer))
-        if (rmsDb < silenceThresholdDb) return PitchResult.SILENT
+        if (rmsDb < silenceThresholdDb) {
+            // Reset the frequency hint after prolonged silence so rests don't bias the next note.
+            if (System.nanoTime() - lastDetectedNano > HINT_RESET_MS * 1_000_000L) {
+                lastFrequency = 0f
+            }
+            return PitchResult.SILENT
+        }
 
         // MPM operates on the raw signal — do NOT apply a windowing function.
         // The NSDF's per-lag energy normalization m'(τ) already handles edge effects
@@ -82,9 +102,18 @@ class PitchProcessor(
         val result = pitchDetector.detectPitch(
             buffer = buffer,
             sampleRate = AudioCaptureService.SAMPLE_RATE,
-            threshold = pitchThreshold
+            threshold = pitchThreshold,
+            hintFreq = lastFrequency
         )
-        if (result.frequency <= 0f) return PitchResult.SILENT
+        if (result.frequency <= 0f) {
+            if (System.nanoTime() - lastDetectedNano > HINT_RESET_MS * 1_000_000L) {
+                lastFrequency = 0f
+            }
+            return PitchResult.SILENT
+        }
+
+        lastFrequency = result.frequency
+        lastDetectedNano = System.nanoTime()
 
         val noteInfo = noteUtils.frequencyToNote(result.frequency, referenceA4)
         return PitchResult(
