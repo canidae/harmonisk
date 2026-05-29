@@ -67,7 +67,7 @@ class PitchDetector {
         val yinBuffer = FloatArray(halfLen)
         cumulativeMeanNormalizedDifference(buffer, yinBuffer)
 
-        // Find first valley below threshold, then descend to its minimum
+        // Find first valley below threshold, then descend to its local minimum.
         var tauEstimate = -1
         var tau = tauMin
         while (tau <= tauMax) {
@@ -81,12 +81,63 @@ class PitchDetector {
 
         if (tauEstimate == -1) return PitchDetectionResult.NONE
 
+        // Octave correction: when the first valley below threshold is at 2τ₀ or 4τ₀
+        // (because d'(τ₀) was marginally above threshold), step back to the shorter period.
+        tauEstimate = correctOctaveDown(yinBuffer, tauEstimate, tauMin, threshold)
+
         val betterTau = parabolicInterpolation(yinBuffer, tauEstimate)
         val frequency = if (betterTau > 0f) sampleRate / betterTau else -1f
         if (frequency <= 0f) return PitchDetectionResult.NONE
 
         val confidence = (1f - yinBuffer[tauEstimate]).coerceIn(0f, 1f)
         return PitchDetectionResult(frequency, confidence)
+    }
+
+    /**
+     * Correct "octave too low" errors by iteratively preferring the half-period if it
+     * also has a local dip within a slightly loose tolerance.
+     *
+     * Safety: since the first-valley scan works left-to-right (smallest τ first), any τ/2
+     * that was strictly below threshold would have been found *before* the current tauEstimate.
+     * Therefore d'(τ/2) ≥ threshold whenever this function is called. We only accept τ/2
+     * if it falls in the narrow gray zone [threshold, threshold + 0.05], i.e., it was a
+     * real near-miss due to threshold strictness — not a spurious harmonic dip.
+     */
+    private fun correctOctaveDown(
+        yinBuffer: FloatArray,
+        tauEstimate: Int,
+        tauMin: Int,
+        threshold: Float
+    ): Int {
+        var tau = tauEstimate
+        val looseTolerance = threshold + 0.05f
+        for (i in 0 until 2) {  // up to 2 corrections: handles ×4 period (2 octaves down)
+            val half = tau / 2
+            if (half < tauMin) break
+            val (localTau, localVal) = localMinimumNear(yinBuffer, half, tauMin)
+            if (localVal < looseTolerance) {
+                tau = localTau
+            } else {
+                break
+            }
+        }
+        return tau
+    }
+
+    /** Find the local minimum within ±12.5% of [center], clamped to [tauMin, size-1]. */
+    private fun localMinimumNear(yinBuffer: FloatArray, center: Int, tauMin: Int): Pair<Int, Float> {
+        val window = maxOf(1, center / 8)
+        val start = maxOf(tauMin, center - window)
+        val end = minOf(yinBuffer.size - 1, center + window)
+        var bestTau = center.coerceIn(start, end)
+        var bestVal = yinBuffer[bestTau]
+        for (t in start..end) {
+            if (yinBuffer[t] < bestVal) {
+                bestVal = yinBuffer[t]
+                bestTau = t
+            }
+        }
+        return Pair(bestTau, bestVal)
     }
 
     private fun cumulativeMeanNormalizedDifference(
@@ -128,10 +179,13 @@ class PitchDetector {
         yinBuffer[0] = 1.0f
         var runningSum = 0.0
 
+        // energy0 is constant across all tau — compute once outside the loop.
+        val energy0 = workEnergyPrefix[halfLen]
         for (tau in 1 until halfLen) {
-            val energy0 = workEnergyPrefix[halfLen]
             val energyTau = workEnergyPrefix[halfLen + tau] - workEnergyPrefix[tau]
-            val diff = energy0 + energyTau - 2.0 * workCre[tau]
+            // Clamp to ≥ 0: in exact math this is always ≥ 0 (Cauchy-Schwarz), but
+            // floating-point cross-correlation can produce tiny negative values.
+            val diff = (energy0 + energyTau - 2.0 * workCre[tau]).coerceAtLeast(0.0)
 
             runningSum += diff
             yinBuffer[tau] = if (runningSum != 0.0) (diff * tau / runningSum).toFloat() else 1.0f
