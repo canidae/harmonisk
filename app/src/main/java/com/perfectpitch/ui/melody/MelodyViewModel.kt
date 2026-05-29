@@ -454,8 +454,12 @@ class MelodyViewModel @Inject constructor(
     fun onVerticalScroll(deltaSeconds: Double) {
         _state.update { current ->
             val track = current.melodyTrack ?: return@update current
+            val timeSig = track.timeSignatureAt(0L)
+            val firstTempoUs = track.tempoChanges.firstOrNull()?.microsecondsPerBeat ?: 500_000L
+            val barDurationSeconds = timeSig.numerator * firstTempoUs / 1_000_000.0
+            val minOffset = -2.0 * barDurationSeconds - current.currentTimeSeconds
             val newOffset = (current.songTimeOffsetSeconds + deltaSeconds)
-                .coerceIn(-current.currentTimeSeconds, track.durationSeconds - current.currentTimeSeconds + 2.0)
+                .coerceIn(minOffset, track.durationSeconds - current.currentTimeSeconds + 2.0)
             current.copy(songTimeOffsetSeconds = newOffset)
         }
     }

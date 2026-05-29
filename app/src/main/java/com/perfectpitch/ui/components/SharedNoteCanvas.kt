@@ -200,13 +200,22 @@ fun SharedNoteCanvas(
         // Draw background
         drawRect(CANVAS_BG)
 
-        // For FreePlay: compute playable-area bottom (before bar 1 = black, no columns/grid)
-        val playableBottom: Float = if (mode is CanvasMode.FreePlay && mode.fallSpeedPxPerSec > 0f) {
-            val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
-            val now = mode.songPositionMs.toDouble()
-            val bar1Y = (pianoEdgeY + now * pxPerMs).toFloat()
-            bar1Y.coerceIn(noteAreaTop, noteAreaBottom)
-        } else noteAreaBottom
+        // Compute playable-area bottom (before bar 1 = black, no columns/grid)
+        val playableBottom: Float = when {
+            mode is CanvasMode.FreePlay && mode.fallSpeedPxPerSec > 0f -> {
+                val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
+                val now = mode.songPositionMs.toDouble()
+                val bar1Y = (pianoEdgeY + now * pxPerMs).toFloat()
+                bar1Y.coerceIn(noteAreaTop, noteAreaBottom)
+            }
+            mode is CanvasMode.Melody && mode.fallSpeedPxPerSec > 0f && pianoAtBottom -> {
+                val pps = mode.fallSpeedPxPerSec * density
+                val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
+                val bar1Y = (pianoEdgeY + viewTimeSeconds * pps).toFloat()
+                bar1Y.coerceIn(noteAreaTop, noteAreaBottom)
+            }
+            else -> noteAreaBottom
+        }
 
         // Draw black-key column backgrounds (clipped to playable area)
         for (midi in minMidi..maxMidi) {
@@ -269,7 +278,7 @@ fun SharedNoteCanvas(
                 }
             }
             is CanvasMode.Melody -> {
-                drawBarLines(mode, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
+                drawBarLines(mode, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density, textMeasurer, playableBottom)
                 drawMelodyNotes(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
                 drawPitchIndicator(mode, layout, pianoEdgeY, pianoAtBottom, density)
                 // Single piano for Melody mode
@@ -383,12 +392,15 @@ private fun DrawScope.drawBarLines(
     } // end clipRect
 }
 
+@OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawBarLines(
     mode: CanvasMode.Melody,
     pianoEdgeY: Float,
     canvasFarEdgeY: Float,
     pianoAtBottom: Boolean,
-    density: Float
+    density: Float,
+    textMeasurer: TextMeasurer,
+    playableBottom: Float
 ) {
     val track = mode.melodyTrack
     val pixelsPerSecond = mode.fallSpeedPxPerSec * density
@@ -410,8 +422,9 @@ private fun DrawScope.drawBarLines(
     var currentTick = 0L
     var tempoIndex = 0
     var beatCount = 0L
+    var barNumber = 1L
 
-    data class BeatPoint(val seconds: Double, val isBarLine: Boolean)
+    data class BeatPoint(val seconds: Double, val isBarLine: Boolean, val barNumber: Long = 0L)
     val beats = mutableListOf<BeatPoint>()
 
     while (currentSeconds < latestViewSeconds + 1.0 && currentSeconds <= songDurationSeconds + 1.0) {
@@ -422,11 +435,12 @@ private fun DrawScope.drawBarLines(
 
         val timeSig = track.timeSignatureAt(currentTick)
         val beatsPerBarHere = timeSig.numerator
+        val isBar = beatsPerBarHere > 0 && (beatCount % beatsPerBarHere == 0L)
 
         if (currentSeconds >= earliestViewSeconds) {
-            val isBar = beatsPerBarHere > 0 && (beatCount % beatsPerBarHere == 0L)
-            beats.add(BeatPoint(currentSeconds, isBar))
+            beats.add(BeatPoint(currentSeconds, isBar, if (isBar) barNumber else 0L))
         }
+        if (isBar) barNumber++
 
         val nextBeatSeconds = currentSeconds + beatDurationSeconds
         val nextBeatTick = currentTick + track.ticksPerQuarterNote.toLong()
@@ -445,16 +459,32 @@ private fun DrawScope.drawBarLines(
         if (beatCount > 10_000L) break
     }
 
+    val barLabelStyle = TextStyle(
+        color = Color.White.copy(alpha = 0.35f),
+        fontSize = (9f * density / 2.75f).sp,
+        fontWeight = FontWeight.Medium
+    )
+
     for (beat in beats) {
         val relativeSeconds = beat.seconds - viewTimeSeconds
         val y = pianoEdgeY - (relativeSeconds * pixelsPerSecond).toFloat()
-        if (y < visibleTop - 2f || y > visibleBottom + 2f) continue
+        if (y < visibleTop - 2f || y > playableBottom + 2f) continue
         drawLine(
             color = Color.White.copy(alpha = if (beat.isBarLine) 0.20f else 0.08f),
             start = Offset(0f, y),
             end = Offset(size.width, y),
             strokeWidth = if (beat.isBarLine) 1.5f * density else 1f * density
         )
+        if (beat.isBarLine && beat.barNumber > 0L) {
+            val label = textMeasurer.measure(
+                text = buildAnnotatedString { append(beat.barNumber.toString()) },
+                style = barLabelStyle
+            )
+            val labelY = (y - label.size.height - 2f * density).coerceAtLeast(visibleTop)
+            if (labelY + label.size.height <= playableBottom) {
+                drawText(label, topLeft = Offset(3f * density, labelY))
+            }
+        }
     }
 }
 

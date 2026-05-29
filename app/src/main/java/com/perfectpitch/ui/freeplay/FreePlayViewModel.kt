@@ -37,11 +37,11 @@ class FreePlayViewModel @Inject constructor(
     private val midiDeviceManager: MidiDeviceManager,
     private val midiInputReceiver: MidiInputReceiver,
     private val midiOutputSender: MidiOutputSender,
-    private val melodySynthesizer: MelodySynthesizer
+    private val melodySynthesizer: MelodySynthesizer,
+    private val noteUtils: NoteUtils
 ) : ViewModel() {
 
     companion object {
-        const val MIN_NOTE_DURATION_MS = 50L
         const val MIN_VISIBLE_KEYS = 5f
         const val MAX_VISIBLE_KEYS = 48f
         const val MIN_FALL_SPEED = 30f
@@ -50,11 +50,11 @@ class FreePlayViewModel @Inject constructor(
         const val ABSOLUTE_MIN_MIDI = 21f  // A0
         const val ABSOLUTE_MAX_MIDI = 108f // A8
         const val MIN_AUTO_FIT_RANGE = 12f
-        const val NEW_NOTE_DEBOUNCE_FRAMES = 2
         private const val TAG = "FreePlayVM"
     }
 
     private var lastAdvanceWallMs: Long = System.currentTimeMillis()
+    private var referenceA4: Float = NoteUtils.DEFAULT_A4_FREQ
 
     private val _state = MutableStateFlow(FreePlayState())
     val state: StateFlow<FreePlayState> = _state.asStateFlow()
@@ -64,22 +64,24 @@ class FreePlayViewModel @Inject constructor(
     private var replayJob: Job? = null
     private var synthOpenJob: Job? = null
 
-    // Replay state flag
+    // Replay/recording state flags
     private var replayActive = false
+    private var recordingActive = false
 
     // Output device saved before auto-switch on record start (null = no auto-switch done)
     private var outputDeviceBeforeRecord: OutputDevice? = null
 
     val warnings = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1)
 
-    // Mic input tracking
+    // Mic input tracking — committed (currently held) note
     private var currentNoteMidi: Int? = null
     private var currentNoteStartMs: Long = 0L
     private var centsSamples = mutableListOf<Float>()
-    private var candidateNoteMidi: Int? = null
-    private var candidateNoteCount: Int = 0
-    // Song position captured at the first detection frame of a new candidate note
-    private var candidateStartSongMs: Long = 0L
+
+    // Snap ON: honing window accumulates frequencies to average before committing
+    private var honingActive = false
+    private var honingStartSongMs: Long = 0L
+    private var honingFreqs = mutableListOf<Float>()
 
     // MIDI input tracking (polyphonic: key = MIDI note number, value = active PlayedNote)
     private val activeMidiNotes = mutableMapOf<Int, PlayedNote>()
@@ -87,6 +89,7 @@ class FreePlayViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
+                referenceA4 = settings.concertPitch
                 pitchProcessor.setReferenceA4(settings.concertPitch)
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
                 pitchProcessor.setYinThreshold(settings.yinThreshold)
@@ -175,10 +178,15 @@ class FreePlayViewModel @Inject constructor(
             outputDeviceBeforeRecord = OutputDevice.SYNTH
             setOutputDevice(OutputDevice.NONE)
         }
+        recordingActive = true
+        lastAdvanceWallMs = System.currentTimeMillis()
         _state.update { it.copy(isRecording = true) }
     }
 
     private fun stopRecording() {
+        recordingActive = false
+        finalizeCurrentNote()
+        abortHoning()
         _state.update { it.copy(isRecording = false) }
         outputDeviceBeforeRecord?.let { previous ->
             setOutputDevice(previous)
@@ -190,7 +198,7 @@ class FreePlayViewModel @Inject constructor(
         val delta = (realTimeMs - lastAdvanceWallMs).coerceAtLeast(0L)
         lastAdvanceWallMs = realTimeMs
         if (!replayActive) {
-            val shouldAdvance = currentNoteMidi != null || activeMidiNotes.isNotEmpty()
+            val shouldAdvance = recordingActive || currentNoteMidi != null || activeMidiNotes.isNotEmpty()
             if (shouldAdvance) {
                 _state.update { it.copy(songPositionMs = it.songPositionMs + delta) }
             }
@@ -240,8 +248,7 @@ class FreePlayViewModel @Inject constructor(
     fun stopListening() {
         stopListeningInternal()
         finalizeCurrentNote()
-        candidateNoteMidi = null
-        candidateNoteCount = 0
+        abortHoning()
         _state.update { it.copy(isListening = false, activeNote = null) }
     }
 
@@ -525,39 +532,30 @@ class FreePlayViewModel @Inject constructor(
     }
 
     private fun processResult(result: PitchResult) {
+        if (_state.value.snapEnabled) {
+            processResultSnap(result)
+        } else {
+            processResultNoSnap(result)
+        }
+    }
+
+    /** Snap OFF: register note on the very first frame the semitone changes. No debounce, no minimum. */
+    private fun processResultNoSnap(result: PitchResult) {
         if (result.isValid) {
             val midi = result.midiNoteNumber
-            val isNewNote = currentNoteMidi == null || midi != currentNoteMidi
-
-            if (isNewNote) {
-                if (midi == candidateNoteMidi) {
-                    candidateNoteCount++
-                } else {
-                    candidateNoteMidi = midi
-                    candidateNoteCount = 1
-                    // Capture song position at first detection for accurate onset timestamp
-                    candidateStartSongMs = _state.value.songPositionMs
-                }
-                if (candidateNoteCount < NEW_NOTE_DEBOUNCE_FRAMES) {
-                    return
-                }
-                candidateNoteMidi = null
-                candidateNoteCount = 0
+            if (currentNoteMidi == null || midi != currentNoteMidi) {
                 finalizeCurrentNote()
                 currentNoteMidi = midi
+                currentNoteStartMs = _state.value.songPositionMs
                 centsSamples.clear()
                 centsSamples.add(result.centsOff)
-                // Use candidateStartSongMs to correct for the debounce delay
-                val noteStart = candidateStartSongMs
-                val snappedStart = if (_state.value.snapEnabled) snapToGrid(noteStart) else noteStart
-                currentNoteStartMs = snappedStart
                 expandRange(midi)
                 if (_state.value.isRecording) {
                     val note = PlayedNote(
                         noteName = result.noteName,
                         octave = result.octave,
                         midiNumber = midi,
-                        startTimeMs = snappedStart,
+                        startTimeMs = currentNoteStartMs,
                         averageCentsOff = result.centsOff,
                         centsHistory = listOf(result.centsOff),
                         voiceIndex = _state.value.activeVoiceIndex
@@ -567,8 +565,6 @@ class FreePlayViewModel @Inject constructor(
                     _state.update { it.copy(pitchResult = result) }
                 }
             } else {
-                candidateNoteMidi = null
-                candidateNoteCount = 0
                 centsSamples.add(result.centsOff)
                 val avgCents = centsSamples.average().toFloat()
                 _state.update { current ->
@@ -586,36 +582,158 @@ class FreePlayViewModel @Inject constructor(
                 finalizeCurrentNote()
                 _state.update { it.copy(activeNote = null, pitchResult = result) }
             }
-            candidateNoteMidi = null
-            candidateNoteCount = 0
         }
+    }
+
+    /**
+     * Snap ON: collect frequency samples for one grid interval (min note duration), then commit the
+     * note whose average frequency best matches the collected data. Shows a tentative note visually
+     * during the honing window.
+     */
+    private fun processResultSnap(result: PitchResult) {
+        if (result.isValid) {
+            val midi = result.midiNoteNumber
+
+            if (honingActive) {
+                val elapsed = _state.value.songPositionMs - honingStartSongMs
+                if (midi != currentNoteMidi) {
+                    // Pitch changed mid-window: restart honing for the new pitch
+                    finalizeCurrentNote()
+                    abortHoning()
+                    startHoning(result)
+                } else {
+                    // Continue accumulating
+                    honingFreqs.add(result.frequency)
+                    centsSamples.add(result.centsOff)
+                    // Update tentative display
+                    val avgCents = centsSamples.average().toFloat()
+                    _state.update { current ->
+                        current.copy(
+                            activeNote = current.activeNote?.copy(
+                                averageCentsOff = avgCents,
+                                centsHistory = current.activeNote.centsHistory + result.centsOff
+                            ),
+                            pitchResult = result
+                        )
+                    }
+                    if (elapsed >= gridIntervalMs()) {
+                        commitHoning(result)
+                    }
+                }
+            } else {
+                if (currentNoteMidi == null || midi != currentNoteMidi) {
+                    // New pitch: finalize any open committed note, start honing
+                    finalizeCurrentNote()
+                    startHoning(result)
+                } else {
+                    // Same pitch, note already committed — just extend it
+                    centsSamples.add(result.centsOff)
+                    val avgCents = centsSamples.average().toFloat()
+                    _state.update { current ->
+                        current.copy(
+                            activeNote = current.activeNote?.copy(
+                                averageCentsOff = avgCents,
+                                centsHistory = current.activeNote.centsHistory + result.centsOff
+                            ),
+                            pitchResult = result
+                        )
+                    }
+                }
+            }
+        } else {
+            if (honingActive) {
+                // Silence before honing window completed: discard partial data
+                abortHoning()
+                _state.update { it.copy(activeNote = null, pitchResult = result) }
+            } else if (currentNoteMidi != null) {
+                finalizeCurrentNote()
+                _state.update { it.copy(activeNote = null, pitchResult = result) }
+            }
+        }
+    }
+
+    private fun startHoning(result: PitchResult) {
+        val midi = result.midiNoteNumber
+        honingActive = true
+        honingStartSongMs = _state.value.songPositionMs
+        honingFreqs.clear()
+        honingFreqs.add(result.frequency)
+        centsSamples.clear()
+        centsSamples.add(result.centsOff)
+        currentNoteMidi = midi
+        currentNoteStartMs = snapToGrid(honingStartSongMs)
+        expandRange(midi)
+        if (_state.value.isRecording) {
+            val note = PlayedNote(
+                noteName = result.noteName,
+                octave = result.octave,
+                midiNumber = midi,
+                startTimeMs = currentNoteStartMs,
+                averageCentsOff = result.centsOff,
+                centsHistory = listOf(result.centsOff),
+                voiceIndex = _state.value.activeVoiceIndex
+            )
+            _state.update { it.copy(activeNote = note, pitchResult = result) }
+        } else {
+            _state.update { it.copy(pitchResult = result) }
+        }
+    }
+
+    private fun commitHoning(result: PitchResult) {
+        honingActive = false
+        if (honingFreqs.isEmpty()) return
+        val avgFreq = honingFreqs.average().toFloat()
+        val noteInfo = noteUtils.frequencyToNote(avgFreq, referenceA4)
+        val confirmedMidi = noteInfo.midiNumber
+        currentNoteMidi = confirmedMidi
+        currentNoteStartMs = snapToGrid(honingStartSongMs)
+        expandRange(confirmedMidi)
+        if (_state.value.isRecording) {
+            val note = PlayedNote(
+                noteName = noteInfo.name,
+                octave = noteInfo.octave,
+                midiNumber = confirmedMidi,
+                startTimeMs = currentNoteStartMs,
+                averageCentsOff = centsSamples.average().toFloat(),
+                centsHistory = centsSamples.toList(),
+                voiceIndex = _state.value.activeVoiceIndex
+            )
+            _state.update { it.copy(activeNote = note, pitchResult = result) }
+        } else {
+            _state.update { it.copy(pitchResult = result) }
+        }
+        honingFreqs.clear()
+    }
+
+    private fun abortHoning() {
+        honingActive = false
+        honingFreqs.clear()
+        currentNoteMidi = null
+        centsSamples.clear()
     }
 
     private fun finalizeCurrentNote() {
         val midi = currentNoteMidi ?: return
         val now = _state.value.songPositionMs
-        val duration = now - currentNoteStartMs
-        if (duration >= MIN_NOTE_DURATION_MS && centsSamples.isNotEmpty()) {
-            val activeNote = _state.value.activeNote
-            if (activeNote != null) {
-                val snappedEnd = if (_state.value.snapEnabled) {
-                    val interval = gridIntervalMs()
-                    val rawSnapped = snapToGrid(now)
-                    if (rawSnapped <= activeNote.startTimeMs) activeNote.startTimeMs + interval else rawSnapped
-                } else now
-                val finalNote = activeNote.copy(endTimeMs = snappedEnd, averageCentsOff = centsSamples.average().toFloat())
+        val activeNote = _state.value.activeNote
+        if (activeNote != null && centsSamples.isNotEmpty()) {
+            val snappedEnd = if (_state.value.snapEnabled) {
+                val interval = gridIntervalMs()
+                val rawSnapped = snapToGrid(now)
+                if (rawSnapped <= activeNote.startTimeMs) activeNote.startTimeMs + interval else rawSnapped
+            } else now
+            val finalNote = activeNote.copy(endTimeMs = snappedEnd, averageCentsOff = centsSamples.average().toFloat())
 
-                // Re-record: delete notes in same voice that overlap the new note
-                val voice = finalNote.voiceIndex
-                val newStart = finalNote.startTimeMs
-                val newEnd = snappedEnd
-                _state.update { current ->
-                    val filtered = (current.playedNotes + finalNote).filter { other ->
-                        other.id == finalNote.id || other.voiceIndex != voice ||
-                        other.endTimeMs == null || other.endTimeMs <= newStart || other.startTimeMs >= newEnd
-                    }
-                    current.copy(playedNotes = filtered, activeNote = null)
+            // Re-record: delete notes in same voice that overlap the new note
+            val voice = finalNote.voiceIndex
+            val newStart = finalNote.startTimeMs
+            val newEnd = snappedEnd
+            _state.update { current ->
+                val filtered = (current.playedNotes + finalNote).filter { other ->
+                    other.id == finalNote.id || other.voiceIndex != voice ||
+                    other.endTimeMs == null || other.endTimeMs <= newStart || other.startTimeMs >= newEnd
                 }
+                current.copy(playedNotes = filtered, activeNote = null)
             }
         } else {
             _state.update { it.copy(activeNote = null) }
@@ -675,31 +793,20 @@ class FreePlayViewModel @Inject constructor(
                 val midiNote = event.midiNote
                 val activeNote = activeMidiNotes.remove(midiNote) ?: return
                 val endMs = _state.value.songPositionMs
-                val duration = endMs - activeNote.startTimeMs
 
                 if (!isRecording || activeNote.startTimeMs < 0) {
                     _state.update { it.copy(activeNote = activeMidiNotes.values.lastOrNull()) }
                     return
                 }
 
-                if (duration < MIN_NOTE_DURATION_MS) {
-                    // Too short — discard
-                    _state.update { current ->
-                        current.copy(
-                            playedNotes = current.playedNotes.filter { it.id != activeNote.id },
-                            activeNote = activeMidiNotes.values.lastOrNull()
-                        )
-                    }
-                } else {
-                    val finalized = activeNote.copy(endTimeMs = endMs)
-                    _state.update { current ->
-                        current.copy(
-                            playedNotes = current.playedNotes.map {
-                                if (it.id == activeNote.id) finalized else it
-                            },
-                            activeNote = activeMidiNotes.values.lastOrNull()
-                        )
-                    }
+                val finalized = activeNote.copy(endTimeMs = endMs)
+                _state.update { current ->
+                    current.copy(
+                        playedNotes = current.playedNotes.map {
+                            if (it.id == activeNote.id) finalized else it
+                        },
+                        activeNote = activeMidiNotes.values.lastOrNull()
+                    )
                 }
             }
         }

@@ -245,31 +245,6 @@ fun FreePlayScreen(
             }
         }
 
-        // Play / Stop toggle
-        IconButton(
-            onClick = { viewModel.togglePlaying() },
-            modifier = Modifier.size(PANEL_BTN_SIZE)
-                .background(if (state.isPlaying) Color(0xFF66BB6A).copy(alpha = 0.35f) else OVERLAY_BG, CircleShape)
-                .then(if (state.isPlaying) Modifier.border(1.dp, Color(0xFF66BB6A), CircleShape) else Modifier)
-        ) {
-            Icon(
-                if (state.isPlaying) Icons.Filled.Stop else Icons.Filled.PlayArrow,
-                contentDescription = if (state.isPlaying) "Stop" else "Play",
-                modifier = Modifier.size(17.dp),
-                tint = if (state.isPlaying) Color(0xFF66BB6A) else OVERLAY_ICON_TINT
-            )
-        }
-
-        // Record toggle
-        IconButton(
-            onClick = { viewModel.toggleRecording() },
-            modifier = Modifier.size(PANEL_BTN_SIZE)
-                .background(if (state.isRecording) Color(0xFFEF5350).copy(alpha = 0.35f) else OVERLAY_BG, CircleShape)
-                .then(if (state.isRecording) Modifier.border(1.dp, Color(0xFFEF5350), CircleShape) else Modifier)
-        ) {
-            Icon(Icons.Filled.FiberManualRecord, null, modifier = Modifier.size(17.dp), tint = if (state.isRecording) Color(0xFFEF5350) else OVERLAY_ICON_TINT)
-        }
-
         // Edit mode toggle
         val isEditing = state.editMode == NoteEditMode.EDIT
         IconButton(
@@ -599,18 +574,47 @@ fun FreePlayScreen(
                 )
             }
 
-            // Play overlay: shown when paused and not in edit mode
-            if (!state.isPlaying && state.editMode == NoteEditMode.NONE) {
+            // Idle overlay: shown when not playing, not recording, and not in edit mode
+            if (!state.isPlaying && !state.isRecording && state.editMode == NoteEditMode.NONE) {
                 Box(
                     modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Filled.PlayArrow,
-                        contentDescription = "Tap to play",
-                        modifier = Modifier.size(72.dp),
-                        tint = Color.White.copy(alpha = 0.3f)
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(32.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Play button
+                        IconButton(
+                            onClick = { viewModel.togglePlaying() },
+                            modifier = Modifier
+                                .size(72.dp)
+                                .background(Color(0xFF66BB6A).copy(alpha = 0.25f), CircleShape)
+                                .border(2.dp, Color(0xFF66BB6A).copy(alpha = 0.7f), CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Filled.PlayArrow,
+                                contentDescription = "Play",
+                                modifier = Modifier.size(40.dp),
+                                tint = Color(0xFF66BB6A).copy(alpha = 0.9f)
+                            )
+                        }
+                        // Record button
+                        IconButton(
+                            onClick = { viewModel.toggleRecording() },
+                            modifier = Modifier
+                                .size(72.dp)
+                                .background(Color(0xFFEF5350).copy(alpha = 0.25f), CircleShape)
+                                .border(2.dp, Color(0xFFEF5350).copy(alpha = 0.7f), CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Filled.FiberManualRecord,
+                                contentDescription = "Record",
+                                modifier = Modifier.size(40.dp),
+                                tint = Color(0xFFEF5350).copy(alpha = 0.9f)
+                            )
+                        }
+                    }
                 }
             }
 
