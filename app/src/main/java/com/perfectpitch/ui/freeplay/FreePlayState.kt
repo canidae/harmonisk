@@ -1,7 +1,5 @@
 package com.perfectpitch.ui.freeplay
 
-import com.perfectpitch.music.PitchResult
-
 enum class NoteEditMode { NONE, EDIT }
 
 enum class PianoVisibility { NONE, UPPER_ONLY, LOWER_ONLY, BOTH }
@@ -10,8 +8,6 @@ enum class PianoVisibility { NONE, UPPER_ONLY, LOWER_ONLY, BOTH }
 enum class OutputDevice { SYNTH, NONE, MIDI }
 
 data class FreePlayState(
-    val pitchResult: PitchResult = PitchResult.SILENT,
-    val isListening: Boolean = false,
     val isRecording: Boolean = false,
     val playedNotes: List<PlayedNote> = emptyList(),
     val activeNote: PlayedNote? = null,

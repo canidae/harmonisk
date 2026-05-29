@@ -175,27 +175,25 @@ fun MelodyPlayScreen(
                 }
 
                 if (state.phase == PlayPhase.READY || state.phase == PlayPhase.PAUSED) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                    IconButton(
+                        onClick = {
+                            if (isPreviewPlaying) viewModel.stopPreview()
+                            if (state.phase == PlayPhase.READY) viewModel.startPlaying()
+                            else viewModel.resume()
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = PIANO_HEIGHT_DP.dp + 24.dp)
+                            .size(72.dp)
+                            .background(Color(0xFF66BB6A).copy(alpha = 0.25f), CircleShape)
+                            .border(2.dp, Color(0xFF66BB6A).copy(alpha = 0.7f), CircleShape)
                     ) {
-                        IconButton(
-                            onClick = {
-                                if (isPreviewPlaying) viewModel.stopPreview()
-                                if (state.phase == PlayPhase.READY) viewModel.startPlaying()
-                                else viewModel.resume()
-                            },
-                            modifier = Modifier
-                                .size(72.dp)
-                                .background(Color.White.copy(alpha = 0.2f), CircleShape)
-                        ) {
-                            Icon(
-                                Icons.Filled.PlayArrow,
-                                contentDescription = if (state.phase == PlayPhase.READY) "Start" else "Resume",
-                                tint = Color.White.copy(alpha = 0.8f),
-                                modifier = Modifier.size(48.dp)
-                            )
-                        }
+                        Icon(
+                            Icons.Filled.PlayArrow,
+                            contentDescription = if (state.phase == PlayPhase.READY) "Start" else "Resume",
+                            tint = Color(0xFF66BB6A).copy(alpha = 0.9f),
+                            modifier = Modifier.size(40.dp)
+                        )
                     }
                 }
 

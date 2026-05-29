@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.perfectpitch.ui.components.CanvasMode
 import com.perfectpitch.ui.components.KeepScreenOn
+import com.perfectpitch.ui.components.PIANO_HEIGHT_DP
 import com.perfectpitch.ui.components.RequireMicPermission
 import com.perfectpitch.ui.components.SharedNoteCanvas
 import com.perfectpitch.ui.components.VOICE_COLORS
@@ -541,7 +542,6 @@ fun FreePlayScreen(
             RequireMicPermission(skip = state.midiInputEnabled) {
                 LaunchedEffect(Unit) {
                     viewModel.initSynthesizer(context)
-                    viewModel.startListening()
                 }
                 DisposableEffect(Unit) { onDispose { viewModel.stopListening() } }
 
@@ -571,60 +571,46 @@ fun FreePlayScreen(
 
             // Idle overlay: shown when not playing, not recording, and not in edit mode
             if (!state.isPlaying && !state.isRecording && state.editMode == NoteEditMode.NONE) {
-                Box(
-                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
+                val showBottomPiano = state.pianoVisibility == PianoVisibility.BOTH ||
+                        state.pianoVisibility == PianoVisibility.LOWER_ONLY
+                val bottomPadding = (if (showBottomPiano) PIANO_HEIGHT_DP else 0f).dp + 24.dp
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = bottomPadding),
+                    horizontalArrangement = Arrangement.spacedBy(32.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(32.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    // Play button
+                    IconButton(
+                        onClick = { viewModel.togglePlaying() },
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(Color(0xFF66BB6A).copy(alpha = 0.25f), CircleShape)
+                            .border(2.dp, Color(0xFF66BB6A).copy(alpha = 0.7f), CircleShape)
                     ) {
-                        // Play button
-                        IconButton(
-                            onClick = { viewModel.togglePlaying() },
-                            modifier = Modifier
-                                .size(72.dp)
-                                .background(Color(0xFF66BB6A).copy(alpha = 0.25f), CircleShape)
-                                .border(2.dp, Color(0xFF66BB6A).copy(alpha = 0.7f), CircleShape)
-                        ) {
-                            Icon(
-                                Icons.Filled.PlayArrow,
-                                contentDescription = "Play",
-                                modifier = Modifier.size(40.dp),
-                                tint = Color(0xFF66BB6A).copy(alpha = 0.9f)
-                            )
-                        }
-                        // Record button
-                        IconButton(
-                            onClick = { viewModel.toggleRecording() },
-                            modifier = Modifier
-                                .size(72.dp)
-                                .background(Color(0xFFEF5350).copy(alpha = 0.25f), CircleShape)
-                                .border(2.dp, Color(0xFFEF5350).copy(alpha = 0.7f), CircleShape)
-                        ) {
-                            Icon(
-                                Icons.Filled.FiberManualRecord,
-                                contentDescription = "Record",
-                                modifier = Modifier.size(40.dp),
-                                tint = Color(0xFFEF5350).copy(alpha = 0.9f)
-                            )
-                        }
+                        Icon(
+                            Icons.Filled.PlayArrow,
+                            contentDescription = "Play",
+                            modifier = Modifier.size(40.dp),
+                            tint = Color(0xFF66BB6A).copy(alpha = 0.9f)
+                        )
                     }
-                }
-            }
-
-            // Recording overlay: tap anywhere to stop recording
-            if (state.isRecording) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Filled.Stop,
-                        contentDescription = "Tap to stop recording",
-                        modifier = Modifier.size(72.dp),
-                        tint = Color(0xFFEF5350).copy(alpha = 0.4f)
-                    )
+                    // Record button
+                    IconButton(
+                        onClick = { viewModel.toggleRecording() },
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(Color(0xFFEF5350).copy(alpha = 0.25f), CircleShape)
+                            .border(2.dp, Color(0xFFEF5350).copy(alpha = 0.7f), CircleShape)
+                    ) {
+                        Icon(
+                            Icons.Filled.FiberManualRecord,
+                            contentDescription = "Record",
+                            modifier = Modifier.size(40.dp),
+                            tint = Color(0xFFEF5350).copy(alpha = 0.9f)
+                        )
+                    }
                 }
             }
 

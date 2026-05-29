@@ -116,7 +116,7 @@ class FreePlayViewModel @Inject constructor(
             ) { inputEnabled, outputEnabled, available ->
                 Triple(inputEnabled, outputEnabled, available)
             }.collect { (inputEnabled, outputEnabled, available) ->
-                val wasListening = _state.value.isListening
+                val wasRecording = _state.value.isRecording
                 _state.update {
                     val newOutputDevice = when {
                         outputEnabled -> OutputDevice.MIDI
@@ -129,8 +129,8 @@ class FreePlayViewModel @Inject constructor(
                         outputDevice = newOutputDevice
                     )
                 }
-                // Re-start listening with the correct source if already active
-                if (wasListening) {
+                // Re-start audio pipeline with the correct source if currently recording
+                if (wasRecording) {
                     stopListeningInternal()
                     startListeningInternal()
                 }
@@ -179,11 +179,13 @@ class FreePlayViewModel @Inject constructor(
         }
         recordingActive = true
         lastAdvanceWallMs = System.currentTimeMillis()
+        startListeningInternal()
         _state.update { it.copy(isRecording = true) }
     }
 
     private fun stopRecording() {
         recordingActive = false
+        stopListeningInternal()
         finalizeCurrentNote()
         abortHoning()
         _state.update { it.copy(isRecording = false) }
@@ -203,9 +205,7 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun startListening() {
-        if (listeningJob?.isActive == true || midiListeningJob?.isActive == true) return
-        _state.update { it.copy(isListening = true) }
-        startListeningInternal()
+        // No-op: audio pipeline starts when recording begins (startRecording)
     }
 
     private fun startListeningInternal() {
@@ -245,7 +245,7 @@ class FreePlayViewModel @Inject constructor(
         stopListeningInternal()
         finalizeCurrentNote()
         abortHoning()
-        _state.update { it.copy(isListening = false, activeNote = null) }
+        _state.update { it.copy(activeNote = null) }
     }
 
     fun setBeatsPerBar(beats: Int) {
@@ -435,7 +435,6 @@ class FreePlayViewModel @Inject constructor(
 
                 _state.update { current ->
                     FreePlayState(
-                        isListening = current.isListening,
                         songPositionMs = maxMs + barMs.toLong(),
                         playedNotes = notes,
                         bpm = importedBpm,
@@ -556,9 +555,7 @@ class FreePlayViewModel @Inject constructor(
                         centsHistory = listOf(result.centsOff),
                         voiceIndex = _state.value.activeVoiceIndex
                     )
-                    _state.update { it.copy(activeNote = note, pitchResult = result) }
-                } else {
-                    _state.update { it.copy(pitchResult = result) }
+                    _state.update { it.copy(activeNote = note) }
                 }
             } else {
                 centsSamples.add(result.centsOff)
@@ -568,15 +565,14 @@ class FreePlayViewModel @Inject constructor(
                         activeNote = current.activeNote?.copy(
                             averageCentsOff = avgCents,
                             centsHistory = current.activeNote.centsHistory + result.centsOff
-                        ),
-                        pitchResult = result
+                        )
                     )
                 }
             }
         } else {
             if (currentNoteMidi != null) {
                 finalizeCurrentNote()
-                _state.update { it.copy(activeNote = null, pitchResult = result) }
+                _state.update { it.copy(activeNote = null) }
             }
         }
     }
@@ -608,8 +604,7 @@ class FreePlayViewModel @Inject constructor(
                             activeNote = current.activeNote?.copy(
                                 averageCentsOff = avgCents,
                                 centsHistory = current.activeNote.centsHistory + result.centsOff
-                            ),
-                            pitchResult = result
+                            )
                         )
                     }
                     if (elapsed >= gridIntervalMs()) {
@@ -630,8 +625,7 @@ class FreePlayViewModel @Inject constructor(
                             activeNote = current.activeNote?.copy(
                                 averageCentsOff = avgCents,
                                 centsHistory = current.activeNote.centsHistory + result.centsOff
-                            ),
-                            pitchResult = result
+                            )
                         )
                     }
                 }
@@ -640,10 +634,10 @@ class FreePlayViewModel @Inject constructor(
             if (honingActive) {
                 // Silence before honing window completed: discard partial data
                 abortHoning()
-                _state.update { it.copy(activeNote = null, pitchResult = result) }
+                _state.update { it.copy(activeNote = null) }
             } else if (currentNoteMidi != null) {
                 finalizeCurrentNote()
-                _state.update { it.copy(activeNote = null, pitchResult = result) }
+                _state.update { it.copy(activeNote = null) }
             }
         }
     }
@@ -669,9 +663,7 @@ class FreePlayViewModel @Inject constructor(
                 centsHistory = listOf(result.centsOff),
                 voiceIndex = _state.value.activeVoiceIndex
             )
-            _state.update { it.copy(activeNote = note, pitchResult = result) }
-        } else {
-            _state.update { it.copy(pitchResult = result) }
+            _state.update { it.copy(activeNote = note) }
         }
     }
 
@@ -694,9 +686,7 @@ class FreePlayViewModel @Inject constructor(
                 centsHistory = centsSamples.toList(),
                 voiceIndex = _state.value.activeVoiceIndex
             )
-            _state.update { it.copy(activeNote = note, pitchResult = result) }
-        } else {
-            _state.update { it.copy(pitchResult = result) }
+            _state.update { it.copy(activeNote = note) }
         }
         honingFreqs.clear()
     }
