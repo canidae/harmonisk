@@ -8,8 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
@@ -83,10 +81,13 @@ fun FreePlayScreen(
     val midiRange = state.viewMaxMidi - state.viewMinMidi
     val pxPerMs = state.fallSpeedPxPerSec * density.density / 1000f
 
-    // Stable references usable inside pointerInput blocks that use Unit/editMode keys
+    // Stable references usable inside pointerInput blocks with Unit keys
     // (those blocks are not restarted on state changes, so raw values would be stale)
     val currentMidiRange by rememberUpdatedState(midiRange)
     val currentPxPerMs by rememberUpdatedState(pxPerMs)
+    val currentSelectedNoteId by rememberUpdatedState(state.selectedNoteId)
+    val currentIsRecording by rememberUpdatedState(state.isRecording)
+    val currentIsPlaying by rememberUpdatedState(state.isPlaying)
 
     val barMs = state.beatsPerBar * (60000.0 / state.bpm)
     val loopStartMs = state.loopStartBar?.let { (it * barMs).toLong() }
@@ -99,11 +100,8 @@ fun FreePlayScreen(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? -> uri?.let { viewModel.importFromMidi(it, context) } }
 
-    // Edit mode interaction state
+    // Note interaction state
     val noteRectsState = remember { mutableStateOf<List<Pair<String, Rect>>>(emptyList()) }
-    var dragNoteId by remember { mutableStateOf<String?>(null) }
-    var dragHandleType by remember { mutableStateOf<String?>(null) }
-    var dragMidiAccum by remember { mutableFloatStateOf(0f) }
     val handleRadiusPx = with(density) { 18.dp.toPx() }
 
     // ── Dropdown / dialog state ──
@@ -198,30 +196,15 @@ fun FreePlayScreen(
 
         Spacer(Modifier.weight(1f))
 
-        // Help | Edit | Settings (rightmost)
-        val isEditing = state.editMode == NoteEditMode.EDIT
-
-        // Help button — only visible in edit mode; placed left of Edit
-        if (isEditing) {
-            IconButton(
-                onClick = { showEditHelp = true },
-                modifier = Modifier.size(PANEL_BTN_SIZE).background(OVERLAY_BG, CircleShape)
-            ) {
-                Icon(Icons.Filled.HelpOutline, contentDescription = "Edit help", tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
-            }
-        }
-
-        // Edit mode toggle
+        // Help button (always visible)
         IconButton(
-            onClick = { viewModel.setEditMode(if (isEditing) NoteEditMode.NONE else NoteEditMode.EDIT) },
-            modifier = Modifier.size(PANEL_BTN_SIZE)
-                .background(if (isEditing) Color(0xFFFFB74D).copy(alpha = 0.35f) else OVERLAY_BG, CircleShape)
-                .then(if (isEditing) Modifier.border(1.dp, Color(0xFFFFB74D), CircleShape) else Modifier)
+            onClick = { showEditHelp = true },
+            modifier = Modifier.size(PANEL_BTN_SIZE).background(OVERLAY_BG, CircleShape)
         ) {
-            Icon(Icons.Filled.Edit, null, modifier = Modifier.size(17.dp), tint = if (isEditing) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
+            Icon(Icons.Filled.HelpOutline, contentDescription = "Help", tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
         }
 
-        // Settings (rightmost)
+        // Settings
         Box {
             IconButton(
                 onClick = { showConfigMenu = true },
@@ -270,31 +253,28 @@ fun FreePlayScreen(
             }
         }
 
-        // Edit mode help dialog
+        // Help dialog
         if (showEditHelp) {
             AlertDialog(
                 onDismissRequest = { showEditHelp = false },
-                confirmButton = {
-                    TextButton(onClick = { showEditHelp = false }) { Text("Got it") }
-                },
-                title = { Text("Edit Mode", fontWeight = FontWeight.Bold) },
+                confirmButton = { TextButton(onClick = { showEditHelp = false }) { Text("Got it") } },
+                title = { Text("Free Play — Note Editing", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        // (icon, iconColor, label, description)
                         val items = listOf(
-                            Icons.Filled.TouchApp      to "Tap a note bar"           to "Select it — resize handles appear and action buttons show to the right.",
-                            Icons.Filled.ContentCut    to "Split button (✂)"         to "Tap the scissors button next to a selected note to split it in two equal halves.",
-                            Icons.Filled.Delete        to "Delete button (🗑)"        to "Tap the delete button next to a selected note to remove it.",
-                            Icons.Filled.OpenWith      to "Long-press + drag a note" to "Move it in time (up/down) and pitch (left/right).",
-                            Icons.Filled.SwipeVertical to "Drag top/bottom handle"   to "Resize the selected note's start or end time.",
-                            Icons.Filled.TouchApp      to "Tap empty space"          to "Deselect the current note."
+                            Triple(Icons.Filled.TouchApp,      null as Color?,          "Tap a note bar"          to "Select it — resize handles appear at the top-left and bottom-left corners, and action buttons appear to the right."),
+                            Triple(Icons.Filled.OpenWith,      null,                    "Drag a selected note"    to "Move it in time (up/down) and pitch (left/right). No long-press needed once selected."),
+                            Triple(Icons.Filled.SwipeVertical, null,                    "Drag a handle"           to "Resize: the top-left handle adjusts the end time, the bottom-left adjusts the start time."),
+                            Triple(Icons.Filled.ContentCut,    Color(0xFFFFB74D),       "Split (✂)"               to "Splits the selected note into two equal halves."),
+                            Triple(Icons.Filled.Delete,        Color(0xFFEF5350),       "Delete (🗑)"              to "Removes the selected note."),
+                            Triple(Icons.Filled.TouchApp,      null,                    "Tap empty space"         to "Deselect the current note.")
                         )
-                        items.forEach { (iconAndLabel, description) ->
-                            val (icon, label) = iconAndLabel
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Icon(icon, null, modifier = Modifier.size(18.dp).padding(top = 1.dp))
+                        items.forEach { (icon, color, labelAndDesc) ->
+                            val (label, description) = labelAndDesc
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+                                Icon(icon, null, modifier = Modifier.size(18.dp).padding(top = 1.dp),
+                                    tint = color ?: LocalContentColor.current)
                                 Column {
                                     Text(label, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                                     Text(description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -528,67 +508,64 @@ fun FreePlayScreen(
                         }
                     }
                 }
-                .pointerInput(state.editMode) {
-                    detectTapGestures(
-                        onTap = { offset ->
-                            if (state.editMode == NoteEditMode.EDIT) {
-                                viewModel.selectNote(noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.first)
-                            } else if (state.isRecording) {
-                                viewModel.toggleRecording()
-                            } else {
-                                viewModel.togglePlaying()
-                            }
+                .pointerInput(Unit) {
+                    detectTapGestures { offset ->
+                        val tappedId = noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.first
+                        if (tappedId != null) {
+                            // Toggle selection on tap
+                            viewModel.selectNote(if (tappedId == currentSelectedNoteId) null else tappedId)
+                        } else {
+                            // Tap on empty space: deselect and pause playback/recording
+                            viewModel.selectNote(null)
+                            if (currentIsRecording) viewModel.toggleRecording()
+                            else if (currentIsPlaying) viewModel.togglePlaying()
                         }
-                    )
-                }
-                .pointerInput(state.editMode) {
-                    if (state.editMode == NoteEditMode.EDIT) {
-                        detectDragGesturesAfterLongPress(
-                            onDragStart = { offset ->
-                                dragNoteId = noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.first
-                                dragMidiAccum = 0f
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                val id = dragNoteId ?: return@detectDragGesturesAfterLongPress
-                                // Accumulate fractional MIDI deltas to avoid rounding-to-zero jitter
-                                dragMidiAccum += dragAmount.x * (currentMidiRange / size.width.toFloat())
-                                val deltaMidi = dragMidiAccum.toInt()
-                                dragMidiAccum -= deltaMidi.toFloat()
-                                val deltaMs = -(dragAmount.y / currentPxPerMs).toLong()
-                                viewModel.moveNote(id, deltaMidi, deltaMs)
-                            },
-                            onDragEnd = { dragNoteId?.let { viewModel.commitNoteEdit(it) }; dragNoteId = null },
-                            onDragCancel = { dragNoteId = null }
-                        )
                     }
                 }
-                .pointerInput(state.editMode, state.selectedNoteId) {
-                    if (state.editMode == NoteEditMode.EDIT && state.selectedNoteId != null) {
-                        detectDragGestures(
-                            onDragStart = { offset ->
-                                val rect = noteRectsState.value.firstOrNull { (id, _) -> id == state.selectedNoteId }?.second
-                                if (rect != null) {
-                                    dragHandleType = when {
-                                        abs(offset.y - rect.top) <= handleRadiusPx * 2 -> "end"
-                                        abs(offset.y - rect.bottom) <= handleRadiusPx * 2 -> "start"
-                                        else -> null
+                // Drag on selected note: move body or resize via handles (no long-press needed)
+                .pointerInput(state.selectedNoteId) {
+                    val selId = state.selectedNoteId ?: return@pointerInput
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val noteRect = noteRectsState.value.firstOrNull { (id, _) -> id == selId }?.second
+                            ?: return@awaitEachGesture
+
+                        // Handle hit area: within handleRadiusPx of the left edge + top/bottom Y
+                        val handleX = noteRect.left + handleRadiusPx
+                        val isEndHandle   = abs(down.position.y - noteRect.top)    <= handleRadiusPx &&
+                                            abs(down.position.x - handleX)          <= handleRadiusPx * 2
+                        val isStartHandle = abs(down.position.y - noteRect.bottom) <= handleRadiusPx &&
+                                            abs(down.position.x - handleX)          <= handleRadiusPx * 2
+                        val isNoteBody    = !isEndHandle && !isStartHandle && noteRect.contains(down.position)
+
+                        if (!isEndHandle && !isStartHandle && !isNoteBody) return@awaitEachGesture
+                        down.consume()
+
+                        var localMidiAccum = 0f
+                        try {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) break
+                                val delta = change.position - change.previousPosition
+                                change.consume()
+                                if (delta.x != 0f || delta.y != 0f) {
+                                    val deltaMs = -(delta.y / currentPxPerMs).toLong()
+                                    when {
+                                        isEndHandle   -> viewModel.extendNoteEnd(selId, deltaMs)
+                                        isStartHandle -> viewModel.extendNoteStart(selId, deltaMs)
+                                        isNoteBody    -> {
+                                            localMidiAccum += delta.x * (currentMidiRange / size.width.toFloat())
+                                            val deltaMidi = localMidiAccum.toInt()
+                                            localMidiAccum -= deltaMidi.toFloat()
+                                            viewModel.moveNote(selId, deltaMidi, deltaMs)
+                                        }
                                     }
                                 }
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                val handType = dragHandleType ?: return@detectDragGestures
-                                val selId = state.selectedNoteId ?: return@detectDragGestures
-                                val deltaMs = -(dragAmount.y / currentPxPerMs).toLong()
-                                when (handType) {
-                                    "end"   -> viewModel.extendNoteEnd(selId, deltaMs)
-                                    "start" -> viewModel.extendNoteStart(selId, deltaMs)
-                                }
-                            },
-                            onDragEnd = { dragHandleType?.let { state.selectedNoteId?.let { id -> viewModel.commitNoteEdit(id) } }; dragHandleType = null },
-                            onDragCancel = { dragHandleType = null }
-                        )
+                            }
+                        } finally {
+                            viewModel.commitNoteEdit(selId)
+                        }
                     }
                 }
         ) {
@@ -610,7 +587,6 @@ fun FreePlayScreen(
                         loopStartMs = if (state.isLooping || state.loopStartBar != null) loopStartMs else null,
                         loopEndMs = if (state.isLooping || state.loopEndBar != null) loopEndMs else null,
                         selectedNoteId = state.selectedNoteId,
-                        isEditMode = state.editMode == NoteEditMode.EDIT,
                         pianoVisibility = state.pianoVisibility
                     ),
                     pianoAtBottom = false,
@@ -622,46 +598,34 @@ fun FreePlayScreen(
                 )
             }
 
-            // Contextual action buttons — shown to the right of a selected note in edit mode
-            val selectedRect = if (state.editMode == NoteEditMode.EDIT && state.selectedNoteId != null) {
-                noteRectsState.value.firstOrNull { (id, _) -> id == state.selectedNoteId }?.second
-            } else null
+            // Action buttons — shown to the right of the selected note
+            val selectedRect = state.selectedNoteId?.let { id ->
+                noteRectsState.value.firstOrNull { (nid, _) -> nid == id }?.second
+            }
             if (selectedRect != null) {
-                val btnSizeDp = 36.dp
-                val btnSizePx = with(density) { btnSizeDp.toPx() }
+                val btnSize = 36.dp
+                val btnSizePx = with(density) { btnSize.toPx() }
                 val paddingPx = with(density) { 6.dp.toPx() }
-                val gapPx    = with(density) { 4.dp.toPx() }
                 val noteMidY = (selectedRect.top + selectedRect.bottom) / 2f
-                // Total height of button column: 2 buttons + 1 gap
-                val colHeight = btnSizePx * 2 + gapPx
-                val colTopY = (noteMidY - colHeight / 2f).toInt()
-
-                // Prefer right of note; clamp so buttons don't overflow canvas width
-                val rawX = selectedRect.right + paddingPx
-                val colX = rawX.toInt()
-
+                val colHeight = btnSizePx * 2 + with(density) { 4.dp.toPx() }
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .offset { IntOffset(colX, colTopY) },
+                        .offset { IntOffset((selectedRect.right + paddingPx).toInt(), (noteMidY - colHeight / 2f).toInt()) },
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // Split button
                     IconButton(
                         onClick = { viewModel.splitNote(state.selectedNoteId!!) },
-                        modifier = Modifier
-                            .size(btnSizeDp)
+                        modifier = Modifier.size(btnSize)
                             .background(Color(0xDD1A1A2E), CircleShape)
                             .border(1.dp, Color(0xFFFFB74D).copy(alpha = 0.7f), CircleShape)
                     ) {
                         Icon(Icons.Filled.ContentCut, contentDescription = "Split note",
                             tint = Color(0xFFFFB74D), modifier = Modifier.size(18.dp))
                     }
-                    // Delete button
                     IconButton(
                         onClick = { viewModel.deleteNote(state.selectedNoteId!!) },
-                        modifier = Modifier
-                            .size(btnSizeDp)
+                        modifier = Modifier.size(btnSize)
                             .background(Color(0xDD1A1A2E), CircleShape)
                             .border(1.dp, Color(0xFFEF5350).copy(alpha = 0.7f), CircleShape)
                     ) {
@@ -671,8 +635,8 @@ fun FreePlayScreen(
                 }
             }
 
-            // Idle overlay: shown when not playing, not recording, and not in edit mode
-            if (!state.isPlaying && !state.isRecording && state.editMode == NoteEditMode.NONE) {
+            // Idle overlay: play/record buttons shown when neither playing nor recording
+            if (!state.isPlaying && !state.isRecording) {
                 val showBottomPiano = state.pianoVisibility == PianoVisibility.BOTH ||
                         state.pianoVisibility == PianoVisibility.LOWER_ONLY
                 val bottomPadding = (if (showBottomPiano) PIANO_HEIGHT_DP else 0f).dp + 24.dp
@@ -683,7 +647,6 @@ fun FreePlayScreen(
                     horizontalArrangement = Arrangement.spacedBy(32.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Play button
                     IconButton(
                         onClick = { viewModel.togglePlaying() },
                         modifier = Modifier
@@ -691,14 +654,9 @@ fun FreePlayScreen(
                             .background(Color(0xFF66BB6A).copy(alpha = 0.25f), CircleShape)
                             .border(2.dp, Color(0xFF66BB6A).copy(alpha = 0.7f), CircleShape)
                     ) {
-                        Icon(
-                            Icons.Filled.PlayArrow,
-                            contentDescription = "Play",
-                            modifier = Modifier.size(40.dp),
-                            tint = Color(0xFF66BB6A).copy(alpha = 0.9f)
-                        )
+                        Icon(Icons.Filled.PlayArrow, contentDescription = "Play",
+                            modifier = Modifier.size(40.dp), tint = Color(0xFF66BB6A).copy(alpha = 0.9f))
                     }
-                    // Record button
                     IconButton(
                         onClick = { viewModel.toggleRecording() },
                         modifier = Modifier
@@ -706,12 +664,8 @@ fun FreePlayScreen(
                             .background(Color(0xFFEF5350).copy(alpha = 0.25f), CircleShape)
                             .border(2.dp, Color(0xFFEF5350).copy(alpha = 0.7f), CircleShape)
                     ) {
-                        Icon(
-                            Icons.Filled.FiberManualRecord,
-                            contentDescription = "Record",
-                            modifier = Modifier.size(40.dp),
-                            tint = Color(0xFFEF5350).copy(alpha = 0.9f)
-                        )
+                        Icon(Icons.Filled.FiberManualRecord, contentDescription = "Record",
+                            modifier = Modifier.size(40.dp), tint = Color(0xFFEF5350).copy(alpha = 0.9f))
                     }
                 }
             }

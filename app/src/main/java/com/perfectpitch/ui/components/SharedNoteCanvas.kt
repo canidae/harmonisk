@@ -75,7 +75,6 @@ sealed interface CanvasMode {
         val loopStartMs: Long? = null,
         val loopEndMs: Long? = null,
         val selectedNoteId: String? = null,
-        val isEditMode: Boolean = false,
         val pianoVisibility: PianoVisibility = PianoVisibility.BOTH
     ) : CanvasMode
 
@@ -577,24 +576,19 @@ private fun DrawScope.drawFreePlayNotes(
             }
         }
 
-        // Draw resize handles only for the selected note
+        // Draw resize handles for the selected note in the top-left / bottom-left corners
         if (isSelected && note.endTimeMs != null) {
-            val centerX = key.x + key.width / 2f
+            val barX = key.x + BAR_GAP_PX
             val clampedTopY    = rawTopY.coerceIn(noteAreaTop, noteAreaBottom)
             val clampedBottomY = rawBottomY.coerceIn(noteAreaTop, noteAreaBottom)
-
-            // Offset handles horizontally so they don't overlap on short notes:
-            // end handle (top) shifted left, start handle (bottom) shifted right
-            val handleOffset = 6f * density
-            val endHandleX   = centerX - handleOffset
-            val startHandleX = centerX + handleOffset
-
-            // End handle (top = note end = more recent)
-            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,           center = Offset(endHandleX, clampedTopY))
-            drawCircle(color = barColor,                         radius = handleRadius - 3f * density, center = Offset(endHandleX, clampedTopY))
-            // Start handle (bottom = note start = older)
-            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,           center = Offset(startHandleX, clampedBottomY))
-            drawCircle(color = barColor,                         radius = handleRadius - 3f * density, center = Offset(startHandleX, clampedBottomY))
+            // Place both handles at the left edge of the bar
+            val handleX = barX + handleRadius
+            // End handle (top-left corner)
+            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,                center = Offset(handleX, clampedTopY))
+            drawCircle(color = barColor,                        radius = handleRadius - 3f * density, center = Offset(handleX, clampedTopY))
+            // Start handle (bottom-left corner)
+            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,                center = Offset(handleX, clampedBottomY))
+            drawCircle(color = barColor,                        radius = handleRadius - 3f * density, center = Offset(handleX, clampedBottomY))
         }
     }
 }

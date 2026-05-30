@@ -320,15 +320,11 @@ class FreePlayViewModel @Inject constructor(
 
     // endregion
 
-    // region Edit mode
-
-    fun setEditMode(mode: NoteEditMode) {
-        _state.update { it.copy(editMode = mode, selectedNoteId = null) }
-        if (mode == NoteEditMode.EDIT) stopPlaying()
-    }
+    // region Note editing
 
     fun selectNote(id: String?) {
         _state.update { it.copy(selectedNoteId = id) }
+        if (id != null) stopPlaying()
     }
 
     fun deleteNote(id: String) {

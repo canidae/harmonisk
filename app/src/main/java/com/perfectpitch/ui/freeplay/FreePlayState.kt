@@ -1,7 +1,5 @@
 package com.perfectpitch.ui.freeplay
 
-enum class NoteEditMode { NONE, EDIT }
-
 enum class PianoVisibility { NONE, UPPER_ONLY, LOWER_ONLY, BOTH }
 
 /** Audio output routing for playback. */
@@ -24,7 +22,6 @@ data class FreePlayState(
     val loopStartBar: Int? = null,
     val loopEndBar: Int? = null,
     val isLooping: Boolean = false,
-    val editMode: NoteEditMode = NoteEditMode.NONE,
     val selectedNoteId: String? = null,
     // MIDI state
     val midiAvailable: Boolean = false,
