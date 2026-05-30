@@ -520,7 +520,9 @@ private fun DrawScope.drawFreePlayNotes(
         val rawTopY = pianoEdgeY + ageOfEndMs * pxPerMs
         val rawBottomY = pianoEdgeY + ageOfStartMs * pxPerMs
 
-        // Color based on voice
+        // Color based on voice; non-active voices are slightly dimmed, black keys slightly darker.
+        // No position-based color changes: all notes look the same regardless of where they are
+        // relative to the now-line (avoids jarring colour shift as notes scroll past).
         val baseVoiceColor = VOICE_COLORS[note.voiceIndex % VOICE_COLORS.size]
         val isActiveVoice = note.voiceIndex == mode.activeVoiceIndex || note.isActive
         var barColor = if (isActiveVoice) baseVoiceColor else baseVoiceColor.copy(alpha = 0.6f)
@@ -531,13 +533,8 @@ private fun DrawScope.drawFreePlayNotes(
                 blue = barColor.blue * 0.75f
             )
         }
-        // Dim upcoming (future) notes — they appear above the now-line
-        if (ageOfStartMs < 0) {
-            barColor = barColor.copy(alpha = barColor.alpha * 0.45f)
-        }
 
         val isSelected = note.id == mode.selectedNoteId
-        val borderAlpha = if (isSelected) 0.9f else 0.25f
 
         drawNoteBar(
             barX = key.x + BAR_GAP_PX,
@@ -547,28 +544,51 @@ private fun DrawScope.drawFreePlayNotes(
             visibleTop = noteAreaTop,
             visibleBottom = noteAreaBottom,
             color = barColor,
-            borderAlpha = borderAlpha,
+            borderAlpha = if (isSelected) 0.0f else 0.25f,  // selection glow replaces border
             centsHistory = note.centsHistory,
             density = density
         )
 
-        // Draw handles: large for selected note, small for all finalized notes in edit mode
-        if (note.endTimeMs != null && (isSelected || mode.isEditMode)) {
+        // Selection glow: bright thick rounded outline drawn on top of the note bar
+        if (isSelected) {
+            val barX = key.x + BAR_GAP_PX
+            val barW = key.width - BAR_GAP_PX * 2f
+            if (barW >= 2f) {
+                val clippedTop    = rawTopY.coerceIn(noteAreaTop, noteAreaBottom)
+                val clippedBottom = rawBottomY.coerceIn(noteAreaTop, noteAreaBottom)
+                if (clippedBottom - clippedTop >= 1f) {
+                    val r = CORNER_RADIUS_DP * density
+                    val topR    = if (rawTopY    <= noteAreaTop)    0f else r
+                    val bottomR = if (rawBottomY >= noteAreaBottom) 0f else r
+                    val selPath = Path().apply {
+                        addRoundRect(RoundRect(
+                            left = barX, top = clippedTop, right = barX + barW, bottom = clippedBottom,
+                            topLeftCornerRadius    = CornerRadius(topR, topR),
+                            topRightCornerRadius   = CornerRadius(topR, topR),
+                            bottomLeftCornerRadius = CornerRadius(bottomR, bottomR),
+                            bottomRightCornerRadius = CornerRadius(bottomR, bottomR)
+                        ))
+                    }
+                    // Soft outer glow
+                    drawPath(selPath, Color.White.copy(alpha = 0.30f), style = Stroke(width = 5f * density))
+                    // Crisp bright inner border
+                    drawPath(selPath, Color.White.copy(alpha = 0.90f), style = Stroke(width = 1.5f * density))
+                }
+            }
+        }
+
+        // Draw resize handles only for the selected note
+        if (isSelected && note.endTimeMs != null) {
             val centerX = key.x + key.width / 2f
-            val clampedTopY = rawTopY.coerceIn(noteAreaTop, noteAreaBottom)
+            val clampedTopY    = rawTopY.coerceIn(noteAreaTop, noteAreaBottom)
             val clampedBottomY = rawBottomY.coerceIn(noteAreaTop, noteAreaBottom)
 
-            val outerR = if (isSelected) handleRadius else 5f * density
-            val innerR = if (isSelected) handleRadius - 3f * density else 3f * density
-            val alpha  = if (isSelected) 0.9f else 0.45f
-            val iColor = if (isSelected) barColor else barColor.copy(alpha = 0.8f)
-
             // End handle (top = note end = more recent)
-            drawCircle(color = Color.White.copy(alpha = alpha), radius = outerR, center = Offset(centerX, clampedTopY))
-            drawCircle(color = iColor, radius = innerR, center = Offset(centerX, clampedTopY))
+            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,           center = Offset(centerX, clampedTopY))
+            drawCircle(color = barColor,                         radius = handleRadius - 3f * density, center = Offset(centerX, clampedTopY))
             // Start handle (bottom = note start = older)
-            drawCircle(color = Color.White.copy(alpha = alpha), radius = outerR, center = Offset(centerX, clampedBottomY))
-            drawCircle(color = iColor, radius = innerR, center = Offset(centerX, clampedBottomY))
+            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,           center = Offset(centerX, clampedBottomY))
+            drawCircle(color = barColor,                         radius = handleRadius - 3f * density, center = Offset(centerX, clampedBottomY))
         }
     }
 }

@@ -275,12 +275,13 @@ fun FreePlayScreen(
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         val items = listOf(
-                            Icons.Filled.TouchApp       to "Tap a note bar"           to "Select it and show resize handles.",
-                            Icons.Filled.DoNotTouch     to "Double-tap a note bar"    to "Delete that note.",
-                            Icons.Filled.OpenWith       to "Long-press + drag a note" to "Move it in time and pitch.",
-                            Icons.Filled.SwipeVertical  to "Drag top/bottom handle"   to "Resize the selected note's start or end time.",
-                            Icons.Filled.ContentCut     to "Hold note + second finger" to "Split the note into two equal halves.",
-                            Icons.Filled.TouchApp       to "Tap empty space"          to "Deselect the current note."
+                            Icons.Filled.TouchApp       to "Tap a note bar"            to "Select it — resize handles appear and action buttons show to the right.",
+                            Icons.Filled.ContentCut     to "Split button (✂)"          to "Tap the scissors button next to a selected note to split it in two equal halves.",
+                            Icons.Filled.Delete         to "Delete button (🗑)"         to "Tap the delete button next to a selected note to remove it.",
+                            Icons.Filled.OpenWith       to "Long-press + drag a note"  to "Move it in time (up/down) and pitch (left/right).",
+                            Icons.Filled.SwipeVertical  to "Drag top/bottom handle"    to "Resize the selected note's start or end time.",
+                            Icons.Filled.TouchApp       to "Tap empty space"           to "Deselect the current note.",
+                            Icons.Filled.ContentCut     to "Hold note + second finger" to "Alternative way to split: long-press a note bar then tap with another finger."
                         )
                         items.forEach { (iconAndLabel, description) ->
                             val (icon, label) = iconAndLabel
@@ -524,11 +525,6 @@ fun FreePlayScreen(
                 }
                 .pointerInput(state.editMode) {
                     detectTapGestures(
-                        onDoubleTap = { offset ->
-                            if (state.editMode == NoteEditMode.EDIT) {
-                                noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.let { (id, _) -> viewModel.deleteNote(id) }
-                            }
-                        },
                         onTap = { offset ->
                             if (state.editMode == NoteEditMode.EDIT) {
                                 viewModel.selectNote(noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.first)
@@ -676,6 +672,55 @@ fun FreePlayScreen(
                         tint = Color(0xFFFFB74D),
                         modifier = Modifier.size(16.dp)
                     )
+                }
+            }
+
+            // Contextual action buttons — shown to the right of a selected note in edit mode
+            val selectedRect = if (state.editMode == NoteEditMode.EDIT && state.selectedNoteId != null) {
+                noteRectsState.value.firstOrNull { (id, _) -> id == state.selectedNoteId }?.second
+            } else null
+            if (selectedRect != null) {
+                val btnSizeDp = 36.dp
+                val btnSizePx = with(density) { btnSizeDp.toPx() }
+                val paddingPx = with(density) { 6.dp.toPx() }
+                val gapPx    = with(density) { 4.dp.toPx() }
+                val noteMidY = (selectedRect.top + selectedRect.bottom) / 2f
+                // Total height of button column: 2 buttons + 1 gap
+                val colHeight = btnSizePx * 2 + gapPx
+                val colTopY = (noteMidY - colHeight / 2f).toInt()
+
+                // Prefer right of note; clamp so buttons don't overflow canvas width
+                val rawX = selectedRect.right + paddingPx
+                val colX = rawX.toInt()
+
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .offset { IntOffset(colX, colTopY) },
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Split button
+                    IconButton(
+                        onClick = { viewModel.splitNote(state.selectedNoteId!!) },
+                        modifier = Modifier
+                            .size(btnSizeDp)
+                            .background(Color(0xDD1A1A2E), CircleShape)
+                            .border(1.dp, Color(0xFFFFB74D).copy(alpha = 0.7f), CircleShape)
+                    ) {
+                        Icon(Icons.Filled.ContentCut, contentDescription = "Split note",
+                            tint = Color(0xFFFFB74D), modifier = Modifier.size(18.dp))
+                    }
+                    // Delete button
+                    IconButton(
+                        onClick = { viewModel.deleteNote(state.selectedNoteId!!) },
+                        modifier = Modifier
+                            .size(btnSizeDp)
+                            .background(Color(0xDD1A1A2E), CircleShape)
+                            .border(1.dp, Color(0xFFEF5350).copy(alpha = 0.7f), CircleShape)
+                    ) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Delete note",
+                            tint = Color(0xFFEF5350), modifier = Modifier.size(18.dp))
+                    }
                 }
             }
 
