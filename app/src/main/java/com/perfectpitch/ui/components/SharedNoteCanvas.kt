@@ -593,12 +593,12 @@ private fun DrawScope.drawFreePlayNotes(
                            else baseVoiceColor.copy(alpha = 0.6f)
             if (key.isBlack) barColor = barColor.copy(red = barColor.red * 0.75f, green = barColor.green * 0.75f, blue = barColor.blue * 0.75f)
 
-            // End handle: top-right corner
-            val endHandleX = barX + barW - handleRadius
+            // End handle: centered on top-right corner
+            val endHandleX = barX + barW
             drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,                center = Offset(endHandleX, rawTopY))
             drawCircle(color = barColor,                        radius = handleRadius - 3f * density, center = Offset(endHandleX, rawTopY))
-            // Start handle: bottom-left corner
-            val startHandleX = barX + handleRadius
+            // Start handle: centered on bottom-left corner
+            val startHandleX = barX
             drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,                center = Offset(startHandleX, rawBottomY))
             drawCircle(color = barColor,                        radius = handleRadius - 3f * density, center = Offset(startHandleX, rawBottomY))
         }
