@@ -583,12 +583,18 @@ private fun DrawScope.drawFreePlayNotes(
             val clampedTopY    = rawTopY.coerceIn(noteAreaTop, noteAreaBottom)
             val clampedBottomY = rawBottomY.coerceIn(noteAreaTop, noteAreaBottom)
 
+            // Offset handles horizontally so they don't overlap on short notes:
+            // end handle (top) shifted left, start handle (bottom) shifted right
+            val handleOffset = 6f * density
+            val endHandleX   = centerX - handleOffset
+            val startHandleX = centerX + handleOffset
+
             // End handle (top = note end = more recent)
-            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,           center = Offset(centerX, clampedTopY))
-            drawCircle(color = barColor,                         radius = handleRadius - 3f * density, center = Offset(centerX, clampedTopY))
+            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,           center = Offset(endHandleX, clampedTopY))
+            drawCircle(color = barColor,                         radius = handleRadius - 3f * density, center = Offset(endHandleX, clampedTopY))
             // Start handle (bottom = note start = older)
-            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,           center = Offset(centerX, clampedBottomY))
-            drawCircle(color = barColor,                         radius = handleRadius - 3f * density, center = Offset(centerX, clampedBottomY))
+            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,           center = Offset(startHandleX, clampedBottomY))
+            drawCircle(color = barColor,                         radius = handleRadius - 3f * density, center = Offset(startHandleX, clampedBottomY))
         }
     }
 }
