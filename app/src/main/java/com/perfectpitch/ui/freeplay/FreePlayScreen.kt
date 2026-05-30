@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -515,10 +516,21 @@ fun FreePlayScreen(
                             // Toggle selection on tap
                             viewModel.selectNote(if (tappedId == currentSelectedNoteId) null else tappedId)
                         } else {
-                            // Tap on empty space: deselect and pause playback/recording
-                            viewModel.selectNote(null)
-                            if (currentIsRecording) viewModel.toggleRecording()
-                            else if (currentIsPlaying) viewModel.togglePlaying()
+                            // Check if tap landed on a handle circle of the selected note
+                            // (handles are centered on corners, half outside the noteRect)
+                            val selRect = currentSelectedNoteId?.let { id ->
+                                noteRectsState.value.firstOrNull { (rid, _) -> rid == id }?.second
+                            }
+                            val onHandle = selRect != null && (
+                                run { val dx = offset.x - selRect.right;  val dy = offset.y - selRect.top;    dx*dx+dy*dy <= handleRadiusPx*handleRadiusPx } ||
+                                run { val dx = offset.x - selRect.left;   val dy = offset.y - selRect.bottom; dx*dx+dy*dy <= handleRadiusPx*handleRadiusPx }
+                            )
+                            if (!onHandle) {
+                                // Tap on truly empty space: deselect and pause
+                                viewModel.selectNote(null)
+                                if (currentIsRecording) viewModel.toggleRecording()
+                                else if (currentIsPlaying) viewModel.togglePlaying()
+                            }
                         }
                     }
                 }
@@ -552,7 +564,7 @@ fun FreePlayScreen(
                         val originalMidi = viewModel.getNoteMidi(selId)
                         try {
                             while (true) {
-                                val event = awaitPointerEvent()
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
                                 val change = event.changes.firstOrNull { it.id == down.id } ?: break
                                 if (!change.pressed) break
                                 val delta = change.position - change.previousPosition
