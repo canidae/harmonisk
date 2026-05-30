@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.SettingsRepository
+import com.perfectpitch.music.NoteInfo
 import com.perfectpitch.music.NoteUtils
 import com.perfectpitch.music.PitchResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,14 +30,24 @@ class TunerViewModel @Inject constructor(
 
         /**
          * EMA alpha in semitone space.
-         * α = 0.2 at ~43 fps gives:
-         *   • 6 Hz vibrato attenuated to ~28% amplitude (±30 ct vibrato → ~±8.5 ct display)
-         *   • Note name switches after ~72 ms; 95% settled in ~325 ms
+         * α = 0.3 at ~43 fps gives:
+         *   • 6 Hz vibrato attenuated to ~20% amplitude (±30 ct vibrato → ~±6 ct display)
+         *   • 95% settled in ~215 ms — fast enough for smooth real-time tuning with CREPE's
+         *     accurate output (MPM required a lower alpha to suppress its own noise)
          */
-        const val EMA_ALPHA = 0.2f
+        const val EMA_ALPHA = 0.3f
 
         /** Consecutive in-tune frames before showing "✓ In Tune". */
         const val IN_TUNE_HOLD_FRAMES = 5
+
+        /**
+         * Hysteresis band around a semitone boundary (in cents).
+         * Once a note name is committed, the smoothed pitch must move MORE than
+         * (50 + HYSTERESIS_CENTS) cents from the current note's centre before the
+         * display switches to an adjacent semitone.  This prevents the name from
+         * flickering when the pitch hovers near a boundary.
+         */
+        const val HYSTERESIS_CENTS = 15f
     }
 
     private val _state = MutableStateFlow(TunerState())
@@ -51,6 +62,9 @@ class TunerViewModel @Inject constructor(
 
     // Stable "In Tune" counter
     private var inTuneConsecutiveCount = 0
+
+    // Hysteresis: the MIDI note number currently committed to for display (-1 = none)
+    private var displayedMidi: Int = -1
 
     private var referenceA4 = NoteUtils.DEFAULT_A4_FREQ
 
@@ -93,7 +107,33 @@ class TunerViewModel @Inject constructor(
             }
 
             val smoothedFreq = (referenceA4 * 2.0.pow(smoothedSemitones / 12.0)).toFloat()
-            val noteInfo = noteUtils.frequencyToNote(smoothedFreq, referenceA4)
+            val rawNoteInfo = noteUtils.frequencyToNote(smoothedFreq, referenceA4)
+
+            // Hysteresis: only switch displayed note name when the smoothed pitch has moved
+            // clearly past the semitone boundary (> 50 + HYSTERESIS_CENTS from current centre).
+            val noteInfo: NoteInfo = when {
+                displayedMidi == -1 -> {
+                    // First valid frame after silence — commit immediately.
+                    displayedMidi = rawNoteInfo.midiNumber
+                    rawNoteInfo
+                }
+                rawNoteInfo.midiNumber == displayedMidi -> rawNoteInfo
+                else -> {
+                    val displayedCenter = noteUtils.midiToFrequency(displayedMidi, referenceA4)
+                    val centsFromDisplayed =
+                        (1200.0 * log2(smoothedFreq.toDouble() / displayedCenter.toDouble())).toFloat()
+                    if (abs(centsFromDisplayed) > 50f + HYSTERESIS_CENTS) {
+                        // Crossed decisively into the adjacent semitone — switch.
+                        displayedMidi = rawNoteInfo.midiNumber
+                        rawNoteInfo
+                    } else {
+                        // Still within the hysteresis band — keep the current note name but
+                        // show the actual cents offset relative to the displayed note centre.
+                        noteUtils.frequencyToNote(displayedCenter, referenceA4)
+                            .copy(centsOff = centsFromDisplayed)
+                    }
+                }
+            }
 
             // Count consecutive frames within the in-tune window for the stable indicator
             if (abs(noteInfo.centsOff) <= IN_TUNE_CENTS) {
@@ -129,6 +169,7 @@ class TunerViewModel @Inject constructor(
                     delay(HOLD_DURATION_MS)
                     // Hold expired — player truly stopped. Reset so the next note starts fresh.
                     isFirstValidFrame = true
+                    displayedMidi = -1
                     _state.update {
                         it.copy(
                             displayedResult = PitchResult.SILENT,
