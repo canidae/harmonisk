@@ -362,12 +362,16 @@ class FreePlayViewModel @Inject constructor(
             val noteIdx = ((newMidi % 12) + 12) % 12
             val newOctave = (newMidi / 12) - 1
             val newNoteName = NoteUtils.NOTE_NAMES[noteIdx]
+            val duration = note.endTimeMs?.minus(note.startTimeMs)
+            val rawStart = note.startTimeMs + deltaMs
+            val newStart = snapToGridIfEnabled(rawStart, current.snapEnabled)
+            val newEnd = duration?.let { newStart + it }
             val newNote = note.copy(
                 noteName = newNoteName,
                 octave = newOctave,
                 midiNumber = newMidi,
-                startTimeMs = (note.startTimeMs + deltaMs).coerceAtLeast(0L),
-                endTimeMs = note.endTimeMs?.let { (it + deltaMs).coerceAtLeast(note.startTimeMs + 1L) }
+                startTimeMs = newStart,
+                endTimeMs = newEnd
             )
             current.copy(playedNotes = current.playedNotes.map { if (it.id == id) newNote else it })
         }
@@ -377,18 +381,18 @@ class FreePlayViewModel @Inject constructor(
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
             val endMs = note.endTimeMs ?: return@update current
-            val newStart = (note.startTimeMs + deltaMs).coerceIn(0L, endMs - 1L)
-            val newNote = note.copy(startTimeMs = newStart)
-            current.copy(playedNotes = current.playedNotes.map { if (it.id == id) newNote else it })
+            val rawStart = note.startTimeMs + deltaMs
+            val newStart = snapToGridIfEnabled(rawStart, current.snapEnabled).coerceIn(0L, endMs - 1L)
+            current.copy(playedNotes = current.playedNotes.map { if (it.id == id) note.copy(startTimeMs = newStart) else it })
         }
     }
 
     fun extendNoteEnd(id: String, deltaMs: Long) {
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
-            val newEnd = ((note.endTimeMs ?: 0L) + deltaMs).coerceAtLeast(note.startTimeMs + 1L)
-            val newNote = note.copy(endTimeMs = newEnd)
-            current.copy(playedNotes = current.playedNotes.map { if (it.id == id) newNote else it })
+            val rawEnd = (note.endTimeMs ?: 0L) + deltaMs
+            val newEnd = snapToGridIfEnabled(rawEnd, current.snapEnabled).coerceAtLeast(note.startTimeMs + 1L)
+            current.copy(playedNotes = current.playedNotes.map { if (it.id == id) note.copy(endTimeMs = newEnd) else it })
         }
     }
 
@@ -480,9 +484,13 @@ class FreePlayViewModel @Inject constructor(
 
     private fun snapToGrid(timeMs: Long): Long {
         val interval = gridIntervalMs()
-        val snapped = (timeMs.toDouble() / interval).toLong() * interval
+        // Nearest-neighbour snap (rounds to closest grid point)
+        val snapped = Math.round(timeMs.toDouble() / interval) * interval
         return snapped.coerceAtLeast(0L)
     }
+
+    private fun snapToGridIfEnabled(timeMs: Long, enabled: Boolean): Long =
+        if (enabled) snapToGrid(timeMs) else timeMs.coerceAtLeast(0L)
 
 
     fun onHorizontalZoom(scaleFactor: Float, focusFraction: Float) {
@@ -622,7 +630,7 @@ class FreePlayViewModel @Inject constructor(
                         )
                     }
                     if (elapsed >= gridIntervalMs()) {
-                        commitHoning(result)
+                        commitHoning()
                     }
                 }
             } else {
@@ -646,9 +654,15 @@ class FreePlayViewModel @Inject constructor(
             }
         } else {
             if (honingActive) {
-                // Silence before honing window completed: discard partial data
-                abortHoning()
-                _state.update { it.copy(activeNote = null) }
+                val elapsed = _state.value.songPositionMs - honingStartSongMs
+                // Accept note if played for at least half the min duration (leeway for near-misses)
+                if (elapsed >= gridIntervalMs() / 2 && honingFreqs.isNotEmpty()) {
+                    commitHoning()
+                    finalizeCurrentNote()
+                } else {
+                    abortHoning()
+                    _state.update { it.copy(activeNote = null) }
+                }
             } else if (currentNoteMidi != null) {
                 finalizeCurrentNote()
                 _state.update { it.copy(activeNote = null) }
@@ -681,7 +695,7 @@ class FreePlayViewModel @Inject constructor(
         }
     }
 
-    private fun commitHoning(result: PitchResult) {
+    private fun commitHoning() {
         honingActive = false
         if (honingFreqs.isEmpty()) return
         val avgFreq = honingFreqs.average().toFloat()

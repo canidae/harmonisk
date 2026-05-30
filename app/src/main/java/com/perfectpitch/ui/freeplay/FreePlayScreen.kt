@@ -530,12 +530,13 @@ fun FreePlayScreen(
                         val noteRect = noteRectsState.value.firstOrNull { (id, _) -> id == selId }?.second
                             ?: return@awaitEachGesture
 
-                        // Handle hit area: within handleRadiusPx of the left edge + top/bottom Y
-                        val handleX = noteRect.left + handleRadiusPx
+                        // Handle hit areas: end (top-left), start (bottom-right)
+                        val endHandleX   = noteRect.left  + handleRadiusPx
+                        val startHandleX = noteRect.right - handleRadiusPx
                         val isEndHandle   = abs(down.position.y - noteRect.top)    <= handleRadiusPx &&
-                                            abs(down.position.x - handleX)          <= handleRadiusPx * 2
+                                            abs(down.position.x - endHandleX)       <= handleRadiusPx * 2
                         val isStartHandle = abs(down.position.y - noteRect.bottom) <= handleRadiusPx &&
-                                            abs(down.position.x - handleX)          <= handleRadiusPx * 2
+                                            abs(down.position.x - startHandleX)     <= handleRadiusPx * 2
                         val isNoteBody    = !isEndHandle && !isStartHandle && noteRect.contains(down.position)
 
                         if (!isEndHandle && !isStartHandle && !isNoteBody) return@awaitEachGesture

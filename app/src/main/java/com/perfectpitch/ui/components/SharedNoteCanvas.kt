@@ -586,9 +586,10 @@ private fun DrawScope.drawFreePlayNotes(
             // End handle (top-left corner)
             drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,                center = Offset(handleX, clampedTopY))
             drawCircle(color = barColor,                        radius = handleRadius - 3f * density, center = Offset(handleX, clampedTopY))
-            // Start handle (bottom-left corner)
-            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,                center = Offset(handleX, clampedBottomY))
-            drawCircle(color = barColor,                        radius = handleRadius - 3f * density, center = Offset(handleX, clampedBottomY))
+            // Start handle (bottom-right corner)
+            val startHandleX = barX + (key.width - BAR_GAP_PX * 2f) - handleRadius
+            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,                center = Offset(startHandleX, clampedBottomY))
+            drawCircle(color = barColor,                        radius = handleRadius - 3f * density, center = Offset(startHandleX, clampedBottomY))
         }
     }
 }
