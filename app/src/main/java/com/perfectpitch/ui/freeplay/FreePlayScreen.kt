@@ -263,9 +263,9 @@ fun FreePlayScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         // (icon, iconColor, label, description)
                         val items = listOf(
-                            Triple(Icons.Filled.TouchApp,      null as Color?,          "Tap a note bar"          to "Select it — resize handles appear at the top-left and bottom-left corners, and action buttons appear to the right."),
-                            Triple(Icons.Filled.OpenWith,      null,                    "Drag a selected note"    to "Move it in time (up/down) and pitch (left/right). No long-press needed once selected."),
-                            Triple(Icons.Filled.SwipeVertical, null,                    "Drag a handle"           to "Resize: the top-left handle adjusts the end time, the bottom-left adjusts the start time."),
+                            Triple(Icons.Filled.TouchApp,      null as Color?,          "Tap a note bar"          to "Select it for editing — action buttons appear to the right."),
+                            Triple(Icons.Filled.OpenWith,      null,                    "Drag a selected note"    to "Move it in time (up/down) and pitch (left/right)."),
+                            Triple(Icons.Filled.SwipeVertical, null,                    "Drag a handle"           to "Resize: The top-right handle adjusts the end time, the bottom-left adjusts the start time."),
                             Triple(Icons.Filled.ContentCut,    Color(0xFFFFB74D),       "Split (✂)"               to "Splits the selected note into two equal halves."),
                             Triple(Icons.Filled.Delete,        Color(0xFFEF5350),       "Delete (🗑)"              to "Removes the selected note."),
                             Triple(Icons.Filled.TouchApp,      null,                    "Tap empty space"         to "Deselect the current note.")
@@ -530,9 +530,9 @@ fun FreePlayScreen(
                         val noteRect = noteRectsState.value.firstOrNull { (id, _) -> id == selId }?.second
                             ?: return@awaitEachGesture
 
-                        // Handle hit areas: end (top-left), start (bottom-right)
-                        val endHandleX   = noteRect.left  + handleRadiusPx
-                        val startHandleX = noteRect.right - handleRadiusPx
+                        // Handle hit areas: end (top-right), start (bottom-left)
+                        val endHandleX   = noteRect.right - handleRadiusPx
+                        val startHandleX = noteRect.left  + handleRadiusPx
                         val isEndHandle   = abs(down.position.y - noteRect.top)    <= handleRadiusPx &&
                                             abs(down.position.x - endHandleX)       <= handleRadiusPx * 2
                         val isStartHandle = abs(down.position.y - noteRect.bottom) <= handleRadiusPx &&
@@ -543,6 +543,9 @@ fun FreePlayScreen(
                         down.consume()
 
                         var localMidiAccum = 0f
+                        var totalMidiDelta = 0
+                        var lastPlayedMidiDelta = Int.MIN_VALUE
+                        val originalMidi = viewModel.getNoteMidi(selId)
                         try {
                             while (true) {
                                 val event = awaitPointerEvent()
@@ -559,7 +562,13 @@ fun FreePlayScreen(
                                             localMidiAccum += delta.x * (currentMidiRange / size.width.toFloat())
                                             val deltaMidi = localMidiAccum.toInt()
                                             localMidiAccum -= deltaMidi.toFloat()
+                                            if (deltaMidi != 0) totalMidiDelta += deltaMidi
                                             viewModel.moveNote(selId, deltaMidi, deltaMs)
+                                            // Audible feedback when semitone changes
+                                            if (originalMidi != null && totalMidiDelta != lastPlayedMidiDelta) {
+                                                lastPlayedMidiDelta = totalMidiDelta
+                                                viewModel.previewNoteTone((originalMidi + totalMidiDelta).coerceIn(21, 108))
+                                            }
                                         }
                                     }
                                 }

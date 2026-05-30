@@ -508,6 +508,7 @@ private fun DrawScope.drawFreePlayNotes(
         mode.activeNote?.let { add(it) }
     }
 
+    // Pass 1: draw all note bars and selection glows
     for (note in allNotes) {
         val key = layout[note.midiNumber] ?: continue
 
@@ -575,21 +576,31 @@ private fun DrawScope.drawFreePlayNotes(
                 }
             }
         }
+    }
 
-        // Draw resize handles for the selected note in the top-left / bottom-left corners
-        if (isSelected && note.endTimeMs != null) {
+    // Pass 2: draw handles for the selected note on top of all bars
+    val selectedNote = allNotes.firstOrNull { it.id == mode.selectedNoteId }
+    if (selectedNote != null && selectedNote.endTimeMs != null) {
+        val key = layout[selectedNote.midiNumber]
+        if (key != null) {
+            val noteEndMs = selectedNote.endTimeMs
+            val rawTopY    = (pianoEdgeY + (now - noteEndMs)             * pxPerMs).coerceIn(noteAreaTop, noteAreaBottom)
+            val rawBottomY = (pianoEdgeY + (now - selectedNote.startTimeMs) * pxPerMs).coerceIn(noteAreaTop, noteAreaBottom)
             val barX = key.x + BAR_GAP_PX
-            val clampedTopY    = rawTopY.coerceIn(noteAreaTop, noteAreaBottom)
-            val clampedBottomY = rawBottomY.coerceIn(noteAreaTop, noteAreaBottom)
-            // Place both handles at the left edge of the bar
-            val handleX = barX + handleRadius
-            // End handle (top-left corner)
-            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,                center = Offset(handleX, clampedTopY))
-            drawCircle(color = barColor,                        radius = handleRadius - 3f * density, center = Offset(handleX, clampedTopY))
-            // Start handle (bottom-right corner)
-            val startHandleX = barX + (key.width - BAR_GAP_PX * 2f) - handleRadius
-            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,                center = Offset(startHandleX, clampedBottomY))
-            drawCircle(color = barColor,                        radius = handleRadius - 3f * density, center = Offset(startHandleX, clampedBottomY))
+            val barW = key.width - BAR_GAP_PX * 2f
+            val baseVoiceColor = VOICE_COLORS[selectedNote.voiceIndex % VOICE_COLORS.size]
+            var barColor = if (selectedNote.voiceIndex == mode.activeVoiceIndex || selectedNote.isActive) baseVoiceColor
+                           else baseVoiceColor.copy(alpha = 0.6f)
+            if (key.isBlack) barColor = barColor.copy(red = barColor.red * 0.75f, green = barColor.green * 0.75f, blue = barColor.blue * 0.75f)
+
+            // End handle: top-right corner
+            val endHandleX = barX + barW - handleRadius
+            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,                center = Offset(endHandleX, rawTopY))
+            drawCircle(color = barColor,                        radius = handleRadius - 3f * density, center = Offset(endHandleX, rawTopY))
+            // Start handle: bottom-left corner
+            val startHandleX = barX + handleRadius
+            drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,                center = Offset(startHandleX, rawBottomY))
+            drawCircle(color = barColor,                        radius = handleRadius - 3f * density, center = Offset(startHandleX, rawBottomY))
         }
     }
 }

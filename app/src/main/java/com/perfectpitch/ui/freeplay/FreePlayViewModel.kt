@@ -63,6 +63,8 @@ class FreePlayViewModel @Inject constructor(
     private var midiListeningJob: Job? = null
     private var replayJob: Job? = null
     private var synthOpenJob: Job? = null
+    private var previewJob: Job? = null
+    private var previewMidiNote: Int = -1
 
     // Replay/recording state flags
     private var replayActive = false
@@ -352,6 +354,21 @@ class FreePlayViewModel @Inject constructor(
                 playedNotes = current.playedNotes.flatMap { if (it.id == id) listOf(first, second) else listOf(it) },
                 selectedNoteId = null
             )
+        }
+    }
+
+    fun getNoteMidi(id: String): Int? = _state.value.playedNotes.find { it.id == id }?.midiNumber
+
+    fun previewNoteTone(midiNote: Int) {
+        if (!melodySynthesizer.isReady) return
+        previewJob?.cancel()
+        if (previewMidiNote != -1) melodySynthesizer.noteOff(0, previewMidiNote)
+        previewMidiNote = midiNote
+        previewJob = viewModelScope.launch {
+            melodySynthesizer.noteOn(0, midiNote, 80)
+            delay(300)
+            melodySynthesizer.noteOff(0, midiNote)
+            previewMidiNote = -1
         }
     }
 
