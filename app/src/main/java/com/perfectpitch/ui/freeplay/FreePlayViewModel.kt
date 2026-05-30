@@ -340,6 +340,25 @@ class FreePlayViewModel @Inject constructor(
         }
     }
 
+    fun splitNote(id: String) {
+        _state.update { current ->
+            val note = current.playedNotes.find { it.id == id } ?: return@update current
+            val endMs = note.endTimeMs ?: return@update current
+            val duration = endMs - note.startTimeMs
+            if (duration < 2L) return@update current
+            val midMs = note.startTimeMs + duration / 2L
+            val first  = note.copy(endTimeMs = midMs)
+            val second = note.copy(
+                id = java.util.UUID.randomUUID().toString(),
+                startTimeMs = midMs
+            )
+            current.copy(
+                playedNotes = current.playedNotes.flatMap { if (it.id == id) listOf(first, second) else listOf(it) },
+                selectedNoteId = null
+            )
+        }
+    }
+
     fun moveNote(id: String, deltaMidi: Int, deltaMs: Long) {
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current

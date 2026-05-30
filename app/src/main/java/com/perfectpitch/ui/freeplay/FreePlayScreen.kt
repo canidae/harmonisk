@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -29,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -98,14 +100,16 @@ fun FreePlayScreen(
     var dragNoteId by remember { mutableStateOf<String?>(null) }
     var dragHandleType by remember { mutableStateOf<String?>(null) }
     val handleRadiusPx = with(density) { 18.dp.toPx() }
+    var splitReadyNoteId by remember { mutableStateOf<String?>(null) }
 
-    // ── Dropdown state (defined here so lambdas below can capture them) ──
+    // ── Dropdown / dialog state ──
     var showInputMenu by remember { mutableStateOf(false) }
     var showOutputMenu by remember { mutableStateOf(false) }
     var showConfigMenu by remember { mutableStateOf(false) }
     var showVoiceMenu by remember { mutableStateOf(false) }
     var showBeatsMenu by remember { mutableStateOf(false) }
     var showDivisionMenu by remember { mutableStateOf(false) }
+    var showEditHelp by remember { mutableStateOf(false) }
 
     // ── Panel 1 content: I/O · Settings · Play · Record · Edit · ScrollTop ──
     val panel1Content: @Composable RowScope.() -> Unit = {
@@ -248,6 +252,52 @@ fun FreePlayScreen(
                 .then(if (isEditing) Modifier.border(1.dp, Color(0xFFFFB74D), CircleShape) else Modifier)
         ) {
             Icon(Icons.Filled.Edit, null, modifier = Modifier.size(17.dp), tint = if (isEditing) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
+        }
+
+        // Help button — only visible in edit mode
+        if (isEditing) {
+            IconButton(
+                onClick = { showEditHelp = true },
+                modifier = Modifier.size(PANEL_BTN_SIZE).background(OVERLAY_BG, CircleShape)
+            ) {
+                Icon(Icons.Filled.HelpOutline, contentDescription = "Edit help", tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
+            }
+        }
+
+        // Edit mode help dialog
+        if (showEditHelp) {
+            AlertDialog(
+                onDismissRequest = { showEditHelp = false },
+                confirmButton = {
+                    TextButton(onClick = { showEditHelp = false }) { Text("Got it") }
+                },
+                title = { Text("Edit Mode", fontWeight = FontWeight.Bold) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        val items = listOf(
+                            Icons.Filled.TouchApp       to "Tap a note bar"           to "Select it and show resize handles.",
+                            Icons.Filled.DoNotTouch     to "Double-tap a note bar"    to "Delete that note.",
+                            Icons.Filled.OpenWith       to "Long-press + drag a note" to "Move it in time and pitch.",
+                            Icons.Filled.SwipeVertical  to "Drag top/bottom handle"   to "Resize the selected note's start or end time.",
+                            Icons.Filled.ContentCut     to "Hold note + second finger" to "Split the note into two equal halves.",
+                            Icons.Filled.TouchApp       to "Tap empty space"          to "Deselect the current note."
+                        )
+                        items.forEach { (iconAndLabel, description) ->
+                            val (icon, label) = iconAndLabel
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Icon(icon, null, modifier = Modifier.size(18.dp).padding(top = 1.dp))
+                                Column {
+                                    Text(label, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                    Text(description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+            )
         }
 
     }
@@ -538,6 +588,37 @@ fun FreePlayScreen(
                         )
                     }
                 }
+                // Split gesture: long-press a note bar → hold → tap with a second finger → split.
+                .pointerInput(state.editMode) {
+                    if (state.editMode != NoteEditMode.EDIT) return@pointerInput
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val noteId = noteRectsState.value
+                            .firstOrNull { (_, r) -> r.contains(down.position) }?.first
+                            ?: return@awaitEachGesture  // not on a note bar
+
+                        // Wait for the long-press threshold; cancels if the finger moves or lifts
+                        awaitLongPressOrCancellation(down.id) ?: return@awaitEachGesture
+
+                        // Long press confirmed — signal visually and wait for second finger
+                        splitReadyNoteId = noteId
+                        try {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                // First finger lifted → cancel
+                                if (event.changes.none { it.id == down.id && it.pressed }) break
+                                // Second finger down → split
+                                if (event.changes.count { it.pressed } >= 2) {
+                                    viewModel.splitNote(noteId)
+                                    event.changes.forEach { it.consume() }
+                                    break
+                                }
+                            }
+                        } finally {
+                            splitReadyNoteId = null
+                        }
+                    }
+                }
         ) {
             RequireMicPermission(skip = state.midiInputEnabled) {
                 LaunchedEffect(Unit) {
@@ -567,6 +648,35 @@ fun FreePlayScreen(
                     onNoteRects = { rects -> noteRectsState.value = rects },
                     modifier = Modifier.fillMaxSize()
                 )
+            }
+
+            // Scissors icon shown over the note being held for a split gesture
+            val splitRect = splitReadyNoteId?.let { id ->
+                noteRectsState.value.firstOrNull { (nid, _) -> nid == id }?.second
+            }
+            if (splitRect != null) {
+                val iconSizePx = with(density) { 28.dp.toPx() }
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .offset {
+                            IntOffset(
+                                (splitRect.center.x - iconSizePx / 2).toInt(),
+                                ((splitRect.top + splitRect.bottom) / 2f - iconSizePx / 2).toInt()
+                            )
+                        }
+                        .size(28.dp)
+                        .background(Color(0xDD0D0D1A), CircleShape)
+                        .border(1.dp, Color(0xFFFFB74D), CircleShape)
+                ) {
+                    Icon(
+                        Icons.Filled.ContentCut,
+                        contentDescription = null,
+                        tint = Color(0xFFFFB74D),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
 
             // Idle overlay: shown when not playing, not recording, and not in edit mode
