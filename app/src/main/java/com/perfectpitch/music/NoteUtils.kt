@@ -19,14 +19,13 @@ class NoteUtils {
         val centsOff = ((semitonesFromA4 - roundedSemitones) * 100.0).toFloat()
 
         val midiNumber = A4_MIDI_NUMBER + roundedSemitones
-        val noteIndex = ((midiNumber % SEMITONES_PER_OCTAVE) + SEMITONES_PER_OCTAVE) % SEMITONES_PER_OCTAVE
-        val octave = (midiNumber / SEMITONES_PER_OCTAVE) - 1
+        val (noteIndex, octave) = midiToNoteIndexAndOctave(midiNumber)
 
         return NoteInfo(name = NOTE_NAMES[noteIndex], octave = octave, centsOff = centsOff, midiNumber = midiNumber)
     }
 
     fun midiToFrequency(midiNumber: Int, refA4: Float = DEFAULT_A4_FREQ): Float =
-        refA4 * 2f.pow((midiNumber - A4_MIDI_NUMBER).toFloat() / 12f)
+        (refA4.toDouble() * 2.0.pow((midiNumber - A4_MIDI_NUMBER).toDouble() / 12.0)).toFloat()
 
     fun noteToFrequency(noteName: String, octave: Int, refA4: Float = DEFAULT_A4_FREQ): Float {
         val noteIndex = NOTE_NAMES.indexOf(noteName)
@@ -40,9 +39,14 @@ class NoteUtils {
     }
 
     fun midiToNoteName(midiNumber: Int): String {
-        val noteIndex = ((midiNumber % SEMITONES_PER_OCTAVE) + SEMITONES_PER_OCTAVE) % SEMITONES_PER_OCTAVE
-        val octave = (midiNumber / SEMITONES_PER_OCTAVE) - 1
+        val (noteIndex, octave) = midiToNoteIndexAndOctave(midiNumber)
         return "${NOTE_NAMES[noteIndex]}$octave"
+    }
+
+    private fun midiToNoteIndexAndOctave(midi: Int): Pair<Int, Int> {
+        val noteIndex = ((midi % SEMITONES_PER_OCTAVE) + SEMITONES_PER_OCTAVE) % SEMITONES_PER_OCTAVE
+        val octave = (midi / SEMITONES_PER_OCTAVE) - 1
+        return noteIndex to octave
     }
 }
 

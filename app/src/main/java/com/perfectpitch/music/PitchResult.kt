@@ -1,5 +1,7 @@
 package com.perfectpitch.music
 
+import kotlin.math.abs
+
 /**
  * Result of pitch detection for a single audio frame.
  */
@@ -13,11 +15,11 @@ data class PitchResult(
     val rmsDb: Float,
     val isSilent: Boolean
 ) {
-    val isValid: Boolean get() = !isSilent && frequency > 0f
+    val isValid: Boolean get() = !isSilent
 
     val noteWithOctave: String get() = "$noteName$octave"
 
-    val isInTune: Boolean get() = kotlin.math.abs(centsOff) <= ScoringEngine.PERFECT_CENTS
+    val isInTune: Boolean get() = abs(centsOff) <= ScoringEngine.PERFECT_CENTS
 
     companion object {
         val SILENT = PitchResult(

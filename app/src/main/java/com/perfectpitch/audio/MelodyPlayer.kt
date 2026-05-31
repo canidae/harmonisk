@@ -40,7 +40,7 @@ class MelodyPlayer(
         playJob = scope.launch {
             try {
                 val startTimeMs = System.currentTimeMillis()
-                val notes = melodyTrack.notes.sortedBy { it.startTick }
+                val notes = melodyTrack.notes
 
                 val events = mutableListOf<TimedEvent>()
                 for (note in notes) {

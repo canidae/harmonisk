@@ -39,31 +39,20 @@ class ScoringEngine {
     }
 
     fun scoreNote(result: NotePerformance): NoteScore {
-        val pitchScore = scorePitch(result.centsOff)
+        val pitchAccuracy = getPitchAccuracy(result.centsOff)
         val durationScore = scoreDuration(result.actualDurationMs, result.expectedDurationMs)
 
         val overallScore = (
-            pitchScore * PITCH_WEIGHT +
+            pitchAccuracy.score * PITCH_WEIGHT +
             durationScore * DURATION_WEIGHT
         )
 
         return NoteScore(
-            pitchScore = pitchScore,
+            pitchScore = pitchAccuracy.score,
             durationScore = durationScore,
             overallScore = overallScore,
-            pitchAccuracy = getPitchAccuracy(result.centsOff)
+            pitchAccuracy = pitchAccuracy
         )
-    }
-
-    private fun scorePitch(centsOff: Float): Float {
-        val absCents = abs(centsOff)
-        return when {
-            absCents <= PERFECT_CENTS -> PERFECT_POINTS.toFloat()
-            absCents <= GREAT_CENTS -> GREAT_POINTS.toFloat()
-            absCents <= GOOD_CENTS -> GOOD_POINTS.toFloat()
-            absCents <= OK_CENTS -> OK_POINTS.toFloat()
-            else -> MISS_POINTS.toFloat()
-        }
     }
 
     private fun getPitchAccuracy(centsOff: Float): PitchAccuracy {
@@ -142,7 +131,9 @@ data class NoteScore(
     val pitchAccuracy: PitchAccuracy
 )
 
-enum class PitchAccuracy { PERFECT, GREAT, GOOD, OK, MISS }
+enum class PitchAccuracy(val score: Float) {
+    PERFECT(100f), GREAT(80f), GOOD(50f), OK(25f), MISS(0f)
+}
 
 enum class ScoreTier { LEGENDARY, EXCELLENT, GREAT, GOOD, OK, NEEDS_WORK }
 

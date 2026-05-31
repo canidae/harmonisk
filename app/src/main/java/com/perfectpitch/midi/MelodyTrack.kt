@@ -1,13 +1,25 @@
 package com.perfectpitch.midi
 
 /** Parsed melody track from a MIDI file. */
-data class MelodyTrack(
+class MelodyTrack(
     val name: String,
     val notes: List<NoteEvent>,
     val tempoChanges: List<TempoEvent>,
     val timeSignatures: List<TimeSignatureEvent>,
     val ticksPerQuarterNote: Int
 ) {
+    private val sortedNotes: List<NoteEvent> by lazy { notes.sortedBy { it.startTick } }
+
+    val durationSeconds: Double by lazy {
+        tickToSeconds(notes.maxOfOrNull { it.endTick } ?: 0L)
+    }
+
+    val noteRange: IntRange by lazy {
+        val min = notes.minOfOrNull { it.noteNumber } ?: 0
+        val max = notes.maxOfOrNull { it.noteNumber } ?: 127
+        min..max
+    }
+
     fun tickToSeconds(tick: Long): Double {
         var seconds = 0.0
         var lastTick = 0L
@@ -24,21 +36,19 @@ data class MelodyTrack(
         return seconds
     }
 
-    fun getNoteAtTime(seconds: Double): NoteEvent? =
-        notes.find { note ->
-            val start = noteStartSeconds(note)
-            seconds >= start && seconds < start + noteDurationSeconds(note)
+    fun getNoteAtTime(seconds: Double): NoteEvent? {
+        // Binary search: find the last note starting at or before `seconds`
+        var lo = 0
+        var hi = sortedNotes.size - 1
+        while (lo <= hi) {
+            val mid = (lo + hi) ushr 1
+            if (noteStartSeconds(sortedNotes[mid]) <= seconds) lo = mid + 1 else hi = mid - 1
         }
-
-    val durationSeconds: Double
-        get() = tickToSeconds(notes.maxOfOrNull { it.endTick } ?: 0L)
-
-    val noteRange: IntRange
-        get() {
-            val min = notes.minOfOrNull { it.noteNumber } ?: 0
-            val max = notes.maxOfOrNull { it.noteNumber } ?: 127
-            return min..max
-        }
+        if (hi < 0) return null
+        val candidate = sortedNotes[hi]
+        val start = noteStartSeconds(candidate)
+        return if (seconds < start + noteDurationSeconds(candidate)) candidate else null
+    }
 
     fun noteDurationSeconds(note: NoteEvent): Double =
         tickToSeconds(note.endTick) - tickToSeconds(note.startTick)
@@ -48,7 +58,13 @@ data class MelodyTrack(
     /** Returns a new track with all notes transposed by [semitones], clamped to MIDI range 0–127. */
     fun transpose(semitones: Int): MelodyTrack {
         if (semitones == 0) return this
-        return copy(notes = notes.map { it.copy(noteNumber = (it.noteNumber + semitones).coerceIn(0, 127)) })
+        return MelodyTrack(
+            name = name,
+            notes = notes.map { it.copy(noteNumber = (it.noteNumber + semitones).coerceIn(0, 127)) },
+            tempoChanges = tempoChanges,
+            timeSignatures = timeSignatures,
+            ticksPerQuarterNote = ticksPerQuarterNote
+        )
     }
 
     /** Returns the BPM at the given [tick] position. */
@@ -77,11 +93,8 @@ data class MelodyTrack(
             val tempo = tempoChanges[i]
             val nextTick = if (i + 1 < tempoChanges.size) tempoChanges[i + 1].tick else Long.MAX_VALUE
             val segmentTicks = nextTick - tempo.tick
+            currentUsPerBeat = tempo.microsecondsPerBeat
             val segmentSeconds = segmentTicks.toDouble() * currentUsPerBeat / (ticksPerQuarterNote * 1_000_000.0)
-
-            if (tempo.tick >= currentTick) {
-                currentUsPerBeat = tempo.microsecondsPerBeat
-            }
 
             if (remainingSeconds <= segmentSeconds) {
                 return currentTick + (remainingSeconds * ticksPerQuarterNote * 1_000_000.0 / currentUsPerBeat).toLong()
@@ -93,4 +106,3 @@ data class MelodyTrack(
         return currentTick + (remainingSeconds * ticksPerQuarterNote * 1_000_000.0 / currentUsPerBeat).toLong()
     }
 }
-
