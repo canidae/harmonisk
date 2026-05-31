@@ -92,6 +92,10 @@ fun FreePlayScreen(
     val currentIsRecording by rememberUpdatedState(state.isRecording)
     val currentIsPlaying by rememberUpdatedState(state.isPlaying)
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        viewModel.snackbarMessage.collect { snackbarHostState.showSnackbar(it) }
+    }
     val barMs = state.beatsPerBar * (60000.0 / state.bpm)
     val defaultLoopEndBar = run {
         val maxEndMs = state.playedNotes.mapNotNull { it.endTimeMs }.maxOrNull() ?: 0L
@@ -100,7 +104,7 @@ fun FreePlayScreen(
     val effectiveLoopStartBar = state.loopStartBar ?: 1
     val effectiveLoopEndBar = state.loopEndBar ?: defaultLoopEndBar
     val loopStartMs = ((effectiveLoopStartBar - 1) * barMs).toLong()
-    val loopEndMs   = (effectiveLoopEndBar   * barMs).toLong()
+    val loopEndMs   = ((effectiveLoopEndBar - 1) * barMs).toLong()
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("audio/midi")
@@ -485,6 +489,7 @@ fun FreePlayScreen(
             viewModel.stopListening()
         }
     }
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
         if (isLandscape) {
             // In landscape: both panels in a single horizontal bar to save vertical space
@@ -651,8 +656,8 @@ fun FreePlayScreen(
                         bpm = state.bpm,
                         beatsPerBar = state.beatsPerBar,
                         activeVoiceIndex = state.activeVoiceIndex,
-                        loopStartMs = if (state.loopStartBar != null) loopStartMs else null,
-                        loopEndMs = if (state.loopEndBar != null) loopEndMs else null,
+                        loopStartMs = loopStartMs,
+                        loopEndMs = loopEndMs,
                         selectedNoteId = state.selectedNoteId,
                         pianoVisibility = state.pianoVisibility
                     ),
@@ -739,4 +744,6 @@ fun FreePlayScreen(
 
         }
     }
+    SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).systemBarsPadding())
+    } // end Box
 }

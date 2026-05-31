@@ -36,6 +36,7 @@ import com.perfectpitch.ui.melody.NoteResultState
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.roundToLong
 
 private val CANVAS_BG = Color(0xFF0D0D1A)
 private val BLACK_COLUMN_BG = Color(0xFF151520)
@@ -323,26 +324,9 @@ private fun DrawScope.drawBarLines(
 
     clipRect(left = 0f, top = visibleTop, right = size.width, bottom = clipBottom) {
 
-    // Draw loop region if active
+    // Draw loop bar line markers (start and end lines in distinct color)
     val loopStartMs = mode.loopStartMs
     val loopEndMs = mode.loopEndMs
-    if (loopStartMs != null && loopEndMs != null && loopEndMs > loopStartMs) {
-        val loopBandTop = (nowY + (now - loopEndMs) * pxPerMs).toFloat().coerceIn(visibleTop, visibleBottom)
-        val loopBandBottom = (nowY + (now - loopStartMs) * pxPerMs).toFloat().coerceIn(visibleTop, visibleBottom)
-        if (loopBandBottom > loopBandTop) {
-            drawRect(
-                color = Color(0x33FFB74D),
-                topLeft = Offset(0f, loopBandTop),
-                size = Size(size.width, loopBandBottom - loopBandTop)
-            )
-            if (loopBandTop >= visibleTop && loopBandTop <= visibleBottom) {
-                drawLine(Color(0xAAFFB74D), Offset(0f, loopBandTop), Offset(size.width, loopBandTop), strokeWidth = 2f * density)
-            }
-            if (loopBandBottom >= visibleTop && loopBandBottom <= visibleBottom) {
-                drawLine(Color(0xAAFFB74D), Offset(0f, loopBandBottom), Offset(size.width, loopBandBottom), strokeWidth = 2f * density)
-            }
-        }
-    }
 
     val earliestTimeMs = now - (noteAreaBottom - nowY) / pxPerMs * 1.1
     val firstBeatIndex = kotlin.math.floor(earliestTimeMs / beatDurationMs).toLong() - 1L
@@ -355,6 +339,14 @@ private fun DrawScope.drawBarLines(
 
     var beatIndex = firstBeatIndex
     var safetyCounter = 0
+    // Pre-compute loop bar-line indices (0-based) for fast comparison
+    val loopStartBeatIndex = loopStartMs?.let { (it / beatDurationMs).roundToLong() }
+    val loopEndBeatIndex   = loopEndMs?.let   { (it / beatDurationMs).roundToLong() }
+    val loopBarLineStyle = TextStyle(
+        color = Color(0xFFFFB74D).copy(alpha = 0.85f),
+        fontSize = (9f * density / 2.75f).sp,
+        fontWeight = FontWeight.Bold
+    )
     while (safetyCounter++ < 2000) {
         val beatTimeMs = beatIndex * beatDurationMs
         // Skip beats before session start (bar 1)
@@ -366,19 +358,20 @@ private fun DrawScope.drawBarLines(
         val y = (nowY + ageMs * pxPerMs).toFloat()
         if (y < visibleTop - 2f) break
         val isBar = beatIndex % mode.beatsPerBar == 0L
+        val isLoopMarker = isBar && (beatIndex == loopStartBeatIndex || beatIndex == loopEndBeatIndex)
         if (y <= visibleBottom + 2f) {
             drawLine(
-                color = Color.White.copy(alpha = if (isBar) 0.20f else 0.08f),
+                color = if (isLoopMarker) Color(0xCCFFB74D)
+                        else Color.White.copy(alpha = if (isBar) 0.20f else 0.08f),
                 start = Offset(0f, y),
                 end = Offset(size.width, y),
-                strokeWidth = if (isBar) 1.5f * density else 1f * density
+                strokeWidth = if (isLoopMarker) 2f * density else if (isBar) 1.5f * density else 1f * density
             )
-            // Draw bar number at the left edge of each bar line
             if (isBar) {
                 val barNumber = (beatTimeMs / barDurationMs).toLong() + 1
                 val label = textMeasurer.measure(
                     text = buildAnnotatedString { append(barNumber.toString()) },
-                    style = barLabelStyle
+                    style = if (isLoopMarker) loopBarLineStyle else barLabelStyle
                 )
                 val labelY = (y - label.size.height - 2f * density).coerceAtLeast(visibleTop.toFloat())
                 if (labelY + label.size.height <= visibleBottom) {

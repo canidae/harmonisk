@@ -60,6 +60,9 @@ class FreePlayViewModel @Inject constructor(
     private val _state = MutableStateFlow(FreePlayState())
     val state: StateFlow<FreePlayState> = _state.asStateFlow()
 
+    private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val snackbarMessage: SharedFlow<String> = _snackbarMessage.asSharedFlow()
+
     private var listeningJob: Job? = null
     private var midiListeningJob: Job? = null
     private var replayJob: Job? = null
@@ -316,7 +319,14 @@ class FreePlayViewModel @Inject constructor(
         val s = _state.value
         val nowBar = (s.songPositionMs / barMs).roundToInt() + 1
         val locked = s.loopEndBar
-        _state.update { it.copy(loopEndBar = if (locked != null && locked == nowBar) null else nowBar) }
+        // Unlock if tapping the already-locked bar
+        if (locked != null && locked == nowBar) { _state.update { it.copy(loopEndBar = null) }; return }
+        val startBar = s.loopStartBar
+        if (startBar != null) {
+            if (nowBar == startBar) { _snackbarMessage.tryEmit("End bar must differ from start bar"); return }
+            if (nowBar < startBar) { _state.update { it.copy(loopStartBar = nowBar, loopEndBar = startBar) }; return }
+        }
+        _state.update { it.copy(loopEndBar = nowBar) }
     }
 
     // endregion
@@ -880,7 +890,7 @@ class FreePlayViewModel @Inject constructor(
             val s = _state.value
             val barMs = (s.beatsPerBar * (60000.0 / s.bpm)).toLong()
             val loopEndMs = if (s.loopEndBar != null) {
-                s.loopEndBar * barMs
+                (s.loopEndBar - 1) * barMs
             } else {
                 lastNoteEndMs + 4 * barMs
             }
