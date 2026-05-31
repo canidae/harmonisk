@@ -4,6 +4,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import kotlin.math.abs
+import kotlin.math.log2
 
 class NoteUtilsTest {
 
@@ -90,9 +91,10 @@ class NoteUtilsTest {
         for (freq in testFrequencies) {
             val note = noteUtils.frequencyToNote(freq)
             val reconstructed = noteUtils.noteToFrequency(note.name, note.octave)
-            assertEquals(
-                "Round trip failed for $freq Hz (${note.name}${note.octave})",
-                freq, reconstructed, 1.0f
+            val centsError = 1200.0 * log2(reconstructed.toDouble() / freq.toDouble())
+            assertTrue(
+                "Round trip failed for $freq Hz (${note.name}${note.octave}): cents error $centsError exceeds 0.5",
+                abs(centsError) < 0.5
             )
         }
     }
@@ -114,6 +116,20 @@ class NoteUtilsTest {
         // One octave up = 1200 cents
         val octaveCents = noteUtils.frequencyToCents(880f, 440f)
         assertEquals(1200f, octaveCents, 1f)
+    }
+
+    @Test
+    fun `frequencyToCents unison returns zero cents`() {
+        val cents = noteUtils.frequencyToCents(440f, 440f)
+        assertEquals(0f, cents, 0.01f)
+    }
+
+    @Test
+    fun `frequencyToCents flat note returns negative cents`() {
+        // A note below the reference should give negative cents
+        val cents = noteUtils.frequencyToCents(415.30f, 440f) // G#4 vs A4 = -100 cents
+        assertTrue("Expected negative cents for flat note, got $cents", cents < 0f)
+        assertEquals(-100f, cents, 2f)
     }
 
     @Test
