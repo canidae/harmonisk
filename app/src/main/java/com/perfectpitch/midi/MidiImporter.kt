@@ -3,6 +3,7 @@ package com.perfectpitch.midi
 import com.perfectpitch.music.NoteUtils
 import com.perfectpitch.ui.freeplay.PlayedNote
 import java.io.InputStream
+import java.util.UUID
 
 data class MultiTrackMidi(
     val bpm: Float,
@@ -156,6 +157,7 @@ object MidiImporter {
                     startTimeMs = startMs,
                     endTimeMs = endMs,
                     averageCentsOff = 0f,
+                    id = UUID.randomUUID().toString(),
                     voiceIndex = voiceIdx
                 ))
             }

@@ -83,11 +83,12 @@ class ScoringEngine {
         for (score in noteScores) {
             if (score.pitchAccuracy == PitchAccuracy.PERFECT || score.pitchAccuracy == PitchAccuracy.GREAT) {
                 currentStreak++
-                longestStreak = max(longestStreak, currentStreak)
             } else {
+                longestStreak = max(longestStreak, currentStreak)
                 currentStreak = 0
             }
         }
+        longestStreak = max(longestStreak, currentStreak)
 
         val avgScore = noteScores.map { it.overallScore }.average().toFloat()
         val notesHit = noteScores.count { it.pitchAccuracy != PitchAccuracy.MISS }

@@ -6,6 +6,7 @@ import com.perfectpitch.audio.*
 import com.perfectpitch.data.AudioDelayRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
@@ -142,57 +143,70 @@ class CalibrationViewModel @Inject constructor(
     }
 
     private suspend fun measureRoundTrip(): Int? {
-        val detections = mutableListOf<Pair<Long, Float>>()
-
-        val pitchJob = viewModelScope.launch {
-            pitchProcessor.pitchFlow().collect { result ->
-                if (result.isValid && result.frequency > 0f) {
-                    detections.add(System.currentTimeMillis() to result.frequency)
-                }
-            }
-        }
-
-        delay(300)
-
+        // Channel is the single producer/consumer point — no shared-state race.
+        val detectionChannel = Channel<Pair<Long, Float>>(Channel.UNLIMITED)
+        val localDetections = mutableListOf<Pair<Long, Float>>()
         val roundTrips = mutableListOf<Long>()
 
         try {
-            for (i in 0 until NUM_TONES) {
-                if (!currentCoroutineContext().isActive) break
-
-                val playTime = System.currentTimeMillis()
-                melodySynthesizer.noteOn(0, MIDI_NOTE, MIDI_VELOCITY)
-                delay(TONE_DURATION_MS)
-                melodySynthesizer.noteOff(0, MIDI_NOTE)
-
-                _state.update { it.copy(tonesPlayed = i + 1) }
-
-                val deadline = playTime + MAX_DETECTION_WINDOW_MS
-                val remaining = deadline - System.currentTimeMillis()
-                if (remaining > 0) delay(remaining)
-
-                val detection = detections.firstOrNull { (time, freq) ->
-                    time >= playTime &&
-                        time <= playTime + MAX_DETECTION_WINDOW_MS &&
-                        kotlin.math.abs(freq - TARGET_FREQ) < FREQ_TOLERANCE
+            coroutineScope {
+                // Child coroutine: collect pitch detections and forward to channel.
+                val pitchJob = launch {
+                    pitchProcessor.pitchFlow().collect { result ->
+                        if (result.isValid && result.frequency > 0f) {
+                            detectionChannel.trySend(System.currentTimeMillis() to result.frequency)
+                        }
+                    }
                 }
 
-                if (detection != null) {
-                    val roundTrip = detection.first - playTime
-                    roundTrips.add(roundTrip)
-                    _state.update { it.copy(tonesDetected = roundTrips.size) }
+                delay(300)
+
+                try {
+                    for (i in 0 until NUM_TONES) {
+                        if (!isActive) break
+
+                        val playTime = System.currentTimeMillis()
+                        melodySynthesizer.noteOn(0, MIDI_NOTE, MIDI_VELOCITY)
+                        delay(TONE_DURATION_MS)
+                        melodySynthesizer.noteOff(0, MIDI_NOTE)
+
+                        _state.update { it.copy(tonesPlayed = i + 1) }
+
+                        val deadline = playTime + MAX_DETECTION_WINDOW_MS
+                        val remaining = deadline - System.currentTimeMillis()
+                        if (remaining > 0) delay(remaining)
+
+                        // Drain any new detections from the channel into the local list.
+                        while (true) {
+                            localDetections.add(detectionChannel.tryReceive().getOrNull() ?: break)
+                        }
+
+                        val detection = localDetections.firstOrNull { (time, freq) ->
+                            time >= playTime &&
+                                time <= playTime + MAX_DETECTION_WINDOW_MS &&
+                                kotlin.math.abs(freq - TARGET_FREQ) < FREQ_TOLERANCE
+                        }
+
+                        if (detection != null) {
+                            val roundTrip = detection.first - playTime
+                            roundTrips.add(roundTrip)
+                            _state.update { it.copy(tonesDetected = roundTrips.size) }
+                        }
+
+                        val cutoff = playTime + MAX_DETECTION_WINDOW_MS
+                        localDetections.removeAll { (time, _) -> time <= cutoff }
+
+                        val elapsed = System.currentTimeMillis() - playTime
+                        val gap = TONE_SPACING_MS - elapsed
+                        if (gap > 0) delay(gap)
+                    }
+                } finally {
+                    pitchJob.cancel()
+                    melodySynthesizer.allNotesOff()
                 }
-
-                val cutoff = playTime + MAX_DETECTION_WINDOW_MS
-                detections.removeAll { (time, _) -> time <= cutoff }
-
-                val elapsed = System.currentTimeMillis() - playTime
-                val gap = TONE_SPACING_MS - elapsed
-                if (gap > 0) delay(gap)
             }
         } finally {
-            pitchJob.cancel()
-            melodySynthesizer.allNotesOff()
+            detectionChannel.close()
         }
 
         if (roundTrips.size < 3) return null

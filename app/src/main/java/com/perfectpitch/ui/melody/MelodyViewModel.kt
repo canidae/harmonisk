@@ -232,6 +232,7 @@ class MelodyViewModel @Inject constructor(
         val track = melodyRepository.loadFromUri(uri, "Imported MIDI")
         if (track != null) {
             originalMelodyTrack = track
+            currentMelodyId = melodyRepository.uriMelodyId(uri)
             val (viewMin, viewMax) = viewRangeFor(track)
             _state.update {
                 it.copy(
@@ -241,6 +242,23 @@ class MelodyViewModel @Inject constructor(
                     viewMaxMidi = viewMax,
                     transposeSemitones = 0
                 )
+            }
+            // Load any previously saved per-melody settings for this URI
+            viewModelScope.launch {
+                melodySettingsRepository.getSettings(currentMelodyId!!).first().let { saved ->
+                    _state.update {
+                        it.copy(
+                            waitMode = saved.waitMode,
+                            allowWrongNotes = saved.allowWrongNotes,
+                            tempoMultiplier = saved.tempoMultiplier,
+                            playMelodyAudio = saved.playMelodyAudio,
+                            fallSpeedPxPerSec = saved.fallSpeedPxPerSec
+                        )
+                    }
+                    if (saved.transposeSemitones != 0) {
+                        setTranspose(saved.transposeSemitones)
+                    }
+                }
             }
             return true
         }

@@ -1,6 +1,8 @@
 package com.perfectpitch.ui.components
 
 import android.Manifest
+import android.content.Intent
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -11,8 +13,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
+import android.app.Activity
 
 @Composable
 fun RequireMicPermission(
@@ -32,12 +36,20 @@ fun RequireMicPermission(
         )
     }
     var showRationale by remember { mutableStateOf(false) }
+    var permanentlyDenied by remember { mutableStateOf(false) }
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         hasPermission = granted
-        if (!granted) showRationale = true
+        if (!granted) {
+            val activity = context as? Activity
+            permanentlyDenied = activity != null &&
+                !ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity, Manifest.permission.RECORD_AUDIO
+                )
+            showRationale = !permanentlyDenied
+        }
     }
 
     if (hasPermission) {
@@ -45,8 +57,16 @@ fun RequireMicPermission(
     } else {
         PermissionRequest(
             showRationale = showRationale,
+            permanentlyDenied = permanentlyDenied,
             onRequestPermission = {
-                launcher.launch(Manifest.permission.RECORD_AUDIO)
+                if (permanentlyDenied) {
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = android.net.Uri.fromParts("package", context.packageName, null)
+                    }
+                    context.startActivity(intent)
+                } else {
+                    launcher.launch(Manifest.permission.RECORD_AUDIO)
+                }
             }
         )
     }
@@ -55,6 +75,7 @@ fun RequireMicPermission(
 @Composable
 private fun PermissionRequest(
     showRationale: Boolean,
+    permanentlyDenied: Boolean,
     onRequestPermission: () -> Unit
 ) {
     Column(
@@ -76,12 +97,15 @@ private fun PermissionRequest(
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = if (showRationale) {
-                "Perfect Pitch needs microphone access to detect the notes you play. " +
-                    "Please grant the permission in your device settings."
-            } else {
-                "Perfect Pitch needs access to your microphone to listen to your " +
-                    "instrument and detect pitch in real time."
+            text = when {
+                permanentlyDenied ->
+                    "Microphone access was permanently denied. Please enable it in your device settings."
+                showRationale ->
+                    "Perfect Pitch needs microphone access to detect the notes you play. " +
+                        "Please grant the permission."
+                else ->
+                    "Perfect Pitch needs access to your microphone to listen to your " +
+                        "instrument and detect pitch in real time."
             },
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
@@ -89,7 +113,7 @@ private fun PermissionRequest(
         )
         Spacer(modifier = Modifier.height(32.dp))
         Button(onClick = onRequestPermission) {
-            Text(if (showRationale) "Open Settings" else "Grant Permission")
+            Text(if (permanentlyDenied) "Open Settings" else "Grant Permission")
         }
     }
 }

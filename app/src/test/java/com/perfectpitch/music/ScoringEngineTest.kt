@@ -31,7 +31,7 @@ class ScoringEngineTest {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69,
             detectedMidiNote = 69,
-            centsOff = 8f,
+            centsOff = 15f,   // > PERFECT_CENTS (10) and <= GREAT_CENTS (20)
             expectedDurationMs = 500,
             actualDurationMs = 500
         ))
@@ -44,7 +44,7 @@ class ScoringEngineTest {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69,
             detectedMidiNote = 69,
-            centsOff = 20f,
+            centsOff = 25f,   // > GREAT_CENTS (20) and <= GOOD_CENTS (30)
             expectedDurationMs = 500,
             actualDurationMs = 500
         ))

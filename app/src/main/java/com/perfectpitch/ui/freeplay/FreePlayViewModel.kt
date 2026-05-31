@@ -26,6 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import java.util.UUID
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
@@ -636,6 +637,7 @@ class FreePlayViewModel @Inject constructor(
                         startTimeMs = currentNoteStartMs,
                         averageCentsOff = result.centsOff,
                         centsHistory = listOf(result.centsOff),
+                        id = UUID.randomUUID().toString(),
                         voiceIndex = _state.value.activeVoiceIndex
                     )
                     _state.update { it.copy(activeNote = note) }
@@ -750,6 +752,7 @@ class FreePlayViewModel @Inject constructor(
                 startTimeMs = currentNoteStartMs,
                 averageCentsOff = result.centsOff,
                 centsHistory = listOf(result.centsOff),
+                id = UUID.randomUUID().toString(),
                 voiceIndex = _state.value.activeVoiceIndex
             )
             _state.update { it.copy(activeNote = note) }
@@ -773,6 +776,7 @@ class FreePlayViewModel @Inject constructor(
                 startTimeMs = currentNoteStartMs,
                 averageCentsOff = centsSamples.average().toFloat(),
                 centsHistory = centsSamples.toList(),
+                id = UUID.randomUUID().toString(),
                 voiceIndex = _state.value.activeVoiceIndex
             )
             _state.update { it.copy(activeNote = note) }
@@ -841,6 +845,7 @@ class FreePlayViewModel @Inject constructor(
                         octave = octave,
                         midiNumber = midiNote,
                         startTimeMs = _state.value.songPositionMs,
+                        id = UUID.randomUUID().toString(),
                         voiceIndex = _state.value.activeVoiceIndex
                     )
                     activeMidiNotes[midiNote] = note
@@ -857,6 +862,7 @@ class FreePlayViewModel @Inject constructor(
                         octave = octave,
                         midiNumber = midiNote,
                         startTimeMs = _state.value.songPositionMs,
+                        id = UUID.randomUUID().toString(),
                         voiceIndex = _state.value.activeVoiceIndex
                     )
                     activeMidiNotes[midiNote] = note

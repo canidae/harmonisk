@@ -68,6 +68,9 @@ class MelodyRepository(
         return track
     }
 
+    /** Stable melody ID derived from a user-supplied URI. */
+    fun uriMelodyId(uri: Uri): String = "user_${uri.hashCode()}"
+
     /**
      * Load a melody from a user-selected file URI.
      */
@@ -75,8 +78,7 @@ class MelodyRepository(
         return try {
             context.contentResolver.openInputStream(uri)?.use { stream ->
                 val track = parser.parse(stream, name)
-                val id = "user_${uri.hashCode()}"
-                cache[id] = track
+                cache[uriMelodyId(uri)] = track
                 track
             }
         } catch (e: Exception) {

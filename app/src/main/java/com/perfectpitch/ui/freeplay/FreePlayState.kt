@@ -43,7 +43,7 @@ data class PlayedNote(
     val endTimeMs: Long? = null,
     val averageCentsOff: Float = 0f,
     val centsHistory: List<Float> = emptyList(),
-    val id: String = java.util.UUID.randomUUID().toString(),
+    val id: String,
     val voiceIndex: Int = 0
 ) {
     val isActive: Boolean get() = endTimeMs == null
