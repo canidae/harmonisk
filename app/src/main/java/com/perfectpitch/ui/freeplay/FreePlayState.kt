@@ -21,7 +21,6 @@ data class FreePlayState(
     val voiceCount: Int = 1,
     val loopStartBar: Int? = null,
     val loopEndBar: Int? = null,
-    val isLooping: Boolean = false,
     val selectedNoteId: String? = null,
     // MIDI state
     val midiAvailable: Boolean = false,

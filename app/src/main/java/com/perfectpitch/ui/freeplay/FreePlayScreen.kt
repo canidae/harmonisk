@@ -99,7 +99,7 @@ fun FreePlayScreen(
     }.coerceAtLeast(4)
     val effectiveLoopStartBar = state.loopStartBar ?: 1
     val effectiveLoopEndBar = state.loopEndBar ?: defaultLoopEndBar
-    val loopStartMs = (effectiveLoopStartBar * barMs).toLong()
+    val loopStartMs = ((effectiveLoopStartBar - 1) * barMs).toLong()
     val loopEndMs   = (effectiveLoopEndBar   * barMs).toLong()
 
     val exportLauncher = rememberLauncherForActivityResult(
@@ -272,12 +272,12 @@ fun FreePlayScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Note editing", fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         val noteItems = listOf(
-                            Triple(Icons.Filled.TouchApp,      null as Color?,     "Tap a note bar"       to "Select it for editing."),
-                            Triple(Icons.Filled.OpenWith,      null,               "Drag a selected note" to "Change time and pitch."),
-                            Triple(Icons.Filled.SwipeVertical, null,               "Drag a handle"        to "Adjust start/end: Top-right sets end time, bottom-left sets start time."),
-                            Triple(Icons.Filled.ContentCut,    Color(0xFFFFB74D),  "Split (✂)"            to "Halves the selected note."),
-                            Triple(Icons.Filled.Delete,        Color(0xFFEF5350),  "Delete (🗑)"           to "Removes the selected note."),
-                            Triple(Icons.Filled.TouchApp,      null,               "Tap empty space"      to "Deselect the current note.")
+                            Triple(Icons.Filled.TouchApp,      null as Color?,     "Tap a note bar"       to "Select note for editing."),
+                            Triple(Icons.Filled.OpenWith,      null,               "Drag a selected note" to "Change time/semitone."),
+                            Triple(Icons.Filled.SwipeVertical, null,               "Drag a handle"        to "Adjust start/end."),
+                            Triple(Icons.Filled.ContentCut,    Color(0xFFFFB74D),  "Split (✂)"            to "Halves the note."),
+                            Triple(Icons.Filled.Delete,        Color(0xFFEF5350),  "Delete (🗑)"           to "Removes the note."),
+                            Triple(Icons.Filled.TouchApp,      null,               "Tap empty space"      to "Deselect the note.")
                         )
                         noteItems.forEach { (icon, color, labelAndDesc) ->
                             val (label, description) = labelAndDesc
@@ -304,9 +304,8 @@ fun FreePlayScreen(
                                     Text("–", fontSize = 12.sp)
                                     Text("4", fontSize = 13.sp, color = Color(0xFFFFB74D),
                                         modifier = Modifier.background(Color(0xFF1A1A2E), MaterialTheme.shapes.extraSmall).padding(horizontal = 4.dp, vertical = 1.dp))
-                                    Text("↻", fontSize = 13.sp)
                                 }
-                                Text("Tap a bar number to lock it to the current position (turns orange). Tap the same locked number again to unlock it. Press ↻ to start/stop looping.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Tap a bar number to lock it to the current position (turns orange). Tap the same locked number again to unlock it.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -455,7 +454,7 @@ fun FreePlayScreen(
 
         Spacer(Modifier.width(8.dp))
 
-        // Loop controls — "Loop X – Y ↻"
+        // Loop controls — "Loop X – Y"
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Loop", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
             Spacer(Modifier.width(4.dp))
@@ -476,14 +475,6 @@ fun FreePlayScreen(
                     .clickable { viewModel.setLoopEnd() }
                     .padding(horizontal = 4.dp, vertical = 2.dp)
             )
-            Spacer(Modifier.width(2.dp))
-            IconButton(
-                onClick = { viewModel.toggleLoop() },
-                modifier = Modifier.size(PANEL_BTN_SIZE)
-                    .then(if (state.isLooping) Modifier.border(1.dp, Color(0xFFFFB74D), CircleShape) else Modifier)
-            ) {
-                Icon(Icons.Filled.Loop, null, modifier = Modifier.size(14.dp), tint = if (state.isLooping) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
-            }
         }
     }
 
@@ -660,8 +651,8 @@ fun FreePlayScreen(
                         bpm = state.bpm,
                         beatsPerBar = state.beatsPerBar,
                         activeVoiceIndex = state.activeVoiceIndex,
-                        loopStartMs = if (state.isLooping || state.loopStartBar != null) loopStartMs else null,
-                        loopEndMs = if (state.isLooping || state.loopEndBar != null) loopEndMs else null,
+                        loopStartMs = if (state.loopStartBar != null) loopStartMs else null,
+                        loopEndMs = if (state.loopEndBar != null) loopEndMs else null,
                         selectedNoteId = state.selectedNoteId,
                         pianoVisibility = state.pianoVisibility
                     ),

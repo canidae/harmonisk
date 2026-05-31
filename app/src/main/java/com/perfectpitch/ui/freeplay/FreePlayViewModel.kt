@@ -306,7 +306,7 @@ class FreePlayViewModel @Inject constructor(
     fun setLoopStart() {
         val barMs = barDurationMs()
         val s = _state.value
-        val nowBar = (s.songPositionMs / barMs).roundToInt()
+        val nowBar = (s.songPositionMs / barMs).roundToInt() + 1
         val locked = s.loopStartBar
         _state.update { it.copy(loopStartBar = if (locked != null && locked == nowBar) null else nowBar) }
     }
@@ -314,15 +314,9 @@ class FreePlayViewModel @Inject constructor(
     fun setLoopEnd() {
         val barMs = barDurationMs()
         val s = _state.value
-        val nowBar = (s.songPositionMs / barMs).roundToInt()
+        val nowBar = (s.songPositionMs / barMs).roundToInt() + 1
         val locked = s.loopEndBar
         _state.update { it.copy(loopEndBar = if (locked != null && locked == nowBar) null else nowBar) }
-    }
-
-    fun toggleLoop() {
-        val s = _state.value
-        if (s.loopStartBar == null || s.loopEndBar == null) return
-        _state.update { it.copy(isLooping = !it.isLooping) }
     }
 
     // endregion
@@ -891,7 +885,7 @@ class FreePlayViewModel @Inject constructor(
                 lastNoteEndMs + 4 * barMs
             }
             val loopStartMs = if (s.loopStartBar != null) {
-                s.loopStartBar * barMs
+                (s.loopStartBar - 1) * barMs
             } else {
                 firstNoteMs
             }
