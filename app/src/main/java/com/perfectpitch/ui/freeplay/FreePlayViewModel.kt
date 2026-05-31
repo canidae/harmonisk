@@ -106,6 +106,8 @@ class FreePlayViewModel @Inject constructor(
                         snapEnabled = settings.freeplaySnapEnabled
                     )
                 }
+                // Persist migrated fall speed so the halving only happens once
+                settingsRepository.updateFreeplayFallSpeed(settings.freeplayFallSpeed)
             }
         }
         // Observe MIDI device availability and switch input source automatically
