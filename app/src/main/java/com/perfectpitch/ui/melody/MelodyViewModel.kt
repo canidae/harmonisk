@@ -52,21 +52,17 @@ class MelodyViewModel @Inject constructor(
     private val _state = MutableStateFlow(MelodyPlayState())
     val state: StateFlow<MelodyPlayState> = _state.asStateFlow()
 
+    val availableMelodies: StateFlow<List<MelodyRepository.MelodyInfo>> =
+        MutableStateFlow(melodyRepository.getAvailableMelodies()).asStateFlow()
+
     private var playbackJob: Job? = null
     private var pitchJob: Job? = null
     private var playbackStartTime = 0L
     private var pauseOffset = 0.0
 
-    // Per-note tracking
+    // Per-note tracking state (encapsulated for a single reset() call)
+    private val noteTracking = NoteTrackingState()
     private var currentNoteDetectedCorrectly = false
-    private var centsOffSum = 0f
-    private var centsOffCount = 0
-    private var correctPitchFrameCount = 0
-    private var isWaitingForNote = false
-    private var wasWaitingForNote = false
-    // Grace period: time continues advancing for inputDelay + extra before freezing
-    private var waitGraceStartTime = 0L
-    private var waitGraceDurationMs = 0L
 
     private var originalMelodyTrack: MelodyTrack? = null
     private var currentMelodyId: String? = null
@@ -156,40 +152,29 @@ class MelodyViewModel @Inject constructor(
     fun shouldShowCalibrationPrompt(): Boolean = !calibrationPromptDismissed
 
     fun toggleMidiInput() {
-        val current = midiDeviceManager.inputOverride.value
-        val effective = _state.value.midiInputEnabled
-        // If currently auto-enabled, force off; if off (auto or forced), force on; if force-on, return to auto
-        val newOverride: Boolean? = when {
-            current == true -> null  // force-on → back to auto
-            effective -> false       // auto-on → force off
-            else -> true             // off → force on
-        }
-        midiDeviceManager.setInputOverride(newOverride)
+        midiDeviceManager.setInputOverride(
+            computeNextOverride(midiDeviceManager.inputOverride.value, _state.value.midiInputEnabled)
+        )
     }
 
     fun toggleMidiOutput() {
-        val current = midiDeviceManager.outputOverride.value
-        val effective = _state.value.midiOutputEnabled
-        val newOverride: Boolean? = when {
-            current == true -> null
-            effective -> false
-            else -> true
-        }
-        midiDeviceManager.setOutputOverride(newOverride)
+        midiDeviceManager.setOutputOverride(
+            computeNextOverride(midiDeviceManager.outputOverride.value, _state.value.midiOutputEnabled)
+        )
+    }
+
+    private fun computeNextOverride(current: Boolean?, effective: Boolean): Boolean? = when {
+        current == true -> null  // force-on → back to auto
+        effective -> false       // auto-on → force off
+        else -> true             // off → force on
     }
 
     fun saveSplitPercent(percent: Float) {
-        val outputDevice = audioDeviceMonitor.currentDevice.value
-        val inputDevice = audioDeviceMonitor.currentInputDevice.value
-        viewModelScope.launch {
-            audioDelayRepository.setSplitPercent(outputDevice.deviceKey, percent)
-            audioDelayRepository.setSplitPercent(inputDevice.deviceKey, percent)
-        }
+        viewModelScope.launch { audioDelayRepository.setSplitPercentForCurrentDevices(percent) }
     }
 
-    fun getAvailableMelodies(): List<MelodyRepository.MelodyInfo> {
-        return melodyRepository.getAvailableMelodies()
-    }
+    fun getAvailableMelodies(): List<MelodyRepository.MelodyInfo> =
+        melodyRepository.getAvailableMelodies()
 
     fun loadMelody(info: MelodyRepository.MelodyInfo): Boolean {
         val track = melodyRepository.loadMelody(info)
@@ -395,11 +380,7 @@ class MelodyViewModel @Inject constructor(
             )
         }
 
-        isWaitingForNote = false
-        wasWaitingForNote = false
-        centsOffSum = 0f
-        centsOffCount = 0
-        correctPitchFrameCount = 0
+        noteTracking.reset()
         currentNoteDetectedCorrectly = false
 
         // Stop any preview playback and reset game sync
@@ -418,8 +399,8 @@ class MelodyViewModel @Inject constructor(
         playbackJob?.cancel()
         pitchJob?.cancel()
         melodyPlayer.resetGameSync()
-        wasWaitingForNote = isWaitingForNote
-        isWaitingForNote = false
+        noteTracking.wasWaitingForNote = noteTracking.isWaitingForNote
+        noteTracking.isWaitingForNote = false
         _state.update { it.copy(phase = PlayPhase.PAUSED, isListening = false) }
     }
 
@@ -433,8 +414,8 @@ class MelodyViewModel @Inject constructor(
             val countdownDuration = currentState.countdownDurationSeconds
             val rewindTo = targetTime - countdownDuration
             pauseOffset = rewindTo
-            isWaitingForNote = false
-            wasWaitingForNote = false
+            noteTracking.isWaitingForNote = false
+            noteTracking.wasWaitingForNote = false
             _state.update {
                 it.copy(
                     phase = PlayPhase.COUNTDOWN,
@@ -447,9 +428,9 @@ class MelodyViewModel @Inject constructor(
             return
         }
 
-        if (wasWaitingForNote) {
-            isWaitingForNote = true
-            wasWaitingForNote = false
+        if (noteTracking.wasWaitingForNote) {
+            noteTracking.isWaitingForNote = true
+            noteTracking.wasWaitingForNote = false
             _state.update { it.copy(phase = PlayPhase.WAITING_FOR_NOTE) }
         } else if (_state.value.currentTimeSeconds < 0.0) {
             // Still in countdown period — resume countdown
@@ -468,8 +449,8 @@ class MelodyViewModel @Inject constructor(
         pitchJob?.cancel()
         melodyPlayer.resetGameSync()
         pauseOffset = 0.0
-        isWaitingForNote = false
-        wasWaitingForNote = false
+        noteTracking.isWaitingForNote = false
+        noteTracking.wasWaitingForNote = false
         _state.update {
             it.copy(
                 phase = PlayPhase.NOT_STARTED,
@@ -531,9 +512,9 @@ class MelodyViewModel @Inject constructor(
 
             while (isActive) {
                 // Grace period: continue advancing time for a while after entering wait mode
-                if (isWaitingForNote) {
-                    val graceElapsed = SystemClock.elapsedRealtime() - waitGraceStartTime
-                    if (graceElapsed >= waitGraceDurationMs) {
+                if (noteTracking.isWaitingForNote) {
+                    val graceElapsed = SystemClock.elapsedRealtime() - noteTracking.waitGraceStartTime
+                    if (graceElapsed >= noteTracking.waitGraceDurationMs) {
                         // Grace expired — actually freeze time
                         delay(16)
                         continue
@@ -662,15 +643,13 @@ class MelodyViewModel @Inject constructor(
             results[noteIndex] = NoteResultState.ACTIVE
             _state.update { it.copy(currentNoteIndex = noteIndex, noteResults = results) }
             currentNoteDetectedCorrectly = false
-            centsOffSum = 0f
-            centsOffCount = 0
-            correctPitchFrameCount = 0
+            noteTracking.resetForNewNote()
 
             // In wait mode, start grace period before freezing
             if (_state.value.waitMode) {
-                isWaitingForNote = true
-                waitGraceStartTime = SystemClock.elapsedRealtime()
-                waitGraceDurationMs = audioInputDelayMs.toLong() + GRACE_PERIOD_EXTRA_MS
+                noteTracking.isWaitingForNote = true
+                noteTracking.waitGraceStartTime = SystemClock.elapsedRealtime()
+                noteTracking.waitGraceDurationMs = audioInputDelayMs.toLong() + GRACE_PERIOD_EXTRA_MS
                 _state.update { it.copy(phase = PlayPhase.WAITING_FOR_NOTE) }
             }
         } else if (noteIndex < 0 && _state.value.currentNoteIndex >= 0) {
@@ -696,18 +675,18 @@ class MelodyViewModel @Inject constructor(
         // vibrato peaks that round to a neighbouring MIDI number are still counted correctly,
         // instead of being dropped by a strict MIDI equality check.
         if (abs(centsOff) <= 50f) {
-            centsOffSum += abs(centsOff)
-            centsOffCount++
-            correctPitchFrameCount++
+            noteTracking.centsOffSum += abs(centsOff)
+            noteTracking.centsOffCount++
+            noteTracking.correctPitchFrameCount++
         }
 
         val isCorrectNote = abs(centsOff) <= 50f
 
-        if (isWaitingForNote) {
+        if (noteTracking.isWaitingForNote) {
             if (isCorrectNote) {
                 // Correct note played — unfreeze
                 currentNoteDetectedCorrectly = true
-                isWaitingForNote = false
+                noteTracking.isWaitingForNote = false
                 // Recalculate playback offset so time resumes from current position
                 pauseOffset = _state.value.currentTimeSeconds
                 playbackStartTime = SystemClock.elapsedRealtime()
@@ -715,7 +694,7 @@ class MelodyViewModel @Inject constructor(
             } else if (_state.value.allowWrongNotes) {
                 // Wrong note while waiting — score as miss and move on
                 scoreCurrentNote(expectedNote, noteIndex)
-                isWaitingForNote = false
+                noteTracking.isWaitingForNote = false
                 pauseOffset = _state.value.currentTimeSeconds
                 playbackStartTime = SystemClock.elapsedRealtime()
                 _state.update { it.copy(phase = PlayPhase.PLAYING) }
@@ -749,9 +728,9 @@ class MelodyViewModel @Inject constructor(
         // Duration = time player held correct pitch, derived from the actual audio chunk size
         val frameDurationMs = com.perfectpitch.audio.AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000L /
             com.perfectpitch.audio.AudioCaptureService.SAMPLE_RATE
-        val actualDurationMs = correctPitchFrameCount * frameDurationMs
+        val actualDurationMs = noteTracking.correctPitchFrameCount * frameDurationMs
 
-        val effectiveCentsOff = if (centsOffCount > 0) centsOffSum / centsOffCount else 100f
+        val effectiveCentsOff = if (noteTracking.centsOffCount > 0) noteTracking.centsOffSum / noteTracking.centsOffCount else 100f
 
         val performance = NotePerformance(
             expectedMidiNote = expectedNote.noteNumber,
@@ -811,7 +790,7 @@ class MelodyViewModel @Inject constructor(
         pitchJob?.cancel()
         melodyPlayer.resetGameSync()
         pauseOffset = 0.0
-        isWaitingForNote = false
+        noteTracking.isWaitingForNote = false
 
         val noteScores = _state.value.noteScores
         val melodyScore = scoringEngine.calculateMelodyScore(noteScores)
@@ -835,5 +814,33 @@ class MelodyViewModel @Inject constructor(
         pitchJob?.cancel()
         melodyPlayer.stop()
         melodySynthesizer.close()
+    }
+}
+
+/** Mutable note-tracking state encapsulated for a single reset() call. */
+private class NoteTrackingState {
+    var centsOffSum = 0f
+    var centsOffCount = 0
+    var correctPitchFrameCount = 0
+    var isWaitingForNote = false
+    var wasWaitingForNote = false
+    var waitGraceStartTime = 0L
+    var waitGraceDurationMs = 0L
+
+    fun reset() {
+        centsOffSum = 0f
+        centsOffCount = 0
+        correctPitchFrameCount = 0
+        isWaitingForNote = false
+        wasWaitingForNote = false
+        waitGraceStartTime = 0L
+        waitGraceDurationMs = 0L
+    }
+
+    /** Reset only the per-note pitch accumulation counters (called when a new note begins). */
+    fun resetForNewNote() {
+        centsOffSum = 0f
+        centsOffCount = 0
+        correctPitchFrameCount = 0
     }
 }

@@ -121,6 +121,20 @@ class AudioDelayRepository(
             )
         }
 
+    suspend fun setTotalDelayForCurrentDevices(totalDelayMs: Int) {
+        val outputKey = audioDeviceMonitor.currentDevice.value.deviceKey
+        val inputKey = audioDeviceMonitor.currentInputDevice.value.deviceKey
+        setTotalDelay(outputKey, totalDelayMs)
+        setTotalDelay(inputKey, totalDelayMs)
+    }
+
+    suspend fun setSplitPercentForCurrentDevices(splitPercent: Float) {
+        val outputKey = audioDeviceMonitor.currentDevice.value.deviceKey
+        val inputKey = audioDeviceMonitor.currentInputDevice.value.deviceKey
+        setSplitPercent(outputKey, splitPercent)
+        setSplitPercent(inputKey, splitPercent)
+    }
+
     private suspend fun updateProfile(deviceKey: String, update: (DelayProfile?) -> DelayProfile) {
         context.audioDelayStore.edit { prefs ->
             val current = parseProfiles(prefs[PROFILES_KEY]).toMutableMap()

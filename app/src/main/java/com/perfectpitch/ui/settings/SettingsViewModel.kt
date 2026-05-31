@@ -50,21 +50,11 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun saveTotalDelay(ms: Int) {
-        val outputDevice = audioDeviceMonitor.currentDevice.value
-        val inputDevice = audioDeviceMonitor.currentInputDevice.value
-        viewModelScope.launch {
-            audioDelayRepository.setTotalDelay(outputDevice.deviceKey, ms)
-            audioDelayRepository.setTotalDelay(inputDevice.deviceKey, ms)
-        }
+        viewModelScope.launch { audioDelayRepository.setTotalDelayForCurrentDevices(ms) }
     }
 
     fun saveSplitPercent(percent: Float) {
-        val outputDevice = audioDeviceMonitor.currentDevice.value
-        val inputDevice = audioDeviceMonitor.currentInputDevice.value
-        viewModelScope.launch {
-            audioDelayRepository.setSplitPercent(outputDevice.deviceKey, percent)
-            audioDelayRepository.setSplitPercent(inputDevice.deviceKey, percent)
-        }
+        viewModelScope.launch { audioDelayRepository.setSplitPercentForCurrentDevices(percent) }
     }
 
     fun resetToDefaults() {

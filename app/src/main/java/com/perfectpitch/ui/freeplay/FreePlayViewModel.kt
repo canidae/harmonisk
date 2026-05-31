@@ -57,7 +57,7 @@ class FreePlayViewModel @Inject constructor(
         private const val TAG = "FreePlayVM"
     }
 
-    private var lastAdvanceWallMs: Long = System.currentTimeMillis()
+    private var lastAdvanceWallMs: Long = 0L
     private var referenceA4: Float = NoteUtils.DEFAULT_A4_FREQ
 
     private val _state = MutableStateFlow(FreePlayState())
@@ -72,10 +72,6 @@ class FreePlayViewModel @Inject constructor(
     private var synthOpenJob: Job? = null
     private var previewJob: Job? = null
     private var previewMidiNote: Int = -1
-
-    // Replay/recording state flags
-    private var replayActive = false
-    private var recordingActive = false
 
     // Output device saved before auto-switch on record start (null = no auto-switch done)
     private var outputDeviceBeforeRecord: OutputDevice? = null
@@ -190,14 +186,12 @@ class FreePlayViewModel @Inject constructor(
         if (pos < loopStart || pos >= loopEnd) {
             _state.update { it.copy(songPositionMs = loopStart) }
         }
-        recordingActive = true
         lastAdvanceWallMs = System.currentTimeMillis()
         startListeningInternal()
         _state.update { it.copy(isRecording = true) }
     }
 
     private fun stopRecording() {
-        recordingActive = false
         stopListeningInternal()
         finalizeCurrentNote()
         abortHoning()
@@ -209,9 +203,10 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun getEffectiveTime(realTimeMs: Long): Long {
+        if (lastAdvanceWallMs == 0L) lastAdvanceWallMs = realTimeMs
         val delta = (realTimeMs - lastAdvanceWallMs).coerceAtLeast(0L)
         lastAdvanceWallMs = realTimeMs
-        if (!replayActive && recordingActive) {
+        if (replayJob?.isActive != true && _state.value.isRecording) {
             val newPos = _state.value.songPositionMs + delta
             val (loopStart, loopEnd) = effectiveLoopBounds()
             if (newPos >= loopEnd) {
@@ -321,7 +316,7 @@ class FreePlayViewModel @Inject constructor(
     /** Returns (loopStartMs, loopEndMs) based on locked bars or sensible defaults. */
     private fun effectiveLoopBounds(): Pair<Long, Long> {
         val s = _state.value
-        val bMs = (s.beatsPerBar * (60000.0 / s.bpm)).toLong()
+        val bMs = barDurationMs().toLong()
         val startMs = if (s.loopStartBar != null) (s.loopStartBar - 1) * bMs else 0L
         val endMs = if (s.loopEndBar != null) {
             (s.loopEndBar - 1) * bMs
@@ -909,7 +904,6 @@ class FreePlayViewModel @Inject constructor(
             _state.update { it.copy(songPositionMs = initialStart) }
         }
 
-        replayActive = true
         _state.update { it.copy(isPlaying = true) }
 
         replayJob = viewModelScope.launch {
@@ -979,7 +973,6 @@ class FreePlayViewModel @Inject constructor(
             }
 
             player?.allNotesOff()
-            replayActive = false
             lastAdvanceWallMs = System.currentTimeMillis()
             _state.update { it.copy(isPlaying = false) }
         }
@@ -988,7 +981,6 @@ class FreePlayViewModel @Inject constructor(
     fun stopPlaying() {
         replayJob?.cancel()
         replayJob = null
-        replayActive = false
         lastAdvanceWallMs = System.currentTimeMillis()
         midiOutputSender.allNotesOff()
         if (melodySynthesizer.isReady) melodySynthesizer.allNotesOff()

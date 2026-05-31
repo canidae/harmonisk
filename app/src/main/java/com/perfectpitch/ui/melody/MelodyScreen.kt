@@ -88,7 +88,7 @@ fun MelodyScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            val melodies = remember { viewModel.getAvailableMelodies() }
+            val melodies by viewModel.availableMelodies.collectAsStateWithLifecycle()
             if (melodies.isNotEmpty()) {
                 LazyColumn(
                     modifier = Modifier.weight(1f, fill = false),
