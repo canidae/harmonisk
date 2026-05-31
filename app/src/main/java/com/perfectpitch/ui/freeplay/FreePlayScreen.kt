@@ -200,7 +200,7 @@ fun FreePlayScreen(
         // Help button (always visible)
         IconButton(
             onClick = { showEditHelp = true },
-            modifier = Modifier.size(PANEL_BTN_SIZE).background(OVERLAY_BG, CircleShape)
+            modifier = Modifier.size(PANEL_BTN_SIZE)
         ) {
             Icon(Icons.Filled.HelpOutline, contentDescription = "Help", tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
         }
@@ -209,7 +209,7 @@ fun FreePlayScreen(
         Box {
             IconButton(
                 onClick = { showConfigMenu = true },
-                modifier = Modifier.size(PANEL_BTN_SIZE).background(OVERLAY_BG, CircleShape)
+                modifier = Modifier.size(PANEL_BTN_SIZE)
             ) {
                 Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
             }

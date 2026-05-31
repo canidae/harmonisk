@@ -21,20 +21,14 @@ class SettingsRepository(
         val FREEPLAY_BPM = floatPreferencesKey("freeplay_bpm")
         val FREEPLAY_MIN_NOTE_DIVISION = intPreferencesKey("freeplay_min_note_division")
         val FREEPLAY_SNAP_ENABLED = booleanPreferencesKey("freeplay_snap_enabled")
-        // Migration flag: v1 default was 150; v2 default is 75 (half). Existing saves are halved once.
-        val FREEPLAY_FALL_SPEED_HALVED = booleanPreferencesKey("freeplay_fall_speed_halved")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
-        val rawSpeed = prefs[FREEPLAY_FALL_SPEED]
-        // One-time migration: halve any speed saved before default was changed from 150 to 75
-        val migratedSpeed = if (rawSpeed != null && prefs[FREEPLAY_FALL_SPEED_HALVED] != true)
-            rawSpeed / 2f else rawSpeed
         AppSettings(
             concertPitch = prefs[CONCERT_PITCH] ?: 440f,
             darkTheme = prefs[DARK_THEME] ?: true,
             silenceThresholdDb = prefs[SILENCE_THRESHOLD_DB] ?: -50f,
-            freeplayFallSpeed = migratedSpeed ?: 75f,
+            freeplayFallSpeed = prefs[FREEPLAY_FALL_SPEED] ?: 75f,
             freeplayBeatsPerBar = prefs[FREEPLAY_BEATS_PER_BAR] ?: 4,
             freeplayBpm = prefs[FREEPLAY_BPM] ?: 120f,
             freeplayMinNoteDivision = prefs[FREEPLAY_MIN_NOTE_DIVISION] ?: 16,
@@ -51,10 +45,7 @@ class SettingsRepository(
     }
 
     suspend fun updateFreeplayFallSpeed(speed: Float) {
-        context.dataStore.edit {
-            it[FREEPLAY_FALL_SPEED] = speed
-            it[FREEPLAY_FALL_SPEED_HALVED] = true  // migration done; future reads not halved
-        }
+        context.dataStore.edit { it[FREEPLAY_FALL_SPEED] = speed }
     }
 
     suspend fun updateFreeplayBeatsPerBar(beats: Int) {
