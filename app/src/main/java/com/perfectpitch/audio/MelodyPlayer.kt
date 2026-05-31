@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /** Plays a [MelodyTrack] through a [NotePlayer] in standalone or game-synced mode. */
 class MelodyPlayer(
-    private val synthesizer: MelodySynthesizer
+    synthesizer: NotePlayer
 ) {
     @Volatile private var notePlayer: NotePlayer = synthesizer
     private var playJob: Job? = null
@@ -99,12 +99,14 @@ class MelodyPlayer(
         playJob?.cancel()
         playJob = null
         _isPlaying.value = false
-        lastNoteOnIndex = -1
-        lastNoteOnMidi = -1
-        if (notePlayer.isReady) notePlayer.allNotesOff()
+        resetNoteTracking()
     }
 
     fun resetGameSync() {
+        resetNoteTracking()
+    }
+
+    private fun resetNoteTracking() {
         lastNoteOnIndex = -1
         lastNoteOnMidi = -1
         if (notePlayer.isReady) notePlayer.allNotesOff()

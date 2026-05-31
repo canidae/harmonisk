@@ -37,15 +37,13 @@ class AudioDeviceMonitor(context: Context) {
     val currentInputDevice: StateFlow<AudioInputDevice> = _currentInputDevice.asStateFlow()
 
     private val callback = object : AudioDeviceCallback() {
-        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) {
-            _currentDevice.value = resolveActiveOutputDevice()
-            _currentInputDevice.value = resolveActiveInputDevice()
-        }
+        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) = refreshDevices()
+        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) = refreshDevices()
+    }
 
-        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
-            _currentDevice.value = resolveActiveOutputDevice()
-            _currentInputDevice.value = resolveActiveInputDevice()
-        }
+    private fun refreshDevices() {
+        _currentDevice.value = resolveActiveOutputDevice()
+        _currentInputDevice.value = resolveActiveInputDevice()
     }
 
     init {
@@ -59,67 +57,39 @@ class AudioDeviceMonitor(context: Context) {
     private fun resolveActiveOutputDevice(): AudioOutputDevice {
         val outputs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
 
-        val bluetooth = outputs.firstOrNull { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP }
-        if (bluetooth != null) {
+        firstOfTypes(outputs, AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)?.let { bluetooth ->
             val name = bluetooth.productName?.toString()?.takeIf { it.isNotBlank() } ?: "Bluetooth"
-            return AudioOutputDevice(
-                type = AudioOutputDeviceType.BLUETOOTH,
-                name = name,
-                deviceKey = "bluetooth_$name"
-            )
+            return AudioOutputDevice(type = AudioOutputDeviceType.BLUETOOTH, name = name, deviceKey = "bluetooth_$name")
         }
 
-        val wired = outputs.firstOrNull {
-            it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
-                it.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES
-        }
-        if (wired != null) {
-            return AudioOutputDevice(
-                type = AudioOutputDeviceType.WIRED,
-                name = "Wired headphones",
-                deviceKey = "wired"
-            )
+        firstOfTypes(outputs, AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES)?.let {
+            return AudioOutputDevice(type = AudioOutputDeviceType.WIRED, name = "Wired headphones", deviceKey = "wired")
         }
 
-        return AudioOutputDevice(
-            type = AudioOutputDeviceType.SPEAKER,
-            name = "Phone speaker",
-            deviceKey = "speaker"
-        )
+        return AudioOutputDevice(type = AudioOutputDeviceType.SPEAKER, name = "Phone speaker", deviceKey = "speaker")
     }
 
     private fun resolveActiveInputDevice(): AudioInputDevice {
         val inputs = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
 
-        val bluetooth = inputs.firstOrNull {
-            it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
-                it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
-        }
-        if (bluetooth != null) {
+        firstOfTypes(inputs, AudioDeviceInfo.TYPE_BLUETOOTH_SCO, AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)?.let { bluetooth ->
             val name = bluetooth.productName?.toString()?.takeIf { it.isNotBlank() } ?: "Bluetooth"
-            return AudioInputDevice(
-                type = AudioInputDeviceType.BLUETOOTH,
-                name = name,
-                deviceKey = "bt_mic_$name"
-            )
+            return AudioInputDevice(type = AudioInputDeviceType.BLUETOOTH, name = name, deviceKey = "bt_mic_$name")
         }
 
-        val wired = inputs.firstOrNull {
-            it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET
-        }
-        if (wired != null) {
-            return AudioInputDevice(
-                type = AudioInputDeviceType.WIRED,
-                name = "Wired headset mic",
-                deviceKey = "wired_mic"
-            )
+        firstOfTypes(inputs, AudioDeviceInfo.TYPE_WIRED_HEADSET)?.let {
+            return AudioInputDevice(type = AudioInputDeviceType.WIRED, name = "Wired headset mic", deviceKey = "wired_mic")
         }
 
-        return AudioInputDevice(
-            type = AudioInputDeviceType.BUILTIN,
-            name = "Built-in microphone",
-            deviceKey = "builtin_mic"
-        )
+        return AudioInputDevice(type = AudioInputDeviceType.BUILTIN, name = "Built-in microphone", deviceKey = "builtin_mic")
+    }
+
+    private fun firstOfTypes(devices: Array<out AudioDeviceInfo>, vararg types: Int): AudioDeviceInfo? {
+        for (type in types) {
+            val found = devices.firstOrNull { it.type == type }
+            if (found != null) return found
+        }
+        return null
     }
 }
 
