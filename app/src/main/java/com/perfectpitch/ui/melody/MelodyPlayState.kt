@@ -4,8 +4,10 @@ import com.perfectpitch.midi.MelodyTrack
 import com.perfectpitch.music.MelodyScore
 import com.perfectpitch.music.NoteScore
 import com.perfectpitch.music.PitchResult
+import kotlin.math.ceil
 
-data class MelodyPlayState(
+/** Active session tracking state. */
+data class MelodyGameState(
     val phase: PlayPhase = PlayPhase.NOT_STARTED,
     val melodyTrack: MelodyTrack? = null,
     val currentTimeSeconds: Double = 0.0,
@@ -20,43 +22,46 @@ data class MelodyPlayState(
     val transposeSemitones: Int = 0,
     val melodyScore: MelodyScore? = null,
     val isListening: Boolean = false,
-    // Melody audio playback during gameplay (off by default)
     val playMelodyAudio: Boolean = false,
-    // View controls
-    val fallSpeedPxPerSec: Float = 150f,
-    val songTimeOffsetSeconds: Double = 0.0,
-    val viewMinMidi: Float = 60f,
-    val viewMaxMidi: Float = 72f,
-    // Per-note cents history for pitch wiggle rendering (key = note index in track)
     val noteCentsHistory: Map<Int, List<Float>> = emptyMap(),
-    // MIDI device state
-    val midiAvailable: Boolean = false,
-    val midiInputEnabled: Boolean = false,
-    val midiOutputEnabled: Boolean = false,
     // Non-zero during a mid-song countdown resume: the game-time value at which scoring starts
     val countdownResumeTarget: Double = 0.0
 ) {
-    /** Countdown display value derived from currentTimeSeconds (3, 2, 1) */
+    /** Countdown display value derived from currentTimeSeconds (3, 2, 1, 0). */
     val countdownValue: Int
         get() {
             val remaining = if (countdownResumeTarget > 0.0)
                 countdownResumeTarget - currentTimeSeconds
             else
                 -currentTimeSeconds
-            return kotlin.math.ceil(remaining).toInt().coerceIn(1, countdownDurationSeconds.toInt())
+            return ceil(remaining).toInt()
         }
 
     /**
      * True when the view is already scrolled to (or before) the first note.
      * Used in FINISHED state to hide the "Scroll to start" button once there.
      */
-    val isAtScrollStart: Boolean
-        get() {
-            val track = melodyTrack ?: return true
-            val firstNoteStart = track.notes.firstOrNull()?.let { track.noteStartSeconds(it) } ?: 0.0
-            return currentTimeSeconds + songTimeOffsetSeconds <= firstNoteStart + 0.05
-        }
+    fun isAtScrollStart(songTimeOffsetSeconds: Double): Boolean {
+        val track = melodyTrack ?: return true
+        val firstNoteStart = track.notes.firstOrNull()?.let { track.noteStartSeconds(it) } ?: 0.0
+        return currentTimeSeconds + songTimeOffsetSeconds <= firstNoteStart + 0.05
+    }
 }
+
+/** Rendering and scroll parameters. */
+data class MelodyViewState(
+    val fallSpeedPxPerSec: Float = 150f,
+    val songTimeOffsetSeconds: Double = 0.0,
+    val viewMinMidi: Float = 60f,
+    val viewMaxMidi: Float = 72f
+)
+
+/** MIDI device availability state. */
+data class MelodyDeviceState(
+    val midiAvailable: Boolean = false,
+    val midiInputEnabled: Boolean = false,
+    val midiOutputEnabled: Boolean = false
+)
 
 enum class PlayPhase {
     NOT_STARTED,

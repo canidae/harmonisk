@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.perfectpitch.ui.components.CanvasMode
 import com.perfectpitch.ui.components.KeepScreenOn
 import com.perfectpitch.ui.components.PIANO_HEIGHT_DP
@@ -44,7 +45,9 @@ fun MelodyPlayScreen(
     onNavigateToCalibration: () -> Unit = {},
     viewModel: MelodyViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val gameState by viewModel.gameState.collectAsStateWithLifecycle()
+    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
+    val deviceState by viewModel.deviceState.collectAsStateWithLifecycle()
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
     val uncalibratedDevice by viewModel.uncalibratedDevicePrompt.collectAsState()
     val splitPercent by viewModel.activeSplitPercent.collectAsState()
@@ -62,13 +65,13 @@ fun MelodyPlayScreen(
 
     LaunchedEffect(Unit) {
         viewModel.initSynthesizer()
-        if (state.phase == PlayPhase.NOT_STARTED) {
+        if (gameState.phase == PlayPhase.NOT_STARTED) {
             viewModel.enterReadyPhase()
         }
     }
 
-    LaunchedEffect(state.phase) {
-        if (state.phase == PlayPhase.FINISHED) {
+    LaunchedEffect(gameState.phase) {
+        if (gameState.phase == PlayPhase.FINISHED) {
             showResultsModal = true
         }
     }
@@ -89,7 +92,7 @@ fun MelodyPlayScreen(
         }
     }
 
-    RequireMicPermission(skip = state.midiInputEnabled) {
+    RequireMicPermission(skip = deviceState.midiInputEnabled) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
 
@@ -103,8 +106,8 @@ fun MelodyPlayScreen(
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     // MIDI input toggle
-                    if (state.midiAvailable) {
-                        val isMidi = state.midiInputEnabled
+                    if (deviceState.midiAvailable) {
+                        val isMidi = deviceState.midiInputEnabled
                         IconButton(
                             onClick = { viewModel.toggleMidiInput() },
                             modifier = Modifier.size(PANEL_BTN_SIZE)
@@ -119,8 +122,8 @@ fun MelodyPlayScreen(
                         }
                     }
                     // MIDI output toggle
-                    if (state.midiAvailable) {
-                        val isMidi = state.midiOutputEnabled
+                    if (deviceState.midiAvailable) {
+                        val isMidi = deviceState.midiOutputEnabled
                         IconButton(
                             onClick = { viewModel.toggleMidiOutput() },
                             modifier = Modifier.size(PANEL_BTN_SIZE)
@@ -136,9 +139,9 @@ fun MelodyPlayScreen(
                     }
 
                     // BPM / time sig + live progress
-                    val track = state.melodyTrack
+                    val track = gameState.melodyTrack
                     if (track != null) {
-                        val currentTick = track.secondsToTick(state.currentTimeSeconds.coerceAtLeast(0.0))
+                        val currentTick = track.secondsToTick(gameState.currentTimeSeconds.coerceAtLeast(0.0))
                         val currentBpm = track.bpmAt(currentTick).roundToInt()
                         val currentTimeSig = track.timeSignatureAt(currentTick)
                         Spacer(Modifier.width(6.dp))
@@ -147,14 +150,14 @@ fun MelodyPlayScreen(
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White.copy(alpha = 0.85f)
                         )
-                        val showProgress = state.phase == PlayPhase.PLAYING ||
-                                state.phase == PlayPhase.PAUSED ||
-                                state.phase == PlayPhase.WAITING_FOR_NOTE
+                        val showProgress = gameState.phase == PlayPhase.PLAYING ||
+                                gameState.phase == PlayPhase.PAUSED ||
+                                gameState.phase == PlayPhase.WAITING_FOR_NOTE
                         if (showProgress) {
                             val progress = if (track.durationSeconds > 0)
-                                (state.currentTimeSeconds / track.durationSeconds * 100).toInt().coerceAtMost(100)
+                                (gameState.currentTimeSeconds / track.durationSeconds * 100).toInt().coerceAtMost(100)
                             else 0
-                            val notesHit = state.noteResults.count {
+                            val notesHit = gameState.noteResults.count {
                                 it.value != NoteResultState.MISS && it.value != NoteResultState.ACTIVE
                             }
                             Spacer(Modifier.width(8.dp))
@@ -169,8 +172,8 @@ fun MelodyPlayScreen(
                     Spacer(Modifier.weight(1f))
 
                     // Preview melody button
-                    if (state.phase == PlayPhase.READY || state.phase == PlayPhase.PAUSED ||
-                        state.phase == PlayPhase.PLAYING || state.phase == PlayPhase.WAITING_FOR_NOTE) {
+                    if (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED ||
+                        gameState.phase == PlayPhase.PLAYING || gameState.phase == PlayPhase.WAITING_FOR_NOTE) {
                         IconButton(
                             onClick = { if (isPreviewPlaying) viewModel.stopPreview() else viewModel.previewMelody() },
                             modifier = Modifier.size(PANEL_BTN_SIZE)
@@ -200,22 +203,22 @@ fun MelodyPlayScreen(
                             DropdownMenuItem(
                                 text = { Text("Wait for note") },
                                 trailingIcon = {
-                                    Switch(checked = state.waitMode, onCheckedChange = { viewModel.setWaitMode(it) }, modifier = Modifier.height(20.dp))
+                                    Switch(checked = gameState.waitMode, onCheckedChange = { viewModel.setWaitMode(it) }, modifier = Modifier.height(20.dp))
                                 },
-                                onClick = { viewModel.setWaitMode(!state.waitMode) }
+                                onClick = { viewModel.setWaitMode(!gameState.waitMode) }
                             )
-                            if (state.waitMode) {
+                            if (gameState.waitMode) {
                                 DropdownMenuItem(
                                     text = { Text("Allow wrong notes") },
                                     trailingIcon = {
-                                        Switch(checked = state.allowWrongNotes, onCheckedChange = { viewModel.setAllowWrongNotes(it) }, modifier = Modifier.height(20.dp))
+                                        Switch(checked = gameState.allowWrongNotes, onCheckedChange = { viewModel.setAllowWrongNotes(it) }, modifier = Modifier.height(20.dp))
                                     },
-                                    onClick = { viewModel.setAllowWrongNotes(!state.allowWrongNotes) }
+                                    onClick = { viewModel.setAllowWrongNotes(!gameState.allowWrongNotes) }
                                 )
                             }
-                            DropdownMenuItem(text = { Text("Tempo: ${"%.0f".format(state.tempoMultiplier * 100)}%") }, onClick = {})
+                            DropdownMenuItem(text = { Text("Tempo: ${"%.0f".format(gameState.tempoMultiplier * 100)}%") }, onClick = {})
                             Slider(
-                                value = state.tempoMultiplier,
+                                value = gameState.tempoMultiplier,
                                 onValueChange = { viewModel.setTempoMultiplier(it) },
                                 valueRange = 0.5f..1.5f,
                                 steps = 9,
@@ -225,15 +228,15 @@ fun MelodyPlayScreen(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        if (state.transposeSemitones == 0) "Transpose: 0"
-                                        else if (state.transposeSemitones > 0) "Transpose: +${state.transposeSemitones}"
-                                        else "Transpose: ${state.transposeSemitones}"
+                                        if (gameState.transposeSemitones == 0) "Transpose: 0"
+                                        else if (gameState.transposeSemitones > 0) "Transpose: +${gameState.transposeSemitones}"
+                                        else "Transpose: ${gameState.transposeSemitones}"
                                     )
                                 },
                                 onClick = {}
                             )
                             Slider(
-                                value = state.transposeSemitones.toFloat(),
+                                value = gameState.transposeSemitones.toFloat(),
                                 onValueChange = { viewModel.setTranspose(it.toInt()) },
                                 valueRange = -24f..24f,
                                 steps = 47,
@@ -243,9 +246,9 @@ fun MelodyPlayScreen(
                             DropdownMenuItem(
                                 text = { Text("Play melody audio") },
                                 trailingIcon = {
-                                    Switch(checked = state.playMelodyAudio, onCheckedChange = { viewModel.setPlayMelodyAudio(it) }, modifier = Modifier.height(20.dp))
+                                    Switch(checked = gameState.playMelodyAudio, onCheckedChange = { viewModel.setPlayMelodyAudio(it) }, modifier = Modifier.height(20.dp))
                                 },
-                                onClick = { viewModel.setPlayMelodyAudio(!state.playMelodyAudio) }
+                                onClick = { viewModel.setPlayMelodyAudio(!gameState.playMelodyAudio) }
                             )
                             HorizontalDivider()
                             DropdownMenuItem(
@@ -279,56 +282,56 @@ fun MelodyPlayScreen(
                             detectTransformGestures { _, pan, zoom, _ ->
                                 if (zoom != 1f) viewModel.onVerticalZoom(zoom)
                                 if (pan.y != 0f) {
-                                    val secondsPerPx = 1.0 / (state.fallSpeedPxPerSec * density.density)
+                                    val secondsPerPx = 1.0 / (viewState.fallSpeedPxPerSec * density.density)
                                     viewModel.onVerticalScroll(pan.y * secondsPerPx)
                                 }
                             }
                         }
-                        .pointerInput(state.phase) {
+                        .pointerInput(gameState.phase) {
                             detectTapGestures {
-                                val phase = state.phase
+                                val phase = gameState.phase
                                 if (phase == PlayPhase.PLAYING || phase == PlayPhase.COUNTDOWN || phase == PlayPhase.WAITING_FOR_NOTE) {
                                     viewModel.pause()
                                 }
                             }
                         }
                 ) {
-                    val track = state.melodyTrack
+                    val track = gameState.melodyTrack
 
                     if (track != null) {
                         SharedNoteCanvas(
                             mode = CanvasMode.Melody(
                                 melodyTrack = track,
-                                noteResults = state.noteResults,
-                                currentNoteIndex = state.currentNoteIndex,
-                                noteCentsHistory = state.noteCentsHistory,
-                                currentTimeSeconds = state.currentTimeSeconds,
-                                songTimeOffsetSeconds = state.songTimeOffsetSeconds,
-                                fallSpeedPxPerSec = state.fallSpeedPxPerSec,
-                                detectedMidiNote = if (state.pitchResult.isValid) state.pitchResult.midiNoteNumber else null,
-                                detectedCentsOff = if (state.pitchResult.isValid) state.pitchResult.centsOff else null
+                                noteResults = gameState.noteResults,
+                                currentNoteIndex = gameState.currentNoteIndex,
+                                noteCentsHistory = gameState.noteCentsHistory,
+                                currentTimeSeconds = gameState.currentTimeSeconds,
+                                songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
+                                fallSpeedPxPerSec = viewState.fallSpeedPxPerSec,
+                                detectedMidiNote = if (gameState.pitchResult.isValid) gameState.pitchResult.midiNoteNumber else null,
+                                detectedCentsOff = if (gameState.pitchResult.isValid) gameState.pitchResult.centsOff else null
                             ),
                             pianoAtBottom = true,
-                            viewMinMidi = state.viewMinMidi,
-                            viewMaxMidi = state.viewMaxMidi,
+                            viewMinMidi = viewState.viewMinMidi,
+                            viewMaxMidi = viewState.viewMaxMidi,
                             modifier = Modifier.fillMaxSize()
                         )
 
-                        if (state.phase == PlayPhase.COUNTDOWN) {
+                        if (gameState.phase == PlayPhase.COUNTDOWN) {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 Text(
-                                    text = "${state.countdownValue}",
+                                    text = "${gameState.countdownValue}",
                                     style = MaterialTheme.typography.displayLarge,
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
                             }
                         }
 
-                        if (state.phase == PlayPhase.READY || state.phase == PlayPhase.PAUSED) {
+                        if (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED) {
                             IconButton(
                                 onClick = {
                                     if (isPreviewPlaying) viewModel.stopPreview()
-                                    if (state.phase == PlayPhase.READY) viewModel.startPlaying()
+                                    if (gameState.phase == PlayPhase.READY) viewModel.startPlaying()
                                     else viewModel.resume()
                                 },
                                 modifier = Modifier
@@ -340,7 +343,7 @@ fun MelodyPlayScreen(
                             ) {
                                 Icon(
                                     Icons.Filled.PlayArrow,
-                                    contentDescription = if (state.phase == PlayPhase.READY) "Start" else "Resume",
+                                    contentDescription = if (gameState.phase == PlayPhase.READY) "Start" else "Resume",
                                     tint = Color(0xFF66BB6A).copy(alpha = 0.9f),
                                     modifier = Modifier.size(40.dp)
                                 )
@@ -348,7 +351,7 @@ fun MelodyPlayScreen(
                         }
 
                         // Contextual action buttons (bottom-right overlay)
-                        val showScrollButton = state.phase == PlayPhase.FINISHED && !state.isAtScrollStart
+                        val showScrollButton = gameState.phase == PlayPhase.FINISHED && !gameState.isAtScrollStart(viewState.songTimeOffsetSeconds)
                         Column(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
@@ -369,7 +372,7 @@ fun MelodyPlayScreen(
                                     )
                                 }
                             }
-                            if (state.phase == PlayPhase.FINISHED) {
+                            if (gameState.phase == PlayPhase.FINISHED) {
                                 IconButton(
                                     onClick = { showResultsModal = true },
                                     modifier = Modifier.size(OVERLAY_BUTTON_SIZE).background(OVERLAY_BG, CircleShape)
@@ -402,7 +405,7 @@ fun MelodyPlayScreen(
         }
     }
 
-    if (showResultsModal && state.melodyScore != null) {
-        ScoreResultModal(melodyScore = state.melodyScore!!, onDismiss = { showResultsModal = false })
+    if (showResultsModal && gameState.melodyScore != null) {
+        ScoreResultModal(melodyScore = gameState.melodyScore!!, onDismiss = { showResultsModal = false })
     }
 }
