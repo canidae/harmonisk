@@ -322,14 +322,13 @@ class MelodyViewModel @Inject constructor(
     // --- Melody preview / listen ---
 
     /**
-     * Open the synthesizer with the provided context.
-     * Call this from the Composable layer where context is available.
+     * Open the synthesizer. Call this before using audio playback.
      */
-    fun initSynthesizer(context: android.content.Context) {
+    fun initSynthesizer() {
         if (melodySynthesizer.isReady || synthOpenJob?.isActive == true) return
         synthOpenJob = viewModelScope.launch {
             try {
-                melodySynthesizer.open(context)
+                melodySynthesizer.open()
             } catch (e: Exception) {
                 android.util.Log.w("MelodyViewModel", "Synth init failed", e)
             }

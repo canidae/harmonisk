@@ -14,7 +14,6 @@ class SettingsRepository(
 ) {
     companion object {
         val CONCERT_PITCH = floatPreferencesKey("concert_pitch")
-        val DARK_THEME = booleanPreferencesKey("dark_theme")
         val SILENCE_THRESHOLD_DB = floatPreferencesKey("silence_threshold_db")
         val FREEPLAY_FALL_SPEED = floatPreferencesKey("freeplay_fall_speed")
         val FREEPLAY_BEATS_PER_BAR = intPreferencesKey("freeplay_beats_per_bar")
@@ -26,7 +25,6 @@ class SettingsRepository(
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
         AppSettings(
             concertPitch = prefs[CONCERT_PITCH] ?: 440f,
-            darkTheme = prefs[DARK_THEME] ?: true,
             silenceThresholdDb = prefs[SILENCE_THRESHOLD_DB] ?: -50f,
             freeplayFallSpeed = prefs[FREEPLAY_FALL_SPEED] ?: 75f,
             freeplayBeatsPerBar = prefs[FREEPLAY_BEATS_PER_BAR] ?: 4,
@@ -71,7 +69,6 @@ class SettingsRepository(
 
 data class AppSettings(
     val concertPitch: Float = 440f,
-    val darkTheme: Boolean = true,
     val silenceThresholdDb: Float = -50f,
     val freeplayFallSpeed: Float = 75f,
     val freeplayBeatsPerBar: Int = 4,

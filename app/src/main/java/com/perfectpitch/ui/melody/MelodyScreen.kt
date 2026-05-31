@@ -34,7 +34,7 @@ fun MelodyScreen(
     var previewingMelody by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        viewModel.initSynthesizer(context)
+        viewModel.initSynthesizer()
     }
 
     LaunchedEffect(isPreviewPlaying) {

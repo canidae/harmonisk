@@ -89,7 +89,7 @@ class CalibrationViewModel @Inject constructor(
         }
         viewModelScope.launch {
             try {
-                melodySynthesizer.open(context)
+                melodySynthesizer.open()
                 _state.update { it.copy(synthReady = true, synthError = null) }
                 goToInstructions()
             } catch (e: Exception) {

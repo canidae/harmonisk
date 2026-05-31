@@ -62,7 +62,7 @@ fun MelodyPlayScreen(
     KeepScreenOn()
 
     LaunchedEffect(Unit) {
-        viewModel.initSynthesizer(context)
+        viewModel.initSynthesizer()
         if (state.phase == PlayPhase.NOT_STARTED) {
             viewModel.enterReadyPhase()
         }

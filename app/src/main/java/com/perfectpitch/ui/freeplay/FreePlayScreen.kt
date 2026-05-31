@@ -643,7 +643,7 @@ fun FreePlayScreen(
         ) {
             RequireMicPermission(skip = state.midiInputEnabled) {
                 LaunchedEffect(Unit) {
-                    viewModel.initSynthesizer(context)
+                    viewModel.initSynthesizer()
                 }
                 DisposableEffect(Unit) { onDispose { viewModel.stopListening() } }
 

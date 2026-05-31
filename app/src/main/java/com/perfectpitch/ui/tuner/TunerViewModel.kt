@@ -90,8 +90,6 @@ class TunerViewModel @Inject constructor(
     }
 
     private fun processResult(result: PitchResult) {
-        _state.update { it.copy(pitchResult = result) }
-
         if (result.isValid) {
             holdJob?.cancel()
             holdJob = null

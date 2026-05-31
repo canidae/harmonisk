@@ -75,9 +75,6 @@ class CrepePitchDetector(context: Context) {
     private val inputBuffer = ByteBuffer
         .allocateDirect(1 * CREPE_INPUT_SAMPLES * Float.SIZE_BYTES)
         .order(ByteOrder.nativeOrder())
-    private val outputBuffer = ByteBuffer
-        .allocateDirect(1 * N_BINS * Float.SIZE_BYTES)
-        .order(ByteOrder.nativeOrder())
     private val outputArray = Array(1) { FloatArray(N_BINS) }
 
     // Reusable downsampled buffer
@@ -111,7 +108,6 @@ class CrepePitchDetector(context: Context) {
         for (s in downsampledBuf) inputBuffer.putFloat(s)
 
         // Run inference
-        outputBuffer.rewind()
         interpreter.run(inputBuffer, outputArray)
         val activation = outputArray[0]
 

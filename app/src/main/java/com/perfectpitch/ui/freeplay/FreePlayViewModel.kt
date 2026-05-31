@@ -159,11 +159,11 @@ class FreePlayViewModel @Inject constructor(
         }
     }
 
-    /** Open the synthesizer for replay fallback. Call from the Composable where context is available. */
-    fun initSynthesizer(context: Context) {
+    /** Open the synthesizer for replay fallback. */
+    fun initSynthesizer() {
         if (melodySynthesizer.isReady || synthOpenJob?.isActive == true) return
         synthOpenJob = viewModelScope.launch {
-            try { melodySynthesizer.open(context) } catch (_: Exception) {}
+            try { melodySynthesizer.open() } catch (_: Exception) {}
         }
     }
 

@@ -46,8 +46,7 @@ class MelodySynthesizer : NotePlayer {
 
     private enum class EnvelopeStage { ATTACK, DECAY, SUSTAIN, RELEASE, DONE }
 
-    @Suppress("UNUSED_PARAMETER")
-    suspend fun open(context: android.content.Context? = null) {
+    fun open() {
         if (isReady) return
 
         val bufferSize = AudioTrack.getMinBufferSize(
