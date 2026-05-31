@@ -32,6 +32,7 @@ class PitchProcessor(
          * hint is cleared. Prevents a note before a long rest from biasing the next note.
          */
         private const val HINT_RESET_MS = 800L
+        private const val HINT_RESET_NANOS = HINT_RESET_MS * 1_000_000L
     }
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB
@@ -86,16 +87,10 @@ class PitchProcessor(
 
     private fun processBuffer(buffer: FloatArray): PitchResult {
         val rmsDb = AudioUtils.linearToDb(AudioUtils.rms(buffer))
-        if (rmsDb < silenceThresholdDb) {
-            if (System.nanoTime() - lastDetectedNano > HINT_RESET_MS * 1_000_000L) lastFrequency = 0f
-            return PitchResult.SILENT
-        }
+        if (rmsDb < silenceThresholdDb) return handleSilent()
 
         val result = crepeDetector.detectPitch(buffer = buffer, hintFreq = lastFrequency)
-        if (result.frequency <= 0f) {
-            if (System.nanoTime() - lastDetectedNano > HINT_RESET_MS * 1_000_000L) lastFrequency = 0f
-            return PitchResult.SILENT
-        }
+        if (result.frequency <= 0f) return handleSilent()
 
         lastFrequency = result.frequency
         lastDetectedNano = System.nanoTime()
@@ -111,5 +106,10 @@ class PitchProcessor(
             rmsDb = rmsDb,
             isSilent = false
         )
+    }
+
+    private fun handleSilent(): PitchResult {
+        if (System.nanoTime() - lastDetectedNano > HINT_RESET_NANOS) lastFrequency = 0f
+        return PitchResult.SILENT
     }
 }

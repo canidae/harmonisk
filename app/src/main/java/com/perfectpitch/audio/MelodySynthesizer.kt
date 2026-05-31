@@ -24,6 +24,12 @@ class MelodySynthesizer : NotePlayer {
         private const val DECAY_MS = 50f
         private const val SUSTAIN_LEVEL = 0.7f
         private const val RELEASE_MS = 30f
+
+        // Precomputed per-sample envelope deltas and phase increment
+        private val ATTACK_DELTA = 1f / (ATTACK_MS / 1000f * SAMPLE_RATE)
+        private val DECAY_DELTA = (1f - SUSTAIN_LEVEL) / (DECAY_MS / 1000f * SAMPLE_RATE)
+        private val RELEASE_DELTA = 1f / (RELEASE_MS / 1000f * SAMPLE_RATE)
+        private val PHASE_INC = 2.0 * PI / SAMPLE_RATE
     }
 
     private var audioTrack: AudioTrack? = null
@@ -35,7 +41,7 @@ class MelodySynthesizer : NotePlayer {
 
     override val isReady: Boolean get() = audioTrack != null && running
 
-    private data class NoteState(
+    private class NoteState(
         val frequency: Float,
         val velocity: Float,
         var phase: Double = 0.0,
@@ -144,35 +150,30 @@ class MelodySynthesizer : NotePlayer {
     }
 
     private fun renderBuffer(buffer: ShortArray) {
-        val attackDelta = 1f / (ATTACK_MS / 1000f * SAMPLE_RATE)
-        val decayDelta = (1f - SUSTAIN_LEVEL) / (DECAY_MS / 1000f * SAMPLE_RATE)
-        val releaseDelta = 1f / (RELEASE_MS / 1000f * SAMPLE_RATE)
-        val phaseInc = 2.0 * PI / SAMPLE_RATE
-
         val toRemove = mutableListOf<Int>()
 
-        for (i in buffer.indices) {
-            var sample = 0f
-            synchronized(noteLock) {
+        synchronized(noteLock) {
+            for (i in buffer.indices) {
+                var sample = 0f
                 for ((note, state) in activeNotes) {
                     when (state.stage) {
                         EnvelopeStage.ATTACK -> {
-                            state.envelope += attackDelta
+                            state.envelope += ATTACK_DELTA
                             if (state.envelope >= 1f) {
                                 state.envelope = 1f
                                 state.stage = EnvelopeStage.DECAY
                             }
                         }
                         EnvelopeStage.DECAY -> {
-                            state.envelope -= decayDelta
+                            state.envelope -= DECAY_DELTA
                             if (state.envelope <= SUSTAIN_LEVEL) {
                                 state.envelope = SUSTAIN_LEVEL
                                 state.stage = EnvelopeStage.SUSTAIN
                             }
                         }
-                        EnvelopeStage.SUSTAIN -> {}
+                        EnvelopeStage.SUSTAIN -> { /* envelope held at SUSTAIN_LEVEL; no per-sample update needed */ }
                         EnvelopeStage.RELEASE -> {
-                            state.envelope -= releaseDelta
+                            state.envelope -= RELEASE_DELTA
                             if (state.envelope <= 0f) {
                                 state.envelope = 0f
                                 state.stage = EnvelopeStage.DONE
@@ -190,14 +191,13 @@ class MelodySynthesizer : NotePlayer {
                     val raw = (fundamental + harmonic2) / 1.3f
 
                     sample += raw * state.envelope * state.velocity
-                    state.phase += phaseInc
+                    state.phase += PHASE_INC
                 }
-                toRemove.forEach { activeNotes.remove(it) }
-                toRemove.clear()
-            }
 
-            val clipped = sample.coerceIn(-1f, 1f)
-            buffer[i] = (clipped * Short.MAX_VALUE).toInt().toShort()
+                val clipped = sample.coerceIn(-1f, 1f)
+                buffer[i] = (clipped * Short.MAX_VALUE).toInt().toShort()
+            }
+            toRemove.forEach { activeNotes.remove(it) }
         }
     }
 

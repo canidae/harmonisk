@@ -1,15 +1,17 @@
 package com.perfectpitch.audio
 
+import kotlin.math.cos
+import kotlin.math.log10
 import kotlin.math.sqrt
 
 object AudioUtils {
 
-    private val hannWindowCache = HashMap<Int, FloatArray>()
+    private val hannWindowCache = mutableMapOf<Int, FloatArray>()
 
     private fun getHannWindow(size: Int): FloatArray =
         hannWindowCache.getOrPut(size) {
             FloatArray(size) { i ->
-                0.5f * (1f - kotlin.math.cos(2f * Math.PI.toFloat() * i / (size - 1)))
+                0.5f * (1f - cos(2f * Math.PI.toFloat() * i / (size - 1)))
             }
         }
 
@@ -27,6 +29,5 @@ object AudioUtils {
 
     fun linearToDb(amplitude: Float): Float =
         if (amplitude <= 0f) -100f
-        else 20f * kotlin.math.log10(amplitude)
+        else 20f * log10(amplitude)
 }
-

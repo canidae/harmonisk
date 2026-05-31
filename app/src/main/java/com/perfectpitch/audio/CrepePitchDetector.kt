@@ -7,6 +7,8 @@ import java.nio.ByteOrder
 import java.nio.channels.FileChannel
 import kotlin.math.abs
 import kotlin.math.ln
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 /**
  * Shared result type for pitch detection.
@@ -57,7 +59,7 @@ class CrepePitchDetector(context: Context) {
             (i.toFloat() / (N_BINS - 1) * 7180f) + 1997.3794f
         }
         private val BIN_FREQS = FloatArray(N_BINS) { i ->
-            (10.0 * Math.pow(2.0, BIN_CENTS[i] / 1200.0)).toFloat()
+            (10.0 * 2.0.pow(BIN_CENTS[i] / 1200.0)).toFloat()
         }
 
         /**
@@ -153,7 +155,7 @@ class CrepePitchDetector(context: Context) {
         var variance = 0.0
         for (s in buf) { val d = s - mean; variance += d * d }
         variance /= buf.size
-        val invStd = if (variance > 1e-10) (1.0 / Math.sqrt(variance)).toFloat() else 1f
+        val invStd = if (variance > 1e-10) (1.0 / sqrt(variance)).toFloat() else 1f
         for (i in buf.indices) buf[i] = ((buf[i] - mean) * invStd).toFloat()
     }
 
