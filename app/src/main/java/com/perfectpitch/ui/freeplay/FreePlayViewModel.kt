@@ -26,6 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
@@ -183,6 +184,11 @@ class FreePlayViewModel @Inject constructor(
             outputDeviceBeforeRecord = OutputDevice.SYNTH
             setOutputDevice(OutputDevice.NONE)
         }
+        val (loopStart, loopEnd) = effectiveLoopBounds()
+        val pos = _state.value.songPositionMs
+        if (pos < loopStart || pos >= loopEnd) {
+            _state.update { it.copy(songPositionMs = loopStart) }
+        }
         recordingActive = true
         lastAdvanceWallMs = System.currentTimeMillis()
         startListeningInternal()
@@ -205,13 +211,17 @@ class FreePlayViewModel @Inject constructor(
         val delta = (realTimeMs - lastAdvanceWallMs).coerceAtLeast(0L)
         lastAdvanceWallMs = realTimeMs
         if (!replayActive && recordingActive) {
-            _state.update { it.copy(songPositionMs = it.songPositionMs + delta) }
+            val newPos = _state.value.songPositionMs + delta
+            val (loopStart, loopEnd) = effectiveLoopBounds()
+            if (newPos >= loopEnd) {
+                finalizeCurrentNote()
+                abortHoning()
+                _state.update { it.copy(songPositionMs = loopStart, activeNote = null) }
+            } else {
+                _state.update { it.copy(songPositionMs = newPos) }
+            }
         }
         return _state.value.songPositionMs
-    }
-
-    fun startListening() {
-        // No-op: audio pipeline starts when recording begins (startRecording)
     }
 
     private fun startListeningInternal() {
@@ -273,7 +283,7 @@ class FreePlayViewModel @Inject constructor(
 
     fun setMinNoteDivision(division: Int) {
         val valid = listOf(4, 8, 16, 32, 64)
-        val clamped = valid.minByOrNull { kotlin.math.abs(it - division) } ?: 16
+        val clamped = valid.minByOrNull { abs(it - division) } ?: 16
         _state.update { it.copy(minNoteDivision = clamped) }
         viewModelScope.launch { settingsRepository.updateFreeplayMinNoteDivision(clamped) }
     }
@@ -306,6 +316,21 @@ class FreePlayViewModel @Inject constructor(
     // region Loop
 
     private fun barDurationMs(): Double = _state.value.beatsPerBar * (60000.0 / _state.value.bpm)
+
+    /** Returns (loopStartMs, loopEndMs) based on locked bars or sensible defaults. */
+    private fun effectiveLoopBounds(): Pair<Long, Long> {
+        val s = _state.value
+        val bMs = (s.beatsPerBar * (60000.0 / s.bpm)).toLong()
+        val startMs = if (s.loopStartBar != null) (s.loopStartBar - 1) * bMs else 0L
+        val endMs = if (s.loopEndBar != null) {
+            (s.loopEndBar - 1) * bMs
+        } else {
+            val lastNoteEnd = s.playedNotes.mapNotNull { it.endTimeMs }.maxOrNull() ?: 0L
+            val defaultEndBar = (ceil(lastNoteEnd.toDouble() / bMs).toInt() + 4).coerceAtLeast(4)
+            (defaultEndBar - 1) * bMs
+        }
+        return Pair(startMs, endMs)
+    }
 
     fun setLoopStart() {
         val barMs = barDurationMs()
@@ -869,11 +894,11 @@ class FreePlayViewModel @Inject constructor(
             .filter { it.endTimeMs != null }
             .sortedBy { it.startTimeMs }
 
-        val firstNoteMs = allNotes.firstOrNull()?.startTimeMs ?: 0L
-        val lastNoteEndMs = allNotes.maxOfOrNull { it.endTimeMs!! } ?: 0L
-
-        if (allNotes.isNotEmpty() && _state.value.songPositionMs >= lastNoteEndMs) {
-            _state.update { it.copy(songPositionMs = firstNoteMs) }
+        // Snap to loop start if current position is outside the loop area
+        val (initialStart, initialEnd) = effectiveLoopBounds()
+        val currentPos = _state.value.songPositionMs
+        if (currentPos < initialStart || currentPos >= initialEnd) {
+            _state.update { it.copy(songPositionMs = initialStart) }
         }
 
         replayActive = true
@@ -886,20 +911,6 @@ class FreePlayViewModel @Inject constructor(
                 OutputDevice.MIDI -> if (midiOutputSender.isReady) midiOutputSender else melodySynthesizer
                 OutputDevice.SYNTH -> melodySynthesizer
                 OutputDevice.NONE -> null
-            }
-
-            // Helper: compute current loop bounds from live state (so user changes take effect immediately)
-            fun loopBounds(): Pair<Long, Long> {
-                val cs = _state.value
-                val bMs = (cs.beatsPerBar * (60000.0 / cs.bpm)).toLong()
-                val startMs = if (cs.loopStartBar != null) (cs.loopStartBar - 1) * bMs else firstNoteMs
-                val endMs = if (cs.loopEndBar != null) {
-                    (cs.loopEndBar - 1) * bMs
-                } else {
-                    val defaultEndBar = (ceil(lastNoteEndMs.toDouble() / bMs).toInt() + 4).coerceAtLeast(4)
-                    (defaultEndBar - 1) * bMs
-                }
-                return Pair(startMs, endMs)
             }
 
             data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean)
@@ -923,11 +934,11 @@ class FreePlayViewModel @Inject constructor(
             var lastWallMs = System.currentTimeMillis()
 
             while (job.isActive) {
-                // Detect external seek (from onVerticalScroll)
+                // Detect external seek
                 val statePosition = _state.value.songPositionMs
-                if (kotlin.math.abs(statePosition - replayPositionMs) > 100) {
+                if (abs(statePosition - replayPositionMs) > 100) {
                     player?.allNotesOff()
-                    replayPositionMs = statePosition.coerceAtLeast(firstNoteMs)
+                    replayPositionMs = statePosition
                     events = buildEvents(replayPositionMs)
                     eventIndex = 0
                     lastWallMs = System.currentTimeMillis()
@@ -946,7 +957,7 @@ class FreePlayViewModel @Inject constructor(
                 }
 
                 // Loop-at-end: re-read bounds each frame so user changes take effect immediately
-                val (loopStartMs, loopEndMs) = loopBounds()
+                val (loopStartMs, loopEndMs) = effectiveLoopBounds()
                 if (replayPositionMs >= loopEndMs) {
                     player?.allNotesOff()
                     replayPositionMs = loopStartMs
