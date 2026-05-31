@@ -36,6 +36,31 @@ fun SettingsScreen(
             )
         }
     ) { padding ->
+        var showResetConfirm by remember { mutableStateOf(false) }
+
+        if (showResetConfirm) {
+            AlertDialog(
+                onDismissRequest = { showResetConfirm = false },
+                title = { Text("Reset to defaults?") },
+                text = {
+                    Text(
+                        "All settings will be returned to their default values, including:\n\n" +
+                        "• Concert pitch (A = 440 Hz)\n" +
+                        "• Silence threshold\n" +
+                        "• Free Play speed, tempo, time signature, note snapping"
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.resetToDefaults(); showResetConfirm = false }) {
+                        Text("Reset")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showResetConfirm = false }) { Text("Cancel") }
+                }
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -173,10 +198,10 @@ fun SettingsScreen(
 
             // Reset button
             OutlinedButton(
-                onClick = { viewModel.resetToDefaults() },
+                onClick = { showResetConfirm = true },
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
-                Text("Reset to Defaults")
+                Text("Reset to defaults")
             }
         }
     }

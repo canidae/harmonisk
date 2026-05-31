@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -39,6 +40,7 @@ import com.perfectpitch.ui.components.RequireMicPermission
 import com.perfectpitch.ui.components.SharedNoteCanvas
 import com.perfectpitch.ui.components.VOICE_COLORS
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 private val OVERLAY_BG = Color(0xAA1A1A2E)
@@ -91,8 +93,14 @@ fun FreePlayScreen(
     val currentIsPlaying by rememberUpdatedState(state.isPlaying)
 
     val barMs = state.beatsPerBar * (60000.0 / state.bpm)
-    val loopStartMs = state.loopStartBar?.let { (it * barMs).toLong() }
-    val loopEndMs   = state.loopEndBar?.let   { (it * barMs).toLong() }
+    val defaultLoopEndBar = run {
+        val maxEndMs = state.playedNotes.mapNotNull { it.endTimeMs }.maxOrNull() ?: 0L
+        ceil(maxEndMs.toDouble() / barMs).toInt() + 4
+    }.coerceAtLeast(4)
+    val effectiveLoopStartBar = state.loopStartBar ?: 1
+    val effectiveLoopEndBar = state.loopEndBar ?: defaultLoopEndBar
+    val loopStartMs = (effectiveLoopStartBar * barMs).toLong()
+    val loopEndMs   = (effectiveLoopEndBar   * barMs).toLong()
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("audio/midi")
@@ -259,19 +267,19 @@ fun FreePlayScreen(
             AlertDialog(
                 onDismissRequest = { showEditHelp = false },
                 confirmButton = { TextButton(onClick = { showEditHelp = false }) { Text("Got it") } },
-                title = { Text("Free Play — Note Editing", fontWeight = FontWeight.Bold) },
+                title = { Text("Free Play — Help", fontWeight = FontWeight.Bold) },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        // (icon, iconColor, label, description)
-                        val items = listOf(
-                            Triple(Icons.Filled.TouchApp,      null as Color?,          "Tap a note bar"          to "Select it for editing — action buttons appear to the right."),
-                            Triple(Icons.Filled.OpenWith,      null,                    "Drag a selected note"    to "Move it in time (up/down) and pitch (left/right)."),
-                            Triple(Icons.Filled.SwipeVertical, null,                    "Drag a handle"           to "Resize: The top-right handle adjusts the end time, the bottom-left adjusts the start time."),
-                            Triple(Icons.Filled.ContentCut,    Color(0xFFFFB74D),       "Split (✂)"               to "Splits the selected note into two equal halves."),
-                            Triple(Icons.Filled.Delete,        Color(0xFFEF5350),       "Delete (🗑)"              to "Removes the selected note."),
-                            Triple(Icons.Filled.TouchApp,      null,                    "Tap empty space"         to "Deselect the current note.")
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Note editing", fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val noteItems = listOf(
+                            Triple(Icons.Filled.TouchApp,      null as Color?,     "Tap a note bar"       to "Select it for editing."),
+                            Triple(Icons.Filled.OpenWith,      null,               "Drag a selected note" to "Change time and pitch."),
+                            Triple(Icons.Filled.SwipeVertical, null,               "Drag a handle"        to "Adjust start/end: Top-right sets end time, bottom-left sets start time."),
+                            Triple(Icons.Filled.ContentCut,    Color(0xFFFFB74D),  "Split (✂)"            to "Halves the selected note."),
+                            Triple(Icons.Filled.Delete,        Color(0xFFEF5350),  "Delete (🗑)"           to "Removes the selected note."),
+                            Triple(Icons.Filled.TouchApp,      null,               "Tap empty space"      to "Deselect the current note.")
                         )
-                        items.forEach { (icon, color, labelAndDesc) ->
+                        noteItems.forEach { (icon, color, labelAndDesc) ->
                             val (label, description) = labelAndDesc
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
                                 Icon(icon, null, modifier = Modifier.size(18.dp).padding(top = 1.dp),
@@ -280,6 +288,25 @@ fun FreePlayScreen(
                                     Text(label, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                                     Text(description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                        Text("Looping", fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+                            Icon(Icons.Filled.Loop, null, modifier = Modifier.size(18.dp).padding(top = 1.dp))
+                            Column {
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Loop", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("1", fontSize = 13.sp, color = Color.White,
+                                        modifier = Modifier.background(Color(0xFF1A1A2E), MaterialTheme.shapes.extraSmall).padding(horizontal = 4.dp, vertical = 1.dp))
+                                    Text("–", fontSize = 12.sp)
+                                    Text("4", fontSize = 13.sp, color = Color(0xFFFFB74D),
+                                        modifier = Modifier.background(Color(0xFF1A1A2E), MaterialTheme.shapes.extraSmall).padding(horizontal = 4.dp, vertical = 1.dp))
+                                    Text("↻", fontSize = 13.sp)
+                                }
+                                Text("Tap a bar number to lock it to the current position (turns orange). Tap the same locked number again to unlock it. Press ↻ to start/stop looping.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -428,28 +455,34 @@ fun FreePlayScreen(
 
         Spacer(Modifier.width(8.dp))
 
-        // Loop controls
-        TextButton(
-            onClick = { viewModel.setLoopStart() },
-            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-            modifier = Modifier.height(PANEL_BTN_SIZE)
-        ) {
-            Text("S", fontSize = 10.sp, color = if (state.loopStartBar != null) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
-        }
-        TextButton(
-            onClick = { viewModel.setLoopEnd() },
-            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-            modifier = Modifier.height(PANEL_BTN_SIZE)
-        ) {
-            Text("E", fontSize = 10.sp, color = if (state.loopEndBar != null) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
-        }
-        if (state.loopStartBar != null && state.loopEndBar != null) {
+        // Loop controls — "Loop X – Y ↻"
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Loop", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = effectiveLoopStartBar.toString(),
+                fontSize = 11.sp,
+                color = if (state.loopStartBar != null) Color(0xFFFFB74D) else Color.White,
+                modifier = Modifier
+                    .clickable { viewModel.setLoopStart() }
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+            Text("–", fontSize = 10.sp, color = Color.White.copy(alpha = 0.4f))
+            Text(
+                text = effectiveLoopEndBar.toString(),
+                fontSize = 11.sp,
+                color = if (state.loopEndBar != null) Color(0xFFFFB74D) else Color.White,
+                modifier = Modifier
+                    .clickable { viewModel.setLoopEnd() }
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+            Spacer(Modifier.width(2.dp))
             IconButton(
                 onClick = { viewModel.toggleLoop() },
                 modifier = Modifier.size(PANEL_BTN_SIZE)
                     .then(if (state.isLooping) Modifier.border(1.dp, Color(0xFFFFB74D), CircleShape) else Modifier)
             ) {
-                Icon(Icons.Filled.Loop, null, modifier = Modifier.size(16.dp), tint = if (state.isLooping) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
+                Icon(Icons.Filled.Loop, null, modifier = Modifier.size(14.dp), tint = if (state.isLooping) Color(0xFFFFB74D) else OVERLAY_ICON_TINT)
             }
         }
     }

@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 @HiltViewModel
 class FreePlayViewModel @Inject constructor(
@@ -304,14 +305,18 @@ class FreePlayViewModel @Inject constructor(
 
     fun setLoopStart() {
         val barMs = barDurationMs()
-        val currentBar = (_state.value.songPositionMs / barMs).toInt()
-        _state.update { it.copy(loopStartBar = currentBar) }
+        val s = _state.value
+        val nowBar = (s.songPositionMs / barMs).roundToInt()
+        val locked = s.loopStartBar
+        _state.update { it.copy(loopStartBar = if (locked != null && locked == nowBar) null else nowBar) }
     }
 
     fun setLoopEnd() {
         val barMs = barDurationMs()
-        val currentBar = (_state.value.songPositionMs / barMs).toInt() + 1
-        _state.update { it.copy(loopEndBar = currentBar) }
+        val s = _state.value
+        val nowBar = (s.songPositionMs / barMs).roundToInt()
+        val locked = s.loopEndBar
+        _state.update { it.copy(loopEndBar = if (locked != null && locked == nowBar) null else nowBar) }
     }
 
     fun toggleLoop() {

@@ -137,6 +137,37 @@ fun MelodyPlayScreen(
                         }
                     }
 
+                    // BPM / time sig + live progress
+                    val track = state.melodyTrack
+                    if (track != null) {
+                        val currentTick = track.secondsToTick(state.currentTimeSeconds.coerceAtLeast(0.0))
+                        val currentBpm = track.bpmAt(currentTick).roundToInt()
+                        val currentTimeSig = track.timeSignatureAt(currentTick)
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "$currentBpm  ${currentTimeSig.numerator}/${currentTimeSig.denominator}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
+                        val showProgress = state.phase == PlayPhase.PLAYING ||
+                                state.phase == PlayPhase.PAUSED ||
+                                state.phase == PlayPhase.WAITING_FOR_NOTE
+                        if (showProgress) {
+                            val progress = if (track.durationSeconds > 0)
+                                (state.currentTimeSeconds / track.durationSeconds * 100).toInt().coerceAtMost(100)
+                            else 0
+                            val notesHit = state.noteResults.count {
+                                it.value != NoteResultState.MISS && it.value != NoteResultState.ACTIVE
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "$progress%  $notesHit/${track.notes.size}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+
                     Spacer(Modifier.weight(1f))
 
                     // Preview melody button
@@ -285,23 +316,6 @@ fun MelodyPlayScreen(
                             modifier = Modifier.fillMaxSize()
                         )
 
-                        // BPM / time signature chip (top-left)
-                        val currentTick = track.secondsToTick(state.currentTimeSeconds.coerceAtLeast(0.0))
-                        val currentBpm = track.bpmAt(currentTick).roundToInt()
-                        val currentTimeSig = track.timeSignatureAt(currentTick)
-                        Surface(
-                            color = Color(0xCC1A1A2E),
-                            shape = MaterialTheme.shapes.small,
-                            modifier = Modifier.align(Alignment.TopStart).padding(start = 8.dp, top = 8.dp)
-                        ) {
-                            Text(
-                                text = "$currentBpm BPM  ${currentTimeSig.numerator}/${currentTimeSig.denominator}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.85f),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-
                         if (state.phase == PlayPhase.COUNTDOWN) {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 Text(
@@ -332,25 +346,6 @@ fun MelodyPlayScreen(
                                     tint = Color(0xFF66BB6A).copy(alpha = 0.9f),
                                     modifier = Modifier.size(40.dp)
                                 )
-                            }
-                        }
-
-                        if (state.phase == PlayPhase.PLAYING || state.phase == PlayPhase.PAUSED || state.phase == PlayPhase.WAITING_FOR_NOTE) {
-                            Row(
-                                modifier = Modifier.padding(start = 12.dp, top = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                val progress = if (track.durationSeconds > 0) {
-                                    (state.currentTimeSeconds / track.durationSeconds * 100).toInt().coerceAtMost(100)
-                                } else 0
-                                Surface(color = Color(0xCC1A1A2E), shape = MaterialTheme.shapes.small) {
-                                    Text("$progress%", style = MaterialTheme.typography.labelLarge, color = Color.White, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                                }
-                                val notesHit = state.noteResults.count { it.value != NoteResultState.MISS && it.value != NoteResultState.ACTIVE }
-                                Surface(color = Color(0xCC1A1A2E), shape = MaterialTheme.shapes.small) {
-                                    Text("$notesHit / ${track.notes.size}", style = MaterialTheme.typography.labelLarge, color = Color.White, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                                }
                             }
                         }
 
