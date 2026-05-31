@@ -26,6 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -321,10 +322,10 @@ class FreePlayViewModel @Inject constructor(
         val locked = s.loopEndBar
         // Unlock if tapping the already-locked bar
         if (locked != null && locked == nowBar) { _state.update { it.copy(loopEndBar = null) }; return }
-        val startBar = s.loopStartBar
-        if (startBar != null) {
-            if (nowBar == startBar) { _snackbarMessage.tryEmit("End bar must differ from start bar"); return }
-            if (nowBar < startBar) { _state.update { it.copy(loopStartBar = nowBar, loopEndBar = startBar) }; return }
+        val effectiveStart = s.loopStartBar ?: 1
+        if (nowBar == effectiveStart) { _snackbarMessage.tryEmit("End bar must differ from start bar"); return }
+        if (s.loopStartBar != null && nowBar < s.loopStartBar) {
+            _state.update { it.copy(loopStartBar = nowBar, loopEndBar = s.loopStartBar) }; return
         }
         _state.update { it.copy(loopEndBar = nowBar) }
     }
@@ -887,17 +888,18 @@ class FreePlayViewModel @Inject constructor(
                 OutputDevice.NONE -> null
             }
 
-            val s = _state.value
-            val barMs = (s.beatsPerBar * (60000.0 / s.bpm)).toLong()
-            val loopEndMs = if (s.loopEndBar != null) {
-                (s.loopEndBar - 1) * barMs
-            } else {
-                lastNoteEndMs + 4 * barMs
-            }
-            val loopStartMs = if (s.loopStartBar != null) {
-                (s.loopStartBar - 1) * barMs
-            } else {
-                firstNoteMs
+            // Helper: compute current loop bounds from live state (so user changes take effect immediately)
+            fun loopBounds(): Pair<Long, Long> {
+                val cs = _state.value
+                val bMs = (cs.beatsPerBar * (60000.0 / cs.bpm)).toLong()
+                val startMs = if (cs.loopStartBar != null) (cs.loopStartBar - 1) * bMs else firstNoteMs
+                val endMs = if (cs.loopEndBar != null) {
+                    (cs.loopEndBar - 1) * bMs
+                } else {
+                    val defaultEndBar = (ceil(lastNoteEndMs.toDouble() / bMs).toInt() + 4).coerceAtLeast(4)
+                    (defaultEndBar - 1) * bMs
+                }
+                return Pair(startMs, endMs)
             }
 
             data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean)
@@ -943,7 +945,8 @@ class FreePlayViewModel @Inject constructor(
                     else player?.noteOff(0, ev.midiNote)
                 }
 
-                // Loop-at-end
+                // Loop-at-end: re-read bounds each frame so user changes take effect immediately
+                val (loopStartMs, loopEndMs) = loopBounds()
                 if (replayPositionMs >= loopEndMs) {
                     player?.allNotesOff()
                     replayPositionMs = loopStartMs
