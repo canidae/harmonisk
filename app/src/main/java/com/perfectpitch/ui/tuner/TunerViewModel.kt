@@ -7,6 +7,7 @@ import com.perfectpitch.data.SettingsRepository
 import com.perfectpitch.music.NoteInfo
 import com.perfectpitch.music.NoteUtils
 import com.perfectpitch.music.PitchResult
+import com.perfectpitch.music.ScoringEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -26,7 +27,6 @@ class TunerViewModel @Inject constructor(
 
     companion object {
         const val HOLD_DURATION_MS = 10_000L
-        const val IN_TUNE_CENTS = 10
 
         /**
          * EMA alpha in semitone space.
@@ -134,7 +134,7 @@ class TunerViewModel @Inject constructor(
             }
 
             // Count consecutive frames within the in-tune window for the stable indicator
-            if (abs(noteInfo.centsOff) <= IN_TUNE_CENTS) {
+            if (abs(noteInfo.centsOff) <= ScoringEngine.PERFECT_CENTS) {
                 inTuneConsecutiveCount++
             } else {
                 inTuneConsecutiveCount = 0

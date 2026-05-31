@@ -39,18 +39,15 @@ import com.perfectpitch.ui.components.PIANO_HEIGHT_DP
 import com.perfectpitch.ui.components.RequireMicPermission
 import com.perfectpitch.ui.components.SharedNoteCanvas
 import com.perfectpitch.ui.components.VOICE_COLORS
+import com.perfectpitch.ui.NOTE_DIVISION_OPTIONS
+import com.perfectpitch.ui.OVERLAY_BG
+import com.perfectpitch.ui.OVERLAY_ICON_TINT
+import com.perfectpitch.ui.PANEL_BG
+import com.perfectpitch.ui.PANEL_BTN_SIZE
+import com.perfectpitch.ui.PANEL_ROW2_BG
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
-
-private val OVERLAY_BG = Color(0xAA1A1A2E)
-private val OVERLAY_ICON_TINT = Color.White.copy(alpha = 0.9f)
-private val PANEL_BG = Color(0xDD0D0D1A)
-private val PANEL_ROW2_BG = Color(0xBB0D0D1A)
-private val PANEL_BTN_SIZE = 32.dp
-
-private val NOTE_DIVISIONS = listOf(4, 8, 16, 32, 64)
-private val NOTE_DIVISION_LABELS = mapOf(4 to "♩ Quarter", 8 to "♪ 8th", 16 to "♬ 16th", 32 to "32nd", 64 to "64th")
 
 private val PIANO_VISIBILITY_LABELS = mapOf(
     PianoVisibility.BOTH        to "Upper + lower keyboards",
@@ -232,10 +229,10 @@ fun FreePlayScreen(
                     onClick = { viewModel.toggleSnap() }
                 )
                 if (state.snapEnabled) {
-                    val divIndex = NOTE_DIVISIONS.indexOf(state.minNoteDivision).takeIf { it >= 0 } ?: 2
+                    val divIndex = NOTE_DIVISION_OPTIONS.indexOfFirst { it.division == state.minNoteDivision }.takeIf { it >= 0 } ?: 2
                     val reversedIndex = 4 - divIndex
-                    DropdownMenuItem(text = { Text("Min note duration: ${NOTE_DIVISION_LABELS[state.minNoteDivision] ?: "${state.minNoteDivision}th"}") }, onClick = {})
-                    Slider(value = reversedIndex.toFloat(), onValueChange = { viewModel.setMinNoteDivision(NOTE_DIVISIONS[4 - it.roundToInt()]) }, valueRange = 0f..4f, steps = 3, modifier = Modifier.padding(horizontal = 16.dp))
+                    DropdownMenuItem(text = { Text("Min note duration: ${NOTE_DIVISION_OPTIONS.find { it.division == state.minNoteDivision }?.label ?: "${state.minNoteDivision}th"}") }, onClick = {})
+                    Slider(value = reversedIndex.toFloat(), onValueChange = { viewModel.setMinNoteDivision(NOTE_DIVISION_OPTIONS[4 - it.roundToInt()].division) }, valueRange = 0f..4f, steps = 3, modifier = Modifier.padding(horizontal = 16.dp))
                 }
                 HorizontalDivider()
                 var showPianoVisMenu by remember { mutableStateOf(false) }

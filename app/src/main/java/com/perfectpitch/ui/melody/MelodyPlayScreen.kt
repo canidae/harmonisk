@@ -31,13 +31,12 @@ import com.perfectpitch.ui.components.KeepScreenOn
 import com.perfectpitch.ui.components.PIANO_HEIGHT_DP
 import com.perfectpitch.ui.components.RequireMicPermission
 import com.perfectpitch.ui.components.SharedNoteCanvas
+import com.perfectpitch.ui.OVERLAY_BG
+import com.perfectpitch.ui.OVERLAY_BUTTON_SIZE
+import com.perfectpitch.ui.OVERLAY_ICON_TINT
+import com.perfectpitch.ui.PANEL_BG
+import com.perfectpitch.ui.PANEL_BTN_SIZE
 import kotlin.math.roundToInt
-
-private val PANEL_BG = Color(0xDD0D0D1A)
-private val PANEL_BTN_SIZE = 32.dp
-private val OVERLAY_BG = Color(0xAA1A1A2E)
-private val OVERLAY_ICON_TINT = Color.White.copy(alpha = 0.9f)
-private val OVERLAY_BUTTON_SIZE = 40.dp
 
 @Composable
 fun MelodyPlayScreen(

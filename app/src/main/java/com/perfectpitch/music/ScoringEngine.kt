@@ -27,6 +27,15 @@ class ScoringEngine {
         // Scoring weights — timing excluded (latency-agnostic)
         const val PITCH_WEIGHT = 0.6f
         const val DURATION_WEIGHT = 0.4f
+
+        fun scoreTier(score: Float): ScoreTier = when {
+            score >= 95f -> ScoreTier.LEGENDARY
+            score >= 80f -> ScoreTier.EXCELLENT
+            score >= 65f -> ScoreTier.GREAT
+            score >= 50f -> ScoreTier.GOOD
+            score >= 30f -> ScoreTier.OK
+            else -> ScoreTier.NEEDS_WORK
+        }
     }
 
     fun scoreNote(result: NotePerformance): NoteScore {
@@ -108,15 +117,13 @@ class ScoringEngine {
         )
     }
 
-    private fun getEncouragingMessage(score: Float): String {
-        return when {
-            score >= 95f -> "🌟 Outstanding! 🌟"
-            score >= 80f -> "🎉 Excellent! 🎉"
-            score >= 65f -> "👏 Well done! 👏"
-            score >= 50f -> "💪 Keep it up! 💪"
-            score >= 30f -> "🎵 Getting there! 🎵"
-            else -> "🎶 Keep practicing! 🎶"
-        }
+    private fun getEncouragingMessage(score: Float): String = when (scoreTier(score)) {
+        ScoreTier.LEGENDARY -> "🌟 Outstanding! 🌟"
+        ScoreTier.EXCELLENT -> "🎉 Excellent! 🎉"
+        ScoreTier.GREAT -> "👏 Well done! 👏"
+        ScoreTier.GOOD -> "💪 Keep it up! 💪"
+        ScoreTier.OK -> "🎵 Getting there! 🎵"
+        ScoreTier.NEEDS_WORK -> "🎶 Keep practicing! 🎶"
     }
 }
 
@@ -136,6 +143,8 @@ data class NoteScore(
 )
 
 enum class PitchAccuracy { PERFECT, GREAT, GOOD, OK, MISS }
+
+enum class ScoreTier { LEGENDARY, EXCELLENT, GREAT, GOOD, OK, NEEDS_WORK }
 
 data class MelodyScore(
     val overallScore: Float,

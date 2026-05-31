@@ -18,6 +18,8 @@ import com.perfectpitch.midi.MidiOutputSender
 import com.perfectpitch.midi.MidiWriter
 import com.perfectpitch.music.NoteUtils
 import com.perfectpitch.music.PitchResult
+import com.perfectpitch.ui.MAX_FALL_SPEED
+import com.perfectpitch.ui.MIN_FALL_SPEED
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -48,8 +50,6 @@ class FreePlayViewModel @Inject constructor(
     companion object {
         const val MIN_VISIBLE_KEYS = 5f
         const val MAX_VISIBLE_KEYS = 48f
-        const val MIN_FALL_SPEED = 30f
-        const val MAX_FALL_SPEED = 600f
         const val RANGE_PADDING = 2
         const val ABSOLUTE_MIN_MIDI = 21f  // A0
         const val ABSOLUTE_MAX_MIDI = 108f // A8

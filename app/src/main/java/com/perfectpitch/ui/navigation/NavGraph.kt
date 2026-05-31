@@ -22,53 +22,53 @@ fun NavGraph() {
 
     NavHost(
         navController = navController,
-        startDestination = "home"
+        startDestination = NavRoutes.HOME
     ) {
-        composable("home") {
+        composable(NavRoutes.HOME) {
             HomeScreen(
-                onNavigateToFreePlay = { navController.navigate("freeplay") },
-                onNavigateToMelody = { navController.navigate("melody_graph") },
-                onNavigateToTuner = { navController.navigate("tuner") },
-                onNavigateToSettings = { navController.navigate("settings") }
+                onNavigateToFreePlay = { navController.navigate(NavRoutes.FREEPLAY) },
+                onNavigateToMelody = { navController.navigate(NavRoutes.MELODY_GRAPH) },
+                onNavigateToTuner = { navController.navigate(NavRoutes.TUNER) },
+                onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS) }
             )
         }
-        composable("freeplay") {
+        composable(NavRoutes.FREEPLAY) {
             FreePlayScreen(onBack = { navController.popBackStack() })
         }
-        navigation(startDestination = "melody", route = "melody_graph") {
-            composable("melody") { entry ->
+        navigation(startDestination = NavRoutes.MELODY, route = NavRoutes.MELODY_GRAPH) {
+            composable(NavRoutes.MELODY) { entry ->
                 val parentEntry = remember(entry) {
-                    navController.getBackStackEntry("melody_graph")
+                    navController.getBackStackEntry(NavRoutes.MELODY_GRAPH)
                 }
                 val viewModel: MelodyViewModel = hiltViewModel(parentEntry)
                 MelodyScreen(
                     onBack = { navController.popBackStack() },
-                    onStartPlay = { navController.navigate("melody/play") },
+                    onStartPlay = { navController.navigate(NavRoutes.MELODY_PLAY) },
                     viewModel = viewModel
                 )
             }
-            composable("melody/play") { entry ->
+            composable(NavRoutes.MELODY_PLAY) { entry ->
                 val parentEntry = remember(entry) {
-                    navController.getBackStackEntry("melody_graph")
+                    navController.getBackStackEntry(NavRoutes.MELODY_GRAPH)
                 }
                 val viewModel: MelodyViewModel = hiltViewModel(parentEntry)
                 MelodyPlayScreen(
                     onBack = { navController.popBackStack() },
-                    onNavigateToCalibration = { navController.navigate("calibration") },
+                    onNavigateToCalibration = { navController.navigate(NavRoutes.CALIBRATION) },
                     viewModel = viewModel
                 )
             }
         }
-        composable("tuner") {
+        composable(NavRoutes.TUNER) {
             TunerScreen(onBack = { navController.popBackStack() })
         }
-        composable("settings") {
+        composable(NavRoutes.SETTINGS) {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
-                onNavigateToCalibration = { navController.navigate("calibration") }
+                onNavigateToCalibration = { navController.navigate(NavRoutes.CALIBRATION) }
             )
         }
-        composable("calibration") {
+        composable(NavRoutes.CALIBRATION) {
             CalibrationScreen(onBack = { navController.popBackStack() })
         }
     }

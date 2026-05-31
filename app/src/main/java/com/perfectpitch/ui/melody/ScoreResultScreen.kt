@@ -12,6 +12,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.perfectpitch.music.MelodyScore
+import com.perfectpitch.music.ScoringEngine
+import com.perfectpitch.music.ScoreTier
 import com.perfectpitch.ui.theme.*
 
 @Composable
@@ -50,7 +52,7 @@ fun ScoreResultModal(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "${"%.0f".format(animatedScore)}",
+                        text = "%.0f".format(animatedScore),
                         style = enthusiasm.scoreStyle(),
                         color = scoreColor(score)
                     )
@@ -108,13 +110,13 @@ private enum class EnthusiasmLevel(val emoji: String) {
     }
 }
 
-private fun enthusiasmLevel(score: Float) = when {
-    score >= 95f -> EnthusiasmLevel.LEGENDARY
-    score >= 80f -> EnthusiasmLevel.EXCELLENT
-    score >= 65f -> EnthusiasmLevel.GREAT
-    score >= 50f -> EnthusiasmLevel.GOOD
-    score >= 30f -> EnthusiasmLevel.OK
-    else -> EnthusiasmLevel.NEEDS_WORK
+private fun enthusiasmLevel(score: Float): EnthusiasmLevel = when (ScoringEngine.scoreTier(score)) {
+    ScoreTier.LEGENDARY -> EnthusiasmLevel.LEGENDARY
+    ScoreTier.EXCELLENT -> EnthusiasmLevel.EXCELLENT
+    ScoreTier.GREAT -> EnthusiasmLevel.GREAT
+    ScoreTier.GOOD -> EnthusiasmLevel.GOOD
+    ScoreTier.OK -> EnthusiasmLevel.OK
+    ScoreTier.NEEDS_WORK -> EnthusiasmLevel.NEEDS_WORK
 }
 
 @Composable

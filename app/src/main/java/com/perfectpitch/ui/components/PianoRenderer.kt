@@ -8,10 +8,9 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.perfectpitch.music.NoteUtils
 import kotlin.math.ceil
 import kotlin.math.floor
-
-private val NOTE_NAMES = arrayOf("C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B")
 
 const val PIANO_HEIGHT_DP = 52f
 private const val BLACK_KEY_HEIGHT_FRACTION = 0.62f
@@ -165,7 +164,7 @@ fun DrawScope.drawPianoKeyboard(
         // Label on white key
         val noteIndex = midi % 12
         val octave = midi / 12 - 1
-        val noteName = NOTE_NAMES[noteIndex]
+        val noteName = NoteUtils.NOTE_NAMES[noteIndex]
         val label = if (key.width > 35f * density) "$noteName$octave" else noteName
         val fontSize = (key.width / density * 0.3f).coerceIn(7f, 13f)
 
@@ -229,7 +228,7 @@ fun DrawScope.drawPianoKeyboard(
 
         if (key.width > 22f * density) {
             val noteIndex = midi % 12
-            val noteName = NOTE_NAMES[noteIndex]
+            val noteName = NoteUtils.NOTE_NAMES[noteIndex]
             val fontSize = (key.width / density * 0.28f).coerceIn(7f, 10f)
             val textLayout = textMeasurer.measure(
                 text = AnnotatedString(noteName),

@@ -18,6 +18,8 @@ import com.perfectpitch.midi.MidiInputReceiver
 import com.perfectpitch.midi.MidiNoteEvent
 import com.perfectpitch.midi.MidiOutputSender
 import com.perfectpitch.music.*
+import com.perfectpitch.ui.MAX_FALL_SPEED
+import com.perfectpitch.ui.MIN_FALL_SPEED
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -42,8 +44,6 @@ class MelodyViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
-        const val MIN_FALL_SPEED = 30f
-        const val MAX_FALL_SPEED = 600f
         const val NOTE_RANGE_PADDING = 3
         /** Extra grace time beyond calibrated input delay — musically acceptable lateness. */
         const val GRACE_PERIOD_EXTRA_MS = 150L

@@ -17,7 +17,7 @@ data class PitchResult(
 
     val noteWithOctave: String get() = "$noteName$octave"
 
-    val isInTune: Boolean get() = kotlin.math.abs(centsOff) <= 10f
+    val isInTune: Boolean get() = kotlin.math.abs(centsOff) <= ScoringEngine.PERFECT_CENTS
 
     companion object {
         val SILENT = PitchResult(
