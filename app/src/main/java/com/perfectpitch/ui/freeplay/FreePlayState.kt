@@ -11,7 +11,7 @@ data class FreePlayState(
     val activeNote: PlayedNote? = null,
     val viewMinMidi: Float = 60f,
     val viewMaxMidi: Float = 72f,
-    val fallSpeedPxPerSec: Float = 150f,
+    val fallSpeedPxPerSec: Float = 75f,
     val songPositionMs: Long = 0L,
     val beatsPerBar: Int = 4,
     val bpm: Float = 120f,

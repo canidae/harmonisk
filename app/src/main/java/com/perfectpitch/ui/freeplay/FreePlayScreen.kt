@@ -559,15 +559,22 @@ fun FreePlayScreen(
                             val dy = down.position.y - noteRect.bottom
                             dx * dx + dy * dy <= (handleRadiusPx * handleRadiusPx)
                         }
-                        val isNoteBody    = !isEndHandle && !isStartHandle && noteRect.contains(down.position)
+                        val isNoteBody = !isEndHandle && !isStartHandle && noteRect.contains(down.position)
 
                         if (!isEndHandle && !isStartHandle && !isNoteBody) return@awaitEachGesture
                         down.consume()
 
+                        // Capture note times at drag start; all deltas are computed from origin so
+                        // snap jumps to the next grid as the total drag crosses a grid-interval boundary
+                        val origInfo = viewModel.getNoteInfo(selId) ?: return@awaitEachGesture
+                        val origStartMs = origInfo.startTimeMs
+                        val origEndMs   = origInfo.endTimeMs
+                        val origMidi    = origInfo.midiNumber
+
+                        var totalYPx     = 0f
                         var localMidiAccum = 0f
                         var totalMidiDelta = 0
                         var lastPlayedMidiDelta = Int.MIN_VALUE
-                        val originalMidi = viewModel.getNoteMidi(selId)
                         try {
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -575,22 +582,26 @@ fun FreePlayScreen(
                                 if (!change.pressed) break
                                 val delta = change.position - change.previousPosition
                                 change.consume()
-                                if (delta.x != 0f || delta.y != 0f) {
-                                    val deltaMs = -(delta.y / currentPxPerMs).toLong()
-                                    when {
-                                        isEndHandle   -> viewModel.extendNoteEnd(selId, deltaMs)
-                                        isStartHandle -> viewModel.extendNoteStart(selId, deltaMs)
-                                        isNoteBody    -> {
-                                            localMidiAccum += delta.x * (currentMidiRange / size.width.toFloat())
-                                            val deltaMidi = localMidiAccum.toInt()
-                                            localMidiAccum -= deltaMidi.toFloat()
-                                            if (deltaMidi != 0) totalMidiDelta += deltaMidi
-                                            viewModel.moveNote(selId, deltaMidi, deltaMs)
-                                            // Audible feedback when semitone changes
-                                            if (originalMidi != null && totalMidiDelta != lastPlayedMidiDelta) {
-                                                lastPlayedMidiDelta = totalMidiDelta
-                                                viewModel.previewNoteTone((originalMidi + totalMidiDelta).coerceIn(21, 108))
-                                            }
+
+                                totalYPx += delta.y
+                                val totalDeltaMs = -(totalYPx / currentPxPerMs).toLong()
+
+                                when {
+                                    isEndHandle   -> {
+                                        if (origEndMs != null)
+                                            viewModel.extendNoteEnd(selId, origEndMs + totalDeltaMs)
+                                    }
+                                    isStartHandle -> viewModel.extendNoteStart(selId, origStartMs + totalDeltaMs)
+                                    isNoteBody    -> {
+                                        localMidiAccum += delta.x * (currentMidiRange / size.width.toFloat())
+                                        val deltaMidi = localMidiAccum.toInt()
+                                        localMidiAccum -= deltaMidi.toFloat()
+                                        if (deltaMidi != 0) totalMidiDelta += deltaMidi
+                                        viewModel.moveNote(selId, totalMidiDelta, origStartMs + totalDeltaMs)
+                                        // Audible feedback when semitone changes
+                                        if (totalMidiDelta != lastPlayedMidiDelta) {
+                                            lastPlayedMidiDelta = totalMidiDelta
+                                            viewModel.previewNoteTone((origMidi + totalMidiDelta).coerceIn(21, 108))
                                         }
                                     }
                                 }

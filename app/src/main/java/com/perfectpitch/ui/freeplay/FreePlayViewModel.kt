@@ -359,6 +359,10 @@ class FreePlayViewModel @Inject constructor(
 
     fun getNoteMidi(id: String): Int? = _state.value.playedNotes.find { it.id == id }?.midiNumber
 
+    data class NoteInfo(val startTimeMs: Long, val endTimeMs: Long?, val midiNumber: Int)
+    fun getNoteInfo(id: String): NoteInfo? = _state.value.playedNotes.find { it.id == id }
+        ?.let { NoteInfo(it.startTimeMs, it.endTimeMs, it.midiNumber) }
+
     fun previewNoteTone(midiNote: Int) {
         if (!melodySynthesizer.isReady) return
         previewJob?.cancel()
@@ -372,7 +376,8 @@ class FreePlayViewModel @Inject constructor(
         }
     }
 
-    fun moveNote(id: String, deltaMidi: Int, deltaMs: Long) {
+    /** Move note body: rawStartMs is the ABSOLUTE target start (pre-snap), deltaMidi is integer semitone change. */
+    fun moveNote(id: String, deltaMidi: Int, rawStartMs: Long) {
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
             val newMidi = (note.midiNumber + deltaMidi).coerceIn(21, 108)
@@ -380,7 +385,7 @@ class FreePlayViewModel @Inject constructor(
             val newOctave = (newMidi / 12) - 1
             val newNoteName = NoteUtils.NOTE_NAMES[noteIdx]
             val duration = note.endTimeMs?.minus(note.startTimeMs)
-            val newStart = (note.startTimeMs + deltaMs).coerceAtLeast(0L)
+            val newStart = snapToGridIfEnabled(rawStartMs, current.snapEnabled).coerceAtLeast(0L)
             val newEnd = duration?.let { newStart + it }
             val newNote = note.copy(
                 noteName = newNoteName,
@@ -393,19 +398,21 @@ class FreePlayViewModel @Inject constructor(
         }
     }
 
-    fun extendNoteStart(id: String, deltaMs: Long) {
+    /** Set start handle: rawStartMs is the ABSOLUTE target start (pre-snap). */
+    fun extendNoteStart(id: String, rawStartMs: Long) {
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
             val endMs = note.endTimeMs ?: return@update current
-            val newStart = (note.startTimeMs + deltaMs).coerceIn(0L, endMs - 1L)
+            val newStart = snapToGridIfEnabled(rawStartMs, current.snapEnabled).coerceIn(0L, endMs - 1L)
             current.copy(playedNotes = current.playedNotes.map { if (it.id == id) note.copy(startTimeMs = newStart) else it })
         }
     }
 
-    fun extendNoteEnd(id: String, deltaMs: Long) {
+    /** Set end handle: rawEndMs is the ABSOLUTE target end (pre-snap). */
+    fun extendNoteEnd(id: String, rawEndMs: Long) {
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
-            val newEnd = ((note.endTimeMs ?: 0L) + deltaMs).coerceAtLeast(note.startTimeMs + 1L)
+            val newEnd = snapToGridIfEnabled(rawEndMs, current.snapEnabled).coerceAtLeast(note.startTimeMs + 1L)
             current.copy(playedNotes = current.playedNotes.map { if (it.id == id) note.copy(endTimeMs = newEnd) else it })
         }
     }

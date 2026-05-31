@@ -128,6 +128,9 @@ fi
 #   * DEFAULT_JVM_OPTS, JAVA_OPTS, and GRADLE_OPTS environment variables
 #   * extra://special handling for JAVA_OPTS
 
+# Suppress JVM restricted-method warnings from Gradle's native-platform library
+DEFAULT_JVM_OPTS='--enable-native-access=ALL-UNNAMED'
+
 exec "$JAVACMD" \
     $DEFAULT_JVM_OPTS \
     $JAVA_OPTS \
