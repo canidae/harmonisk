@@ -626,7 +626,7 @@ fun FreePlayScreen(
                                         val deltaMidi = localMidiAccum.toInt()
                                         localMidiAccum -= deltaMidi.toFloat()
                                         if (deltaMidi != 0) totalMidiDelta += deltaMidi
-                                        viewModel.moveNote(selId, totalMidiDelta, origStartMs + totalDeltaMs)
+                                        viewModel.moveNote(selId, origMidi + totalMidiDelta, origStartMs + totalDeltaMs)
                                         // Audible feedback when semitone changes
                                         if (totalMidiDelta != lastPlayedMidiDelta) {
                                             lastPlayedMidiDelta = totalMidiDelta

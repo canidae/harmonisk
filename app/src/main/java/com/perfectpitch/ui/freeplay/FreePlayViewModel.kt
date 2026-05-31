@@ -411,13 +411,13 @@ class FreePlayViewModel @Inject constructor(
         }
     }
 
-    /** Move note body: rawStartMs is the ABSOLUTE target start (pre-snap), deltaMidi is integer semitone change. */
-    fun moveNote(id: String, deltaMidi: Int, rawStartMs: Long) {
+    /** Move note body: rawStartMs is the ABSOLUTE target start (pre-snap), newMidi is the absolute target MIDI note. */
+    fun moveNote(id: String, newMidi: Int, rawStartMs: Long) {
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
-            val newMidi = (note.midiNumber + deltaMidi).coerceIn(21, 108)
-            val noteIdx = ((newMidi % 12) + 12) % 12
-            val newOctave = (newMidi / 12) - 1
+            val clampedMidi = newMidi.coerceIn(21, 108)
+            val noteIdx = ((clampedMidi % 12) + 12) % 12
+            val newOctave = (clampedMidi / 12) - 1
             val newNoteName = NoteUtils.NOTE_NAMES[noteIdx]
             val duration = note.endTimeMs?.minus(note.startTimeMs)
             val newStart = snapToGridIfEnabled(rawStartMs, current.snapEnabled).coerceAtLeast(0L)
@@ -425,7 +425,7 @@ class FreePlayViewModel @Inject constructor(
             val newNote = note.copy(
                 noteName = newNoteName,
                 octave = newOctave,
-                midiNumber = newMidi,
+                midiNumber = clampedMidi,
                 startTimeMs = newStart,
                 endTimeMs = newEnd
             )
