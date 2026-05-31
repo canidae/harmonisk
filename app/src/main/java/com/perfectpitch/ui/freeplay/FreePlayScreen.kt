@@ -455,6 +455,12 @@ fun FreePlayScreen(
     }
 
     // ── Main layout ───────────────────────────────────────────────────────
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.stopPlaying()
+            viewModel.stopListening()
+        }
+    }
     Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
         if (isLandscape) {
             // In landscape: both panels in a single horizontal bar to save vertical space

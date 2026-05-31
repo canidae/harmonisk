@@ -380,8 +380,7 @@ class FreePlayViewModel @Inject constructor(
             val newOctave = (newMidi / 12) - 1
             val newNoteName = NoteUtils.NOTE_NAMES[noteIdx]
             val duration = note.endTimeMs?.minus(note.startTimeMs)
-            val rawStart = note.startTimeMs + deltaMs
-            val newStart = snapToGridIfEnabled(rawStart, current.snapEnabled)
+            val newStart = (note.startTimeMs + deltaMs).coerceAtLeast(0L)
             val newEnd = duration?.let { newStart + it }
             val newNote = note.copy(
                 noteName = newNoteName,
@@ -398,8 +397,7 @@ class FreePlayViewModel @Inject constructor(
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
             val endMs = note.endTimeMs ?: return@update current
-            val rawStart = note.startTimeMs + deltaMs
-            val newStart = snapToGridIfEnabled(rawStart, current.snapEnabled).coerceIn(0L, endMs - 1L)
+            val newStart = (note.startTimeMs + deltaMs).coerceIn(0L, endMs - 1L)
             current.copy(playedNotes = current.playedNotes.map { if (it.id == id) note.copy(startTimeMs = newStart) else it })
         }
     }
@@ -407,22 +405,26 @@ class FreePlayViewModel @Inject constructor(
     fun extendNoteEnd(id: String, deltaMs: Long) {
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
-            val rawEnd = (note.endTimeMs ?: 0L) + deltaMs
-            val newEnd = snapToGridIfEnabled(rawEnd, current.snapEnabled).coerceAtLeast(note.startTimeMs + 1L)
+            val newEnd = ((note.endTimeMs ?: 0L) + deltaMs).coerceAtLeast(note.startTimeMs + 1L)
             current.copy(playedNotes = current.playedNotes.map { if (it.id == id) note.copy(endTimeMs = newEnd) else it })
         }
     }
 
+    /** Snap final position and remove overlapping notes in the same voice. */
     fun commitNoteEdit(id: String) {
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
             val endMs = note.endTimeMs ?: return@update current
-            val voice = note.voiceIndex
+            val snappedStart = snapToGridIfEnabled(note.startTimeMs, current.snapEnabled)
+            val snappedEnd   = snapToGridIfEnabled(endMs, current.snapEnabled)
+                .coerceAtLeast(snappedStart + 1L)
+            val snapped = note.copy(startTimeMs = snappedStart, endTimeMs = snappedEnd)
+            val voice = snapped.voiceIndex
             val filtered = current.playedNotes.filter { other ->
                 other.id == id || other.voiceIndex != voice ||
-                other.endTimeMs == null || other.endTimeMs <= note.startTimeMs || other.startTimeMs >= endMs
+                other.endTimeMs == null || other.endTimeMs <= snappedStart || other.startTimeMs >= snappedEnd
             }
-            current.copy(playedNotes = filtered)
+            current.copy(playedNotes = filtered.map { if (it.id == id) snapped else it })
         }
     }
 
@@ -971,7 +973,9 @@ class FreePlayViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        stopPlaying()
         stopListening()
-        replayJob?.cancel()
+        previewJob?.cancel()
+        if (melodySynthesizer.isReady) melodySynthesizer.allNotesOff()
     }
 }
