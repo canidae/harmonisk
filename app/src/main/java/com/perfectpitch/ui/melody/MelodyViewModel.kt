@@ -373,7 +373,8 @@ class MelodyViewModel @Inject constructor(
                 currentNoteIndex = -1,
                 songTimeOffsetSeconds = 0.0,
                 melodyScore = null,
-                noteCentsHistory = emptyMap()
+                noteCentsHistory = emptyMap(),
+                countdownResumeTarget = 0.0
             )
         }
 
@@ -406,6 +407,29 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun resume() {
+        val currentState = _state.value
+
+        // If the user panned while paused, scroll back to live and play a 3-second countdown
+        // before resuming scoring — same visual effect as starting for the first time.
+        if (currentState.songTimeOffsetSeconds != 0.0) {
+            val targetTime = currentState.currentTimeSeconds
+            val countdownDuration = currentState.countdownDurationSeconds
+            val rewindTo = targetTime - countdownDuration
+            pauseOffset = rewindTo
+            isWaitingForNote = false
+            wasWaitingForNote = false
+            _state.update {
+                it.copy(
+                    phase = PlayPhase.COUNTDOWN,
+                    currentTimeSeconds = rewindTo,
+                    songTimeOffsetSeconds = 0.0,
+                    countdownResumeTarget = targetTime
+                )
+            }
+            startPlaybackTimer()
+            return
+        }
+
         if (wasWaitingForNote) {
             isWaitingForNote = true
             wasWaitingForNote = false
@@ -435,7 +459,8 @@ class MelodyViewModel @Inject constructor(
                 currentTimeSeconds = 0.0,
                 isListening = false,
                 noteResults = emptyMap(),
-                noteCentsHistory = emptyMap()
+                noteCentsHistory = emptyMap(),
+                countdownResumeTarget = 0.0
             )
         }
     }
@@ -452,6 +477,8 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun onVerticalScroll(deltaSeconds: Double) {
+        val phase = _state.value.phase
+        if (phase == PlayPhase.PLAYING || phase == PlayPhase.COUNTDOWN || phase == PlayPhase.WAITING_FOR_NOTE) return
         _state.update { current ->
             val track = current.melodyTrack ?: return@update current
             val timeSig = track.timeSignatureAt(0L)
@@ -483,7 +510,11 @@ class MelodyViewModel @Inject constructor(
         playbackJob = viewModelScope.launch {
             val track = _state.value.melodyTrack ?: return@launch
             val tempo = _state.value.tempoMultiplier
-            var pitchDetectionStarted = _state.value.phase == PlayPhase.PLAYING
+            // For mid-song countdown resumes, pitch scoring starts at the resume target time;
+            // for initial start, it starts at time 0.
+            val pitchStartThreshold = _state.value.countdownResumeTarget.let { if (it > 0.0) it else 0.0 }
+            var pitchDetectionStarted = _state.value.phase == PlayPhase.PLAYING ||
+                    _state.value.phase == PlayPhase.WAITING_FOR_NOTE
 
             while (isActive) {
                 // Grace period: continue advancing time for a while after entering wait mode
@@ -500,10 +531,10 @@ class MelodyViewModel @Inject constructor(
                 val elapsed = (SystemClock.elapsedRealtime() - playbackStartTime) / 1000.0 * tempo
                 val currentTime = pauseOffset + elapsed
 
-                // Transition from COUNTDOWN to PLAYING when time reaches 0.0
-                if (!pitchDetectionStarted && currentTime >= 0.0) {
+                // Transition from COUNTDOWN to PLAYING when time reaches the threshold
+                if (!pitchDetectionStarted && currentTime >= pitchStartThreshold) {
                     pitchDetectionStarted = true
-                    _state.update { it.copy(phase = PlayPhase.PLAYING) }
+                    _state.update { it.copy(phase = PlayPhase.PLAYING, countdownResumeTarget = 0.0) }
                     startPitchDetection()
                 }
 
@@ -514,8 +545,8 @@ class MelodyViewModel @Inject constructor(
 
                 _state.update { it.copy(currentTimeSeconds = currentTime) }
 
-                // Only track notes once we're past the countdown
-                if (currentTime >= 0.0) {
+                // Only track notes once pitch detection is active (after countdown)
+                if (pitchDetectionStarted) {
                     updateCurrentNote(currentTime)
                 }
 

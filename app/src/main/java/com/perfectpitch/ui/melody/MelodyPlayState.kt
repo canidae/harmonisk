@@ -32,11 +32,19 @@ data class MelodyPlayState(
     // MIDI device state
     val midiAvailable: Boolean = false,
     val midiInputEnabled: Boolean = false,
-    val midiOutputEnabled: Boolean = false
+    val midiOutputEnabled: Boolean = false,
+    // Non-zero during a mid-song countdown resume: the game-time value at which scoring starts
+    val countdownResumeTarget: Double = 0.0
 ) {
     /** Countdown display value derived from currentTimeSeconds (3, 2, 1) */
     val countdownValue: Int
-        get() = kotlin.math.ceil(-currentTimeSeconds).toInt().coerceIn(1, countdownDurationSeconds.toInt())
+        get() {
+            val remaining = if (countdownResumeTarget > 0.0)
+                countdownResumeTarget - currentTimeSeconds
+            else
+                -currentTimeSeconds
+            return kotlin.math.ceil(remaining).toInt().coerceIn(1, countdownDurationSeconds.toInt())
+        }
 
     /**
      * True when the view is already scrolled to (or before) the first note.

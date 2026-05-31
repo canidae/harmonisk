@@ -11,7 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
@@ -350,8 +349,7 @@ fun MelodyPlayScreen(
                         }
 
                         // Contextual action buttons (bottom-right overlay)
-                        val showScrollButton = if (state.phase == PlayPhase.FINISHED) !state.isAtScrollStart
-                                               else state.songTimeOffsetSeconds != 0.0
+                        val showScrollButton = state.phase == PlayPhase.FINISHED && !state.isAtScrollStart
                         Column(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
@@ -361,15 +359,12 @@ fun MelodyPlayScreen(
                         ) {
                             if (showScrollButton) {
                                 IconButton(
-                                    onClick = {
-                                        if (state.phase == PlayPhase.FINISHED) viewModel.scrollToBeginning()
-                                        else viewModel.scrollToLive()
-                                    },
+                                    onClick = { viewModel.scrollToBeginning() },
                                     modifier = Modifier.size(OVERLAY_BUTTON_SIZE).background(OVERLAY_BG, CircleShape)
                                 ) {
                                     Icon(
-                                        if (state.phase == PlayPhase.FINISHED) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowUp,
-                                        contentDescription = if (state.phase == PlayPhase.FINISHED) "Scroll to beginning" else "Back to live",
+                                        Icons.Filled.KeyboardArrowDown,
+                                        contentDescription = "Scroll to beginning",
                                         tint = OVERLAY_ICON_TINT,
                                         modifier = Modifier.size(20.dp)
                                     )
