@@ -491,10 +491,6 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
-    fun scrollToLive() {
-        _state.update { it.copy(songTimeOffsetSeconds = 0.0) }
-    }
-
     fun scrollToBeginning() {
         val track = _state.value.melodyTrack ?: return
         val firstNoteStart = track.notes.firstOrNull()?.let { track.noteStartSeconds(it) } ?: 0.0

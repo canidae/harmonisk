@@ -539,7 +539,8 @@ private fun DrawScope.drawFreePlayNotes(
             color = barColor,
             borderAlpha = if (isSelected) 0.0f else 0.25f,  // selection glow replaces border
             centsHistory = note.centsHistory,
-            density = density
+            density = density,
+            wigglyPianoAtBottom = true  // FreePlay notes scroll down: sample 0 (start) is at rawBottomY
         )
 
         // Selection glow: bright thick rounded outline drawn on top of the note bar
@@ -599,6 +600,8 @@ private fun DrawScope.drawFreePlayNotes(
 }
 
 // endregion
+
+// region Melody rendering
 
 private fun DrawScope.drawMelodyNotes(
     mode: CanvasMode.Melody,
@@ -743,8 +746,10 @@ private fun DrawScope.drawNoteBar(
         drawWigglyPitchLine(
             barX = barX,
             barW = barW,
+            rawTopY = rawTopY,
+            rawBottomY = rawBottomY,
             clippedTop = clippedTop,
-            clippedHeight = barHeight,
+            clippedBottom = clippedBottom,
             centsHistory = centsHistory,
             pianoAtBottom = wigglyPianoAtBottom,
             density = density
@@ -759,8 +764,10 @@ private fun DrawScope.drawNoteBar(
 private fun DrawScope.drawWigglyPitchLine(
     barX: Float,
     barW: Float,
+    rawTopY: Float,
+    rawBottomY: Float,
     clippedTop: Float,
-    clippedHeight: Float,
+    clippedBottom: Float,
     centsHistory: List<Float>,
     pianoAtBottom: Boolean,
     density: Float
@@ -768,26 +775,30 @@ private fun DrawScope.drawWigglyPitchLine(
     val numSamples = centsHistory.size
     if (numSamples < 1) return
 
+    // Use the full (unclipped) bar height so the line isn't compressed when the
+    // bar extends outside the visible area. Drawing is clipped to [clippedTop, clippedBottom].
+    val fullHeight = rawBottomY - rawTopY
+    if (fullHeight < 1f) return
+
     val path = Path()
     val centerX = barX + barW / 2f
     val maxDeviationPx = barW / 2f - 2f
-
-    val yStep = if (numSamples > 1) clippedHeight / (numSamples - 1).toFloat() else 0f
+    val yStep = if (numSamples > 1) fullHeight / (numSamples - 1).toFloat() else 0f
 
     for (i in centsHistory.indices) {
         val normalized = (centsHistory[i] / 50f).coerceIn(-1f, 1f)
         val x = centerX - normalized * maxDeviationPx
-
-        val y = if (pianoAtBottom) {
-            clippedTop + clippedHeight - i * yStep
-        } else {
-            clippedTop + i * yStep
-        }
-
+        // pianoAtBottom: notes fall toward the piano at the bottom;
+        //   sample 0 = note start → rawBottomY (newest, closest to piano)
+        //   sample N-1 = note end → rawTopY   (oldest, furthest from piano)
+        // !pianoAtBottom: opposite direction (FreePlay dual-piano layout mirrors this)
+        val y = if (pianoAtBottom) rawBottomY - i * yStep else rawTopY + i * yStep
         if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
     }
 
-    drawGlowPath(path, density)
+    clipRect(left = barX, top = clippedTop, right = barX + barW, bottom = clippedBottom) {
+        drawGlowPath(path, density)
+    }
 }
 
 // endregion
