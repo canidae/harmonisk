@@ -12,6 +12,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.perfectpitch.ui.components.NoteDisplay
 import com.perfectpitch.ui.components.PitchGauge
 import com.perfectpitch.ui.components.RequireMicPermission
@@ -24,7 +25,7 @@ fun TunerScreen(
     onBack: () -> Unit,
     viewModel: TunerViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     KeepScreenOn()
 

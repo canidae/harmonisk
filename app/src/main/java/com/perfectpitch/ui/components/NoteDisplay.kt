@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.perfectpitch.ui.theme.*
+import com.perfectpitch.ui.utils.centsColor
 
 @Composable
 fun NoteDisplay(

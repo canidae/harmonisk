@@ -51,21 +51,12 @@ fun ScoreResultModal(
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "%.0f".format(animatedScore),
-                        style = enthusiasm.scoreStyle(),
-                        color = scoreColor(score)
+                    EnthusiasmDisplay(
+                        level = enthusiasm,
+                        scoreText = "%.0f".format(animatedScore),
+                        scoreColor = scoreColor(score),
+                        message = melodyScore.encouragingMessage
                     )
-
-                    if (melodyScore.encouragingMessage.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = melodyScore.encouragingMessage,
-                            style = enthusiasm.messageStyle(),
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -90,23 +81,40 @@ private enum class EnthusiasmLevel(val emoji: String) {
     GOOD("\uD83D\uDCAA"),        // 💪
     OK("\uD83C\uDFB5"),          // 🎵
     NEEDS_WORK("\uD83C\uDFB6"); // 🎶
+}
 
-    @Composable
-    fun scoreStyle() = when (this) {
-        LEGENDARY, EXCELLENT -> MaterialTheme.typography.displayLarge
-        GREAT, GOOD -> MaterialTheme.typography.displayMedium
-        OK -> MaterialTheme.typography.displaySmall
-        NEEDS_WORK -> MaterialTheme.typography.headlineMedium
-    }
+@Composable
+private fun EnthusiasmDisplay(
+    level: EnthusiasmLevel,
+    scoreText: String,
+    scoreColor: androidx.compose.ui.graphics.Color,
+    message: String
+) {
+    Text(
+        text = scoreText,
+        style = when (level) {
+            EnthusiasmLevel.LEGENDARY, EnthusiasmLevel.EXCELLENT -> MaterialTheme.typography.displayLarge
+            EnthusiasmLevel.GREAT, EnthusiasmLevel.GOOD -> MaterialTheme.typography.displayMedium
+            EnthusiasmLevel.OK -> MaterialTheme.typography.displaySmall
+            EnthusiasmLevel.NEEDS_WORK -> MaterialTheme.typography.headlineMedium
+        },
+        color = scoreColor
+    )
 
-    @Composable
-    fun messageStyle() = when (this) {
-        LEGENDARY -> MaterialTheme.typography.displaySmall
-        EXCELLENT -> MaterialTheme.typography.titleLarge
-        GREAT -> MaterialTheme.typography.titleMedium
-        GOOD -> MaterialTheme.typography.bodyLarge
-        OK -> MaterialTheme.typography.bodyLarge
-        NEEDS_WORK -> MaterialTheme.typography.bodyMedium
+    if (message.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = message,
+            style = when (level) {
+                EnthusiasmLevel.LEGENDARY -> MaterialTheme.typography.displaySmall
+                EnthusiasmLevel.EXCELLENT -> MaterialTheme.typography.titleLarge
+                EnthusiasmLevel.GREAT -> MaterialTheme.typography.titleMedium
+                EnthusiasmLevel.GOOD, EnthusiasmLevel.OK -> MaterialTheme.typography.bodyLarge
+                EnthusiasmLevel.NEEDS_WORK -> MaterialTheme.typography.bodyMedium
+            },
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

@@ -188,89 +188,25 @@ fun MelodyPlayScreen(
                     }
 
                     // Settings
-                    Box {
-                        IconButton(
-                            onClick = { showConfigMenu = true },
-                            modifier = Modifier.size(PANEL_BTN_SIZE)
-                        ) {
-                            Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
-                        }
-                        DropdownMenu(
-                            expanded = showConfigMenu,
-                            onDismissRequest = { showConfigMenu = false },
-                            offset = DpOffset((-180).dp, 0.dp)
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Wait for note") },
-                                trailingIcon = {
-                                    Switch(checked = gameState.waitMode, onCheckedChange = { viewModel.setWaitMode(it) }, modifier = Modifier.height(20.dp))
-                                },
-                                onClick = { viewModel.setWaitMode(!gameState.waitMode) }
-                            )
-                            if (gameState.waitMode) {
-                                DropdownMenuItem(
-                                    text = { Text("Allow wrong notes") },
-                                    trailingIcon = {
-                                        Switch(checked = gameState.allowWrongNotes, onCheckedChange = { viewModel.setAllowWrongNotes(it) }, modifier = Modifier.height(20.dp))
-                                    },
-                                    onClick = { viewModel.setAllowWrongNotes(!gameState.allowWrongNotes) }
-                                )
-                            }
-                            DropdownMenuItem(text = { Text("Tempo: ${"%.0f".format(gameState.tempoMultiplier * 100)}%") }, onClick = {})
-                            Slider(
-                                value = gameState.tempoMultiplier,
-                                onValueChange = { viewModel.setTempoMultiplier(it) },
-                                valueRange = 0.5f..1.5f,
-                                steps = 9,
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        if (gameState.transposeSemitones == 0) "Transpose: 0"
-                                        else if (gameState.transposeSemitones > 0) "Transpose: +${gameState.transposeSemitones}"
-                                        else "Transpose: ${gameState.transposeSemitones}"
-                                    )
-                                },
-                                onClick = {}
-                            )
-                            Slider(
-                                value = gameState.transposeSemitones.toFloat(),
-                                onValueChange = { viewModel.setTranspose(it.toInt()) },
-                                valueRange = -24f..24f,
-                                steps = 47,
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text("Play melody audio") },
-                                trailingIcon = {
-                                    Switch(checked = gameState.playMelodyAudio, onCheckedChange = { viewModel.setPlayMelodyAudio(it) }, modifier = Modifier.height(20.dp))
-                                },
-                                onClick = { viewModel.setPlayMelodyAudio(!gameState.playMelodyAudio) }
-                            )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text("Audio delay split: ${(splitPercent * 100).roundToInt()}% output") },
-                                onClick = {}
-                            )
-                            Slider(
-                                value = (splitPercent * 100).roundToInt().toFloat(),
-                                onValueChange = { viewModel.saveSplitPercent(it / 100f) },
-                                valueRange = 0f..100f,
-                                steps = 99,
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("Out: ${outputDelay}ms", style = MaterialTheme.typography.labelSmall)
-                                Text("In: ${inputDelay}ms", style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
-                    }
+                    MelodySettingsMenu(
+                        expanded = showConfigMenu,
+                        onDismiss = { showConfigMenu = false },
+                        onOpen = { showConfigMenu = true },
+                        waitMode = gameState.waitMode,
+                        onWaitModeChange = { viewModel.setWaitMode(it) },
+                        allowWrongNotes = gameState.allowWrongNotes,
+                        onAllowWrongNotesChange = { viewModel.setAllowWrongNotes(it) },
+                        tempoMultiplier = gameState.tempoMultiplier,
+                        onTempoChange = { viewModel.setTempoMultiplier(it) },
+                        transposeSemitones = gameState.transposeSemitones,
+                        onTransposeChange = { viewModel.setTranspose(it) },
+                        playMelodyAudio = gameState.playMelodyAudio,
+                        onPlayMelodyAudioChange = { viewModel.setPlayMelodyAudio(it) },
+                        splitPercent = splitPercent,
+                        onSplitPercentChange = { viewModel.saveSplitPercent(it) },
+                        outputDelay = outputDelay,
+                        inputDelay = inputDelay
+                    )
                 }
 
                 // ── Canvas area ──────────────────────────────────────────
@@ -407,5 +343,112 @@ fun MelodyPlayScreen(
 
     if (showResultsModal && gameState.melodyScore != null) {
         ScoreResultModal(melodyScore = gameState.melodyScore!!, onDismiss = { showResultsModal = false })
+    }
+}
+
+@Composable
+private fun MelodySettingsMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    onOpen: () -> Unit,
+    waitMode: Boolean,
+    onWaitModeChange: (Boolean) -> Unit,
+    allowWrongNotes: Boolean,
+    onAllowWrongNotesChange: (Boolean) -> Unit,
+    tempoMultiplier: Float,
+    onTempoChange: (Float) -> Unit,
+    transposeSemitones: Int,
+    onTransposeChange: (Int) -> Unit,
+    playMelodyAudio: Boolean,
+    onPlayMelodyAudioChange: (Boolean) -> Unit,
+    splitPercent: Float,
+    onSplitPercentChange: (Float) -> Unit,
+    outputDelay: Int,
+    inputDelay: Int
+) {
+    Box {
+        IconButton(
+            onClick = onOpen,
+            modifier = Modifier.size(PANEL_BTN_SIZE)
+        ) {
+            Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = onDismiss,
+            offset = DpOffset((-180).dp, 0.dp)
+        ) {
+            DropdownMenuItem(
+                text = { Text("Wait for note") },
+                trailingIcon = {
+                    Switch(checked = waitMode, onCheckedChange = onWaitModeChange, modifier = Modifier.height(20.dp))
+                },
+                onClick = { onWaitModeChange(!waitMode) }
+            )
+            if (waitMode) {
+                DropdownMenuItem(
+                    text = { Text("Allow wrong notes") },
+                    trailingIcon = {
+                        Switch(checked = allowWrongNotes, onCheckedChange = onAllowWrongNotesChange, modifier = Modifier.height(20.dp))
+                    },
+                    onClick = { onAllowWrongNotesChange(!allowWrongNotes) }
+                )
+            }
+            DropdownMenuItem(text = { Text("Tempo: ${"%.0f".format(tempoMultiplier * 100)}%") }, onClick = {})
+            Slider(
+                value = tempoMultiplier,
+                onValueChange = onTempoChange,
+                valueRange = 0.5f..1.5f,
+                steps = 9,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        when {
+                            transposeSemitones == 0 -> "Transpose: 0"
+                            transposeSemitones > 0  -> "Transpose: +$transposeSemitones"
+                            else                    -> "Transpose: $transposeSemitones"
+                        }
+                    )
+                },
+                onClick = {}
+            )
+            Slider(
+                value = transposeSemitones.toFloat(),
+                onValueChange = { onTransposeChange(it.toInt()) },
+                valueRange = -24f..24f,
+                steps = 47,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("Play melody audio") },
+                trailingIcon = {
+                    Switch(checked = playMelodyAudio, onCheckedChange = onPlayMelodyAudioChange, modifier = Modifier.height(20.dp))
+                },
+                onClick = { onPlayMelodyAudioChange(!playMelodyAudio) }
+            )
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("Audio delay split: ${(splitPercent * 100).roundToInt()}% output") },
+                onClick = {}
+            )
+            Slider(
+                value = (splitPercent * 100).roundToInt().toFloat(),
+                onValueChange = { onSplitPercentChange(it / 100f) },
+                valueRange = 0f..100f,
+                steps = 99,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Out: ${outputDelay}ms", style = MaterialTheme.typography.labelSmall)
+                Text("In: ${inputDelay}ms", style = MaterialTheme.typography.labelSmall)
+            }
+        }
     }
 }

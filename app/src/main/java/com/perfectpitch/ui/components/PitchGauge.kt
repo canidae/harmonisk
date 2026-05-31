@@ -18,7 +18,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.perfectpitch.ui.theme.centsColor
+import com.perfectpitch.ui.utils.centsColor
 
 /** Semi-circular pitch gauge showing cents offset from -50 to +50. */
 @Composable

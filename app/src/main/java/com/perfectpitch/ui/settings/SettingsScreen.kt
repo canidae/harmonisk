@@ -128,44 +128,24 @@ fun SettingsScreen(
                 var editingTotal by remember { mutableStateOf(false) }
                 var totalText by remember(totalDelay) { mutableStateOf(totalDelay.toString()) }
 
-                if (editingTotal) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = totalText,
-                            onValueChange = { totalText = it },
-                            label = { Text("Total delay (ms)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.width(160.dp)
-                        )
-                        Button(
-                            onClick = {
-                                totalText.toIntOrNull()?.let { viewModel.saveTotalDelay(it) }
-                                editingTotal = false
-                            },
-                            enabled = totalText.toIntOrNull() != null
-                        ) { Text("Save") }
-                        TextButton(onClick = {
-                            totalText = totalDelay.toString()
-                            editingTotal = false
-                        }) { Text("Cancel") }
+                InlineEditableNumber(
+                    label = "Total delay",
+                    unit = "ms",
+                    value = totalDelay,
+                    displayText = "Total delay: ${totalDelay}ms",
+                    editing = editingTotal,
+                    editText = totalText,
+                    onEditTextChange = { totalText = it },
+                    onEdit = { editingTotal = true },
+                    onSave = {
+                        totalText.toIntOrNull()?.let { viewModel.saveTotalDelay(it) }
+                        editingTotal = false
+                    },
+                    onCancel = {
+                        totalText = totalDelay.toString()
+                        editingTotal = false
                     }
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Total delay: ${totalDelay}ms",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        TextButton(onClick = { editingTotal = true }) { Text("Edit") }
-                    }
-                }
+                )
 
                 // Split slider (cold — no audio)
                 val splitPct = (splitPercent * 100).roundToInt()
@@ -219,5 +199,52 @@ private fun SettingSection(
             modifier = Modifier.padding(bottom = 8.dp)
         )
         content()
+    }
+}
+
+@Composable
+private fun InlineEditableNumber(
+    label: String,
+    unit: String,
+    value: Int,
+    displayText: String,
+    editing: Boolean,
+    editText: String,
+    onEditTextChange: (String) -> Unit,
+    onEdit: () -> Unit,
+    onSave: () -> Unit,
+    onCancel: () -> Unit
+) {
+    if (editing) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = editText,
+                onValueChange = onEditTextChange,
+                label = { Text("$label ($unit)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.width(160.dp)
+            )
+            Button(
+                onClick = onSave,
+                enabled = editText.toIntOrNull() != null
+            ) { Text("Save") }
+            TextButton(onClick = onCancel) { Text("Cancel") }
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = displayText,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            TextButton(onClick = onEdit) { Text("Edit") }
+        }
     }
 }

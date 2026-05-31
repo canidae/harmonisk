@@ -82,9 +82,6 @@ fun calculatePianoLayout(
         val nextWhite = result[midi + 1]
 
         val x = when {
-            prevWhite != null && nextWhite != null -> {
-                prevWhite.x + prevWhite.width - blackKeyWidth / 2f
-            }
             prevWhite != null -> prevWhite.x + prevWhite.width - blackKeyWidth / 2f
             nextWhite != null -> nextWhite.x - blackKeyWidth / 2f
             else -> continue

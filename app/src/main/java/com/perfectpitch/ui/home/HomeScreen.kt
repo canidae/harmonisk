@@ -117,22 +117,25 @@ private fun LandscapeContent(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        LandscapeModeCard(
+        ModeCard(
             modifier = Modifier.weight(1f),
+            isLandscape = true,
             emoji = "🎵",
             title = "Free Play",
             description = "Pitch feedback",
             onClick = onNavigateToFreePlay
         )
-        LandscapeModeCard(
+        ModeCard(
             modifier = Modifier.weight(1f),
+            isLandscape = true,
             emoji = "🎼",
             title = "Play by Melody",
             description = "Follow a melody",
             onClick = onNavigateToMelody
         )
-        LandscapeModeCard(
+        ModeCard(
             modifier = Modifier.weight(1f),
+            isLandscape = true,
             emoji = "🎸",
             title = "Tune Instrument",
             description = "Tune up",
@@ -146,67 +149,62 @@ private fun ModeCard(
     emoji: String,
     title: String,
     description: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isLandscape: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
+    if (isLandscape) {
+        Card(
+            onClick = onClick,
+            modifier = modifier.fillMaxHeight()
         ) {
-            Text(
-                text = emoji,
-                style = MaterialTheme.typography.headlineLarge
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(title, style = MaterialTheme.typography.titleLarge)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(emoji, style = MaterialTheme.typography.headlineMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center
+                )
                 Text(
                     description,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun LandscapeModeCard(
-    modifier: Modifier,
-    emoji: String,
-    title: String,
-    description: String,
-    onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxHeight()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+    } else {
+        Card(
+            onClick = onClick,
+            modifier = modifier.fillMaxWidth()
         ) {
-            Text(emoji, style = MaterialTheme.typography.headlineMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                title,
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = emoji,
+                    style = MaterialTheme.typography.headlineLarge
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(title, style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        description,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }
