@@ -61,8 +61,7 @@ class MidiOutputSender(
         }
     }
 
-    override fun noteOn(channel: Int, note: Int, velocity: Int) {
-        val port = outputPort ?: return
+    override fun noteOn(channel: Int, note: Int, velocity: Int) = withPort { port ->
         val buf = ByteArray(3)
         buf[0] = (0x90 or (channel and 0x0F)).toByte()
         buf[1] = (note and 0x7F).toByte()
@@ -70,8 +69,7 @@ class MidiOutputSender(
         try { port.send(buf, 0, 3) } catch (_: Exception) {}
     }
 
-    override fun noteOff(channel: Int, note: Int) {
-        val port = outputPort ?: return
+    override fun noteOff(channel: Int, note: Int) = withPort { port ->
         val buf = ByteArray(3)
         buf[0] = (0x80 or (channel and 0x0F)).toByte()
         buf[1] = (note and 0x7F).toByte()
@@ -79,8 +77,7 @@ class MidiOutputSender(
         try { port.send(buf, 0, 3) } catch (_: Exception) {}
     }
 
-    override fun allNotesOff() {
-        val port = outputPort ?: return
+    override fun allNotesOff() = withPort { port ->
         val buf = ByteArray(3)
         for (ch in 0..15) {
             buf[0] = (0xB0 or ch).toByte()
@@ -88,6 +85,11 @@ class MidiOutputSender(
             buf[2] = 0
             try { port.send(buf, 0, 3) } catch (_: Exception) {}
         }
+    }
+
+    private inline fun withPort(block: (MidiInputPort) -> Unit) {
+        val port = outputPort ?: return
+        block(port)
     }
 
     private suspend fun openDeviceAsync(

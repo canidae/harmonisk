@@ -1,5 +1,6 @@
 package com.perfectpitch.midi
 
+import android.util.Log
 import com.perfectpitch.music.NoteUtils
 import com.perfectpitch.ui.freeplay.PlayedNote
 import java.io.InputStream
@@ -12,20 +13,28 @@ data class MultiTrackMidi(
     val voiceTracks: List<List<NoteEvent>>
 )
 
+data class MidiImportResult(
+    val notes: List<PlayedNote>,
+    val bpm: Float,
+    val beatsPerBar: Int
+)
+
 object MidiImporter {
+
+    private const val TAG = "MidiImporter"
 
     fun parse(inputStream: InputStream): MultiTrackMidi {
         val data = inputStream.readBytes()
         var pos = 0
 
-        val headerChunkId = String(data, pos, 4, Charsets.US_ASCII)
+        val headerChunkId = readMidiString(data, pos, 4)
         require(headerChunkId == "MThd") { "Not a MIDI file" }
         pos += 4
 
-        val headerLength = readInt32(data, pos); pos += 4
-        val format = readInt16(data, pos); pos += 2
-        val numTracks = readInt16(data, pos); pos += 2
-        val timeDivision = readInt16(data, pos); pos += 2
+        val headerLength = readMidiInt32(data, pos); pos += 4
+        val format = readMidiInt16(data, pos); pos += 2
+        val numTracks = readMidiInt16(data, pos); pos += 2
+        val timeDivision = readMidiInt16(data, pos); pos += 2
         pos = 8 + headerLength
 
         var bpm = 120f
@@ -34,11 +43,11 @@ object MidiImporter {
 
         for (trackIdx in 0 until numTracks) {
             if (pos + 8 > data.size) break
-            val chunkId = String(data, pos, 4, Charsets.US_ASCII)
+            val chunkId = readMidiString(data, pos, 4)
             if (chunkId != "MTrk") { pos += 8; continue }
             pos += 4
 
-            val trackLength = readInt32(data, pos); pos += 4
+            val trackLength = readMidiInt32(data, pos); pos += 4
             val trackEnd = pos + trackLength
             var tick = 0L
             var runningStatus = 0
@@ -47,7 +56,7 @@ object MidiImporter {
 
             while (pos < trackEnd) {
                 if (pos >= data.size) break
-                val (delta, bytesRead) = readVarLen(data, pos)
+                val (delta, bytesRead) = readMidiVarLen(data, pos)
                 pos += bytesRead
                 tick += delta
                 if (pos >= data.size) break
@@ -87,7 +96,7 @@ object MidiImporter {
                     statusByte == 0xFF -> {
                         if (pos >= data.size) break
                         val metaType = data[pos++].toInt() and 0xFF
-                        val (metaLen, metaLenBytes) = readVarLen(data, pos)
+                        val (metaLen, metaLenBytes) = readMidiVarLen(data, pos)
                         pos += metaLenBytes
                         when (metaType) {
                             0x51 -> {
@@ -111,10 +120,13 @@ object MidiImporter {
                         pos += metaLen.toInt()
                     }
                     statusByte == 0xF0 || statusByte == 0xF7 -> {
-                        val (len, lb) = readVarLen(data, pos)
+                        val (len, lb) = readMidiVarLen(data, pos)
                         pos += lb + len.toInt()
                     }
-                    else -> break
+                    else -> {
+                        Log.w(TAG, "Unknown MIDI event: 0x${statusByte.toString(16)} at pos $pos, skipping rest of track")
+                        break
+                    }
                 }
             }
             pos = trackEnd
@@ -132,7 +144,7 @@ object MidiImporter {
         )
     }
 
-    fun convertToPlayedNotes(multiTrackMidi: MultiTrackMidi): Pair<List<PlayedNote>, Pair<Float, Int>> {
+    fun convertToPlayedNotes(multiTrackMidi: MultiTrackMidi): MidiImportResult {
         val tpq = multiTrackMidi.ticksPerQuarterNote.toDouble()
         val bpmD = multiTrackMidi.bpm.toDouble()
 
@@ -162,28 +174,10 @@ object MidiImporter {
                 ))
             }
         }
-        return playedNotes to (multiTrackMidi.bpm to multiTrackMidi.beatsPerBar)
-    }
-
-    private fun readInt32(data: ByteArray, pos: Int): Int =
-        ((data[pos].toInt() and 0xFF) shl 24) or
-        ((data[pos + 1].toInt() and 0xFF) shl 16) or
-        ((data[pos + 2].toInt() and 0xFF) shl 8) or
-        (data[pos + 3].toInt() and 0xFF)
-
-    private fun readInt16(data: ByteArray, pos: Int): Int =
-        ((data[pos].toInt() and 0xFF) shl 8) or (data[pos + 1].toInt() and 0xFF)
-
-    private fun readVarLen(data: ByteArray, pos: Int): Pair<Long, Int> {
-        var value = 0L
-        var bytesRead = 0
-        var current: Int
-        do {
-            if (pos + bytesRead >= data.size) break
-            current = data[pos + bytesRead].toInt() and 0xFF
-            value = (value shl 7) or (current.toLong() and 0x7F)
-            bytesRead++
-        } while (current and 0x80 != 0 && bytesRead < 4)
-        return value to bytesRead
+        return MidiImportResult(
+            notes = playedNotes,
+            bpm = multiTrackMidi.bpm,
+            beatsPerBar = multiTrackMidi.beatsPerBar
+        )
     }
 }

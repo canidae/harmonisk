@@ -493,8 +493,10 @@ class FreePlayViewModel @Inject constructor(
             try {
                 val inputStream = context.contentResolver.openInputStream(uri) ?: return@launch
                 val multiTrack = MidiImporter.parse(inputStream)
-                val (notes, bpmBeats) = MidiImporter.convertToPlayedNotes(multiTrack)
-                val (importedBpm, importedBeatsPerBar) = bpmBeats
+                val result = MidiImporter.convertToPlayedNotes(multiTrack)
+                val notes = result.notes
+                val importedBpm = result.bpm
+                val importedBeatsPerBar = result.beatsPerBar
                 val voiceCount = ((notes.maxOfOrNull { it.voiceIndex } ?: 0) + 1).coerceIn(1, 8)
 
                 finalizeCurrentNote()
@@ -830,7 +832,7 @@ class FreePlayViewModel @Inject constructor(
         val isRecording = _state.value.isRecording
         when (event) {
             is MidiNoteEvent.NoteOn -> {
-                val midiNote = event.midiNote
+                val midiNote = event.noteNumber
                 // Ignore duplicate note-on for an already-held note
                 if (activeMidiNotes.containsKey(midiNote)) return
 
@@ -871,7 +873,7 @@ class FreePlayViewModel @Inject constructor(
             }
 
             is MidiNoteEvent.NoteOff -> {
-                val midiNote = event.midiNote
+                val midiNote = event.noteNumber
                 val activeNote = activeMidiNotes.remove(midiNote) ?: return
                 val endMs = _state.value.songPositionMs
 

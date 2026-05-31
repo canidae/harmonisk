@@ -46,8 +46,6 @@ class MidiWriter {
 
         // One track per voice
         for ((_, voiceNotes) in voiceGroups) {
-            data class MidiEvt(val tick: Long, val isNoteOn: Boolean, val noteNum: Int, val velocity: Int)
-
             val events = mutableListOf<MidiEvt>()
             for (note in voiceNotes) {
                 val startTick = msToTick(note.startTimeMs)
@@ -115,3 +113,5 @@ class MidiWriter {
         (value and 0xFF).toByte()
     )
 }
+
+private data class MidiEvt(val tick: Long, val isNoteOn: Boolean, val noteNum: Int, val velocity: Int)

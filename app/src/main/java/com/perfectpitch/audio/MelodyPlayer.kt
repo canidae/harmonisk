@@ -42,8 +42,6 @@ class MelodyPlayer(
                 val startTimeMs = System.currentTimeMillis()
                 val notes = melodyTrack.notes.sortedBy { it.startTick }
 
-                data class TimedEvent(val timeMs: Long, val noteNumber: Int, val isOn: Boolean, val velocity: Int)
-
                 val events = mutableListOf<TimedEvent>()
                 for (note in notes) {
                     val startMs = (melodyTrack.noteStartSeconds(note) / tempo * 1000).toLong()
@@ -112,3 +110,5 @@ class MelodyPlayer(
         if (notePlayer.isReady) notePlayer.allNotesOff()
     }
 }
+
+private data class TimedEvent(val timeMs: Long, val noteNumber: Int, val isOn: Boolean, val velocity: Int)

@@ -1,5 +1,6 @@
 package com.perfectpitch.midi
 
+import android.util.Log
 import java.io.InputStream
 
 /** Parser for Standard MIDI File (SMF) format 0 and 1. */
@@ -10,18 +11,18 @@ class MidiParser {
         var pos = 0
 
         // Parse header chunk
-        val headerChunkId = readString(data, pos, 4)
+        val headerChunkId = readMidiString(data, pos, 4)
         require(headerChunkId == "MThd") { "Invalid MIDI file: expected MThd, got $headerChunkId" }
         pos += 4
 
-        val headerLength = readInt32(data, pos)
+        val headerLength = readMidiInt32(data, pos)
         pos += 4
 
-        val format = readInt16(data, pos)
+        val format = readMidiInt16(data, pos)
         pos += 2
-        val numTracks = readInt16(data, pos)
+        val numTracks = readMidiInt16(data, pos)
         pos += 2
-        val timeDivision = readInt16(data, pos)
+        val timeDivision = readMidiInt16(data, pos)
         pos += 2
 
         require(format in 0..1) { "Only MIDI format 0 and 1 are supported, got $format" }
@@ -36,11 +37,11 @@ class MidiParser {
         val allTimeSignatures = mutableListOf<TimeSignatureEvent>()
 
         for (trackIdx in 0 until numTracks) {
-            val trackChunkId = readString(data, pos, 4)
+            val trackChunkId = readMidiString(data, pos, 4)
             require(trackChunkId == "MTrk") { "Expected MTrk at position $pos, got $trackChunkId" }
             pos += 4
 
-            val trackLength = readInt32(data, pos)
+            val trackLength = readMidiInt32(data, pos)
             pos += 4
 
             val trackEnd = pos + trackLength
@@ -52,7 +53,7 @@ class MidiParser {
 
             while (pos < trackEnd) {
                 // Read delta time
-                val (deltaTime, bytesRead) = readVariableLength(data, pos)
+                val (deltaTime, bytesRead) = readMidiVarLen(data, pos)
                 pos += bytesRead
                 tick += deltaTime
 
@@ -110,7 +111,7 @@ class MidiParser {
                     // Meta event (0xFF)
                     statusByte == 0xFF -> {
                         val metaType = data[pos++].toInt() and 0xFF
-                        val (metaLength, metaLenBytes) = readVariableLength(data, pos)
+                        val (metaLength, metaLenBytes) = readMidiVarLen(data, pos)
                         pos += metaLenBytes
 
                         when (metaType) {
@@ -141,12 +142,12 @@ class MidiParser {
 
                     // SysEx (0xF0, 0xF7)
                     statusByte == 0xF0 || statusByte == 0xF7 -> {
-                        val (sysexLength, sysexLenBytes) = readVariableLength(data, pos)
+                        val (sysexLength, sysexLenBytes) = readMidiVarLen(data, pos)
                         pos += sysexLenBytes + sysexLength.toInt()
                     }
 
                     else -> {
-                        // Unknown event, skip
+                        Log.w(TAG, "Unknown MIDI event: 0x${statusByte.toString(16)} at pos $pos, skipping rest of track")
                         break
                     }
                 }
@@ -167,32 +168,7 @@ class MidiParser {
         )
     }
 
-    private fun readString(data: ByteArray, pos: Int, length: Int): String =
-        String(data, pos, length, Charsets.US_ASCII)
-
-    private fun readInt32(data: ByteArray, pos: Int): Int {
-        return ((data[pos].toInt() and 0xFF) shl 24) or
-            ((data[pos + 1].toInt() and 0xFF) shl 16) or
-            ((data[pos + 2].toInt() and 0xFF) shl 8) or
-            (data[pos + 3].toInt() and 0xFF)
-    }
-
-    private fun readInt16(data: ByteArray, pos: Int): Int {
-        return ((data[pos].toInt() and 0xFF) shl 8) or
-            (data[pos + 1].toInt() and 0xFF)
-    }
-
-    private fun readVariableLength(data: ByteArray, pos: Int): Pair<Long, Int> {
-        var value = 0L
-        var bytesRead = 0
-        var current: Int
-
-        do {
-            current = data[pos + bytesRead].toInt() and 0xFF
-            value = (value shl 7) or (current.toLong() and 0x7F)
-            bytesRead++
-        } while (current and 0x80 != 0 && bytesRead < 4)
-
-        return value to bytesRead
+    companion object {
+        private const val TAG = "MidiParser"
     }
 }

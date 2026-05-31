@@ -600,8 +600,8 @@ class MelodyViewModel @Inject constructor(
                 midiInputReceiver.midiEventFlow().collect { event ->
                     when (event) {
                         is MidiNoteEvent.NoteOn -> {
-                            heldNotes.add(event.midiNote)
-                            val result = pitchResultFromMidi(event.midiNote)
+                            heldNotes.add(event.noteNumber)
+                            val result = pitchResultFromMidi(event.noteNumber)
                             _state.update { it.copy(pitchResult = result) }
                             val midiNoteIdx = _state.value.currentNoteIndex
                             if (midiNoteIdx >= 0) {
@@ -613,7 +613,7 @@ class MelodyViewModel @Inject constructor(
                             evaluateNote(result)
                         }
                         is MidiNoteEvent.NoteOff -> {
-                            heldNotes.remove(event.midiNote)
+                            heldNotes.remove(event.noteNumber)
                             if (heldNotes.isEmpty()) {
                                 _state.update { it.copy(pitchResult = PitchResult.SILENT) }
                             } else {
