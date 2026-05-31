@@ -13,13 +13,13 @@ class SettingsRepository(
     private val context: Context
 ) {
     companion object {
-        val CONCERT_PITCH = floatPreferencesKey("concert_pitch")
-        val SILENCE_THRESHOLD_DB = floatPreferencesKey("silence_threshold_db")
-        val FREEPLAY_FALL_SPEED = floatPreferencesKey("freeplay_fall_speed")
-        val FREEPLAY_BEATS_PER_BAR = intPreferencesKey("freeplay_beats_per_bar")
-        val FREEPLAY_BPM = floatPreferencesKey("freeplay_bpm")
-        val FREEPLAY_MIN_NOTE_DIVISION = intPreferencesKey("freeplay_min_note_division")
-        val FREEPLAY_SNAP_ENABLED = booleanPreferencesKey("freeplay_snap_enabled")
+        private val CONCERT_PITCH = floatPreferencesKey("concert_pitch")
+        private val SILENCE_THRESHOLD_DB = floatPreferencesKey("silence_threshold_db")
+        private val FREEPLAY_FALL_SPEED = floatPreferencesKey("freeplay_fall_speed")
+        private val FREEPLAY_BEATS_PER_BAR = intPreferencesKey("freeplay_beats_per_bar")
+        private val FREEPLAY_BPM = floatPreferencesKey("freeplay_bpm")
+        private val FREEPLAY_MIN_NOTE_DIVISION = intPreferencesKey("freeplay_min_note_division")
+        private val FREEPLAY_SNAP_ENABLED = booleanPreferencesKey("freeplay_snap_enabled")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->

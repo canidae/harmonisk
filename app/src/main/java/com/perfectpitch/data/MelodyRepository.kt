@@ -15,7 +15,13 @@ class MelodyRepository(
     private val context: Context
 ) {
     private val parser = MidiParser()
-    private val cache = mutableMapOf<String, MelodyTrack>()
+    private val cache = object : LinkedHashMap<String, MelodyTrack>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: Map.Entry<String, MelodyTrack>) = size > MAX_CACHE_ENTRIES
+    }
+
+    companion object {
+        private const val MAX_CACHE_ENTRIES = 20
+    }
 
     data class MelodyInfo(
         val id: String,
@@ -68,8 +74,8 @@ class MelodyRepository(
         return track
     }
 
-    /** Stable melody ID derived from a user-supplied URI. */
-    fun uriMelodyId(uri: Uri): String = "user_${uri.hashCode()}"
+    /** Stable melody ID derived from a user-supplied URI (uses full URI string, no hash collisions). */
+    fun uriMelodyId(uri: Uri): String = "user_${uri}"
 
     /**
      * Load a melody from a user-selected file URI.

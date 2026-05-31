@@ -8,7 +8,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import org.json.JSONObject
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 private val Context.melodySettingsStore: DataStore<Preferences> by preferencesDataStore(
     name = "melody_settings"
@@ -23,8 +25,10 @@ class MelodySettingsRepository(
 ) {
     companion object {
         private val SETTINGS_KEY = stringPreferencesKey("melody_settings_json")
+        private val json = Json { ignoreUnknownKeys = true }
     }
 
+    @Serializable
     data class MelodySettings(
         val waitMode: Boolean = true,
         val allowWrongNotes: Boolean = false,
@@ -49,44 +53,16 @@ class MelodySettingsRepository(
         context.melodySettingsStore.edit { prefs ->
             val current = parseAll(prefs[SETTINGS_KEY]).toMutableMap()
             current[melodyId] = settings
-            prefs[SETTINGS_KEY] = serializeAll(current)
+            prefs[SETTINGS_KEY] = json.encodeToString(current)
         }
     }
 
-    private fun parseAll(json: String?): Map<String, MelodySettings> {
-        if (json.isNullOrBlank()) return emptyMap()
+    private fun parseAll(jsonStr: String?): Map<String, MelodySettings> {
+        if (jsonStr.isNullOrBlank()) return emptyMap()
         return try {
-            val root = JSONObject(json)
-            val map = mutableMapOf<String, MelodySettings>()
-            for (key in root.keys()) {
-                val obj = root.getJSONObject(key)
-                map[key] = MelodySettings(
-                    waitMode = obj.optBoolean("waitMode", true),
-                    allowWrongNotes = obj.optBoolean("allowWrongNotes", false),
-                    tempoMultiplier = obj.optDouble("tempoMultiplier", 1.0).toFloat(),
-                    transposeSemitones = obj.optInt("transposeSemitones", 0),
-                    playMelodyAudio = obj.optBoolean("playMelodyAudio", false),
-                    fallSpeedPxPerSec = obj.optDouble("fallSpeedPxPerSec", 150.0).toFloat()
-                )
-            }
-            map
+            json.decodeFromString(jsonStr)
         } catch (_: Exception) {
             emptyMap()
         }
-    }
-
-    private fun serializeAll(all: Map<String, MelodySettings>): String {
-        val root = JSONObject()
-        for ((id, settings) in all) {
-            val obj = JSONObject()
-            obj.put("waitMode", settings.waitMode)
-            obj.put("allowWrongNotes", settings.allowWrongNotes)
-            obj.put("tempoMultiplier", settings.tempoMultiplier.toDouble())
-            obj.put("transposeSemitones", settings.transposeSemitones)
-            obj.put("playMelodyAudio", settings.playMelodyAudio)
-            obj.put("fallSpeedPxPerSec", settings.fallSpeedPxPerSec.toDouble())
-            root.put(id, obj)
-        }
-        return root.toString()
     }
 }
