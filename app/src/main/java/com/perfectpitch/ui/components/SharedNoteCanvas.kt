@@ -787,7 +787,7 @@ private fun DrawScope.drawWigglyPitchLine(
 
     for (i in centsHistory.indices) {
         val normalized = (centsHistory[i] / 50f).coerceIn(-1f, 1f)
-        val x = centerX - normalized * maxDeviationPx
+        val x = centerX + normalized * maxDeviationPx
         // pianoAtBottom: notes fall toward the piano at the bottom;
         //   sample 0 = note start → rawBottomY (newest, closest to piano)
         //   sample N-1 = note end → rawTopY   (oldest, furthest from piano)
