@@ -27,6 +27,11 @@ android-sdk/platform-tools/adb shell am start -n com.perfectpitch/.MainActivity
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
+### View pitch accuracy test results
+```bash
+android-sdk/platform-tools/adb logcat -d -s PitchAccTest:I
+```
+
 ## Instructions
 - If local uncommited changes, find out their purpose and commit them before beginning on a new task.
 - Minimize comments in code, only comment code that isn't self-explanatory.

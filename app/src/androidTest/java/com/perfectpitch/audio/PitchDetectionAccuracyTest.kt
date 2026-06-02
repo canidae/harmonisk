@@ -1,5 +1,6 @@
 package com.perfectpitch.audio
 
+import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.perfectpitch.midi.MidiParser
@@ -17,6 +18,7 @@ import kotlin.math.*
 class PitchDetectionAccuracyTest {
 
     companion object {
+        private const val TAG = "PitchAccTest"
         private const val CREPE_INPUT_SAMPLES = 1024
         private const val CREPE_SAMPLE_RATE = 16000
         private const val N_BINS = 360
@@ -289,29 +291,29 @@ class PitchDetectionAccuracyTest {
                 results.count { it.detectionCount > 0 }
         else 0.0
 
-        println()
-        println("========== PITCH DETECTION ACCURACY REPORT ==========")
-        println("File: $name")
-        println("Duration: ${"%.1f".format(durationSec)}s")
-        println("Expected notes: $totalExpectedNotes")
-        println("Total detections (non-silent windows): $totalDetections")
-        println("Grouped note events: $groupedNoteCount")
-        println("Average confidence (detected notes): ${"%.3f".format(avgConf)}")
-        println()
-        println("Correct pitch:   $correct (${"%.1f".format(correct * 100.0 / totalExpectedNotes)}%)")
-        println("Off by 1 semitone: $offBy1 (${"%.1f".format(offBy1 * 100.0 / totalExpectedNotes)}%)")
-        println("Off by >1 semitone: $offByMore (${"%.1f".format(offByMore * 100.0 / totalExpectedNotes)}%)")
-        println("Missed:          $missed (${"%.1f".format(missed * 100.0 / totalExpectedNotes)}%)")
-        println()
-        println("Per-octave accuracy:")
+        Log.i(TAG, "")
+        Log.i(TAG, "========== PITCH DETECTION ACCURACY REPORT ==========")
+        Log.i(TAG, "File: $name")
+        Log.i(TAG, "Duration: ${"%.1f".format(durationSec)}s")
+        Log.i(TAG, "Expected notes: $totalExpectedNotes")
+        Log.i(TAG, "Total detections (non-silent windows): $totalDetections")
+        Log.i(TAG, "Grouped note events: $groupedNoteCount")
+        Log.i(TAG, "Average confidence (detected notes): ${"%.3f".format(avgConf)}")
+        Log.i(TAG, "")
+        Log.i(TAG, "Correct pitch:   $correct (${"%.1f".format(correct * 100.0 / totalExpectedNotes)}%)")
+        Log.i(TAG, "Off by 1 semitone: $offBy1 (${"%.1f".format(offBy1 * 100.0 / totalExpectedNotes)}%)")
+        Log.i(TAG, "Off by >1 semitone: $offByMore (${"%.1f".format(offByMore * 100.0 / totalExpectedNotes)}%)")
+        Log.i(TAG, "Missed:          $missed (${"%.1f".format(missed * 100.0 / totalExpectedNotes)}%)")
+        Log.i(TAG, "")
+        Log.i(TAG, "Per-octave accuracy:")
         for ((oct, notes) in octaveStats.entries.sortedBy { it.key }) {
             val ok = notes.count { it.diff == 0 }
             val pct = ok * 100.0 / notes.size
             val label = "C$oct (${notes.first().expectedMidiNote}-${notes.last().expectedMidiNote})"
-            println("  $label: $ok/${notes.size} correct (${"%.1f".format(pct)}%)")
+            Log.i(TAG, "  $label: $ok/${notes.size} correct (${"%.1f".format(pct)}%)")
         }
-        println("=====================================================")
-        println()
+        Log.i(TAG, "=====================================================")
+        Log.i(TAG, "")
     }
 
     data class Detection(
