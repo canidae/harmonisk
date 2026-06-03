@@ -47,7 +47,7 @@ fun TunerScreen(
                 onDispose { viewModel.stopListening() }
             }
 
-            val contentAlpha = if (state.isHeld) 0.5f else 1f
+            val contentAlpha = 1f
 
             Column(
                 modifier = Modifier

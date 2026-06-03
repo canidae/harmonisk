@@ -98,14 +98,14 @@ fun PitchGauge(
             if (isSilent) {
                 Text(
                     text = "—",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                 )
             } else {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         text = noteName,
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
