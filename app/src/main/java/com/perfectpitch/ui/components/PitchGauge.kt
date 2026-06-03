@@ -19,11 +19,15 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.perfectpitch.ui.utils.centsColor
+import kotlin.math.min
 
 /** Semi-circular pitch gauge showing cents offset from -50 to +50. */
 @Composable
 fun PitchGauge(
     centsOff: Float,
+    noteName: String,
+    octave: Int,
+    isSilent: Boolean,
     modifier: Modifier = Modifier,
     maxCents: Float = 50f
 ) {
@@ -70,7 +74,7 @@ fun PitchGauge(
 
             val needleAngle = 180f + normalizedPosition * 180f
             val needleRadians = Math.toRadians(needleAngle.toDouble())
-            val needleLength = arcWidth / 2 * 0.7f
+            val needleLength = min(arcWidth / 2 * 0.7f, arcHeight / 2 * 0.9f)
             val centerX = size.width / 2
             val centerY = arcTop + arcHeight / 2
 
@@ -87,16 +91,25 @@ fun PitchGauge(
             drawCircle(color = gaugeColor, radius = 8f, center = Offset(centerX, centerY))
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
-        ) {
+        if (isSilent) {
             Text(
-                text = "${if (centsOff >= 0) "+" else ""}${"%.0f".format(centsOff)}¢",
-                style = MaterialTheme.typography.titleLarge,
-                color = gaugeColor,
-                textAlign = TextAlign.Center
+                text = "—",
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
             )
+        } else {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = noteName,
+                    style = MaterialTheme.typography.displayLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "$octave",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
         }
     }
 }

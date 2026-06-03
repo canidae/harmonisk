@@ -12,7 +12,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.perfectpitch.ui.components.NoteDisplay
 import com.perfectpitch.ui.components.PitchGauge
 import com.perfectpitch.ui.components.RequireMicPermission
 import com.perfectpitch.ui.components.KeepScreenOn
@@ -57,25 +56,21 @@ fun TunerScreen(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.weight(1f))
-
-                NoteDisplay(
-                    noteName = state.displayedResult.noteName,
-                    octave = state.displayedResult.octave,
-                    isSilent = !state.displayedResult.isValid,
-                    modifier = Modifier.alpha(contentAlpha)
-                )
-
-                Spacer(modifier = Modifier.weight(0.3f))
-
-                PitchGauge(
-                    centsOff = state.smoothedCentsOff,
+                Box(
                     modifier = Modifier
+                        .weight(1f)
                         .alpha(contentAlpha)
-                        .fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.weight(0.3f))
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    PitchGauge(
+                        centsOff = state.smoothedCentsOff,
+                        noteName = state.displayedResult.noteName,
+                        octave = state.displayedResult.octave,
+                        isSilent = !state.displayedResult.isValid,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -97,8 +92,6 @@ fun TunerScreen(
                         textAlign = TextAlign.Center
                     )
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
             }
         }
     }
