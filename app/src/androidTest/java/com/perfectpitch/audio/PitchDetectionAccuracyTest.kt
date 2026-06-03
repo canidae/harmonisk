@@ -12,7 +12,11 @@ import org.junit.runner.RunWith
 import org.tensorflow.lite.Interpreter
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import kotlin.math.*
+import kotlin.math.abs
+import kotlin.math.ln
+import kotlin.math.log10
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 @RunWith(AndroidJUnit4::class)
 class PitchDetectionAccuracyTest {
@@ -30,7 +34,7 @@ class PitchDetectionAccuracyTest {
         }
         private const val CONFIDENCE_THRESHOLD = 0.45f
         private const val ANALYSIS_WINDOW_SIZE = 1024
-        private const val HOP_SIZE = 512
+        private const val HOP_SIZE = 256
         private const val SILENCE_DB = -50f
 
         private val QUARTER_FILES = listOf("quarter_cello", "quarter_guitar", "quarter_oboe", "quarter_piano")
@@ -212,18 +216,33 @@ class PitchDetectionAccuracyTest {
 
     private fun processAudio(audio: FloatArray): List<Detection> {
         val detections = mutableListOf<Detection>()
+        var lastFreqHint = 0f
+        var lastPrimaryMidi = -1
+
         for (start in 0..(audio.size - ANALYSIS_WINDOW_SIZE) step HOP_SIZE) {
             val window = audio.sliceArray(start until start + ANALYSIS_WINDOW_SIZE)
             val time = start.toDouble() / 16000.0
 
             val rmsDb = linearToDb(rms(window))
-            if (rmsDb < SILENCE_DB) continue
+            if (rmsDb < SILENCE_DB) {
+                lastFreqHint = 0f
+                lastPrimaryMidi = -1
+                continue
+            }
 
-            val result = detectPitch(window)
-            if (result.frequency > 0f) {
-                val info = noteUtils.frequencyToNote(result.frequency)
+            val (primary, detected) = detectPitchWithHint(window, lastFreqHint)
+            if (detected.frequency > 0f) {
+                val primaryMidi = noteUtils.frequencyToNote(primary).midiNumber
+                lastFreqHint = if (lastPrimaryMidi > 0 && abs(primaryMidi - lastPrimaryMidi) > 1) {
+                    0f
+                } else {
+                    primary
+                }
+                lastPrimaryMidi = primaryMidi
+
+                val info = noteUtils.frequencyToNote(detected.frequency)
                 if (info.midiNumber > 0) {
-                    detections.add(Detection(time, result.frequency, result.confidence,
+                    detections.add(Detection(time, detected.frequency, detected.confidence,
                         info.midiNumber, "${info.name}$info.octave"))
                 }
             }
@@ -231,7 +250,7 @@ class PitchDetectionAccuracyTest {
         return detections
     }
 
-    private fun detectPitch(buffer: FloatArray): PitchDetectionResult {
+    private fun detectPitchWithHint(buffer: FloatArray, hintFreq: Float): Pair<Float, PitchDetectionResult> {
         normalise(buffer)
 
         val buf = ByteBuffer.allocateDirect(CREPE_INPUT_SAMPLES * Float.SIZE_BYTES)
@@ -245,11 +264,37 @@ class PitchDetectionAccuracyTest {
 
         val peak = act.indices.maxByOrNull { act[it] } ?: 0
         val conf = act[peak]
-        if (conf < CONFIDENCE_THRESHOLD) return PitchDetectionResult.NONE
+        if (conf < CONFIDENCE_THRESHOLD) return 0f to PitchDetectionResult.NONE
 
-        val freq = localWeightedFreq(act, peak)
-        return if (freq <= 0f) PitchDetectionResult.NONE
-        else PitchDetectionResult(freq, conf)
+        val primary = localWeightedFreq(act, peak)
+        val freq = if (hintFreq > 0f) disambiguateOctave(act, primary, hintFreq) else primary
+        val result = if (freq <= 0f) PitchDetectionResult.NONE else PitchDetectionResult(freq, conf)
+        return primary to result
+    }
+
+    private fun detectPitch(buffer: FloatArray): PitchDetectionResult {
+        return detectPitchWithHint(buffer, 0f).second
+    }
+
+    private fun disambiguateOctave(activation: FloatArray, primaryFreq: Float, hintFreq: Float): Float {
+        val peakBin = activation.indices.maxByOrNull { activation[it] } ?: return primaryFreq
+        val candidates = mutableListOf(primaryFreq)
+        val threshold = activation[peakBin] * 0.5f
+        var localPeak = -1
+        var localMax = 0f
+        for (i in activation.indices) {
+            val v = activation[i]
+            if (v >= threshold && abs(i - peakBin) > 3) {
+                if (v > localMax) { localMax = v; localPeak = i }
+            } else if (localPeak >= 0 && (i - localPeak > 5 || i == activation.size - 1)) {
+                candidates.add(localWeightedFreq(activation, localPeak))
+                localPeak = -1; localMax = 0f
+            }
+        }
+        if (candidates.size == 1) return primaryFreq
+        return candidates.minByOrNull { f ->
+            if (f <= 0f) Float.MAX_VALUE else abs(ln(f.toDouble() / hintFreq)).toFloat()
+        } ?: primaryFreq
     }
 
     private fun normalise(buf: FloatArray) {

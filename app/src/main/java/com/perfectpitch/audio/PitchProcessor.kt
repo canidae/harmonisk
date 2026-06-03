@@ -71,6 +71,7 @@ class PitchProcessor(
                     slidingWindow.fill(0f)
                     System.arraycopy(chunk, 0, slidingWindow, 0, chunkSize)
                     windowFilled = chunkSize
+                    lastFrequency = 0f
                 } else if (windowFilled >= ANALYSIS_WINDOW_SIZE) {
                     System.arraycopy(slidingWindow, chunkSize, slidingWindow, 0, ANALYSIS_WINDOW_SIZE - chunkSize)
                     System.arraycopy(chunk, 0, slidingWindow, ANALYSIS_WINDOW_SIZE - chunkSize, chunkSize)
