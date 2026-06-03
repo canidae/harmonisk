@@ -53,6 +53,7 @@ fun MelodyPlayScreen(
     val splitPercent by viewModel.activeSplitPercent.collectAsState()
     val outputDelay by viewModel.activeOutputDelay.collectAsState()
     val inputDelay by viewModel.activeInputDelay.collectAsState()
+    val scoreHistory by viewModel.currentScoreHistory.collectAsStateWithLifecycle()
     val density = LocalDensity.current
     val context = LocalContext.current
     var showResultsModal by remember { mutableStateOf(false) }
@@ -342,7 +343,11 @@ fun MelodyPlayScreen(
     }
 
     if (showResultsModal && gameState.melodyScore != null) {
-        ScoreResultModal(melodyScore = gameState.melodyScore!!, onDismiss = { showResultsModal = false })
+        ScoreResultModal(
+            melodyScore = gameState.melodyScore!!,
+            onDismiss = { showResultsModal = false },
+            scoreHistory = scoreHistory
+        )
     }
 }
 

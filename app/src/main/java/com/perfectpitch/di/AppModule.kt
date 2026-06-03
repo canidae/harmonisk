@@ -10,6 +10,7 @@ import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.AudioDelayRepository
 import com.perfectpitch.data.MelodyRepository
 import com.perfectpitch.data.MelodySettingsRepository
+import com.perfectpitch.data.ScoreHistoryRepository
 import com.perfectpitch.data.SettingsRepository
 import com.perfectpitch.midi.MidiDeviceManager
 import com.perfectpitch.midi.MidiInputReceiver
@@ -115,4 +116,10 @@ object AppModule {
         @ApplicationContext context: Context,
         midiDeviceManager: MidiDeviceManager
     ): MidiOutputSender = MidiOutputSender(context, midiDeviceManager)
+
+    @Provides
+    @Singleton
+    fun provideScoreHistoryRepository(
+        @ApplicationContext context: Context
+    ): ScoreHistoryRepository = ScoreHistoryRepository(context)
 }

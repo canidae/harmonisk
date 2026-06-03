@@ -2,6 +2,8 @@ package com.perfectpitch.ui.melody
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
@@ -11,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.perfectpitch.data.ScoreHistoryRepository.ScoreEntry
 import com.perfectpitch.music.MelodyScore
 import com.perfectpitch.music.ScoringEngine
 import com.perfectpitch.music.ScoreTier
@@ -19,7 +22,8 @@ import com.perfectpitch.ui.theme.*
 @Composable
 fun ScoreResultModal(
     melodyScore: MelodyScore,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    scoreHistory: List<ScoreEntry> = emptyList()
 ) {
     val animatedScore by animateFloatAsState(
         targetValue = melodyScore.overallScore,
@@ -48,14 +52,14 @@ fun ScoreResultModal(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(24.dp),
+                        .padding(24.dp)
+                        .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     EnthusiasmDisplay(
                         level = enthusiasm,
                         scoreText = "%.0f".format(animatedScore),
-                        scoreColor = scoreColor(score),
-                        message = melodyScore.encouragingMessage
+                        scoreColor = scoreColor(score)
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -67,6 +71,22 @@ fun ScoreResultModal(
                         StatCard("Notes Hit", "${melodyScore.notesHit}/${melodyScore.totalNotes}")
                         StatCard("Perfect", "${melodyScore.perfectNotes}")
                         StatCard("Great", "${melodyScore.greatNotes}")
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    HorizontalDivider()
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    ScoreSummaryPanel(score = melodyScore)
+
+                    if (scoreHistory.size >= 2) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        ScoreProgressGraph(
+                            scores = scoreHistory,
+                            compact = true
+                        )
                     }
                 }
             }
@@ -87,11 +107,10 @@ private enum class EnthusiasmLevel(val emoji: String) {
 private fun EnthusiasmDisplay(
     level: EnthusiasmLevel,
     scoreText: String,
-    scoreColor: androidx.compose.ui.graphics.Color,
-    message: String
+    scoreColor: androidx.compose.ui.graphics.Color
 ) {
     Text(
-        text = scoreText,
+        text = "${level.emoji} $scoreText",
         style = when (level) {
             EnthusiasmLevel.LEGENDARY, EnthusiasmLevel.EXCELLENT -> MaterialTheme.typography.displayLarge
             EnthusiasmLevel.GREAT, EnthusiasmLevel.GOOD -> MaterialTheme.typography.displayMedium
@@ -100,22 +119,6 @@ private fun EnthusiasmDisplay(
         },
         color = scoreColor
     )
-
-    if (message.isNotEmpty()) {
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = message,
-            style = when (level) {
-                EnthusiasmLevel.LEGENDARY -> MaterialTheme.typography.displaySmall
-                EnthusiasmLevel.EXCELLENT -> MaterialTheme.typography.titleLarge
-                EnthusiasmLevel.GREAT -> MaterialTheme.typography.titleMedium
-                EnthusiasmLevel.GOOD, EnthusiasmLevel.OK -> MaterialTheme.typography.bodyLarge
-                EnthusiasmLevel.NEEDS_WORK -> MaterialTheme.typography.bodyMedium
-            },
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
 }
 
 private fun enthusiasmLevel(score: Float): EnthusiasmLevel = when (ScoringEngine.scoreTier(score)) {
@@ -145,8 +148,8 @@ private fun StatCard(label: String, value: String) {
 }
 
 private fun scoreColor(score: Float) = when {
-    score >= 80f -> Green80
-    score >= 65f -> Teal80
-    score >= 50f -> Yellow80
+    score >= 95f -> Green80
+    score >= 60f -> Teal80
+    score >= 20f -> Yellow80
     else -> Red80
 }

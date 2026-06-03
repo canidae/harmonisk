@@ -11,6 +11,7 @@ import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.AudioDelayRepository
 import com.perfectpitch.data.MelodyRepository
 import com.perfectpitch.data.MelodySettingsRepository
+import com.perfectpitch.data.ScoreHistoryRepository
 import com.perfectpitch.data.SettingsRepository
 import com.perfectpitch.midi.MelodyTrack
 import com.perfectpitch.midi.MidiDeviceManager
@@ -40,7 +41,8 @@ class MelodyViewModel @Inject constructor(
     private val audioDeviceMonitor: AudioDeviceMonitor,
     private val midiDeviceManager: MidiDeviceManager,
     private val midiInputReceiver: MidiInputReceiver,
-    private val midiOutputSender: MidiOutputSender
+    private val midiOutputSender: MidiOutputSender,
+    private val scoreHistoryRepository: ScoreHistoryRepository
 ) : ViewModel() {
 
     companion object {
@@ -60,6 +62,12 @@ class MelodyViewModel @Inject constructor(
 
     val availableMelodies: StateFlow<List<MelodyRepository.MelodyInfo>> =
         MutableStateFlow(melodyRepository.getAvailableMelodies()).asStateFlow()
+
+    val currentScoreHistory: StateFlow<List<ScoreHistoryRepository.ScoreEntry>> =
+        MutableStateFlow(emptyList())
+
+    private val _allMelodyAverages = MutableStateFlow<Map<String, Float>>(emptyMap())
+    val allMelodyAverages: StateFlow<Map<String, Float>> = _allMelodyAverages.asStateFlow()
 
     private var playbackJob: Job? = null
     private var pitchJob: Job? = null
@@ -120,6 +128,8 @@ class MelodyViewModel @Inject constructor(
                 melodyPlayer.setNotePlayer(player)
             }
         }
+        // Load score averages for all melodies
+        loadAllMelodyAverages()
     }
 
     // Exposed for the in-menu audio delay split slider
@@ -182,6 +192,23 @@ class MelodyViewModel @Inject constructor(
     fun getAvailableMelodies(): List<MelodyRepository.MelodyInfo> =
         melodyRepository.getAvailableMelodies()
 
+    fun loadAllMelodyAverages() {
+        viewModelScope.launch {
+            melodyRepository.getAvailableMelodies().let { melodies ->
+                val flows = melodies.map { info ->
+                    scoreHistoryRepository.getRecentAverage(info.id).map { avg ->
+                        info.id to avg
+                    }
+                }
+                combine(flows) { pairs ->
+                    pairs.filter { it.second != null }.associate { it.first to it.second!! }
+                }.collect { result ->
+                    _allMelodyAverages.value = result
+                }
+            }
+        }
+    }
+
     fun loadMelody(info: MelodyRepository.MelodyInfo): Boolean {
         val track = melodyRepository.loadMelody(info)
         if (track != null) {
@@ -211,6 +238,12 @@ class MelodyViewModel @Inject constructor(
                     if (saved.transposeSemitones != 0) {
                         setTranspose(saved.transposeSemitones)
                     }
+                }
+            }
+            // Load score history for this melody
+            viewModelScope.launch {
+                scoreHistoryRepository.getScores(info.id).collect { scores ->
+                    (currentScoreHistory as MutableStateFlow).value = scores
                 }
             }
             return true
@@ -247,6 +280,12 @@ class MelodyViewModel @Inject constructor(
                     if (saved.transposeSemitones != 0) {
                         setTranspose(saved.transposeSemitones)
                     }
+                }
+            }
+            // Load score history for this melody
+            viewModelScope.launch {
+                scoreHistoryRepository.getScores(currentMelodyId!!).collect { scores ->
+                    (currentScoreHistory as MutableStateFlow).value = scores
                 }
             }
             return true
@@ -813,6 +852,24 @@ class MelodyViewModel @Inject constructor(
             )
         }
         _viewState.update { it.copy(songTimeOffsetSeconds = firstNoteStart - currentTimeSeconds) }
+
+        // Persist the score
+        val melodyId = currentMelodyId
+        if (melodyId != null) {
+            viewModelScope.launch {
+                scoreHistoryRepository.saveScore(melodyId, ScoreHistoryRepository.ScoreEntry(
+                    timestamp = System.currentTimeMillis(),
+                    overallScore = melodyScore.overallScore,
+                    totalNotes = melodyScore.totalNotes,
+                    notesHit = melodyScore.notesHit,
+                    perfectNotes = melodyScore.perfectNotes,
+                    greatNotes = melodyScore.greatNotes,
+                    longestStreak = melodyScore.longestStreak,
+                    avgPitchScore = melodyScore.avgPitchScore,
+                    avgDurationScore = melodyScore.avgDurationScore
+                ))
+            }
+        }
     }
 
     override fun onCleared() {

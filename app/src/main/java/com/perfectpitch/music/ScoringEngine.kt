@@ -152,3 +152,41 @@ data class MelodyScore(
         val EMPTY = MelodyScore(0f, 0, 0, 0, 0, 0, 0f, 0f, "🎶 Keep practicing! 🎶")
     }
 }
+
+data class ScoreBreakdown(
+    val missRatePercent: Float,
+    val avgPitchScore: Float,
+    val avgDurationScore: Float,
+    val primaryWeakness: String,
+    val tipMessage: String
+)
+
+fun MelodyScore.toBreakdown(): ScoreBreakdown {
+    val missRate = if (totalNotes > 0)
+        ((totalNotes - notesHit).toFloat() / totalNotes * 100f) else 0f
+    val pitchScore = avgPitchScore
+    val durationScore = avgDurationScore
+
+    val weakest = when {
+        pitchScore < durationScore && pitchScore < 80f -> "pitch accuracy"
+        durationScore < pitchScore && durationScore < 80f -> "duration accuracy"
+        missRate > 20f -> "missing notes entirely"
+        else -> null
+    }
+
+    val tip = when {
+        weakest == "pitch accuracy" -> "Focus on hitting the exact notes. Try the wait mode to practice each note before moving on."
+        weakest == "duration accuracy" -> "Hold each note for its full length. Try matching the rhythm more carefully."
+        weakest == "missing notes entirely" -> "Some notes were skipped. Slow down the tempo and focus on playing every note."
+        pitchScore >= 90f && durationScore >= 90f -> "Great precision! Keep refining for a perfect score."
+        else -> "Keep practicing consistently — you're building muscle memory!"
+    }
+
+    return ScoreBreakdown(
+        missRatePercent = missRate,
+        avgPitchScore = pitchScore,
+        avgDurationScore = durationScore,
+        primaryWeakness = weakest ?: "none",
+        tipMessage = tip
+    )
+}
