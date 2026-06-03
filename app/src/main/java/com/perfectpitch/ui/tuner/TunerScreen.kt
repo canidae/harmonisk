@@ -1,6 +1,5 @@
 package com.perfectpitch.ui.tuner
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -56,47 +55,38 @@ fun TunerScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .padding(24.dp),
-                verticalArrangement = Arrangement.SpaceEvenly,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Note display
-                Box(modifier = Modifier.alpha(contentAlpha)) {
-                    NoteDisplay(
-                        noteName = state.displayedResult.noteName,
-                        octave = state.displayedResult.octave,
-                        isSilent = !state.displayedResult.isValid
-                    )
-                }
+                Spacer(modifier = Modifier.weight(1f))
 
-                // Pitch gauge
-                Box(modifier = Modifier.alpha(contentAlpha)) {
-                    PitchGauge(
-                        centsOff = state.smoothedCentsOff,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                NoteDisplay(
+                    noteName = state.displayedResult.noteName,
+                    octave = state.displayedResult.octave,
+                    isSilent = !state.displayedResult.isValid,
+                    modifier = Modifier.alpha(contentAlpha)
+                )
 
-                // Frequency display
+                Spacer(modifier = Modifier.weight(0.3f))
+
+                PitchGauge(
+                    centsOff = state.smoothedCentsOff,
+                    modifier = Modifier
+                        .alpha(contentAlpha)
+                        .fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.weight(0.3f))
+
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.alpha(contentAlpha)
                 ) {
-                    if (state.displayedResult.isValid) {
-                        Text(
-                            text = "${"%.1f".format(state.displayedResult.frequency)} Hz",
-                            style = MaterialTheme.typography.headlineMedium,
-                            textAlign = TextAlign.Center
-                        )
-
-                        if (state.isHeld) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "held",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    Text(
+                        text = "${"%.1f".format(state.displayedResult.frequency)} Hz",
+                        style = MaterialTheme.typography.headlineMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.alpha(if (state.displayedResult.isValid) 1f else 0f)
+                    )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -106,8 +96,9 @@ fun TunerScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
-
                 }
+
+                Spacer(modifier = Modifier.weight(1f))
             }
         }
     }

@@ -24,11 +24,6 @@ fun NoteDisplay(
                 style = MaterialTheme.typography.displayLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
             )
-            Text(
-                text = "Play a note",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-            )
         } else {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
