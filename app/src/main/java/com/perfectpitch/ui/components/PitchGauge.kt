@@ -88,17 +88,15 @@ fun PitchGauge(
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
         ) {
-            Text("♭", style = MaterialTheme.typography.bodyLarge)
             Text(
                 text = "${if (centsOff >= 0) "+" else ""}${"%.0f".format(centsOff)}¢",
                 style = MaterialTheme.typography.titleLarge,
                 color = gaugeColor,
                 textAlign = TextAlign.Center
             )
-            Text("♯", style = MaterialTheme.typography.bodyLarge)
         }
     }
 }

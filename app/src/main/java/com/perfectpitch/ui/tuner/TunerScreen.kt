@@ -65,7 +65,6 @@ fun TunerScreen(
                     NoteDisplay(
                         noteName = state.displayedResult.noteName,
                         octave = state.displayedResult.octave,
-                        centsOff = state.smoothedCentsOff,
                         isSilent = !state.displayedResult.isValid
                     )
                 }
