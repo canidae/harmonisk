@@ -91,24 +91,29 @@ fun PitchGauge(
             drawCircle(color = gaugeColor, radius = 8f, center = Offset(centerX, centerY))
         }
 
-        if (isSilent) {
-            Text(
-                text = "—",
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-            )
-        } else {
-            Row(verticalAlignment = Alignment.Bottom) {
+        Box(
+            modifier = Modifier.height(48.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isSilent) {
                 Text(
-                    text = noteName,
-                    style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "$octave",
+                    text = "—",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                 )
+            } else {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = noteName,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "$octave",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
             }
         }
     }
