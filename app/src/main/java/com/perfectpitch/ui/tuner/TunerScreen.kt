@@ -17,7 +17,6 @@ import com.perfectpitch.ui.components.NoteDisplay
 import com.perfectpitch.ui.components.PitchGauge
 import com.perfectpitch.ui.components.RequireMicPermission
 import com.perfectpitch.ui.components.KeepScreenOn
-import com.perfectpitch.ui.theme.Green80
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,16 +107,6 @@ fun TunerScreen(
                         textAlign = TextAlign.Center
                     )
 
-                    // In-tune indicator
-                    if (state.isInTune) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "✓ In Tune",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Green80,
-                            textAlign = TextAlign.Center
-                        )
-                    }
                 }
             }
         }
