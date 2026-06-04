@@ -49,6 +49,8 @@ class MelodyViewModel @Inject constructor(
         const val NOTE_RANGE_PADDING = 3
         /** Extra grace time beyond calibrated input delay — musically acceptable lateness. */
         const val GRACE_PERIOD_EXTRA_MS = 150L
+        val FRAME_DURATION_MS = com.perfectpitch.audio.AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000f /
+            com.perfectpitch.audio.AudioCaptureService.SAMPLE_RATE
     }
 
     private val _gameState = MutableStateFlow(MelodyGameState())
@@ -631,10 +633,7 @@ class MelodyViewModel @Inject constructor(
                             _gameState.update { it.copy(pitchResult = result) }
                             val midiNoteIdx = _gameState.value.currentNoteIndex
                             if (midiNoteIdx >= 0) {
-                                _gameState.update { current ->
-                                    val existing = current.noteCentsHistory[midiNoteIdx] ?: emptyList()
-                                    current.copy(noteCentsHistory = current.noteCentsHistory + (midiNoteIdx to existing + result.centsOff))
-                                }
+                                updateNoteProgress(midiNoteIdx, result.centsOff)
                             }
                             evaluateNote(result)
                         }
@@ -655,10 +654,7 @@ class MelodyViewModel @Inject constructor(
                     if (result.isValid) {
                         val micNoteIdx = _gameState.value.currentNoteIndex
                         if (micNoteIdx >= 0) {
-                            _gameState.update { current ->
-                                val existing = current.noteCentsHistory[micNoteIdx] ?: emptyList()
-                                current.copy(noteCentsHistory = current.noteCentsHistory + (micNoteIdx to existing + result.centsOff))
-                            }
+                            updateNoteProgress(micNoteIdx, result.centsOff)
                         }
                         evaluateNote(result)
                     }
@@ -767,6 +763,22 @@ class MelodyViewModel @Inject constructor(
         scoreCurrentNote(expectedNote, noteIndex)
     }
 
+    private fun updateNoteProgress(noteIndex: Int, centsOff: Float) {
+        _gameState.update { current ->
+            val track = current.melodyTrack ?: return@update current
+            if (noteIndex < 0 || noteIndex >= track.notes.size) return@update current
+            val expectedDurationMs = (track.noteDurationSeconds(track.notes[noteIndex]) * 1000).toLong()
+            if (expectedDurationMs <= 0) return@update current
+            val existing = current.noteCentsHistory[noteIndex] ?: emptyList()
+            val newHistory = existing + centsOff
+            val progress = (newHistory.size * FRAME_DURATION_MS / expectedDurationMs.toFloat()).coerceIn(0f, 1f)
+            current.copy(
+                noteCentsHistory = current.noteCentsHistory + (noteIndex to newHistory),
+                notePlayProgress = current.notePlayProgress + (noteIndex to progress)
+            )
+        }
+    }
+
     private fun scoreCurrentNote(expectedNote: com.perfectpitch.midi.NoteEvent, noteIndex: Int) {
         val track = _gameState.value.melodyTrack ?: return
         val expectedDurationMs = (track.noteDurationSeconds(expectedNote) * 1000).toLong()
@@ -797,7 +809,12 @@ class MelodyViewModel @Inject constructor(
         _gameState.update { current ->
             val results = current.noteResults.toMutableMap()
             results[noteIndex] = resultState
-            current.copy(noteResults = results, noteScores = current.noteScores + score)
+            val finalProgress = (actualDurationMs.toFloat() / expectedDurationMs.toFloat()).coerceIn(0f, 1f)
+            current.copy(
+                noteResults = results,
+                noteScores = current.noteScores + score,
+                notePlayProgress = current.notePlayProgress + (noteIndex to finalProgress)
+            )
         }
     }
 

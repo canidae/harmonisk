@@ -103,6 +103,42 @@ class ScoringEngineTest {
     }
 
     @Test
+    fun `duration at PERFECT_DURATION_RATIO boundary gives 100`() {
+        val result = engine.scoreNote(NotePerformance(
+            expectedMidiNote = 69,
+            detectedMidiNote = 69,
+            centsOff = 0f,
+            expectedDurationMs = 1000,
+            actualDurationMs = 850
+        ))
+        assertEquals(100f, result.durationScore, 0.01f)
+    }
+
+    @Test
+    fun `duration just below PERFECT_DURATION_RATIO gives ratio score`() {
+        val result = engine.scoreNote(NotePerformance(
+            expectedMidiNote = 69,
+            detectedMidiNote = 69,
+            centsOff = 0f,
+            expectedDurationMs = 1000,
+            actualDurationMs = 849
+        ))
+        assertEquals(84.9f, result.durationScore, 0.01f)
+    }
+
+    @Test
+    fun `duration overshoot within tolerance gives 100`() {
+        val result = engine.scoreNote(NotePerformance(
+            expectedMidiNote = 69,
+            detectedMidiNote = 69,
+            centsOff = 0f,
+            expectedDurationMs = 500,
+            actualDurationMs = 588
+        ))
+        assertEquals(100f, result.durationScore, 0.01f)
+    }
+
+    @Test
     fun `melody score calculation with all perfect`() {
         val scores = List(10) {
             NoteScore(100f, 100f, 100f, PitchAccuracy.PERFECT)

@@ -17,6 +17,9 @@ class ScoringEngine {
         const val GOOD_CENTS = 30f
         const val OK_CENTS = 40f
 
+        // Duration scoring ratio thresholds
+        const val PERFECT_DURATION_RATIO = 0.85f
+
         // Point values per tier
         const val PERFECT_POINTS = 100
         const val GREAT_POINTS = 80
@@ -69,7 +72,7 @@ class ScoringEngine {
     private fun scoreDuration(actualMs: Long, expectedMs: Long): Float {
         if (expectedMs <= 0) return 100f
         val ratio = min(actualMs, expectedMs).toFloat() / max(actualMs, expectedMs).toFloat()
-        return ratio * 100f
+        return if (ratio >= PERFECT_DURATION_RATIO) 100f else ratio * 100f
     }
 
     fun calculateMelodyScore(noteScores: List<NoteScore>): MelodyScore {

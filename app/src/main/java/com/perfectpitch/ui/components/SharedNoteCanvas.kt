@@ -84,6 +84,7 @@ sealed interface CanvasMode {
         val noteResults: Map<Int, NoteResultState>,
         val currentNoteIndex: Int,
         val noteCentsHistory: Map<Int, List<Float>> = emptyMap(),
+        val notePlayProgress: Map<Int, Float> = emptyMap(),
         val currentTimeSeconds: Double,
         val songTimeOffsetSeconds: Double,
         val fallSpeedPxPerSec: Float,
@@ -658,6 +659,7 @@ private fun DrawScope.drawMelodyNotes(
             color = noteColor,
             borderAlpha = 0.15f,
             centsHistory = mode.noteCentsHistory[index] ?: emptyList(),
+            playProgress = mode.notePlayProgress[index] ?: 0f,
             density = density,
             wigglyPianoAtBottom = pianoAtBottom
         )
@@ -708,6 +710,7 @@ private fun DrawScope.drawNoteBar(
     color: Color,
     borderAlpha: Float,
     centsHistory: List<Float>,
+    playProgress: Float = 1f,
     density: Float,
     wigglyPianoAtBottom: Boolean = false
 ) {
@@ -751,6 +754,7 @@ private fun DrawScope.drawNoteBar(
             clippedTop = clippedTop,
             clippedBottom = clippedBottom,
             centsHistory = centsHistory,
+            playProgress = playProgress,
             pianoAtBottom = wigglyPianoAtBottom,
             density = density
         )
@@ -769,29 +773,27 @@ private fun DrawScope.drawWigglyPitchLine(
     clippedTop: Float,
     clippedBottom: Float,
     centsHistory: List<Float>,
+    playProgress: Float,
     pianoAtBottom: Boolean,
     density: Float
 ) {
     val numSamples = centsHistory.size
-    if (numSamples < 1) return
+    if (numSamples < 1 || playProgress <= 0f) return
 
-    // Use the full (unclipped) bar height so the line isn't compressed when the
-    // bar extends outside the visible area. Drawing is clipped to [clippedTop, clippedBottom].
     val fullHeight = rawBottomY - rawTopY
     if (fullHeight < 1f) return
+
+    val playedHeight = fullHeight * playProgress.coerceIn(0f, 1f)
+    if (playedHeight < 1f) return
 
     val path = Path()
     val centerX = barX + barW / 2f
     val maxDeviationPx = barW / 2f - 2f
-    val yStep = if (numSamples > 1) fullHeight / (numSamples - 1).toFloat() else 0f
+    val yStep = if (numSamples > 1) playedHeight / (numSamples - 1).toFloat() else 0f
 
     for (i in centsHistory.indices) {
         val normalized = (centsHistory[i] / 50f).coerceIn(-1f, 1f)
         val x = centerX + normalized * maxDeviationPx
-        // pianoAtBottom: notes fall toward the piano at the bottom;
-        //   sample 0 = note start → rawBottomY (newest, closest to piano)
-        //   sample N-1 = note end → rawTopY   (oldest, furthest from piano)
-        // !pianoAtBottom: opposite direction (FreePlay dual-piano layout mirrors this)
         val y = if (pianoAtBottom) rawBottomY - i * yStep else rawTopY + i * yStep
         if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
     }

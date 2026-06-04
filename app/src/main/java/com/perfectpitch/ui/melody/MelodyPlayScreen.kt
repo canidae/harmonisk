@@ -242,6 +242,7 @@ fun MelodyPlayScreen(
                                 noteResults = gameState.noteResults,
                                 currentNoteIndex = gameState.currentNoteIndex,
                                 noteCentsHistory = gameState.noteCentsHistory,
+                                notePlayProgress = gameState.notePlayProgress,
                                 currentTimeSeconds = gameState.currentTimeSeconds,
                                 songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
                                 fallSpeedPxPerSec = viewState.fallSpeedPxPerSec,
