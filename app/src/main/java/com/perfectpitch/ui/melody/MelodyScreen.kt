@@ -272,13 +272,8 @@ private fun MelodyProgressSection(
             )
         }
 
-        if (scoreHistory.size >= 2) {
+        if (scoreHistory.size >= 1) {
             ScoreProgressGraph(scores = scoreHistory, compact = false)
-        }
-
-        scoreHistory.lastOrNull()?.let { entry ->
-            val melodyScore = entry.toMelodyScore()
-            ScoreSummaryPanel(score = melodyScore)
         }
     }
 }

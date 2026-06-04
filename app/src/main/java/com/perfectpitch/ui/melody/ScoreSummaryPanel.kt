@@ -23,37 +23,8 @@ fun ScoreSummaryPanel(
     val breakdown = score.toBreakdown()
 
     Column(modifier = modifier.padding(top = 8.dp)) {
-        Text(
-            text = "Improvement Tips",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
         BreakdownRow("Pitch accuracy", breakdown.avgPitchScore)
         BreakdownRow("Duration accuracy", breakdown.avgDurationScore)
-
-        if (score.totalNotes > 0) {
-            val missColor = when {
-                breakdown.missRatePercent >= 30f -> Red80
-                breakdown.missRatePercent >= 10f -> Yellow80
-                else -> Teal80
-            }
-            Text(
-                text = "Miss rate: ${"%.0f".format(breakdown.missRatePercent)}% (${score.totalNotes - score.notesHit}/${score.totalNotes} notes)",
-                style = MaterialTheme.typography.bodySmall,
-                color = missColor,
-                modifier = Modifier.padding(vertical = 2.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = breakdown.tipMessage,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 

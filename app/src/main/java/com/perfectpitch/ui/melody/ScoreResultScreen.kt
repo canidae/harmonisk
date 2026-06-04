@@ -81,7 +81,7 @@ fun ScoreResultModal(
 
                     ScoreSummaryPanel(score = melodyScore)
 
-                    if (scoreHistory.size >= 2) {
+                    if (scoreHistory.size >= 1) {
                         Spacer(modifier = Modifier.height(12.dp))
                         ScoreProgressGraph(
                             scores = scoreHistory,

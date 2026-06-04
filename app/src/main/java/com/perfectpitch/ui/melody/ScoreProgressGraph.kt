@@ -28,24 +28,7 @@ fun ScoreProgressGraph(
     modifier: Modifier = Modifier,
     compact: Boolean = false
 ) {
-    if (scores.size < 2) {
-        if (scores.size == 1) {
-            Column(modifier = modifier.padding(8.dp)) {
-                Text(
-                    "Only one playthrough recorded",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                val c = scoreColor(scores[0].overallScore)
-                Text(
-                    "Score: ${scores[0].overallScore.toInt()}",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = c
-                )
-            }
-        }
-        return
-    }
+    if (scores.isEmpty()) return
 
     val lineColor = Color(0xFF7C4DFF)
     val gridColor = MaterialTheme.colorScheme.outlineVariant
@@ -108,7 +91,8 @@ fun ScoreProgressGraph(
 
             // Plot points
             val points = scores.mapIndexed { index, entry ->
-                val x = chartLeft + chartWidth * index.toFloat() / (scores.size - 1).coerceAtLeast(1)
+                val t = if (scores.size == 1) 1f else index.toFloat() / (scores.size - 1)
+                val x = chartLeft + chartWidth * t
                 val y = chartTop + chartHeight * (1f - (entry.overallScore - scoreMin) / (scoreMax - scoreMin))
                 Offset(x, y.coerceIn(chartTop, chartTop + chartHeight))
             }
@@ -141,14 +125,15 @@ fun ScoreProgressGraph(
             }
 
             // X-axis labels
-            if (!compact && scores.size > 1) {
+            if (!compact) {
                 val step = when {
                     scores.size <= 6 -> 1
                     scores.size <= 12 -> 2
                     else -> (scores.size / 6)
                 }
                 for (i in scores.indices step step) {
-                    val x = chartLeft + chartWidth * i.toFloat() / (scores.size - 1).coerceAtLeast(1)
+                    val t = if (scores.size == 1) 1f else i.toFloat() / (scores.size - 1)
+                    val x = chartLeft + chartWidth * t
                     drawContext.canvas.nativeCanvas.drawText(
                         "#${i + 1}",
                         x,
