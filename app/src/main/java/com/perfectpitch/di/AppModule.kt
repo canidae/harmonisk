@@ -6,6 +6,7 @@ import com.perfectpitch.audio.AudioDeviceMonitor
 import com.perfectpitch.audio.CrepePitchDetector
 import com.perfectpitch.audio.MelodyPlayer
 import com.perfectpitch.audio.MelodySynthesizer
+import com.perfectpitch.audio.MetronomePlayer
 import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.AudioDelayRepository
 import com.perfectpitch.data.MelodyRepository
@@ -122,4 +123,8 @@ object AppModule {
     fun provideScoreHistoryRepository(
         @ApplicationContext context: Context
     ): ScoreHistoryRepository = ScoreHistoryRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideMetronomePlayer(): MetronomePlayer = MetronomePlayer()
 }

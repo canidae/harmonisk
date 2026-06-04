@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -186,6 +187,19 @@ fun MelodyPlayScreen(
                                 modifier = Modifier.size(17.dp)
                             )
                         }
+                    }
+
+                    // Metronome toggle
+                    IconButton(
+                        onClick = { viewModel.toggleMetronome() },
+                        modifier = Modifier.size(PANEL_BTN_SIZE)
+                    ) {
+                        Icon(
+                            Icons.Filled.Timer,
+                            contentDescription = if (gameState.metronomeEnabled) "Metronome on" else "Metronome off",
+                            tint = if (gameState.metronomeEnabled) Color(0xFF90CAF9) else OVERLAY_ICON_TINT,
+                            modifier = Modifier.size(17.dp)
+                        )
                     }
 
                     // Settings

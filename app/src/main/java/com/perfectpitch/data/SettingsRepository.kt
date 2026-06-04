@@ -20,6 +20,8 @@ class SettingsRepository(
         private val FREEPLAY_BPM = floatPreferencesKey("freeplay_bpm")
         private val FREEPLAY_MIN_NOTE_DIVISION = intPreferencesKey("freeplay_min_note_division")
         private val FREEPLAY_SNAP_ENABLED = booleanPreferencesKey("freeplay_snap_enabled")
+        private val FREEPLAY_METRONOME_ENABLED = booleanPreferencesKey("freeplay_metronome_enabled")
+        private val MELODY_METRONOME_ENABLED = booleanPreferencesKey("melody_metronome_enabled")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -30,7 +32,9 @@ class SettingsRepository(
             freeplayBeatsPerBar = prefs[FREEPLAY_BEATS_PER_BAR] ?: 4,
             freeplayBpm = prefs[FREEPLAY_BPM] ?: 120f,
             freeplayMinNoteDivision = prefs[FREEPLAY_MIN_NOTE_DIVISION] ?: 16,
-            freeplaySnapEnabled = prefs[FREEPLAY_SNAP_ENABLED] ?: true
+            freeplaySnapEnabled = prefs[FREEPLAY_SNAP_ENABLED] ?: true,
+            freeplayMetronomeEnabled = prefs[FREEPLAY_METRONOME_ENABLED] ?: false,
+            melodyMetronomeEnabled = prefs[MELODY_METRONOME_ENABLED] ?: false
         )
     }
 
@@ -62,6 +66,14 @@ class SettingsRepository(
         context.dataStore.edit { it[FREEPLAY_SNAP_ENABLED] = enabled }
     }
 
+    suspend fun updateFreeplayMetronomeEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[FREEPLAY_METRONOME_ENABLED] = enabled }
+    }
+
+    suspend fun updateMelodyMetronomeEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[MELODY_METRONOME_ENABLED] = enabled }
+    }
+
     suspend fun resetToDefaults() {
         context.dataStore.edit { it.clear() }
     }
@@ -74,5 +86,7 @@ data class AppSettings(
     val freeplayBeatsPerBar: Int = 4,
     val freeplayBpm: Float = 120f,
     val freeplayMinNoteDivision: Int = 16,
-    val freeplaySnapEnabled: Boolean = true
+    val freeplaySnapEnabled: Boolean = true,
+    val freeplayMetronomeEnabled: Boolean = false,
+    val melodyMetronomeEnabled: Boolean = false
 )

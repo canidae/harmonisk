@@ -7,8 +7,10 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.perfectpitch.audio.MelodySynthesizer
+import com.perfectpitch.audio.MetronomePlayer
 import com.perfectpitch.audio.NotePlayer
 import com.perfectpitch.audio.PitchProcessor
+import com.perfectpitch.data.AudioDelayRepository
 import com.perfectpitch.data.SettingsRepository
 import com.perfectpitch.midi.MidiDeviceManager
 import com.perfectpitch.midi.MidiImporter
@@ -44,7 +46,9 @@ class FreePlayViewModel @Inject constructor(
     private val midiInputReceiver: MidiInputReceiver,
     private val midiOutputSender: MidiOutputSender,
     private val melodySynthesizer: MelodySynthesizer,
-    private val noteUtils: NoteUtils
+    private val metronomePlayer: MetronomePlayer,
+    private val noteUtils: NoteUtils,
+    private val audioDelayRepository: AudioDelayRepository
 ) : ViewModel() {
 
     companion object {
@@ -90,6 +94,8 @@ class FreePlayViewModel @Inject constructor(
     // MIDI input tracking (polyphonic: key = MIDI note number, value = active PlayedNote)
     private val activeMidiNotes = mutableMapOf<Int, PlayedNote>()
 
+    private var audioOutputDelayMs: Int = 0
+
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
@@ -106,8 +112,14 @@ class FreePlayViewModel @Inject constructor(
                         beatsPerBar = settings.freeplayBeatsPerBar,
                         bpm = settings.freeplayBpm,
                         minNoteDivision = settings.freeplayMinNoteDivision,
-                        snapEnabled = settings.freeplaySnapEnabled
+                        snapEnabled = settings.freeplaySnapEnabled,
+                        metronomeEnabled = settings.freeplayMetronomeEnabled
                     )
+                }
+                val metEnabled = settings.freeplayMetronomeEnabled
+                if (metEnabled) {
+                    metronomePlayer.open()
+                    metronomePlayer.setArmed(true)
                 }
             }
         }
@@ -153,6 +165,11 @@ class FreePlayViewModel @Inject constructor(
                 }
             }
         }
+        viewModelScope.launch {
+            audioDelayRepository.activeOutputDelay.collect { delayMs ->
+                audioOutputDelayMs = delayMs
+            }
+        }
     }
 
     /** Open the synthesizer for replay fallback. */
@@ -186,7 +203,13 @@ class FreePlayViewModel @Inject constructor(
         if (pos < loopStart || pos >= loopEnd) {
             _state.update { it.copy(songPositionMs = loopStart) }
         }
+        // Jump back by output delay so metronome clicks and audio arrive at the correct visual position
+        if (audioOutputDelayMs > 0) {
+            _state.update { it.copy(songPositionMs = it.songPositionMs - audioOutputDelayMs) }
+        }
         lastAdvanceWallMs = System.currentTimeMillis()
+        val s = _state.value
+        if (s.metronomeEnabled) metronomePlayer.startSync(s.songPositionMs + audioOutputDelayMs, s.bpm, s.beatsPerBar)
         startListeningInternal()
         _state.update { it.copy(isRecording = true) }
     }
@@ -195,6 +218,7 @@ class FreePlayViewModel @Inject constructor(
         stopListeningInternal()
         finalizeCurrentNote()
         abortHoning()
+        metronomePlayer.stopSync()
         _state.update { it.copy(isRecording = false) }
         outputDeviceBeforeRecord?.let { previous ->
             setOutputDevice(previous)
@@ -216,6 +240,10 @@ class FreePlayViewModel @Inject constructor(
             } else {
                 _state.update { it.copy(songPositionMs = newPos) }
             }
+        }
+        val s = _state.value
+        if (s.metronomeEnabled && (s.isRecording || s.isPlaying)) {
+            metronomePlayer.syncPosition(s.songPositionMs + audioOutputDelayMs, s.bpm, s.beatsPerBar)
         }
         return _state.value.songPositionMs
     }
@@ -904,7 +932,14 @@ class FreePlayViewModel @Inject constructor(
             _state.update { it.copy(songPositionMs = initialStart) }
         }
 
+        if (audioOutputDelayMs > 0) {
+            _state.update { it.copy(songPositionMs = it.songPositionMs - audioOutputDelayMs) }
+        }
         _state.update { it.copy(isPlaying = true) }
+
+        if (_state.value.metronomeEnabled) {
+            metronomePlayer.startSync(_state.value.songPositionMs + audioOutputDelayMs, _state.value.bpm, _state.value.beatsPerBar)
+        }
 
         replayJob = viewModelScope.launch {
             val job = coroutineContext[kotlinx.coroutines.Job]!!
@@ -950,6 +985,7 @@ class FreePlayViewModel @Inject constructor(
                 replayPositionMs += (wallNow - lastWallMs).coerceAtLeast(0L)
                 lastWallMs = wallNow
                 _state.update { it.copy(songPositionMs = replayPositionMs) }
+                if (_state.value.metronomeEnabled) metronomePlayer.syncPosition(replayPositionMs + audioOutputDelayMs, _state.value.bpm, _state.value.beatsPerBar)
 
                 // Fire due events
                 while (eventIndex < events.size && events[eventIndex].timeMs <= replayPositionMs) {
@@ -981,6 +1017,7 @@ class FreePlayViewModel @Inject constructor(
     fun stopPlaying() {
         replayJob?.cancel()
         replayJob = null
+        metronomePlayer.stopSync()
         lastAdvanceWallMs = System.currentTimeMillis()
         midiOutputSender.allNotesOff()
         if (melodySynthesizer.isReady) melodySynthesizer.allNotesOff()
@@ -992,6 +1029,22 @@ class FreePlayViewModel @Inject constructor(
         else replayNotes()
     }
 
+    fun toggleMetronome() {
+        val newState = !_state.value.metronomeEnabled
+        _state.update { it.copy(metronomeEnabled = newState) }
+        if (newState) {
+            metronomePlayer.open()
+            metronomePlayer.setArmed(true)
+        } else {
+            metronomePlayer.setArmed(false)
+        }
+        viewModelScope.launch { settingsRepository.updateFreeplayMetronomeEnabled(newState) }
+    }
+
+    fun stopMetronome() {
+        metronomePlayer.setArmed(false)
+        _state.update { it.copy(metronomeEnabled = false) }
+    }
 
     private fun expandRange(midi: Int) {
         _state.update { current ->
@@ -1005,6 +1058,8 @@ class FreePlayViewModel @Inject constructor(
         super.onCleared()
         stopPlaying()
         stopListening()
+        metronomePlayer.setArmed(false)
+        metronomePlayer.close()
         previewJob?.cancel()
         if (melodySynthesizer.isReady) melodySynthesizer.allNotesOff()
     }

@@ -213,6 +213,19 @@ fun FreePlayScreen(
             Icon(Icons.Filled.HelpOutline, contentDescription = "Help", tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
         }
 
+        // Metronome toggle
+        IconButton(
+            onClick = { viewModel.toggleMetronome() },
+            modifier = Modifier.size(PANEL_BTN_SIZE)
+        ) {
+            Icon(
+                Icons.Filled.Timer,
+                contentDescription = if (state.metronomeEnabled) "Metronome on" else "Metronome off",
+                tint = if (state.metronomeEnabled) Color(0xFF90CAF9) else OVERLAY_ICON_TINT,
+                modifier = Modifier.size(17.dp)
+            )
+        }
+
         // Settings
         Box {
             IconButton(
@@ -481,6 +494,7 @@ fun FreePlayScreen(
     // ── Main layout ───────────────────────────────────────────────────────
     DisposableEffect(Unit) {
         onDispose {
+            viewModel.stopMetronome()
             viewModel.stopPlaying()
             viewModel.stopListening()
         }

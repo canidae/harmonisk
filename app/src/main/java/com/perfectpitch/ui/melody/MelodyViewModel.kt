@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.perfectpitch.audio.AudioDeviceMonitor
 import com.perfectpitch.audio.MelodyPlayer
 import com.perfectpitch.audio.MelodySynthesizer
+import com.perfectpitch.audio.MetronomePlayer
 import com.perfectpitch.audio.NotePlayer
 import com.perfectpitch.audio.PitchProcessor
 import com.perfectpitch.data.AudioDelayRepository
@@ -37,6 +38,7 @@ class MelodyViewModel @Inject constructor(
     private val noteUtils: NoteUtils,
     private val melodySynthesizer: MelodySynthesizer,
     private val melodyPlayer: MelodyPlayer,
+    private val metronomePlayer: MetronomePlayer,
     private val audioDelayRepository: AudioDelayRepository,
     private val audioDeviceMonitor: AudioDeviceMonitor,
     private val midiDeviceManager: MidiDeviceManager,
@@ -95,6 +97,15 @@ class MelodyViewModel @Inject constructor(
             settingsRepository.settings.collect { settings ->
                 pitchProcessor.setReferenceA4(settings.concertPitch)
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.settings.first().let { settings ->
+                if (settings.melodyMetronomeEnabled) {
+                    metronomePlayer.open()
+                    metronomePlayer.setArmed(true)
+                    _gameState.update { it.copy(metronomeEnabled = true) }
+                }
             }
         }
         // Observe per-device audio output delay and update the melody player
@@ -397,11 +408,57 @@ class MelodyViewModel @Inject constructor(
         saveMelodySettings()
     }
 
+    fun toggleMetronome() {
+        val newState = !_gameState.value.metronomeEnabled
+        _gameState.update { it.copy(metronomeEnabled = newState) }
+        if (newState) {
+            metronomePlayer.open()
+            metronomePlayer.setArmed(true)
+        } else {
+            metronomePlayer.setArmed(false)
+        }
+        viewModelScope.launch { settingsRepository.updateMelodyMetronomeEnabled(newState) }
+    }
+
+    fun stopMetronome() {
+        metronomePlayer.setArmed(false)
+        _gameState.update { it.copy(metronomeEnabled = false) }
+    }
+
+    private fun currentMelodyBpm(): Float {
+        val track = _gameState.value.melodyTrack
+        if (track != null) {
+            val time = _gameState.value.currentTimeSeconds.coerceAtLeast(0.0)
+            val tick = track.secondsToTick(time)
+            return track.bpmAt(tick).toFloat()
+        }
+        return 120f
+    }
+
+    private fun currentBeatsPerBar(): Int {
+        val track = _gameState.value.melodyTrack ?: return 4
+        val time = _gameState.value.currentTimeSeconds.coerceAtLeast(0.0)
+        val tick = track.secondsToTick(time)
+        return track.timeSignatureAt(tick).numerator
+    }
+
+    private fun melodyPositionMs(): Long =
+        (_gameState.value.currentTimeSeconds * 1000).toLong()
+
+    private fun countdownBars(): Int = 2
+
+    private fun computeCountdownDuration(): Double {
+        val bpm = currentMelodyBpm().toDouble()
+        val beatsPerBar = currentBeatsPerBar()
+        val beatInterval = 60.0 / bpm
+        return countdownBars() * beatsPerBar * beatInterval + audioOutputDelayMs / 1000.0
+    }
+
     /** Enter READY phase — melody visible but not playing. Bars pre-positioned at countdown offset. */
     fun enterReadyPhase() {
         if (_gameState.value.phase == PlayPhase.NOT_STARTED) {
-            val countdown = _gameState.value.countdownDurationSeconds
-            _gameState.update { it.copy(phase = PlayPhase.READY, currentTimeSeconds = -countdown) }
+            val countdown = computeCountdownDuration()
+            _gameState.update { it.copy(phase = PlayPhase.READY, currentTimeSeconds = -countdown, countdownDurationSeconds = countdown) }
         }
     }
 
@@ -409,12 +466,13 @@ class MelodyViewModel @Inject constructor(
         val track = _gameState.value.melodyTrack ?: return
         if (_gameState.value.phase == PlayPhase.COUNTDOWN || _gameState.value.phase == PlayPhase.PLAYING) return
 
-        val countdownDuration = _gameState.value.countdownDurationSeconds
+        val countdownDuration = computeCountdownDuration()
 
         _gameState.update {
             it.copy(
                 phase = PlayPhase.COUNTDOWN,
                 currentTimeSeconds = -countdownDuration,
+                countdownDurationSeconds = countdownDuration,
                 noteResults = emptyMap(),
                 noteScores = emptyList(),
                 currentNoteIndex = -1,
@@ -436,6 +494,9 @@ class MelodyViewModel @Inject constructor(
         // Time counts from -countdownDuration toward 0.0.
         // Pitch detection starts when currentTimeSeconds reaches 0.0 (transition to PLAYING).
         pauseOffset = -countdownDuration
+        if (_gameState.value.metronomeEnabled) {
+            metronomePlayer.startSync(melodyPositionMs() + audioOutputDelayMs, currentMelodyBpm(), currentBeatsPerBar())
+        }
         startPlaybackTimer()
     }
 
@@ -444,6 +505,7 @@ class MelodyViewModel @Inject constructor(
         playbackJob?.cancel()
         pitchJob?.cancel()
         melodyPlayer.resetGameSync()
+        metronomePlayer.stopSync()
         noteTracking.wasWaitingForNote = noteTracking.isWaitingForNote
         noteTracking.isWaitingForNote = false
         _gameState.update { it.copy(phase = PlayPhase.PAUSED, isListening = false) }
@@ -453,11 +515,11 @@ class MelodyViewModel @Inject constructor(
         val currentGameState = _gameState.value
         val currentViewState = _viewState.value
 
-        // If the user panned while paused, scroll back to live and play a 3-second countdown
+        // If the user panned while paused, scroll back to live and play a beat countdown
         // before resuming scoring — same visual effect as starting for the first time.
         if (currentViewState.songTimeOffsetSeconds != 0.0) {
             val targetTime = currentGameState.currentTimeSeconds
-            val countdownDuration = currentGameState.countdownDurationSeconds
+            val countdownDuration = computeCountdownDuration()
             val rewindTo = targetTime - countdownDuration
             pauseOffset = rewindTo
             noteTracking.isWaitingForNote = false
@@ -465,11 +527,13 @@ class MelodyViewModel @Inject constructor(
             _gameState.update {
                 it.copy(
                     phase = PlayPhase.COUNTDOWN,
+                    countdownDurationSeconds = countdownDuration,
                     currentTimeSeconds = rewindTo,
                     countdownResumeTarget = targetTime
                 )
             }
             _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
+            if (_gameState.value.metronomeEnabled) metronomePlayer.startSync(melodyPositionMs() + audioOutputDelayMs, currentMelodyBpm(), currentBeatsPerBar())
             startPlaybackTimer()
             return
         }
@@ -487,6 +551,7 @@ class MelodyViewModel @Inject constructor(
         if (_gameState.value.currentTimeSeconds >= 0.0) {
             startPitchDetection()
         }
+        if (_gameState.value.metronomeEnabled) metronomePlayer.startSync(melodyPositionMs() + audioOutputDelayMs, currentMelodyBpm(), currentBeatsPerBar())
         startPlaybackTimer()
     }
 
@@ -494,6 +559,7 @@ class MelodyViewModel @Inject constructor(
         playbackJob?.cancel()
         pitchJob?.cancel()
         melodyPlayer.resetGameSync()
+        metronomePlayer.stopSync()
         pauseOffset = 0.0
         noteTracking.isWaitingForNote = false
         noteTracking.wasWaitingForNote = false
@@ -585,6 +651,11 @@ class MelodyViewModel @Inject constructor(
                 }
 
                 _gameState.update { it.copy(currentTimeSeconds = currentTime) }
+
+                // Sync metronome with song position during active playback
+                if (_gameState.value.metronomeEnabled && currentTime >= 0.0) {
+                    metronomePlayer.syncPosition(melodyPositionMs() + audioOutputDelayMs, currentMelodyBpm(), currentBeatsPerBar())
+                }
 
                 // Only track notes once pitch detection is active (after countdown)
                 if (pitchDetectionStarted) {
@@ -851,6 +922,7 @@ class MelodyViewModel @Inject constructor(
         playbackJob?.cancel()
         pitchJob?.cancel()
         melodyPlayer.resetGameSync()
+        metronomePlayer.stopSync()
         pauseOffset = 0.0
         noteTracking.isWaitingForNote = false
 
@@ -893,6 +965,8 @@ class MelodyViewModel @Inject constructor(
         super.onCleared()
         playbackJob?.cancel()
         pitchJob?.cancel()
+        metronomePlayer.setArmed(false)
+        metronomePlayer.close()
         melodyPlayer.stop()
         melodySynthesizer.close()
     }

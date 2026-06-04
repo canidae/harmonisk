@@ -4,7 +4,6 @@ import com.perfectpitch.midi.MelodyTrack
 import com.perfectpitch.music.MelodyScore
 import com.perfectpitch.music.NoteScore
 import com.perfectpitch.music.PitchResult
-import kotlin.math.ceil
 
 /** Active session tracking state. */
 data class MelodyGameState(
@@ -26,16 +25,22 @@ data class MelodyGameState(
     val noteCentsHistory: Map<Int, List<Float>> = emptyMap(),
     val notePlayProgress: Map<Int, Float> = emptyMap(),
     // Non-zero during a mid-song countdown resume: the game-time value at which scoring starts
-    val countdownResumeTarget: Double = 0.0
+    val countdownResumeTarget: Double = 0.0,
+    // Metronome
+    val metronomeEnabled: Boolean = false
 ) {
-    /** Countdown display value derived from currentTimeSeconds (3, 2, 1, 0). */
+    /** Countdown display beat number, counting 1..beatsPerBar repeatedly. */
     val countdownValue: Int
         get() {
-            val remaining = if (countdownResumeTarget > 0.0)
-                countdownResumeTarget - currentTimeSeconds
-            else
-                -currentTimeSeconds
-            return ceil(remaining).toInt()
+            if (phase != PlayPhase.COUNTDOWN) return 0
+            val track = melodyTrack ?: return (-currentTimeSeconds).toInt()
+            val tick = track.secondsToTick(0.0)
+            val bpm = track.bpmAt(tick)
+            val beatsPerBar = track.timeSignatureAt(tick).numerator
+            val intervalSeconds = 60.0 / bpm
+            val elapsed = currentTimeSeconds + countdownDurationSeconds
+            val currentBeat = (elapsed / intervalSeconds).toLong()
+            return (currentBeat % beatsPerBar).toInt() + 1
         }
 
     /**

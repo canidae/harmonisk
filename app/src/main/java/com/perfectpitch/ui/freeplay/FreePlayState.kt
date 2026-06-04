@@ -32,7 +32,9 @@ data class FreePlayState(
     // Piano visibility
     val pianoVisibility: PianoVisibility = PianoVisibility.UPPER_ONLY,
     // Meter denominator (time signature note value: 2, 4, 8, 16, 32)
-    val barDivision: Int = 4
+    val barDivision: Int = 4,
+    // Metronome
+    val metronomeEnabled: Boolean = false
 )
 
 data class PlayedNote(
