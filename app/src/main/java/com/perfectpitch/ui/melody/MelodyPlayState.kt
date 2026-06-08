@@ -5,12 +5,13 @@ import com.perfectpitch.music.MelodyScore
 import com.perfectpitch.music.NoteScore
 import com.perfectpitch.music.PitchResult
 
+const val COUNTDOWN_BARS = 2
+
 /** Active session tracking state. */
 data class MelodyGameState(
     val phase: PlayPhase = PlayPhase.NOT_STARTED,
     val melodyTrack: MelodyTrack? = null,
     val currentTimeSeconds: Double = 0.0,
-    val countdownDurationSeconds: Double = 3.0,
     val noteResults: Map<Int, NoteResultState> = emptyMap(),
     val noteScores: List<NoteScore> = emptyList(),
     val currentNoteIndex: Int = -1,
@@ -29,20 +30,6 @@ data class MelodyGameState(
     // Metronome
     val metronomeEnabled: Boolean = false
 ) {
-    /** Countdown display beat number, counting 1..beatsPerBar repeatedly. */
-    val countdownValue: Int
-        get() {
-            if (phase != PlayPhase.COUNTDOWN) return 0
-            val track = melodyTrack ?: return (-currentTimeSeconds).toInt()
-            val tick = track.secondsToTick(0.0)
-            val bpm = track.bpmAt(tick)
-            val beatsPerBar = track.timeSignatureAt(tick).numerator
-            val intervalSeconds = 60.0 / bpm
-            val elapsed = currentTimeSeconds + countdownDurationSeconds
-            val currentBeat = (elapsed / intervalSeconds).toLong()
-            return (currentBeat % beatsPerBar).toInt() + 1
-        }
-
     /**
      * True when the view is already scrolled to (or before) the first note.
      * Used in FINISHED state to hide the "Scroll to start" button once there.

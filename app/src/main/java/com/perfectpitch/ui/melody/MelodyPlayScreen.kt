@@ -269,16 +269,6 @@ fun MelodyPlayScreen(
                             modifier = Modifier.fillMaxSize()
                         )
 
-                        if (gameState.phase == PlayPhase.COUNTDOWN) {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = "${gameState.countdownValue}",
-                                    style = MaterialTheme.typography.displayLarge,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                            }
-                        }
-
                         if (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED) {
                             IconButton(
                                 onClick = {

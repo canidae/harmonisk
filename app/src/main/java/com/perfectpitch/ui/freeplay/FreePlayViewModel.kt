@@ -95,6 +95,7 @@ class FreePlayViewModel @Inject constructor(
     private val activeMidiNotes = mutableMapOf<Int, PlayedNote>()
 
     private var audioOutputDelayMs: Int = 0
+    private var pendingStartDelayMs: Long = 0L
 
     init {
         viewModelScope.launch {
@@ -203,13 +204,12 @@ class FreePlayViewModel @Inject constructor(
         if (pos < loopStart || pos >= loopEnd) {
             _state.update { it.copy(songPositionMs = loopStart) }
         }
-        // Jump back by output delay so metronome clicks and audio arrive at the correct visual position
-        if (audioOutputDelayMs > 0) {
-            _state.update { it.copy(songPositionMs = it.songPositionMs - audioOutputDelayMs) }
-        }
+        // Don't jump songPositionMs back; instead freeze the canvas for the output delay
+        // so metronome clicks arrive at the speaker exactly when bar/beat lines pass the now line.
+        pendingStartDelayMs = audioOutputDelayMs.toLong()
         lastAdvanceWallMs = System.currentTimeMillis()
         val s = _state.value
-        if (s.metronomeEnabled) metronomePlayer.startSync(s.songPositionMs + audioOutputDelayMs, s.bpm, s.beatsPerBar)
+        if (s.metronomeEnabled) metronomePlayer.startSync(s.songPositionMs, s.bpm, s.beatsPerBar)
         startListeningInternal()
         _state.update { it.copy(isRecording = true) }
     }
@@ -219,6 +219,7 @@ class FreePlayViewModel @Inject constructor(
         finalizeCurrentNote()
         abortHoning()
         metronomePlayer.stopSync()
+        pendingStartDelayMs = 0L
         _state.update { it.copy(isRecording = false) }
         outputDeviceBeforeRecord?.let { previous ->
             setOutputDevice(previous)
@@ -231,19 +232,31 @@ class FreePlayViewModel @Inject constructor(
         val delta = (realTimeMs - lastAdvanceWallMs).coerceAtLeast(0L)
         lastAdvanceWallMs = realTimeMs
         if (replayJob?.isActive != true && _state.value.isRecording) {
-            val newPos = _state.value.songPositionMs + delta
-            val (loopStart, loopEnd) = effectiveLoopBounds()
-            if (newPos >= loopEnd) {
-                finalizeCurrentNote()
-                abortHoning()
-                _state.update { it.copy(songPositionMs = loopStart, activeNote = null) }
-            } else {
-                _state.update { it.copy(songPositionMs = newPos) }
+            // Consume pending start delay before advancing the canvas
+            var remainingDelta = delta
+            if (pendingStartDelayMs > 0) {
+                val consumed = min(remainingDelta, pendingStartDelayMs)
+                pendingStartDelayMs -= consumed
+                remainingDelta -= consumed
+            }
+            if (remainingDelta > 0) {
+                val newPos = _state.value.songPositionMs + remainingDelta
+                val (loopStart, loopEnd) = effectiveLoopBounds()
+                if (newPos >= loopEnd) {
+                    finalizeCurrentNote()
+                    abortHoning()
+                    _state.update { it.copy(songPositionMs = loopStart, activeNote = null) }
+                } else {
+                    _state.update { it.copy(songPositionMs = newPos) }
+                }
             }
         }
         val s = _state.value
-        if (s.metronomeEnabled && (s.isRecording || s.isPlaying)) {
-            metronomePlayer.syncPosition(s.songPositionMs + audioOutputDelayMs, s.bpm, s.beatsPerBar)
+        if (s.metronomeEnabled && s.isRecording) {
+            metronomePlayer.syncPosition(
+                s.songPositionMs + audioOutputDelayMs - pendingStartDelayMs,
+                s.bpm, s.beatsPerBar
+            )
         }
         return _state.value.songPositionMs
     }
@@ -932,13 +945,10 @@ class FreePlayViewModel @Inject constructor(
             _state.update { it.copy(songPositionMs = initialStart) }
         }
 
-        if (audioOutputDelayMs > 0) {
-            _state.update { it.copy(songPositionMs = it.songPositionMs - audioOutputDelayMs) }
-        }
         _state.update { it.copy(isPlaying = true) }
 
         if (_state.value.metronomeEnabled) {
-            metronomePlayer.startSync(_state.value.songPositionMs + audioOutputDelayMs, _state.value.bpm, _state.value.beatsPerBar)
+            metronomePlayer.startSync(_state.value.songPositionMs, _state.value.bpm, _state.value.beatsPerBar)
         }
 
         replayJob = viewModelScope.launch {
@@ -966,6 +976,7 @@ class FreePlayViewModel @Inject constructor(
             }
 
             var replayPositionMs = _state.value.songPositionMs
+            var pendingMs = audioOutputDelayMs.toLong()
             var events = buildEvents(replayPositionMs)
             var eventIndex = 0
             var lastWallMs = System.currentTimeMillis()
@@ -976,16 +987,34 @@ class FreePlayViewModel @Inject constructor(
                 if (abs(statePosition - replayPositionMs) > 100) {
                     player?.allNotesOff()
                     replayPositionMs = statePosition
+                    pendingMs = 0L
                     events = buildEvents(replayPositionMs)
                     eventIndex = 0
                     lastWallMs = System.currentTimeMillis()
                 }
 
                 val wallNow = System.currentTimeMillis()
-                replayPositionMs += (wallNow - lastWallMs).coerceAtLeast(0L)
+                val delta = (wallNow - lastWallMs).coerceAtLeast(0L)
                 lastWallMs = wallNow
+
+                // Consume pending start delay before advancing the play canvas
+                if (pendingMs > 0) {
+                    val consumed = min(delta, pendingMs)
+                    pendingMs -= consumed
+                    if (delta > consumed) {
+                        replayPositionMs += (delta - consumed)
+                    }
+                } else {
+                    replayPositionMs += delta
+                }
+
                 _state.update { it.copy(songPositionMs = replayPositionMs) }
-                if (_state.value.metronomeEnabled) metronomePlayer.syncPosition(replayPositionMs + audioOutputDelayMs, _state.value.bpm, _state.value.beatsPerBar)
+                if (_state.value.metronomeEnabled) {
+                    metronomePlayer.syncPosition(
+                        replayPositionMs + audioOutputDelayMs - pendingMs,
+                        _state.value.bpm, _state.value.beatsPerBar
+                    )
+                }
 
                 // Fire due events
                 while (eventIndex < events.size && events[eventIndex].timeMs <= replayPositionMs) {
@@ -999,6 +1028,7 @@ class FreePlayViewModel @Inject constructor(
                 if (replayPositionMs >= loopEndMs) {
                     player?.allNotesOff()
                     replayPositionMs = loopStartMs
+                    pendingMs = 0L
                     _state.update { it.copy(songPositionMs = replayPositionMs) }
                     events = buildEvents(replayPositionMs)
                     eventIndex = 0
@@ -1018,6 +1048,7 @@ class FreePlayViewModel @Inject constructor(
         replayJob?.cancel()
         replayJob = null
         metronomePlayer.stopSync()
+        pendingStartDelayMs = 0L
         lastAdvanceWallMs = System.currentTimeMillis()
         midiOutputSender.allNotesOff()
         if (melodySynthesizer.isReady) melodySynthesizer.allNotesOff()
@@ -1060,6 +1091,7 @@ class FreePlayViewModel @Inject constructor(
         stopListening()
         metronomePlayer.setArmed(false)
         metronomePlayer.close()
+        pendingStartDelayMs = 0L
         previewJob?.cancel()
         if (melodySynthesizer.isReady) melodySynthesizer.allNotesOff()
     }

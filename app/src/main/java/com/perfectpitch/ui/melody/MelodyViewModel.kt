@@ -445,7 +445,23 @@ class MelodyViewModel @Inject constructor(
     private fun melodyPositionMs(): Long =
         (_gameState.value.currentTimeSeconds * 1000).toLong()
 
-    private fun countdownBars(): Int = 2
+    private fun countdownBars(): Int = COUNTDOWN_BARS
+
+    /** For a mid-song [timeSeconds], returns the game-time of the downbeat exactly 2 bars
+     *  before the current bar. Used as the entry point for the resume countdown. */
+    private fun countdownStartTime(timeSeconds: Double): Double {
+        val track = _gameState.value.melodyTrack ?: return timeSeconds - 2.0
+        val tick = track.secondsToTick(timeSeconds)
+        val timeSig = track.timeSignatureAt(tick)
+        val ppq = track.ticksPerQuarterNote
+        val numerator = timeSig.numerator
+        val denominator = timeSig.denominator
+        val ticksPerBar = ppq.toLong() * 4 * numerator / denominator
+        if (ticksPerBar <= 0) return timeSeconds - 2.0
+        val currentBarIndex = tick / ticksPerBar
+        val countdownStartBar = currentBarIndex - 2
+        return track.tickToSeconds(countdownStartBar * ticksPerBar)
+    }
 
     private fun computeCountdownDuration(): Double {
         val bpm = currentMelodyBpm().toDouble()
@@ -458,7 +474,7 @@ class MelodyViewModel @Inject constructor(
     fun enterReadyPhase() {
         if (_gameState.value.phase == PlayPhase.NOT_STARTED) {
             val countdown = computeCountdownDuration()
-            _gameState.update { it.copy(phase = PlayPhase.READY, currentTimeSeconds = -countdown, countdownDurationSeconds = countdown) }
+            _gameState.update { it.copy(phase = PlayPhase.READY, currentTimeSeconds = -countdown) }
         }
     }
 
@@ -472,7 +488,6 @@ class MelodyViewModel @Inject constructor(
             it.copy(
                 phase = PlayPhase.COUNTDOWN,
                 currentTimeSeconds = -countdownDuration,
-                countdownDurationSeconds = countdownDuration,
                 noteResults = emptyMap(),
                 noteScores = emptyList(),
                 currentNoteIndex = -1,
@@ -515,41 +530,42 @@ class MelodyViewModel @Inject constructor(
         val currentGameState = _gameState.value
         val currentViewState = _viewState.value
 
-        // If the user panned while paused, scroll back to live and play a beat countdown
-        // before resuming scoring — same visual effect as starting for the first time.
+        // Pan branch — reset the scrolled view offset and restart countdown.
         if (currentViewState.songTimeOffsetSeconds != 0.0) {
-            val targetTime = currentGameState.currentTimeSeconds
-            val countdownDuration = computeCountdownDuration()
-            val rewindTo = targetTime - countdownDuration
-            pauseOffset = rewindTo
+            _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
             noteTracking.isWaitingForNote = false
             noteTracking.wasWaitingForNote = false
-            _gameState.update {
-                it.copy(
-                    phase = PlayPhase.COUNTDOWN,
-                    countdownDurationSeconds = countdownDuration,
-                    currentTimeSeconds = rewindTo,
-                    countdownResumeTarget = targetTime
-                )
-            }
-            _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
+            // fall through to restart the countdown below
+        } else if (noteTracking.wasWaitingForNote) {
+            noteTracking.isWaitingForNote = true
+            noteTracking.wasWaitingForNote = false
+            _gameState.update { it.copy(phase = PlayPhase.WAITING_FOR_NOTE) }
             if (_gameState.value.metronomeEnabled) metronomePlayer.startSync(melodyPositionMs() + audioOutputDelayMs, currentMelodyBpm(), currentBeatsPerBar())
             startPlaybackTimer()
             return
         }
 
-        if (noteTracking.wasWaitingForNote) {
-            noteTracking.isWaitingForNote = true
-            noteTracking.wasWaitingForNote = false
-            _gameState.update { it.copy(phase = PlayPhase.WAITING_FOR_NOTE) }
-        } else if (_gameState.value.currentTimeSeconds < 0.0) {
-            // Still in countdown period — resume countdown
-            _gameState.update { it.copy(phase = PlayPhase.COUNTDOWN) }
-        } else {
-            _gameState.update { it.copy(phase = PlayPhase.PLAYING) }
+        // Determine the target time that the countdown should end at:
+        //   - mid-song countdown pause → use the stored resume target
+        //   - initial countdown pause (before song starts) → countdown to 0.0
+        //   - active-play pause → use the time at pause
+        val targetTime = when {
+            currentGameState.countdownResumeTarget > 0.0 -> currentGameState.countdownResumeTarget
+            currentGameState.currentTimeSeconds >= 0.0 -> currentGameState.currentTimeSeconds
+            else -> 0.0
         }
-        if (_gameState.value.currentTimeSeconds >= 0.0) {
-            startPitchDetection()
+
+        val startTime = countdownStartTime(targetTime)
+        val delaySec = audioOutputDelayMs / 1000.0
+        val rewindTo = startTime - delaySec
+        val totalDuration = targetTime - rewindTo
+        pauseOffset = rewindTo
+        _gameState.update {
+            it.copy(
+                phase = PlayPhase.COUNTDOWN,
+                currentTimeSeconds = rewindTo,
+                countdownResumeTarget = targetTime
+            )
         }
         if (_gameState.value.metronomeEnabled) metronomePlayer.startSync(melodyPositionMs() + audioOutputDelayMs, currentMelodyBpm(), currentBeatsPerBar())
         startPlaybackTimer()
@@ -642,6 +658,11 @@ class MelodyViewModel @Inject constructor(
                 if (!pitchDetectionStarted && currentTime >= pitchStartThreshold) {
                     pitchDetectionStarted = true
                     _gameState.update { it.copy(phase = PlayPhase.PLAYING, countdownResumeTarget = 0.0) }
+                    // Stop metronome after countdown if wait-for-note is on;
+                    // otherwise it continues for the full song.
+                    if (_gameState.value.waitMode) {
+                        metronomePlayer.stopSync()
+                    }
                     startPitchDetection()
                 }
 
@@ -652,8 +673,12 @@ class MelodyViewModel @Inject constructor(
 
                 _gameState.update { it.copy(currentTimeSeconds = currentTime) }
 
-                // Sync metronome with song position during active playback
-                if (_gameState.value.metronomeEnabled && currentTime >= 0.0) {
+                // Sync metronome with song position during active playback.
+                // During initial COUNTDOWN (currentTime < 0) this doesn't fire;
+                // during mid-song resume COUNTDOWN (currentTime >= 0) we skip it
+                // so the downbeat-aligned startSync position is preserved.
+                if (_gameState.value.metronomeEnabled && currentTime >= 0.0 &&
+                    _gameState.value.phase != PlayPhase.COUNTDOWN) {
                     metronomePlayer.syncPosition(melodyPositionMs() + audioOutputDelayMs, currentMelodyBpm(), currentBeatsPerBar())
                 }
 
