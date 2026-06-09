@@ -509,9 +509,15 @@ class MelodyViewModel @Inject constructor(
         melodyPlayer.stop()
         melodyPlayer.resetGameSync()
 
+        // Start pitch detection early during countdown so the audio pipeline (AudioRecord +
+        // CREPE sliding window) is warm by the time the first note starts, avoiding the
+        // ~64-114ms cold-start delay that would otherwise push the pitch line into the bar.
+        // The guard inside startPitchDetection() prevents duplicate launch when the timer
+        // loop later transitions to PLAYING (or for resume scenarios).
+        startPitchDetection()
+
         // Start the playback timer immediately — bars begin falling during countdown.
         // Time counts from -countdownDuration toward 0.0.
-        // Pitch detection starts when currentTimeSeconds reaches 0.0 (transition to PLAYING).
         pauseOffset = -countdownDuration
         if (_gameState.value.metronomeEnabled) {
             metronomePlayer.startSync(melodyPositionMs() + audioOutputDelayMs, currentMelodyBpm(), currentBeatsPerBar())
@@ -722,6 +728,7 @@ class MelodyViewModel @Inject constructor(
     }
 
     private fun startPitchDetection() {
+        if (pitchJob?.isActive == true) return
         pitchJob = viewModelScope.launch {
             _gameState.update { it.copy(isListening = true) }
             if (_deviceState.value.midiInputEnabled) {
