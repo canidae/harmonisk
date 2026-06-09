@@ -24,7 +24,9 @@ data class MelodyGameState(
     val isListening: Boolean = false,
     val playMelodyAudio: Boolean = false,
     val noteCentsHistory: Map<Int, List<Float>> = emptyMap(),
+    val noteCentsPositions: Map<Int, List<Float>> = emptyMap(),
     val notePlayProgress: Map<Int, Float> = emptyMap(),
+    val noteFirstDetectionStart: Map<Int, Float> = emptyMap(),
     // Non-zero during a mid-song countdown resume: the game-time value at which scoring starts
     val countdownResumeTarget: Double = 0.0,
     // Metronome

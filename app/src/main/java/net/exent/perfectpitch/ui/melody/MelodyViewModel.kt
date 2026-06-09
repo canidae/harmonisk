@@ -485,6 +485,8 @@ class MelodyViewModel @Inject constructor(
                 currentNoteIndex = -1,
                 melodyScore = null,
                 noteCentsHistory = emptyMap(),
+                noteCentsPositions = emptyMap(),
+                noteFirstDetectionStart = emptyMap(),
                 countdownResumeTarget = 0.0
             )
         }
@@ -578,6 +580,8 @@ class MelodyViewModel @Inject constructor(
                 isListening = false,
                 noteResults = emptyMap(),
                 noteCentsHistory = emptyMap(),
+                noteCentsPositions = emptyMap(),
+                noteFirstDetectionStart = emptyMap(),
                 countdownResumeTarget = 0.0
             )
         }
@@ -855,14 +859,27 @@ class MelodyViewModel @Inject constructor(
         _gameState.update { current ->
             val track = current.melodyTrack ?: return@update current
             if (noteIndex < 0 || noteIndex >= track.notes.size) return@update current
-            val expectedDurationMs = (track.noteDurationSeconds(track.notes[noteIndex]) * 1000).toLong()
-            if (expectedDurationMs <= 0) return@update current
-            val existing = current.noteCentsHistory[noteIndex] ?: emptyList()
-            val newHistory = existing + centsOff
-            val progress = (newHistory.size * FRAME_DURATION_MS / expectedDurationMs.toFloat()).coerceIn(0f, 1f)
+            val note = track.notes[noteIndex]
+            val noteDurationSeconds = track.noteDurationSeconds(note)
+            if (noteDurationSeconds <= 0.0) return@update current
+            val noteStartSeconds = track.noteStartSeconds(note)
+            val expectedFreq = noteUtils.midiToFrequency(note.noteNumber)
+            if (abs(noteUtils.frequencyToCents(current.pitchResult.frequency, expectedFreq)) > 50f) {
+                return@update current
+            }
+            val pos = ((current.currentTimeSeconds - noteStartSeconds) / noteDurationSeconds).toFloat().coerceIn(0f, 1f)
+            val existingHistory = current.noteCentsHistory[noteIndex] ?: emptyList()
+            val existingPositions = current.noteCentsPositions[noteIndex] ?: emptyList()
+            val updatedFirstDetection = if (!current.noteFirstDetectionStart.containsKey(noteIndex)) {
+                current.noteFirstDetectionStart + (noteIndex to pos)
+            } else {
+                current.noteFirstDetectionStart
+            }
             current.copy(
-                noteCentsHistory = current.noteCentsHistory + (noteIndex to newHistory),
-                notePlayProgress = current.notePlayProgress + (noteIndex to progress)
+                noteCentsHistory = current.noteCentsHistory + (noteIndex to (existingHistory + centsOff)),
+                noteCentsPositions = current.noteCentsPositions + (noteIndex to (existingPositions + pos)),
+                notePlayProgress = current.notePlayProgress + (noteIndex to pos),
+                noteFirstDetectionStart = updatedFirstDetection
             )
         }
     }

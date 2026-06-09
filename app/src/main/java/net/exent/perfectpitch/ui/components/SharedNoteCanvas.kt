@@ -84,7 +84,9 @@ sealed interface CanvasMode {
         val noteResults: Map<Int, NoteResultState>,
         val currentNoteIndex: Int,
         val noteCentsHistory: Map<Int, List<Float>> = emptyMap(),
+        val noteCentsPositions: Map<Int, List<Float>> = emptyMap(),
         val notePlayProgress: Map<Int, Float> = emptyMap(),
+        val noteFirstDetectionStart: Map<Int, Float> = emptyMap(),
         val currentTimeSeconds: Double,
         val songTimeOffsetSeconds: Double,
         val fallSpeedPxPerSec: Float,
@@ -659,7 +661,9 @@ private fun DrawScope.drawMelodyNotes(
             color = noteColor,
             borderAlpha = 0.15f,
             centsHistory = mode.noteCentsHistory[index] ?: emptyList(),
+            centsPositions = mode.noteCentsPositions[index] ?: emptyList(),
             playProgress = mode.notePlayProgress[index] ?: 0f,
+            detectionStart = mode.noteFirstDetectionStart[index] ?: 0f,
             density = density,
             wigglyPianoAtBottom = pianoAtBottom
         )
@@ -710,7 +714,9 @@ private fun DrawScope.drawNoteBar(
     color: Color,
     borderAlpha: Float,
     centsHistory: List<Float>,
+    centsPositions: List<Float> = emptyList(),
     playProgress: Float = 1f,
+    detectionStart: Float = 0f,
     density: Float,
     wigglyPianoAtBottom: Boolean = false
 ) {
@@ -754,7 +760,9 @@ private fun DrawScope.drawNoteBar(
             clippedTop = clippedTop,
             clippedBottom = clippedBottom,
             centsHistory = centsHistory,
+            centsPositions = centsPositions,
             playProgress = playProgress,
+            detectionStart = detectionStart,
             pianoAtBottom = wigglyPianoAtBottom,
             density = density
         )
@@ -773,29 +781,41 @@ private fun DrawScope.drawWigglyPitchLine(
     clippedTop: Float,
     clippedBottom: Float,
     centsHistory: List<Float>,
+    centsPositions: List<Float>,
     playProgress: Float,
+    detectionStart: Float,
     pianoAtBottom: Boolean,
     density: Float
 ) {
     val numSamples = centsHistory.size
     if (numSamples < 1 || playProgress <= 0f) return
+    if (numSamples != centsPositions.size) return
 
     val fullHeight = rawBottomY - rawTopY
     if (fullHeight < 1f) return
 
-    val playedHeight = fullHeight * playProgress.coerceIn(0f, 1f)
-    if (playedHeight < 1f) return
+    val start = detectionStart.coerceIn(0f, 1f)
+    val end = playProgress.coerceIn(start + 0.001f, 1f)
+    val lineHeight = fullHeight * (end - start)
+    if (lineHeight < 1f) return
 
     val path = Path()
     val centerX = barX + barW / 2f
     val maxDeviationPx = barW / 2f - 2f
-    val yStep = if (numSamples > 1) playedHeight / (numSamples - 1).toFloat() else 0f
+    val gapThreshold = 0.05f
 
     for (i in centsHistory.indices) {
+        val t = centsPositions[i].coerceIn(0f, 1f)
         val normalized = (centsHistory[i] / 50f).coerceIn(-1f, 1f)
         val x = centerX + normalized * maxDeviationPx
-        val y = if (pianoAtBottom) rawBottomY - i * yStep else rawTopY + i * yStep
-        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        val y = if (pianoAtBottom) rawBottomY - t * fullHeight else rawTopY + t * fullHeight
+        if (i == 0) {
+            path.moveTo(x, y)
+        } else if (t - centsPositions[i - 1] > gapThreshold) {
+            path.moveTo(x, y)
+        } else {
+            path.lineTo(x, y)
+        }
     }
 
     clipRect(left = barX, top = clippedTop, right = barX + barW, bottom = clippedBottom) {
