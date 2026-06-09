@@ -2,7 +2,6 @@ package net.exent.perfectpitch.ui.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -10,10 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,9 +42,9 @@ fun SettingsScreen(
                 text = {
                     Text(
                         "All settings will be returned to their default values, including:\n\n" +
-                        "• Concert pitch (A = 440 Hz)\n" +
-                        "• Silence threshold\n" +
-                        "• Free Play speed, tempo, time signature, note snapping"
+                        "\u2022 Concert pitch (A = 440 Hz)\n" +
+                        "\u2022 Silence threshold\n" +
+                        "\u2022 Free Play speed, tempo, time signature, note snapping"
                     )
                 },
                 confirmButton = {
@@ -104,12 +101,10 @@ fun SettingsScreen(
                 )
             }
 
-            // Audio delay calibration (unified)
+            // Audio delay calibration
             SettingSection(title = "Audio Delay") {
                 val device by viewModel.currentDevice.collectAsState()
                 val inputDevice by viewModel.currentInputDevice.collectAsState()
-                val totalDelay by viewModel.activeTotalDelay.collectAsState()
-                val splitPercent by viewModel.activeSplitPercent.collectAsState()
                 val outputDelay by viewModel.activeOutputDelay.collectAsState()
                 val inputDelay by viewModel.activeInputDelay.collectAsState()
 
@@ -122,47 +117,46 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Total delay — editable inline
-                var editingTotal by remember { mutableStateOf(false) }
-                var totalText by remember(totalDelay) { mutableStateOf(totalDelay.toString()) }
-
-                InlineEditableNumber(
-                    label = "Total delay",
-                    unit = "ms",
-                    value = totalDelay,
-                    displayText = "Total delay: ${totalDelay}ms",
-                    editing = editingTotal,
-                    editText = totalText,
-                    onEditTextChange = { totalText = it },
-                    onEdit = { editingTotal = true },
-                    onSave = {
-                        totalText.toIntOrNull()?.let { viewModel.saveTotalDelay(it) }
-                        editingTotal = false
-                    },
-                    onCancel = {
-                        totalText = totalDelay.toString()
-                        editingTotal = false
-                    }
+                Text(
+                    text = "Output delay: ${outputDelay}ms",
+                    style = MaterialTheme.typography.bodyLarge
                 )
-
-                // Split slider (cold — no audio)
-                val splitPct = (splitPercent * 100).roundToInt()
                 Slider(
-                    value = splitPct.toFloat(),
-                    onValueChange = { viewModel.saveSplitPercent(it / 100f) },
-                    valueRange = 0f..100f,
-                    steps = 19,
+                    value = outputDelay.toFloat(),
+                    onValueChange = { viewModel.setOutputDelay(it.toInt()) },
+                    valueRange = 0f..500f,
+                    steps = 49,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Output delay: ${outputDelay}ms", style = MaterialTheme.typography.labelSmall)
-                    Text("$splitPct%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Input delay: ${inputDelay}ms", style = MaterialTheme.typography.labelSmall)
+                    Text("0ms", style = MaterialTheme.typography.labelSmall)
+                    Text("500ms", style = MaterialTheme.typography.labelSmall)
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Input delay: ${inputDelay}ms",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Slider(
+                    value = inputDelay.toFloat(),
+                    onValueChange = { viewModel.setInputDelay(it.toInt()) },
+                    valueRange = 0f..500f,
+                    steps = 49,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("0ms", style = MaterialTheme.typography.labelSmall)
+                    Text("500ms", style = MaterialTheme.typography.labelSmall)
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -199,52 +193,5 @@ private fun SettingSection(
             modifier = Modifier.padding(bottom = 8.dp)
         )
         content()
-    }
-}
-
-@Composable
-private fun InlineEditableNumber(
-    label: String,
-    unit: String,
-    value: Int,
-    displayText: String,
-    editing: Boolean,
-    editText: String,
-    onEditTextChange: (String) -> Unit,
-    onEdit: () -> Unit,
-    onSave: () -> Unit,
-    onCancel: () -> Unit
-) {
-    if (editing) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedTextField(
-                value = editText,
-                onValueChange = onEditTextChange,
-                label = { Text("$label ($unit)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.width(160.dp)
-            )
-            Button(
-                onClick = onSave,
-                enabled = editText.toIntOrNull() != null
-            ) { Text("Save") }
-            TextButton(onClick = onCancel) { Text("Cancel") }
-        }
-    } else {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = displayText,
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            TextButton(onClick = onEdit) { Text("Edit") }
-        }
     }
 }

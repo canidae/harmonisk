@@ -51,7 +51,6 @@ fun MelodyPlayScreen(
     val deviceState by viewModel.deviceState.collectAsStateWithLifecycle()
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
     val uncalibratedDevice by viewModel.uncalibratedDevicePrompt.collectAsState()
-    val splitPercent by viewModel.activeSplitPercent.collectAsState()
     val outputDelay by viewModel.activeOutputDelay.collectAsState()
     val inputDelay by viewModel.activeInputDelay.collectAsState()
     val scoreHistory by viewModel.currentScoreHistory.collectAsStateWithLifecycle()
@@ -217,8 +216,6 @@ fun MelodyPlayScreen(
                         onTransposeChange = { viewModel.setTranspose(it) },
                         playMelodyAudio = gameState.playMelodyAudio,
                         onPlayMelodyAudioChange = { viewModel.setPlayMelodyAudio(it) },
-                        splitPercent = splitPercent,
-                        onSplitPercentChange = { viewModel.saveSplitPercent(it) },
                         outputDelay = outputDelay,
                         inputDelay = inputDelay
                     )
@@ -371,8 +368,6 @@ private fun MelodySettingsMenu(
     onTransposeChange: (Int) -> Unit,
     playMelodyAudio: Boolean,
     onPlayMelodyAudioChange: (Boolean) -> Unit,
-    splitPercent: Float,
-    onSplitPercentChange: (Float) -> Unit,
     outputDelay: Int,
     inputDelay: Int
 ) {
@@ -442,23 +437,13 @@ private fun MelodySettingsMenu(
             )
             HorizontalDivider()
             DropdownMenuItem(
-                text = { Text("Audio delay split: ${(splitPercent * 100).roundToInt()}% output") },
+                text = { Text("Output delay: ${outputDelay}ms") },
                 onClick = {}
             )
-            Slider(
-                value = (splitPercent * 100).roundToInt().toFloat(),
-                onValueChange = { onSplitPercentChange(it / 100f) },
-                valueRange = 0f..100f,
-                steps = 19,
-                modifier = Modifier.padding(horizontal = 16.dp)
+            DropdownMenuItem(
+                text = { Text("Input delay: ${inputDelay}ms") },
+                onClick = {}
             )
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Out: ${outputDelay}ms", style = MaterialTheme.typography.labelSmall)
-                Text("In: ${inputDelay}ms", style = MaterialTheme.typography.labelSmall)
-            }
         }
     }
 }

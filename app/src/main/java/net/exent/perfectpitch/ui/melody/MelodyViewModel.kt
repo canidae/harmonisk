@@ -145,10 +145,6 @@ class MelodyViewModel @Inject constructor(
         loadAllMelodyAverages()
     }
 
-    // Exposed for the in-menu audio delay split slider
-    val activeSplitPercent: StateFlow<Float> = audioDelayRepository.activeSplitPercent
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AudioDelayRepository.DEFAULT_OUTPUT_SPLIT)
-
     val activeOutputDelay: StateFlow<Int> = audioDelayRepository.activeOutputDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
@@ -196,10 +192,6 @@ class MelodyViewModel @Inject constructor(
         current == true -> null  // force-on → back to auto
         effective -> false       // auto-on → force off
         else -> true             // off → force on
-    }
-
-    fun saveSplitPercent(percent: Float) {
-        viewModelScope.launch { audioDelayRepository.setSplitPercentForCurrentDevices(percent) }
     }
 
     fun getAvailableMelodies(): List<MelodyRepository.MelodyInfo> =

@@ -10,7 +10,6 @@ import net.exent.perfectpitch.audio.AudioDeviceMonitor
 import net.exent.perfectpitch.audio.AudioInputDeviceType
 import net.exent.perfectpitch.audio.AudioOutputDeviceType
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -21,8 +20,7 @@ private val Context.audioDelayStore: DataStore<Preferences> by preferencesDataSt
 )
 
 /**
- * Stores calibrated audio round-trip delay and output/input split per device pair.
- * Output and input delays are derived: `output = total * split`, `input = total * (1 - split)`.
+ * Stores calibrated per-device output and input audio delays.
  */
 class AudioDelayRepository(
     private val context: Context,
@@ -31,8 +29,6 @@ class AudioDelayRepository(
     companion object {
         private val PROFILES_KEY = stringPreferencesKey("delay_profiles_json")
         private val json = Json { ignoreUnknownKeys = true }
-
-        const val DEFAULT_OUTPUT_SPLIT = 0.8f
 
         fun defaultOutputDelay(type: AudioOutputDeviceType): Int = when (type) {
             AudioOutputDeviceType.SPEAKER -> 0
@@ -49,44 +45,27 @@ class AudioDelayRepository(
 
     @Serializable
     data class DelayProfile(
-        val totalDelayMs: Int,
-        val splitPercent: Float
-    ) {
-        val outputDelayMs: Int get() = (totalDelayMs * splitPercent).toInt()
-        val inputDelayMs: Int get() = totalDelayMs - outputDelayMs
-    }
+        val outputDelayMs: Int,
+        val inputDelayMs: Int
+    )
 
     private val profilesFlow: Flow<Map<String, DelayProfile>> =
         context.audioDelayStore.data.map { prefs ->
             parseProfiles(prefs[PROFILES_KEY])
         }
 
-    val activeOutputDelay: Flow<Int> = combine(
+    val activeOutputDelay: Flow<Int> = kotlinx.coroutines.flow.combine(
         audioDeviceMonitor.currentDevice,
         profilesFlow
     ) { device, profiles ->
         profiles[device.deviceKey]?.outputDelayMs ?: defaultOutputDelay(device.type)
     }
 
-    val activeInputDelay: Flow<Int> = combine(
+    val activeInputDelay: Flow<Int> = kotlinx.coroutines.flow.combine(
         audioDeviceMonitor.currentInputDevice,
         profilesFlow
     ) { device, profiles ->
         profiles[device.deviceKey]?.inputDelayMs ?: defaultInputDelay(device.type)
-    }
-
-    val activeTotalDelay: Flow<Int> = combine(
-        audioDeviceMonitor.currentDevice,
-        profilesFlow
-    ) { device, profiles ->
-        profiles[device.deviceKey]?.totalDelayMs ?: 0
-    }
-
-    val activeSplitPercent: Flow<Float> = combine(
-        audioDeviceMonitor.currentDevice,
-        profilesFlow
-    ) { device, profiles ->
-        profiles[device.deviceKey]?.splitPercent ?: DEFAULT_OUTPUT_SPLIT
     }
 
     val allProfiles: Flow<Map<String, DelayProfile>> = profilesFlow
@@ -97,42 +76,42 @@ class AudioDelayRepository(
     fun isCalibrated(deviceKey: String): Flow<Boolean> =
         profilesFlow.map { it.containsKey(deviceKey) }
 
-    suspend fun saveCalibration(deviceKey: String, totalDelayMs: Int, splitPercent: Float) =
+    suspend fun saveCalibration(deviceKey: String, outputDelayMs: Int, inputDelayMs: Int) =
         updateProfile(deviceKey) {
             DelayProfile(
-                totalDelayMs = totalDelayMs.coerceIn(0, 1000),
-                splitPercent = splitPercent.coerceIn(0f, 1f)
+                outputDelayMs = outputDelayMs.coerceIn(0, 1000),
+                inputDelayMs = inputDelayMs.coerceIn(0, 1000)
             )
         }
 
-    suspend fun setTotalDelay(deviceKey: String, totalDelayMs: Int) =
+    suspend fun setOutputDelay(deviceKey: String, outputDelayMs: Int) =
         updateProfile(deviceKey) { existing ->
             DelayProfile(
-                totalDelayMs = totalDelayMs.coerceIn(0, 1000),
-                splitPercent = existing?.splitPercent ?: DEFAULT_OUTPUT_SPLIT
+                outputDelayMs = outputDelayMs.coerceIn(0, 1000),
+                inputDelayMs = existing?.inputDelayMs ?: 0
             )
         }
 
-    suspend fun setSplitPercent(deviceKey: String, splitPercent: Float) =
+    suspend fun setInputDelay(deviceKey: String, inputDelayMs: Int) =
         updateProfile(deviceKey) { existing ->
             DelayProfile(
-                totalDelayMs = existing?.totalDelayMs ?: 0,
-                splitPercent = splitPercent.coerceIn(0f, 1f)
+                outputDelayMs = existing?.outputDelayMs ?: 0,
+                inputDelayMs = inputDelayMs.coerceIn(0, 1000)
             )
         }
 
-    suspend fun setTotalDelayForCurrentDevices(totalDelayMs: Int) {
+    suspend fun setOutputDelayForCurrentDevices(outputDelayMs: Int) {
         val outputKey = audioDeviceMonitor.currentDevice.value.deviceKey
         val inputKey = audioDeviceMonitor.currentInputDevice.value.deviceKey
-        setTotalDelay(outputKey, totalDelayMs)
-        setTotalDelay(inputKey, totalDelayMs)
+        setOutputDelay(outputKey, outputDelayMs)
+        setOutputDelay(inputKey, outputDelayMs)
     }
 
-    suspend fun setSplitPercentForCurrentDevices(splitPercent: Float) {
+    suspend fun setInputDelayForCurrentDevices(inputDelayMs: Int) {
         val outputKey = audioDeviceMonitor.currentDevice.value.deviceKey
         val inputKey = audioDeviceMonitor.currentInputDevice.value.deviceKey
-        setSplitPercent(outputKey, splitPercent)
-        setSplitPercent(inputKey, splitPercent)
+        setInputDelay(outputKey, inputDelayMs)
+        setInputDelay(inputKey, inputDelayMs)
     }
 
     private suspend fun updateProfile(deviceKey: String, update: (DelayProfile?) -> DelayProfile) {

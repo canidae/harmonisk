@@ -66,7 +66,7 @@ fun CalibrationScreen(
                     )
                 } else if (!state.synthReady && state.phase == CalibrationPhase.INIT) {
                     CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                    Text("Initializing audio…", style = MaterialTheme.typography.bodySmall)
+                    Text("Initializing audio\u2026", style = MaterialTheme.typography.bodySmall)
                 }
 
                 if (state.error != null) {
@@ -87,30 +87,29 @@ fun CalibrationScreen(
                 }
 
                 when (state.phase) {
-                    CalibrationPhase.INIT -> { /* Waiting for init */ }
+                    CalibrationPhase.INIT -> {}
 
                     CalibrationPhase.INSTRUCTIONS -> InstructionsContent(
                         inputDeviceName = state.inputDevice?.name ?: "microphone",
                         outputDeviceName = state.outputDevice?.name ?: "speaker",
                         synthReady = state.synthReady,
-                        onStart = { viewModel.startRoundTripMeasurement() }
+                        onStart = { viewModel.startCalibration() }
                     )
 
-                    CalibrationPhase.MEASURING_ROUNDTRIP -> MeasuringRoundTripContent(
+                    CalibrationPhase.CALIBRATING -> CalibratingContent(
+                        flashDelayMs = state.flashDelayMs,
                         tonesPlayed = state.tonesPlayed,
                         tonesDetected = state.tonesDetected,
-                        onCancel = { viewModel.stopCalibration() }
-                    )
-
-                    CalibrationPhase.ADJUSTING_SPLIT -> AdjustingSplitContent(
-                        state = state,
-                        onSliderChange = { viewModel.updateSplitPercent(it) },
+                        toneStartTimeMs = state.toneStartTimeMs,
+                        onSliderChange = { viewModel.updateFlashDelay(it) },
                         onSave = { viewModel.saveAndFinish() },
-                        onRetry = { viewModel.stopCalibration(); viewModel.startRoundTripMeasurement() }
+                        onRetry = { viewModel.stopCalibration(); viewModel.startCalibration() }
                     )
 
                     CalibrationPhase.DONE -> DoneContent(
-                        state = state,
+                        outputDelayMs = state.computedOutputDelayMs,
+                        inputDelayMs = state.computedInputDelayMs,
+                        flashDelayMs = state.flashDelayMs,
                         onBack = onBack
                     )
                 }
@@ -142,9 +141,11 @@ private fun InstructionsContent(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "This wizard will measure the audio delay of your devices in two steps:\n\n" +
-                    "1. The app will play a series of tones and detect them to measure the total round-trip delay.\n\n" +
-                    "2. You'll adjust a slider until the sound and a visual pulse are perfectly in sync.\n\n" +
+                text = "This wizard will measure the audio delay of your devices:\n\n" +
+                    "1. A tone will play repeatedly. Drag the slider until the circle " +
+                    "flashes just as the tone begins.\n\n" +
+                    "2. The app will measure the time it takes for the tone to reach " +
+                    "the microphone, and compute both delays.\n\n" +
                     "Make sure the environment is quiet and the microphone can hear the speaker.",
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -164,89 +165,53 @@ private fun InstructionsContent(
 }
 
 @Composable
-private fun MeasuringRoundTripContent(
+private fun CalibratingContent(
+    flashDelayMs: Int,
     tonesPlayed: Int,
     tonesDetected: Int,
-    onCancel: () -> Unit
-) {
-    Text(
-        text = "Measuring Round-Trip Delay…",
-        style = MaterialTheme.typography.titleMedium
-    )
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    LinearProgressIndicator(
-        progress = { tonesPlayed.toFloat() / CalibrationViewModel.NUM_TONES },
-        modifier = Modifier.fillMaxWidth().height(8.dp),
-        trackColor = MaterialTheme.colorScheme.surfaceVariant
-    )
-
-    Text(
-        text = "$tonesPlayed / ${CalibrationViewModel.NUM_TONES} tones played, $tonesDetected detected",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-
-    Text(
-        text = "Playing tones and listening… keep the environment quiet.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center
-    )
-
-    Spacer(modifier = Modifier.height(8.dp))
-    TextButton(onClick = onCancel) { Text("Cancel") }
-}
-
-@Composable
-private fun AdjustingSplitContent(
-    state: CalibrationViewModel.CalibrationState,
+    toneStartTimeMs: Long,
     onSliderChange: (Int) -> Unit,
     onSave: () -> Unit,
     onRetry: () -> Unit
 ) {
-    val pulseOnMs = CalibrationViewModel.PULSE_ON_MS
-    val pulseColor = MaterialTheme.colorScheme.primary
-    val pulseOffColor = MaterialTheme.colorScheme.surfaceVariant
+    val flashDuration = CalibrationViewModel.TONE_ON_MS
+    val flashColor = MaterialTheme.colorScheme.primary
+    val flashOffColor = MaterialTheme.colorScheme.surfaceVariant
 
     Text(
-        text = "Adjust Audio Sync",
+        text = "Adjust Flash Sync",
         style = MaterialTheme.typography.titleLarge
     )
 
     Text(
-        text = "Move the slider until the sound and the flashing circle are perfectly in sync.",
+        text = "Drag the slider until the circle flashes just as the tone begins.",
         style = MaterialTheme.typography.bodyMedium,
         textAlign = TextAlign.Center
     )
 
     Spacer(modifier = Modifier.height(8.dp))
 
-    // Pulsing circle — synced to tone playback.
-    // The visual starts outputDelayMs after the tone starts.
-    // toneStartTimeMs is updated each cycle by the VM's split loop.
     var isVisualOn by remember { mutableStateOf(false) }
-    val currentState by rememberUpdatedState(state)
+    val currentToneStart by rememberUpdatedState(toneStartTimeMs)
+    val currentFlashDelay by rememberUpdatedState(flashDelayMs.toLong())
 
     LaunchedEffect(Unit) {
         while (true) {
             withFrameNanos {
-                val toneStart = currentState.toneStartTimeMs
+                val toneStart = currentToneStart
                 if (toneStart <= 0L) {
                     isVisualOn = false
                     return@withFrameNanos
                 }
-                val outputDelay = currentState.outputDelayMs.toLong()
                 val elapsed = System.currentTimeMillis() - toneStart
-                val visualStart = outputDelay
-                val visualEnd = outputDelay + pulseOnMs
-                isVisualOn = elapsed in visualStart until visualEnd
+                val flashStart = currentFlashDelay
+                val flashEnd = currentFlashDelay + flashDuration
+                isVisualOn = elapsed in flashStart until flashEnd
             }
         }
     }
 
-    val circleColor = if (isVisualOn) pulseColor else pulseOffColor
+    val circleColor = if (isVisualOn) flashColor else flashOffColor
 
     Canvas(modifier = Modifier.size(120.dp)) {
         drawCircle(
@@ -258,14 +223,13 @@ private fun AdjustingSplitContent(
 
     Spacer(modifier = Modifier.height(8.dp))
 
-    // Slider card
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Total delay: ${state.totalDelayMs}ms",
+                text = "Flash delay: ${flashDelayMs}ms",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -273,10 +237,10 @@ private fun AdjustingSplitContent(
             Spacer(modifier = Modifier.height(8.dp))
 
             Slider(
-                value = state.splitPercent.toFloat(),
+                value = flashDelayMs.toFloat(),
                 onValueChange = { onSliderChange(it.toInt()) },
-                valueRange = 0f..100f,
-                steps = 19,
+                valueRange = 0f..CalibrationViewModel.SLIDER_MAX.toFloat(),
+                steps = (CalibrationViewModel.SLIDER_MAX / CalibrationViewModel.SLIDER_STEP) - 1,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -284,12 +248,19 @@ private fun AdjustingSplitContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Output delay: ${state.outputDelayMs}ms", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("${state.splitPercent}%", style = MaterialTheme.typography.bodyMedium)
-                Text("Input delay: ${state.inputDelayMs}ms", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("0ms", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${CalibrationViewModel.SLIDER_MAX}ms", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
+
+    Spacer(modifier = Modifier.height(4.dp))
+
+    Text(
+        text = "Tones played: $tonesPlayed | Detected: $tonesDetected",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 
     Spacer(modifier = Modifier.height(8.dp))
 
@@ -301,7 +272,9 @@ private fun AdjustingSplitContent(
 
 @Composable
 private fun DoneContent(
-    state: CalibrationViewModel.CalibrationState,
+    outputDelayMs: Int,
+    inputDelayMs: Int,
+    flashDelayMs: Int,
     onBack: () -> Unit
 ) {
     Icon(
@@ -319,18 +292,23 @@ private fun DoneContent(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Total delay: ${state.totalDelayMs}ms (${state.splitPercent}% output)",
+                text = "Output delay: ${outputDelayMs}ms",
                 style = MaterialTheme.typography.bodyLarge
             )
             Text(
-                text = "Output: ${state.outputDelayMs}ms / Input: ${state.inputDelayMs}ms",
+                text = "Input delay: ${inputDelayMs}ms",
                 style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = "Flash delay: ${flashDelayMs}ms",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 
     Text(
-        text = "Audio delays have been saved. You can fine-tune the split in Settings.",
+        text = "Audio delays have been saved. You can fine-tune them in Settings.",
         style = MaterialTheme.typography.bodyLarge,
         textAlign = TextAlign.Center,
         color = MaterialTheme.colorScheme.onSurfaceVariant

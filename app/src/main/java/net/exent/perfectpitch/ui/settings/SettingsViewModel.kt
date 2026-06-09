@@ -35,12 +35,6 @@ class SettingsViewModel @Inject constructor(
     val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val activeTotalDelay: StateFlow<Int> = audioDelayRepository.activeTotalDelay
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
-    val activeSplitPercent: StateFlow<Float> = audioDelayRepository.activeSplitPercent
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AudioDelayRepository.DEFAULT_OUTPUT_SPLIT)
-
     fun updateConcertPitch(pitch: Float) {
         viewModelScope.launch { settingsRepository.updateConcertPitch(pitch) }
     }
@@ -49,12 +43,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.updateSilenceThreshold(db) }
     }
 
-    fun saveTotalDelay(ms: Int) {
-        viewModelScope.launch { audioDelayRepository.setTotalDelayForCurrentDevices(ms) }
+    fun setOutputDelay(ms: Int) {
+        viewModelScope.launch { audioDelayRepository.setOutputDelayForCurrentDevices(ms) }
     }
 
-    fun saveSplitPercent(percent: Float) {
-        viewModelScope.launch { audioDelayRepository.setSplitPercentForCurrentDevices(percent) }
+    fun setInputDelay(ms: Int) {
+        viewModelScope.launch { audioDelayRepository.setInputDelayForCurrentDevices(ms) }
     }
 
     fun resetToDefaults() {
