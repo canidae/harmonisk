@@ -79,7 +79,7 @@ fun SettingsScreen(
                     value = settings.concertPitch,
                     onValueChange = { viewModel.updateConcertPitch(it) },
                     valueRange = 420f..460f,
-                    steps = 79
+                    steps = 39
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -153,7 +153,7 @@ fun SettingsScreen(
                     value = splitPct.toFloat(),
                     onValueChange = { viewModel.saveSplitPercent(it / 100f) },
                     valueRange = 0f..100f,
-                    steps = 99,
+                    steps = 19,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(

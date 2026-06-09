@@ -14,7 +14,7 @@ android-sdk/platform-tools/adb install app/build/outputs/apk/debug/app-debug.apk
 
 ### Start the app on the device
 ```bash
-android-sdk/platform-tools/adb shell am start -n com.perfectpitch/.MainActivity
+android-sdk/platform-tools/adb shell am start -n net.exent.perfectpitch/.MainActivity
 ```
 
 ### Run unit tests

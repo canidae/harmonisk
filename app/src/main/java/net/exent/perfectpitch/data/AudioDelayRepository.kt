@@ -32,7 +32,7 @@ class AudioDelayRepository(
         private val PROFILES_KEY = stringPreferencesKey("delay_profiles_json")
         private val json = Json { ignoreUnknownKeys = true }
 
-        const val DEFAULT_OUTPUT_SPLIT = 0.9f
+        const val DEFAULT_OUTPUT_SPLIT = 0.8f
 
         fun defaultOutputDelay(type: AudioOutputDeviceType): Int = when (type) {
             AudioOutputDeviceType.SPEAKER -> 0

@@ -449,7 +449,7 @@ private fun MelodySettingsMenu(
                 value = (splitPercent * 100).roundToInt().toFloat(),
                 onValueChange = { onSplitPercentChange(it / 100f) },
                 valueRange = 0f..100f,
-                steps = 99,
+                steps = 19,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
             Row(

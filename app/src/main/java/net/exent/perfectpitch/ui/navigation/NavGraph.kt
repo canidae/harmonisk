@@ -29,7 +29,8 @@ fun NavGraph() {
                 onNavigateToFreePlay = { navController.navigate(NavRoutes.FREEPLAY) },
                 onNavigateToMelody = { navController.navigate(NavRoutes.MELODY_GRAPH) },
                 onNavigateToTuner = { navController.navigate(NavRoutes.TUNER) },
-                onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS) }
+                onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS) },
+                onNavigateToCalibration = { navController.navigate(NavRoutes.CALIBRATION) }
             )
         }
         composable(NavRoutes.FREEPLAY) {

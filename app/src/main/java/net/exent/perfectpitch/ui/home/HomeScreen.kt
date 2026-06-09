@@ -5,12 +5,20 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import net.exent.perfectpitch.audio.AudioDeviceMonitor
+import net.exent.perfectpitch.data.AudioDelayRepository
+import kotlinx.coroutines.flow.*
+import javax.inject.Inject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -18,11 +26,31 @@ fun HomeScreen(
     onNavigateToFreePlay: () -> Unit,
     onNavigateToMelody: () -> Unit,
     onNavigateToTuner: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToCalibration: () -> Unit = {},
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val uncalibratedMsg by viewModel.uncalibratedDevices.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uncalibratedMsg) {
+        val msg = uncalibratedMsg
+        if (msg != null && viewModel.shouldShowPrompt()) {
+            val result = snackbarHostState.showSnackbar(
+                message = msg,
+                actionLabel = "Calibrate",
+                duration = SnackbarDuration.Indefinite
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                onNavigateToCalibration()
+            }
+            viewModel.dismissPrompt()
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Perfect Pitch") },
@@ -207,4 +235,35 @@ private fun ModeCard(
             }
         }
     }
+}
+
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val audioDeviceMonitor: AudioDeviceMonitor,
+    private val audioDelayRepository: AudioDelayRepository
+) : ViewModel() {
+
+    val uncalibratedDevices: StateFlow<String?> = combine(
+        audioDeviceMonitor.currentInputDevice,
+        audioDeviceMonitor.currentDevice,
+        audioDelayRepository.allProfiles
+    ) { inputDevice, outputDevice, profiles ->
+        val uncalibrated = mutableListOf<String>()
+        if (!profiles.containsKey(inputDevice.deviceKey)) {
+            uncalibrated.add(inputDevice.name)
+        }
+        if (!profiles.containsKey(outputDevice.deviceKey)) {
+            uncalibrated.add(outputDevice.name)
+        }
+        if (uncalibrated.isEmpty()) null
+        else "Audio not calibrated: ${uncalibrated.joinToString(", ")}"
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private var promptDismissed = false
+
+    fun dismissPrompt() {
+        promptDismissed = true
+    }
+
+    fun shouldShowPrompt(): Boolean = !promptDismissed
 }
