@@ -418,13 +418,14 @@ class MelodyViewModel @Inject constructor(
     }
 
     private fun currentMelodyBpm(): Float {
-        val track = _gameState.value.melodyTrack
+        val state = _gameState.value
+        val track = state.melodyTrack
         if (track != null) {
-            val time = _gameState.value.currentTimeSeconds.coerceAtLeast(0.0)
+            val time = state.currentTimeSeconds.coerceAtLeast(0.0)
             val tick = track.secondsToTick(time)
-            return track.bpmAt(tick).toFloat()
+            return (track.bpmAt(tick) * state.tempoMultiplier).toFloat()
         }
-        return 120f
+        return 120f * state.tempoMultiplier
     }
 
     private fun currentBeatsPerBar(): Int {
@@ -434,8 +435,11 @@ class MelodyViewModel @Inject constructor(
         return track.timeSignatureAt(tick).numerator
     }
 
-    private fun melodyPositionMs(): Long =
-        (_gameState.value.currentTimeSeconds * 1000).toLong()
+    private fun melodyPositionMs(): Long {
+        val state = _gameState.value
+        val multiplier = state.tempoMultiplier.coerceAtLeast(0.01f)
+        return (state.currentTimeSeconds * 1000 / multiplier).toLong()
+    }
 
     private fun countdownBars(): Int = COUNTDOWN_BARS
 
@@ -456,7 +460,13 @@ class MelodyViewModel @Inject constructor(
     }
 
     private fun computeCountdownDuration(): Double {
-        val bpm = currentMelodyBpm().toDouble()
+        val state = _gameState.value
+        val track = state.melodyTrack
+        val bpm = if (track != null) {
+            val time = state.currentTimeSeconds.coerceAtLeast(0.0)
+            val tick = track.secondsToTick(time)
+            track.bpmAt(tick)
+        } else 120.0
         val beatsPerBar = currentBeatsPerBar()
         val beatInterval = 60.0 / bpm
         return countdownBars() * beatsPerBar * beatInterval + audioOutputDelayMs / 1000.0
