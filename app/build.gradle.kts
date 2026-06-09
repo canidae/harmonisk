@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.perfectpitch"
+    namespace = "net.exent.perfectpitch"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.perfectpitch"
+        applicationId = "net.exent.perfectpitch"
         minSdk = 29
         targetSdk = 35
         versionCode = 1
