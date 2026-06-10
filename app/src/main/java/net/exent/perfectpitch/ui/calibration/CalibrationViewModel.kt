@@ -21,7 +21,7 @@ class CalibrationViewModel @Inject constructor(
     companion object {
         const val NUM_TONES = 8
         const val TONE_ON_MS = 500L
-        const val TONE_OFF_MS = 500L
+        const val TONE_OFF_MS = 1000L
         const val MIDI_NOTE = 69
         const val MIDI_VELOCITY = 100
         const val MAX_DETECTION_WINDOW_MS = 600L
