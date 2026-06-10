@@ -30,23 +30,23 @@ class AudioDelayRepository(
         private val PROFILES_KEY = stringPreferencesKey("delay_profiles_json")
         private val json = Json { ignoreUnknownKeys = true }
 
-        fun defaultOutputDelay(type: AudioOutputDeviceType): Int = when (type) {
+        fun defaultAudioDelay(type: AudioOutputDeviceType): Int = when (type) {
             AudioOutputDeviceType.SPEAKER -> 0
             AudioOutputDeviceType.WIRED -> 0
             AudioOutputDeviceType.BLUETOOTH -> 150
         }
 
-        fun defaultInputDelay(type: AudioInputDeviceType): Int = when (type) {
+        fun defaultVisualDelay(type: AudioInputDeviceType): Int = when (type) {
             AudioInputDeviceType.BUILTIN -> 0
             AudioInputDeviceType.WIRED -> 0
-            AudioInputDeviceType.BLUETOOTH -> 200
+            AudioInputDeviceType.BLUETOOTH -> 0
         }
     }
 
     @Serializable
     data class DelayProfile(
-        val outputDelayMs: Int,
-        val inputDelayMs: Int
+        val audioDelayMs: Int = 0,
+        val visualDelayMs: Int = 0
     )
 
     private val profilesFlow: Flow<Map<String, DelayProfile>> =
@@ -54,18 +54,18 @@ class AudioDelayRepository(
             parseProfiles(prefs[PROFILES_KEY])
         }
 
-    val activeOutputDelay: Flow<Int> = kotlinx.coroutines.flow.combine(
+    val activeAudioDelay: Flow<Int> = kotlinx.coroutines.flow.combine(
         audioDeviceMonitor.currentDevice,
         profilesFlow
     ) { device, profiles ->
-        profiles[device.deviceKey]?.outputDelayMs ?: defaultOutputDelay(device.type)
+        profiles[device.deviceKey]?.audioDelayMs ?: defaultAudioDelay(device.type)
     }
 
-    val activeInputDelay: Flow<Int> = kotlinx.coroutines.flow.combine(
+    val activeVisualDelay: Flow<Int> = kotlinx.coroutines.flow.combine(
         audioDeviceMonitor.currentInputDevice,
         profilesFlow
     ) { device, profiles ->
-        profiles[device.deviceKey]?.inputDelayMs ?: defaultInputDelay(device.type)
+        profiles[device.deviceKey]?.visualDelayMs ?: defaultVisualDelay(device.type)
     }
 
     val allProfiles: Flow<Map<String, DelayProfile>> = profilesFlow
@@ -76,42 +76,42 @@ class AudioDelayRepository(
     fun isCalibrated(deviceKey: String): Flow<Boolean> =
         profilesFlow.map { it.containsKey(deviceKey) }
 
-    suspend fun saveCalibration(deviceKey: String, outputDelayMs: Int, inputDelayMs: Int) =
+    suspend fun saveCalibration(deviceKey: String, audioDelayMs: Int, visualDelayMs: Int) =
         updateProfile(deviceKey) {
             DelayProfile(
-                outputDelayMs = outputDelayMs.coerceIn(0, 1000),
-                inputDelayMs = inputDelayMs.coerceIn(0, 1000)
+                audioDelayMs = audioDelayMs.coerceIn(0, 1000),
+                visualDelayMs = visualDelayMs.coerceIn(0, 1000)
             )
         }
 
-    suspend fun setOutputDelay(deviceKey: String, outputDelayMs: Int) =
+    suspend fun setAudioDelay(deviceKey: String, audioDelayMs: Int) =
         updateProfile(deviceKey) { existing ->
             DelayProfile(
-                outputDelayMs = outputDelayMs.coerceIn(0, 1000),
-                inputDelayMs = existing?.inputDelayMs ?: 0
+                audioDelayMs = audioDelayMs.coerceIn(0, 1000),
+                visualDelayMs = existing?.visualDelayMs ?: 0
             )
         }
 
-    suspend fun setInputDelay(deviceKey: String, inputDelayMs: Int) =
+    suspend fun setVisualDelay(deviceKey: String, visualDelayMs: Int) =
         updateProfile(deviceKey) { existing ->
             DelayProfile(
-                outputDelayMs = existing?.outputDelayMs ?: 0,
-                inputDelayMs = inputDelayMs.coerceIn(0, 1000)
+                audioDelayMs = existing?.audioDelayMs ?: 0,
+                visualDelayMs = visualDelayMs.coerceIn(0, 1000)
             )
         }
 
-    suspend fun setOutputDelayForCurrentDevices(outputDelayMs: Int) {
+    suspend fun setAudioDelayForCurrentDevices(audioDelayMs: Int) {
         val outputKey = audioDeviceMonitor.currentDevice.value.deviceKey
         val inputKey = audioDeviceMonitor.currentInputDevice.value.deviceKey
-        setOutputDelay(outputKey, outputDelayMs)
-        setOutputDelay(inputKey, outputDelayMs)
+        setAudioDelay(outputKey, audioDelayMs)
+        setAudioDelay(inputKey, audioDelayMs)
     }
 
-    suspend fun setInputDelayForCurrentDevices(inputDelayMs: Int) {
+    suspend fun setVisualDelayForCurrentDevices(visualDelayMs: Int) {
         val outputKey = audioDeviceMonitor.currentDevice.value.deviceKey
         val inputKey = audioDeviceMonitor.currentInputDevice.value.deviceKey
-        setInputDelay(outputKey, inputDelayMs)
-        setInputDelay(inputKey, inputDelayMs)
+        setVisualDelay(outputKey, visualDelayMs)
+        setVisualDelay(inputKey, visualDelayMs)
     }
 
     private suspend fun updateProfile(deviceKey: String, update: (DelayProfile?) -> DelayProfile) {

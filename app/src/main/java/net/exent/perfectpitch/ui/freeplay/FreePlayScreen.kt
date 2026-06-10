@@ -77,6 +77,8 @@ fun FreePlayScreen(
     }
 
     val effectiveTime = viewModel.getEffectiveTime(frameTime)
+    val visualDelay by viewModel.activeVisualDelay.collectAsState()
+    val canvasSongPositionMs = effectiveTime - visualDelay
     val midiRange = state.viewMaxMidi - state.viewMinMidi
     val pxPerMs = state.fallSpeedPxPerSec * density.density / 1000f
 
@@ -661,7 +663,7 @@ fun FreePlayScreen(
                     mode = CanvasMode.FreePlay(
                         notes = state.playedNotes,
                         activeNote = state.activeNote,
-                        songPositionMs = effectiveTime,
+                        songPositionMs = canvasSongPositionMs,
                         fallSpeedPxPerSec = state.fallSpeedPxPerSec,
                         bpm = state.bpm,
                         beatsPerBar = state.beatsPerBar,

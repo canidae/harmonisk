@@ -51,8 +51,8 @@ class CalibrationViewModel @Inject constructor(
         val tonesPlayed: Int = 0,
         val tonesDetected: Int = 0,
         val toneStartTimeMs: Long = 0L,
-        val computedOutputDelayMs: Int = 0,
-        val computedInputDelayMs: Int = 0,
+        val computedAudioDelayMs: Int = 0,
+        val computedVisualDelayMs: Int = 0,
         val saved: Boolean = false,
         val error: String? = null
     )
@@ -196,33 +196,32 @@ class CalibrationViewModel @Inject constructor(
 
         stopCalibrationLoop()
 
-        val outputDelayMs = s.flashDelayMs
-
-        val inputDelayMs = if (roundTripMeasurements.size >= MIN_DETECTIONS) {
+        val audioDelayMs = if (roundTripMeasurements.size >= MIN_DETECTIONS) {
             val sorted = roundTripMeasurements.sorted()
-            val median = sorted[sorted.size / 2]
-            ((median - outputDelayMs + 5) / 10 * 10).coerceAtLeast(0)
+            sorted[sorted.size / 2]
         } else {
-            0
+            s.flashDelayMs
         }
+
+        val visualDelayMs = s.flashDelayMs
 
         _state.update {
             it.copy(
-                computedOutputDelayMs = outputDelayMs,
-                computedInputDelayMs = inputDelayMs
+                computedAudioDelayMs = audioDelayMs,
+                computedVisualDelayMs = visualDelayMs
             )
         }
 
         viewModelScope.launch {
             audioDelayRepository.saveCalibration(
                 deviceKey = inputDevice.deviceKey,
-                outputDelayMs = outputDelayMs,
-                inputDelayMs = inputDelayMs
+                audioDelayMs = audioDelayMs,
+                visualDelayMs = visualDelayMs
             )
             audioDelayRepository.saveCalibration(
                 deviceKey = outputDevice.deviceKey,
-                outputDelayMs = outputDelayMs,
-                inputDelayMs = inputDelayMs
+                audioDelayMs = audioDelayMs,
+                visualDelayMs = visualDelayMs
             )
             _state.update { it.copy(phase = CalibrationPhase.DONE, saved = true) }
         }

@@ -70,6 +70,9 @@ class FreePlayViewModel @Inject constructor(
     private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val snackbarMessage: SharedFlow<String> = _snackbarMessage.asSharedFlow()
 
+    val activeVisualDelay: StateFlow<Int> = audioDelayRepository.activeVisualDelay
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     private var listeningJob: Job? = null
     private var midiListeningJob: Job? = null
     private var replayJob: Job? = null
@@ -95,6 +98,7 @@ class FreePlayViewModel @Inject constructor(
     private val activeMidiNotes = mutableMapOf<Int, PlayedNote>()
 
     private var audioOutputDelayMs: Int = 0
+    private var audioVisualDelayMs: Int = 0
     private var pendingStartDelayMs: Long = 0L
 
     init {
@@ -167,8 +171,13 @@ class FreePlayViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            audioDelayRepository.activeOutputDelay.collect { delayMs ->
+            audioDelayRepository.activeAudioDelay.collect { delayMs ->
                 audioOutputDelayMs = delayMs
+            }
+        }
+        viewModelScope.launch {
+            audioDelayRepository.activeVisualDelay.collect { delayMs ->
+                audioVisualDelayMs = delayMs
             }
         }
     }

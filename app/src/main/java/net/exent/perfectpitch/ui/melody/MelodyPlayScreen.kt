@@ -51,8 +51,8 @@ fun MelodyPlayScreen(
     val deviceState by viewModel.deviceState.collectAsStateWithLifecycle()
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
     val uncalibratedDevice by viewModel.uncalibratedDevicePrompt.collectAsState()
-    val outputDelay by viewModel.activeOutputDelay.collectAsState()
-    val inputDelay by viewModel.activeInputDelay.collectAsState()
+    val audioDelay by viewModel.activeAudioDelay.collectAsState()
+    val visualDelay by viewModel.activeVisualDelay.collectAsState()
     val scoreHistory by viewModel.currentScoreHistory.collectAsStateWithLifecycle()
     val density = LocalDensity.current
     val context = LocalContext.current
@@ -216,8 +216,8 @@ fun MelodyPlayScreen(
                         onTransposeChange = { viewModel.setTranspose(it) },
                         playMelodyAudio = gameState.playMelodyAudio,
                         onPlayMelodyAudioChange = { viewModel.setPlayMelodyAudio(it) },
-                        outputDelay = outputDelay,
-                        inputDelay = inputDelay
+                        audioDelay = audioDelay,
+                        visualDelay = visualDelay
                     )
                 }
 
@@ -256,7 +256,7 @@ fun MelodyPlayScreen(
                                 noteCentsPositions = gameState.noteCentsPositions,
                                 notePlayProgress = gameState.notePlayProgress,
                                 noteFirstDetectionStart = gameState.noteFirstDetectionStart,
-                                currentTimeSeconds = gameState.currentTimeSeconds,
+                                currentTimeSeconds = gameState.currentTimeSeconds - visualDelay / 1000.0,
                                 songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
                                 fallSpeedPxPerSec = viewState.fallSpeedPxPerSec,
                                 detectedMidiNote = if (gameState.pitchResult.isValid) gameState.pitchResult.midiNoteNumber else null,
@@ -370,8 +370,8 @@ private fun MelodySettingsMenu(
     onTransposeChange: (Int) -> Unit,
     playMelodyAudio: Boolean,
     onPlayMelodyAudioChange: (Boolean) -> Unit,
-    outputDelay: Int,
-    inputDelay: Int
+    audioDelay: Int,
+    visualDelay: Int
 ) {
     Box {
         IconButton(
@@ -439,11 +439,11 @@ private fun MelodySettingsMenu(
             )
             HorizontalDivider()
             DropdownMenuItem(
-                text = { Text("Output delay: ${outputDelay}ms") },
+                text = { Text("Audio delay: ${audioDelay}ms") },
                 onClick = {}
             )
             DropdownMenuItem(
-                text = { Text("Input delay: ${inputDelay}ms") },
+                text = { Text("Visual delay: ${visualDelay}ms") },
                 onClick = {}
             )
         }

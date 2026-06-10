@@ -107,8 +107,8 @@ fun CalibrationScreen(
                     )
 
                     CalibrationPhase.DONE -> DoneContent(
-                        outputDelayMs = state.computedOutputDelayMs,
-                        inputDelayMs = state.computedInputDelayMs,
+                        audioDelayMs = state.computedAudioDelayMs,
+                        visualDelayMs = state.computedVisualDelayMs,
                         flashDelayMs = state.flashDelayMs,
                         onBack = onBack
                     )
@@ -132,7 +132,7 @@ private fun InstructionsContent(
         style = MaterialTheme.typography.titleLarge
     )
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+            Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "Output: $outputDeviceName\nInput: $inputDeviceName",
@@ -141,11 +141,12 @@ private fun InstructionsContent(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "This wizard will measure the audio delay of your devices:\n\n" +
-                    "1. A tone will play repeatedly. Drag the slider until the circle " +
-                    "flashes just as the tone begins.\n\n" +
-                    "2. The app will measure the time it takes for the tone to reach " +
-                    "the microphone, and compute both delays.\n\n" +
+                text = "This wizard will measure the audio delays of your devices:\n\n" +
+                    "1. Audio delay is measured automatically. The app plays a tone " +
+                    "and measures how long it takes to reach the microphone.\n\n" +
+                    "2. Visual delay: Drag the slider until the flashing circle and " +
+                    "the tone occur at the same time. This compensates for visual " +
+                    "feedback delay from pitch detection.\n\n" +
                     "Make sure the environment is quiet and the microphone can hear the speaker.",
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -272,8 +273,8 @@ private fun CalibratingContent(
 
 @Composable
 private fun DoneContent(
-    outputDelayMs: Int,
-    inputDelayMs: Int,
+    audioDelayMs: Int,
+    visualDelayMs: Int,
     flashDelayMs: Int,
     onBack: () -> Unit
 ) {
@@ -292,11 +293,11 @@ private fun DoneContent(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Output delay: ${outputDelayMs}ms",
+                text = "Audio delay: ${audioDelayMs}ms",
                 style = MaterialTheme.typography.bodyLarge
             )
             Text(
-                text = "Input delay: ${inputDelayMs}ms",
+                text = "Visual delay: ${visualDelayMs}ms",
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(

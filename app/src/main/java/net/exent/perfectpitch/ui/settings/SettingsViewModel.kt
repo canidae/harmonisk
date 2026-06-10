@@ -29,10 +29,10 @@ class SettingsViewModel @Inject constructor(
     val currentInputDevice: StateFlow<AudioInputDevice?> = audioDeviceMonitor.currentInputDevice
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val activeOutputDelay: StateFlow<Int> = audioDelayRepository.activeOutputDelay
+    val activeAudioDelay: StateFlow<Int> = audioDelayRepository.activeAudioDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
+    val activeVisualDelay: StateFlow<Int> = audioDelayRepository.activeVisualDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     fun updateConcertPitch(pitch: Float) {
@@ -43,12 +43,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.updateSilenceThreshold(db) }
     }
 
-    fun setOutputDelay(ms: Int) {
-        viewModelScope.launch { audioDelayRepository.setOutputDelayForCurrentDevices(ms) }
+    fun setAudioDelay(ms: Int) {
+        viewModelScope.launch { audioDelayRepository.setAudioDelayForCurrentDevices(ms) }
     }
 
-    fun setInputDelay(ms: Int) {
-        viewModelScope.launch { audioDelayRepository.setInputDelayForCurrentDevices(ms) }
+    fun setVisualDelay(ms: Int) {
+        viewModelScope.launch { audioDelayRepository.setVisualDelayForCurrentDevices(ms) }
     }
 
     fun resetToDefaults() {

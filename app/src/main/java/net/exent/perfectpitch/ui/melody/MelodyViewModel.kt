@@ -49,7 +49,7 @@ class MelodyViewModel @Inject constructor(
 
     companion object {
         const val NOTE_RANGE_PADDING = 3
-        /** Extra grace time beyond calibrated input delay — musically acceptable lateness. */
+        /** Grace time for wait-for-note mode — musically acceptable lateness. */
         const val GRACE_PERIOD_EXTRA_MS = 150L
         val FRAME_DURATION_MS = net.exent.perfectpitch.audio.AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000f /
             net.exent.perfectpitch.audio.AudioCaptureService.SAMPLE_RATE
@@ -87,10 +87,10 @@ class MelodyViewModel @Inject constructor(
 
     // Melody audio output delay
     private var synthOpenJob: Job? = null
-    // Input delay for backdating pitch detection timestamps
-    private var audioInputDelayMs: Int = 0
-    // Output delay for firing melody audio early enough to compensate for speaker latency
+    // Audio delay for firing melody audio early enough to compensate for speaker latency
     private var audioOutputDelayMs: Int = 0
+    // Visual delay for panning the canvas so bars/notes appear earlier than audio
+    private var audioVisualDelayMs: Int = 0
 
     init {
         viewModelScope.launch {
@@ -108,17 +108,17 @@ class MelodyViewModel @Inject constructor(
                 }
             }
         }
-        // Observe per-device audio output delay and update the melody player
+        // Observe per-device audio delay and update the melody player
         viewModelScope.launch {
-            audioDelayRepository.activeOutputDelay.collect { delayMs ->
+            audioDelayRepository.activeAudioDelay.collect { delayMs ->
                 audioOutputDelayMs = delayMs
                 melodyPlayer.setAudioOutputDelay(delayMs.toLong())
             }
         }
-        // Observe per-device audio input delay for pitch timestamp correction
+        // Observe per-device visual delay for canvas rendering offset
         viewModelScope.launch {
-            audioDelayRepository.activeInputDelay.collect { delayMs ->
-                audioInputDelayMs = delayMs
+            audioDelayRepository.activeVisualDelay.collect { delayMs ->
+                audioVisualDelayMs = delayMs
             }
         }
         // Observe MIDI availability
@@ -145,10 +145,10 @@ class MelodyViewModel @Inject constructor(
         loadAllMelodyAverages()
     }
 
-    val activeOutputDelay: StateFlow<Int> = audioDelayRepository.activeOutputDelay
+    val activeAudioDelay: StateFlow<Int> = audioDelayRepository.activeAudioDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
+    val activeVisualDelay: StateFlow<Int> = audioDelayRepository.activeVisualDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     /** Emits a device name when an uncalibrated device is detected, null otherwise. */
@@ -774,8 +774,7 @@ class MelodyViewModel @Inject constructor(
 
     private fun updateCurrentNote(currentTime: Double) {
         val track = _gameState.value.melodyTrack ?: return
-        // Backdate by input delay to match the audio being evaluated right now
-        val adjustedTime = currentTime - audioInputDelayMs / 1000.0
+        val adjustedTime = currentTime
 
         // Find the note that should be active at the latency-adjusted time
         val noteIndex = track.notes.indexOfFirst { note ->
@@ -799,7 +798,7 @@ class MelodyViewModel @Inject constructor(
             if (_gameState.value.waitMode) {
                 noteTracking.isWaitingForNote = true
                 noteTracking.waitGraceStartTime = SystemClock.elapsedRealtime()
-                noteTracking.waitGraceDurationMs = audioInputDelayMs.toLong() + GRACE_PERIOD_EXTRA_MS
+                noteTracking.waitGraceDurationMs = GRACE_PERIOD_EXTRA_MS
                 _gameState.update { it.copy(phase = PlayPhase.WAITING_FOR_NOTE) }
             }
         } else if (noteIndex < 0 && _gameState.value.currentNoteIndex >= 0) {

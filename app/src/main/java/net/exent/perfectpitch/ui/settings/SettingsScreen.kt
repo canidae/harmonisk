@@ -105,8 +105,8 @@ fun SettingsScreen(
             SettingSection(title = "Audio Delay") {
                 val device by viewModel.currentDevice.collectAsState()
                 val inputDevice by viewModel.currentInputDevice.collectAsState()
-                val outputDelay by viewModel.activeOutputDelay.collectAsState()
-                val inputDelay by viewModel.activeInputDelay.collectAsState()
+                val audioDelay by viewModel.activeAudioDelay.collectAsState()
+                val visualDelay by viewModel.activeVisualDelay.collectAsState()
 
                 // Device line
                 val inName = inputDevice?.name ?: "microphone"
@@ -120,12 +120,12 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Output delay: ${outputDelay}ms",
+                    text = "Audio delay: ${audioDelay}ms",
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Slider(
-                    value = outputDelay.toFloat(),
-                    onValueChange = { viewModel.setOutputDelay(it.toInt()) },
+                    value = audioDelay.toFloat(),
+                    onValueChange = { viewModel.setAudioDelay(it.toInt()) },
                     valueRange = 0f..500f,
                     steps = 49,
                     modifier = Modifier.fillMaxWidth()
@@ -141,12 +141,12 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Input delay: ${inputDelay}ms",
+                    text = "Visual delay: ${visualDelay}ms",
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Slider(
-                    value = inputDelay.toFloat(),
-                    onValueChange = { viewModel.setInputDelay(it.toInt()) },
+                    value = visualDelay.toFloat(),
+                    onValueChange = { viewModel.setVisualDelay(it.toInt()) },
                     valueRange = 0f..500f,
                     steps = 49,
                     modifier = Modifier.fillMaxWidth()
