@@ -43,7 +43,7 @@ import kotlin.math.roundToInt
 @Composable
 fun MelodyPlayScreen(
     onBack: () -> Unit,
-    onNavigateToCalibration: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     viewModel: MelodyViewModel = hiltViewModel()
 ) {
     val gameState by viewModel.gameState.collectAsStateWithLifecycle()
@@ -82,12 +82,12 @@ fun MelodyPlayScreen(
         if (deviceName != null && viewModel.shouldShowCalibrationPrompt()) {
             val result = snackbarHostState.showSnackbar(
                 message = "$deviceName is not calibrated",
-                actionLabel = "Calibrate",
+                actionLabel = "Settings",
                 duration = SnackbarDuration.Long
             )
             if (result == SnackbarResult.ActionPerformed) {
                 viewModel.stop()
-                onNavigateToCalibration()
+                onNavigateToSettings()
             }
             viewModel.dismissCalibrationPrompt()
         }

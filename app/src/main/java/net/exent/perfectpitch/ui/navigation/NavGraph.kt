@@ -7,7 +7,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
-import net.exent.perfectpitch.ui.calibration.CalibrationScreen
 import net.exent.perfectpitch.ui.freeplay.FreePlayScreen
 import net.exent.perfectpitch.ui.home.HomeScreen
 import net.exent.perfectpitch.ui.melody.MelodyPlayScreen
@@ -29,8 +28,7 @@ fun NavGraph() {
                 onNavigateToFreePlay = { navController.navigate(NavRoutes.FREEPLAY) },
                 onNavigateToMelody = { navController.navigate(NavRoutes.MELODY_GRAPH) },
                 onNavigateToTuner = { navController.navigate(NavRoutes.TUNER) },
-                onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS) },
-                onNavigateToCalibration = { navController.navigate(NavRoutes.CALIBRATION) }
+                onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS) }
             )
         }
         composable(NavRoutes.FREEPLAY) {
@@ -55,7 +53,7 @@ fun NavGraph() {
                 val viewModel: MelodyViewModel = hiltViewModel(parentEntry)
                 MelodyPlayScreen(
                     onBack = { navController.popBackStack() },
-                    onNavigateToCalibration = { navController.navigate(NavRoutes.CALIBRATION) },
+                    onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS) },
                     viewModel = viewModel
                 )
             }
@@ -65,12 +63,8 @@ fun NavGraph() {
         }
         composable(NavRoutes.SETTINGS) {
             SettingsScreen(
-                onBack = { navController.popBackStack() },
-                onNavigateToCalibration = { navController.navigate(NavRoutes.CALIBRATION) }
+                onBack = { navController.popBackStack() }
             )
-        }
-        composable(NavRoutes.CALIBRATION) {
-            CalibrationScreen(onBack = { navController.popBackStack() })
         }
     }
 }

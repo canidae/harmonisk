@@ -27,7 +27,6 @@ fun HomeScreen(
     onNavigateToMelody: () -> Unit,
     onNavigateToTuner: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToCalibration: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -39,11 +38,11 @@ fun HomeScreen(
         if (msg != null && viewModel.shouldShowPrompt()) {
             val result = snackbarHostState.showSnackbar(
                 message = msg,
-                actionLabel = "Calibrate",
+                actionLabel = "Settings",
                 duration = SnackbarDuration.Indefinite
             )
             if (result == SnackbarResult.ActionPerformed) {
-                onNavigateToCalibration()
+                onNavigateToSettings()
             }
             viewModel.dismissPrompt()
         }

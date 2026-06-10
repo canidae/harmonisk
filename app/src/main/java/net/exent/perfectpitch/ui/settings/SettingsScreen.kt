@@ -2,6 +2,7 @@ package net.exent.perfectpitch.ui.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -9,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 
@@ -16,10 +18,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onNavigateToCalibration: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsState()
+    val isCalibrating by viewModel.isCalibrating.collectAsState()
+    val calibrationTonesDetected by viewModel.calibrationTonesDetected.collectAsState()
+    val calibrationNoDetection by viewModel.calibrationNoDetection.collectAsState()
+    var showEditAudioDialog by remember { mutableStateOf(false) }
+    var editAudioText by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -54,6 +60,31 @@ fun SettingsScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showResetConfirm = false }) { Text("Cancel") }
+                }
+            )
+        }
+
+        if (showEditAudioDialog) {
+            AlertDialog(
+                onDismissRequest = { showEditAudioDialog = false },
+                title = { Text("Edit Audio Delay") },
+                text = {
+                    OutlinedTextField(
+                        value = editAudioText,
+                        onValueChange = { editAudioText = it },
+                        label = { Text("Delay (ms)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        viewModel.setAudioDelayFromText(editAudioText)
+                        showEditAudioDialog = false
+                    }) { Text("Save") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showEditAudioDialog = false }) { Text("Cancel") }
                 }
             )
         }
@@ -101,14 +132,13 @@ fun SettingsScreen(
                 )
             }
 
-            // Audio delay calibration
-            SettingSection(title = "Audio Delay") {
+            // Audio/Visual delay
+            SettingSection(title = "Audio/Visual Delay") {
                 val device by viewModel.currentDevice.collectAsState()
                 val inputDevice by viewModel.currentInputDevice.collectAsState()
                 val audioDelay by viewModel.activeAudioDelay.collectAsState()
                 val visualDelay by viewModel.activeVisualDelay.collectAsState()
 
-                // Device line
                 val inName = inputDevice?.name ?: "microphone"
                 val outName = device?.name ?: "speaker"
                 Text(
@@ -119,26 +149,46 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = "Audio delay: ${audioDelay}ms",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Slider(
-                    value = audioDelay.toFloat(),
-                    onValueChange = { viewModel.setAudioDelay(it.toInt()) },
-                    valueRange = 0f..500f,
-                    steps = 49,
-                    modifier = Modifier.fillMaxWidth()
-                )
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("0ms", style = MaterialTheme.typography.labelSmall)
-                    Text("500ms", style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        text = "Audio delay: ${audioDelay}ms",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            editAudioText = audioDelay.toString()
+                            showEditAudioDialog = true
+                        },
+                        enabled = !isCalibrating
+                    ) { Text("Edit") }
+                    Button(
+                        onClick = { viewModel.autoCalibrateAudioDelay() }
+                    ) { Text(if (isCalibrating) "Stop" else "Auto") }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                if (isCalibrating) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    if (calibrationNoDetection) {
+                        Text(
+                            text = "Microphone can\u2019t detect any tones",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        Text(
+                            text = "Calibrating\u2026 $calibrationTonesDetected/5 tones detected",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
                     text = "Visual delay: ${visualDelay}ms",
@@ -157,14 +207,6 @@ fun SettingsScreen(
                 ) {
                     Text("0ms", style = MaterialTheme.typography.labelSmall)
                     Text("50ms", style = MaterialTheme.typography.labelSmall)
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = onNavigateToCalibration,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Calibrate Audio Delays")
                 }
             }
 
