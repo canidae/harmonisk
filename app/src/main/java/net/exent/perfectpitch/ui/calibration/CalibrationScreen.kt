@@ -1,6 +1,5 @@
 package net.exent.perfectpitch.ui.calibration
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -11,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -97,11 +95,8 @@ fun CalibrationScreen(
                     )
 
                     CalibrationPhase.CALIBRATING -> CalibratingContent(
-                        flashDelayMs = state.flashDelayMs,
                         tonesPlayed = state.tonesPlayed,
                         tonesDetected = state.tonesDetected,
-                        toneStartTimeMs = state.toneStartTimeMs,
-                        onSliderChange = { viewModel.updateFlashDelay(it) },
                         onSave = { viewModel.saveAndFinish() },
                         onRetry = { viewModel.stopCalibration(); viewModel.startCalibration() }
                     )
@@ -109,7 +104,6 @@ fun CalibrationScreen(
                     CalibrationPhase.DONE -> DoneContent(
                         audioDelayMs = state.computedAudioDelayMs,
                         visualDelayMs = state.computedVisualDelayMs,
-                        flashDelayMs = state.flashDelayMs,
                         onBack = onBack
                     )
                 }
@@ -141,12 +135,9 @@ private fun InstructionsContent(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "This wizard will measure the audio delays of your devices:\n\n" +
-                    "1. Audio delay is measured automatically. The app plays a tone " +
-                    "and measures how long it takes to reach the microphone.\n\n" +
-                    "2. Visual delay: Drag the slider until the flashing circle and " +
-                    "the tone occur at the same time. This compensates for visual " +
-                    "feedback delay from pitch detection.\n\n" +
+                text = "This wizard measures the audio delay of your devices:\n\n" +
+                    "The app plays a tone and measures how long it takes to reach " +
+                    "the microphone. This gives the audio delay for your system.\n\n" +
                     "Make sure the environment is quiet and the microphone can hear the speaker.",
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -167,95 +158,23 @@ private fun InstructionsContent(
 
 @Composable
 private fun CalibratingContent(
-    flashDelayMs: Int,
     tonesPlayed: Int,
     tonesDetected: Int,
-    toneStartTimeMs: Long,
-    onSliderChange: (Int) -> Unit,
     onSave: () -> Unit,
     onRetry: () -> Unit
 ) {
-    val flashDuration = CalibrationViewModel.TONE_ON_MS
-    val flashColor = MaterialTheme.colorScheme.primary
-    val flashOffColor = MaterialTheme.colorScheme.surfaceVariant
-
     Text(
-        text = "Adjust Flash Sync",
+        text = "Calibrating Audio Delay",
         style = MaterialTheme.typography.titleLarge
     )
 
     Text(
-        text = "Drag the slider until the circle flashes just as the tone begins.",
+        text = "Listening for tones\u2026",
         style = MaterialTheme.typography.bodyMedium,
         textAlign = TextAlign.Center
     )
 
     Spacer(modifier = Modifier.height(8.dp))
-
-    var isVisualOn by remember { mutableStateOf(false) }
-    val currentToneStart by rememberUpdatedState(toneStartTimeMs)
-    val currentFlashDelay by rememberUpdatedState(flashDelayMs.toLong())
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            withFrameNanos {
-                val toneStart = currentToneStart
-                if (toneStart <= 0L) {
-                    isVisualOn = false
-                    return@withFrameNanos
-                }
-                val elapsed = System.currentTimeMillis() - toneStart
-                val flashStart = currentFlashDelay
-                val flashEnd = currentFlashDelay + flashDuration
-                isVisualOn = elapsed in flashStart until flashEnd
-            }
-        }
-    }
-
-    val circleColor = if (isVisualOn) flashColor else flashOffColor
-
-    Canvas(modifier = Modifier.size(120.dp)) {
-        drawCircle(
-            color = circleColor,
-            radius = size.minDimension / 2f,
-            center = Offset(size.width / 2f, size.height / 2f)
-        )
-    }
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Flash delay: ${flashDelayMs}ms",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Slider(
-                value = flashDelayMs.toFloat(),
-                onValueChange = { onSliderChange(it.toInt()) },
-                valueRange = 0f..CalibrationViewModel.SLIDER_MAX.toFloat(),
-                steps = (CalibrationViewModel.SLIDER_MAX / CalibrationViewModel.SLIDER_STEP) - 1,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("0ms", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("${CalibrationViewModel.SLIDER_MAX}ms", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-
-    Spacer(modifier = Modifier.height(4.dp))
 
     Text(
         text = "Tones played: $tonesPlayed | Detected: $tonesDetected",
@@ -275,7 +194,6 @@ private fun CalibratingContent(
 private fun DoneContent(
     audioDelayMs: Int,
     visualDelayMs: Int,
-    flashDelayMs: Int,
     onBack: () -> Unit
 ) {
     Icon(
@@ -299,11 +217,6 @@ private fun DoneContent(
             Text(
                 text = "Visual delay: ${visualDelayMs}ms",
                 style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = "Flash delay: ${flashDelayMs}ms",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

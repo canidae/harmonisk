@@ -147,8 +147,8 @@ fun SettingsScreen(
                 Slider(
                     value = visualDelay.toFloat(),
                     onValueChange = { viewModel.setVisualDelay(it.toInt()) },
-                    valueRange = 0f..500f,
-                    steps = 49,
+                    valueRange = 0f..50f,
+                    steps = 50,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(
@@ -156,7 +156,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text("0ms", style = MaterialTheme.typography.labelSmall)
-                    Text("500ms", style = MaterialTheme.typography.labelSmall)
+                    Text("50ms", style = MaterialTheme.typography.labelSmall)
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))

@@ -203,7 +203,7 @@ class CalibrationViewModel @Inject constructor(
             s.flashDelayMs
         }
 
-        val visualDelayMs = s.flashDelayMs
+        val visualDelayMs = 0
 
         _state.update {
             it.copy(
