@@ -51,8 +51,6 @@ class MelodyViewModel @Inject constructor(
         const val NOTE_RANGE_PADDING = 3
         /** Grace time for wait-for-note mode — musically acceptable lateness. */
         const val GRACE_PERIOD_EXTRA_MS = 150L
-        val FRAME_DURATION_MS = net.exent.perfectpitch.audio.AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000f /
-            net.exent.perfectpitch.audio.AudioCaptureService.SAMPLE_RATE
     }
 
     private val _gameState = MutableStateFlow(MelodyGameState())

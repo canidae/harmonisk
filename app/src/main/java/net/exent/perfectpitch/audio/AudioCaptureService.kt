@@ -37,11 +37,6 @@ class AudioCaptureService(
         SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT
     )
 
-    private val bufferSize = maxOf(
-        minBufferSize,
-        BUFFER_SIZE_SAMPLES * 4 // 4 bytes per float
-    )
-
     fun audioFlow(): Flow<FloatArray> = callbackFlow {
         if (ActivityCompat.checkSelfPermission(
                 context, Manifest.permission.RECORD_AUDIO
@@ -60,7 +55,7 @@ class AudioCaptureService(
                     .setEncoding(AUDIO_FORMAT)
                     .build()
             )
-            .setBufferSizeInBytes(bufferSize)
+            .setBufferSizeInBytes(minBufferSize)
             .setContext(context)
             .build()
 

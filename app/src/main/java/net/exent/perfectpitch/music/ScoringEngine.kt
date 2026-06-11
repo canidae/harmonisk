@@ -20,13 +20,6 @@ class ScoringEngine {
         // Duration scoring ratio thresholds
         const val PERFECT_DURATION_RATIO = 0.85f
 
-        // Point values per tier
-        const val PERFECT_POINTS = 100
-        const val GREAT_POINTS = 80
-        const val GOOD_POINTS = 50
-        const val OK_POINTS = 25
-        const val MISS_POINTS = 0
-
         // Scoring weights — timing excluded (latency-agnostic)
         const val PITCH_WEIGHT = 0.6f
         const val DURATION_WEIGHT = 0.4f

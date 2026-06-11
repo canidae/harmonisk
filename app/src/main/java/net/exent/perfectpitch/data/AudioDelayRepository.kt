@@ -70,20 +70,6 @@ class AudioDelayRepository(
 
     val allProfiles: Flow<Map<String, DelayProfile>> = profilesFlow
 
-    fun getProfile(deviceKey: String): Flow<DelayProfile?> =
-        profilesFlow.map { it[deviceKey] }
-
-    fun isCalibrated(deviceKey: String): Flow<Boolean> =
-        profilesFlow.map { it.containsKey(deviceKey) }
-
-    suspend fun saveCalibration(deviceKey: String, audioDelayMs: Int, visualDelayMs: Int) =
-        updateProfile(deviceKey) {
-            DelayProfile(
-                audioDelayMs = audioDelayMs.coerceIn(0, 1000),
-                visualDelayMs = visualDelayMs.coerceIn(0, 1000)
-            )
-        }
-
     suspend fun setAudioDelay(deviceKey: String, audioDelayMs: Int) =
         updateProfile(deviceKey) { existing ->
             DelayProfile(

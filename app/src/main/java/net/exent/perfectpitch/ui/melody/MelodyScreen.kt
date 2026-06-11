@@ -29,8 +29,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import net.exent.perfectpitch.data.ScoreHistoryRepository.ScoreEntry
-import net.exent.perfectpitch.music.MelodyScore
 import net.exent.perfectpitch.ui.theme.Green80
 import net.exent.perfectpitch.ui.theme.Red80
 import net.exent.perfectpitch.ui.theme.Teal80
@@ -277,17 +275,6 @@ private fun MelodyProgressSection(
         }
     }
 }
-
-private fun ScoreEntry.toMelodyScore(): MelodyScore = MelodyScore(
-    overallScore = overallScore,
-    totalNotes = totalNotes,
-    notesHit = notesHit,
-    perfectNotes = perfectNotes,
-    greatNotes = greatNotes,
-    longestStreak = longestStreak,
-    avgPitchScore = avgPitchScore,
-    avgDurationScore = avgDurationScore
-)
 
 private fun scoreColor(score: Float): androidx.compose.ui.graphics.Color = when {
     score >= 95f -> Green80

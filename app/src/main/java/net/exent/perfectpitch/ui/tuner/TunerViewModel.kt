@@ -7,7 +7,6 @@ import net.exent.perfectpitch.data.SettingsRepository
 import net.exent.perfectpitch.music.NoteInfo
 import net.exent.perfectpitch.music.NoteUtils
 import net.exent.perfectpitch.music.PitchResult
-import net.exent.perfectpitch.music.ScoringEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -37,9 +36,6 @@ class TunerViewModel @Inject constructor(
          */
         const val EMA_ALPHA = 0.3f
 
-        /** Consecutive in-tune frames before showing "✓ In Tune". */
-        const val IN_TUNE_HOLD_FRAMES = 5
-
         /**
          * Hysteresis band around a semitone boundary (in cents).
          * Once a note name is committed, the smoothed pitch must move MORE than
@@ -59,9 +55,6 @@ class TunerViewModel @Inject constructor(
     // EMA state in semitone space (semitones relative to A4)
     private var smoothedSemitones: Double = 0.0
     private var isFirstValidFrame = true
-
-    // Stable "In Tune" counter
-    private var inTuneConsecutiveCount = 0
 
     // Hysteresis: the MIDI note number currently committed to for display (-1 = none)
     private var displayedMidi: Int = -1
@@ -132,14 +125,6 @@ class TunerViewModel @Inject constructor(
                 }
             }
 
-            // Count consecutive frames within the in-tune window for the stable indicator
-            if (abs(noteInfo.centsOff) <= ScoringEngine.PERFECT_CENTS) {
-                inTuneConsecutiveCount++
-            } else {
-                inTuneConsecutiveCount = 0
-            }
-            val isInTune = inTuneConsecutiveCount >= IN_TUNE_HOLD_FRAMES
-
             val displayResult = result.copy(
                 frequency = smoothedFreq,
                 noteName = noteInfo.name,
@@ -151,17 +136,13 @@ class TunerViewModel @Inject constructor(
             _state.update {
                 it.copy(
                     displayedResult = displayResult,
-                    smoothedCentsOff = noteInfo.centsOff,
-                    isHeld = false,
-                    isInTune = isInTune
+                    smoothedCentsOff = noteInfo.centsOff
                 )
             }
         } else {
             // Brief silence: don't reset the EMA — hold the current smoothed value so that
             // transient quiet moments (e.g., a breath) don't destabilise the display.
             if (_state.value.displayedResult.isValid && holdJob?.isActive != true) {
-                inTuneConsecutiveCount = 0
-                _state.update { it.copy(isHeld = true, isInTune = false) }
                 holdJob = viewModelScope.launch {
                     delay(HOLD_DURATION_MS)
                     // Hold expired — player truly stopped. Reset so the next note starts fresh.
@@ -170,9 +151,7 @@ class TunerViewModel @Inject constructor(
                     _state.update {
                         it.copy(
                             displayedResult = PitchResult.SILENT,
-                            smoothedCentsOff = 0f,
-                            isHeld = false,
-                            isInTune = false
+                            smoothedCentsOff = 0f
                         )
                     }
                 }

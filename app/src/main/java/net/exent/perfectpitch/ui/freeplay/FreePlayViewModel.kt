@@ -438,8 +438,6 @@ class FreePlayViewModel @Inject constructor(
         }
     }
 
-    fun getNoteMidi(id: String): Int? = _state.value.playedNotes.find { it.id == id }?.midiNumber
-
     data class NoteInfo(val startTimeMs: Long, val endTimeMs: Long?, val midiNumber: Int)
     fun getNoteInfo(id: String): NoteInfo? = _state.value.playedNotes.find { it.id == id }
         ?.let { NoteInfo(it.startTimeMs, it.endTimeMs, it.midiNumber) }

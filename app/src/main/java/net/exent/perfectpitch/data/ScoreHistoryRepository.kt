@@ -56,13 +56,6 @@ class ScoreHistoryRepository(
         }
     }
 
-    fun getLatestScore(melodyId: String): Flow<Float?> {
-        return allScoresFlow.map { scoresMap ->
-            val scores = scoresMap[melodyId] ?: return@map null
-            scores.lastOrNull()?.overallScore
-        }
-    }
-
     suspend fun saveScore(melodyId: String, entry: ScoreEntry) {
         context.scoreHistoryStore.edit { prefs ->
             val current = parseAll(prefs[SCORES_KEY]).toMutableMap()

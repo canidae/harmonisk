@@ -17,13 +17,6 @@ class MetronomePlayer {
         private const val CLICK_SAMPLES = 88
         private const val CLICK_FREQ = 3000f
         private const val CLICK_FREQ_ACCENT = 4500f
-
-        /** Floor division: rounds toward negative infinity. */
-        private fun floorDiv(a: Long, b: Long): Long {
-            var q = a / b
-            if (a xor b < 0L && q * b != a) q--
-            return q
-        }
     }
 
     private var audioTrack: AudioTrack? = null
@@ -146,7 +139,7 @@ class MetronomePlayer {
 
         for (i in buffer.indices) {
             val absSample = baseSample + i
-            val beatIndex = if (beatIntervalSamples > 0) floorDiv(absSample, beatIntervalSamples) else 0L
+            val beatIndex = if (beatIntervalSamples > 0) Math.floorDiv(absSample, beatIntervalSamples) else 0L
             val sampleInBeat = (absSample - beatIndex * beatIntervalSamples).toInt()
 
             if (sampleInBeat < CLICK_SAMPLES) {

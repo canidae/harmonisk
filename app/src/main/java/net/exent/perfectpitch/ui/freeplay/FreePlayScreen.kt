@@ -40,7 +40,6 @@ import net.exent.perfectpitch.ui.components.RequireMicPermission
 import net.exent.perfectpitch.ui.components.SharedNoteCanvas
 import net.exent.perfectpitch.ui.components.VOICE_COLORS
 import net.exent.perfectpitch.ui.NOTE_DIVISION_OPTIONS
-import net.exent.perfectpitch.ui.OVERLAY_BG
 import net.exent.perfectpitch.ui.OVERLAY_ICON_TINT
 import net.exent.perfectpitch.ui.PANEL_BG
 import net.exent.perfectpitch.ui.PANEL_BTN_SIZE

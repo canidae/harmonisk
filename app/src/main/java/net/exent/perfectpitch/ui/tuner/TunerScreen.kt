@@ -47,8 +47,6 @@ fun TunerScreen(
                 onDispose { viewModel.stopListening() }
             }
 
-            val contentAlpha = 1f
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -59,7 +57,6 @@ fun TunerScreen(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .alpha(contentAlpha)
                         .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
@@ -73,8 +70,7 @@ fun TunerScreen(
                 }
 
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.alpha(contentAlpha)
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = "${"%.1f".format(state.displayedResult.frequency)} Hz",
