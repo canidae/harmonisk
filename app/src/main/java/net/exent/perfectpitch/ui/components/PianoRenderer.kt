@@ -18,7 +18,9 @@ private const val BLACK_KEY_WIDTH_FRACTION = 0.6f
 private const val C4_MIDI = 60
 private const val C4_DOT_RADIUS_DP = 2.5f
 
-val BLACK_KEY_INDICES = setOf(1, 3, 6, 8, 10)
+private val BLACK_KEY_INDICES = setOf(1, 3, 6, 8, 10)
+
+private val WHITE_KEY_OFFSET_IN_OCTAVE = intArrayOf(0, -1, 1, -1, 2, 3, -1, 4, -1, 5, -1, 6)
 
 data class KeyLayout(
     val x: Float,
@@ -51,12 +53,10 @@ fun calculatePianoLayout(
     val whiteKeyWidth = totalWidth / whiteKeysInView
     val blackKeyWidth = whiteKeyWidth * BLACK_KEY_WIDTH_FRACTION
 
-    val whiteKeyOffsetInOctave = intArrayOf(0, -1, 1, -1, 2, 3, -1, 4, -1, 5, -1, 6)
-
     fun whiteKeyIndex(midi: Int): Int {
         val octave = midi / 12
         val note = midi % 12
-        val offset = whiteKeyOffsetInOctave[note]
+        val offset = WHITE_KEY_OFFSET_IN_OCTAVE[note]
         return if (offset >= 0) octave * 7 + offset else -1
     }
 
