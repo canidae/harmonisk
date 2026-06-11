@@ -1,6 +1,8 @@
 package net.exent.perfectpitch.music
 
-import kotlin.math.*
+import kotlin.math.log2
+import kotlin.math.pow
+import kotlin.math.round
 
 class NoteUtils {
 
@@ -54,10 +56,3 @@ class NoteUtils {
         return noteIndex to octave
     }
 }
-
-data class NoteInfo(
-    val name: String,
-    val octave: Int,
-    val centsOff: Float,
-    val midiNumber: Int
-)
