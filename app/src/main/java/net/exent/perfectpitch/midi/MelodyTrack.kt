@@ -1,6 +1,5 @@
 package net.exent.perfectpitch.midi
 
-/** Parsed melody track from a MIDI file. */
 class MelodyTrack(
     val name: String,
     val notes: List<NoteEvent>,
@@ -20,34 +19,66 @@ class MelodyTrack(
         min..max
     }
 
-    fun tickToSeconds(tick: Long): Double {
-        var seconds = 0.0
-        var lastTick = 0L
-        var currentUsPerBeat = tempoChanges.firstOrNull()?.microsecondsPerBeat ?: 500_000L
+    private data class TempoSegment(
+        val startTick: Long,
+        val endTick: Long,
+        val startSecond: Double,
+        val usPerBeat: Long
+    )
 
-        for (tempo in tempoChanges) {
-            if (tempo.tick >= tick) break
-            seconds += (tempo.tick - lastTick).toDouble() * currentUsPerBeat / (ticksPerQuarterNote * 1_000_000.0)
-            lastTick = tempo.tick
-            currentUsPerBeat = tempo.microsecondsPerBeat
+    private val segments: List<TempoSegment> by lazy {
+        if (tempoChanges.isEmpty()) {
+            listOf(TempoSegment(0, Long.MAX_VALUE, 0.0, 500_000L))
+        } else {
+            val sortedTempos = tempoChanges.sortedBy { it.tick }
+            buildList {
+                for (i in sortedTempos.indices) {
+                    val t = sortedTempos[i]
+                    val nextTick = if (i + 1 < sortedTempos.size) sortedTempos[i + 1].tick else Long.MAX_VALUE
+                    val startSec = if (i == 0) {
+                        0.0
+                    } else {
+                        val prev = get(i - 1)
+                        prev.startSecond + (prev.endTick - prev.startTick).toDouble() * prev.usPerBeat / (ticksPerQuarterNote * 1_000_000.0)
+                    }
+                    add(TempoSegment(t.tick, nextTick, startSec, t.microsecondsPerBeat))
+                }
+            }
         }
+    }
 
-        seconds += (tick - lastTick).toDouble() * currentUsPerBeat / (ticksPerQuarterNote * 1_000_000.0)
-        return seconds
+    private val noteStartSecondsCache: DoubleArray by lazy {
+        DoubleArray(sortedNotes.size) { i ->
+            tickToSeconds(sortedNotes[i].startTick)
+        }
+    }
+
+    fun tickToSeconds(tick: Long): Double {
+        val idx = segments.binarySearch { it.startTick.compareTo(tick) }
+        val seg = if (idx >= 0) {
+            segments[idx]
+        } else {
+            val insertionPoint = -(idx + 1)
+            segments[if (insertionPoint == 0) 0 else insertionPoint - 1]
+        }
+        if (tick >= seg.endTick) {
+            return seg.startSecond + (seg.endTick - seg.startTick).toDouble() * seg.usPerBeat / (ticksPerQuarterNote * 1_000_000.0)
+        }
+        return seg.startSecond + (tick - seg.startTick).toDouble() * seg.usPerBeat / (ticksPerQuarterNote * 1_000_000.0)
     }
 
     fun getNoteAtTime(seconds: Double): NoteEvent? {
-        // Binary search: find the last note starting at or before `seconds`
         var lo = 0
         var hi = sortedNotes.size - 1
         while (lo <= hi) {
             val mid = (lo + hi) ushr 1
-            if (noteStartSeconds(sortedNotes[mid]) <= seconds) lo = mid + 1 else hi = mid - 1
+            if (noteStartSecondsCache[mid] <= seconds) lo = mid + 1 else hi = mid - 1
         }
         if (hi < 0) return null
         val candidate = sortedNotes[hi]
-        val start = noteStartSeconds(candidate)
-        return if (seconds < start + noteDurationSeconds(candidate)) candidate else null
+        val start = noteStartSecondsCache[hi]
+        val end = tickToSeconds(candidate.endTick)
+        return if (seconds < end) candidate else null
     }
 
     fun noteDurationSeconds(note: NoteEvent): Double =
@@ -55,7 +86,6 @@ class MelodyTrack(
 
     fun noteStartSeconds(note: NoteEvent): Double = tickToSeconds(note.startTick)
 
-    /** Returns a new track with all notes transposed by [semitones], clamped to MIDI range 0–127. */
     fun transpose(semitones: Int): MelodyTrack {
         if (semitones == 0) return this
         return MelodyTrack(
@@ -67,7 +97,6 @@ class MelodyTrack(
         )
     }
 
-    /** Returns the BPM at the given [tick] position. */
     fun bpmAt(tick: Long): Double {
         val event = tempoChanges.lastOrNull { it.tick <= tick }
             ?: tempoChanges.firstOrNull()
@@ -75,34 +104,26 @@ class MelodyTrack(
         return event.bpm
     }
 
-    /** Returns the active [TimeSignatureEvent] at the given [tick] position. */
     fun timeSignatureAt(tick: Long): TimeSignatureEvent {
         return timeSignatures.lastOrNull { it.tick <= tick }
             ?: timeSignatures.firstOrNull()
             ?: TimeSignatureEvent(tick = 0, numerator = 4, denominator = 4)
     }
 
-    /** Approximate inverse of [tickToSeconds]: converts a time in seconds to the nearest tick. */
     fun secondsToTick(seconds: Double): Long {
         if (seconds <= 0.0) return 0L
-        var remainingSeconds = seconds
-        var currentTick = 0L
-        var currentUsPerBeat = tempoChanges.firstOrNull()?.microsecondsPerBeat ?: 500_000L
-
-        for (i in tempoChanges.indices) {
-            val tempo = tempoChanges[i]
-            val nextTick = if (i + 1 < tempoChanges.size) tempoChanges[i + 1].tick else Long.MAX_VALUE
-            val segmentTicks = nextTick - tempo.tick
-            currentUsPerBeat = tempo.microsecondsPerBeat
-            val segmentSeconds = segmentTicks.toDouble() * currentUsPerBeat / (ticksPerQuarterNote * 1_000_000.0)
-
-            if (remainingSeconds <= segmentSeconds) {
-                return currentTick + (remainingSeconds * ticksPerQuarterNote * 1_000_000.0 / currentUsPerBeat).toLong()
-            }
-            remainingSeconds -= segmentSeconds
-            currentTick = nextTick
+        val idx = segments.binarySearch { it.startSecond.compareTo(seconds) }
+        val seg = if (idx >= 0) {
+            segments[idx]
+        } else {
+            val insertionPoint = -(idx + 1)
+            segments[if (insertionPoint == 0) 0 else insertionPoint - 1]
         }
-
-        return currentTick + (remainingSeconds * ticksPerQuarterNote * 1_000_000.0 / currentUsPerBeat).toLong()
+        val elapsedInSegment = seconds - seg.startSecond
+        val segmentEndSec = seg.startSecond + (seg.endTick - seg.startTick).toDouble() * seg.usPerBeat / (ticksPerQuarterNote * 1_000_000.0)
+        if (seconds >= segmentEndSec) {
+            return seg.endTick
+        }
+        return seg.startTick + (elapsedInSegment * ticksPerQuarterNote * 1_000_000.0 / seg.usPerBeat).toLong()
     }
 }

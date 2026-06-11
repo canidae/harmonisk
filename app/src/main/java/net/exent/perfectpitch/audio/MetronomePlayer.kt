@@ -1,8 +1,6 @@
 package net.exent.perfectpitch.audio
 
 import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
 import android.util.Log
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.PI
@@ -19,59 +17,21 @@ class MetronomePlayer {
         private const val CLICK_FREQ_ACCENT = 4500f
     }
 
-    private var audioTrack: AudioTrack? = null
-    private var renderThread: Thread? = null
-    @Volatile private var running = false
-
     @Volatile private var armed = false
     @Volatile private var playing = false
     @Volatile private var bpm: Float = 120f
     @Volatile private var beatsPerBar: Int = 4
     private val sampleCount = AtomicLong(0L)
 
+    private val renderThread = AudioRenderThread(
+        threadName = "MetronomeRenderThread",
+        contentType = AudioAttributes.CONTENT_TYPE_SONIFICATION,
+        bufferFrames = BUFFER_FRAMES,
+        render = ::renderBuffer
+    )
+
     fun open() {
-        if (audioTrack != null) return
-
-        val minBufferSize = AudioTrack.getMinBufferSize(
-            SAMPLE_RATE,
-            AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
-        )
-        val track = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setSampleRate(SAMPLE_RATE)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .build()
-            )
-            .setBufferSizeInBytes(maxOf(BUFFER_FRAMES * 2, minBufferSize))
-            .setTransferMode(AudioTrack.MODE_STREAM)
-            .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
-            .build()
-
-        audioTrack = track
-        track.play()
-        running = true
-
-        renderThread = Thread({
-            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
-            val buffer = ShortArray(BUFFER_FRAMES)
-
-            while (running) {
-                renderBuffer(buffer)
-                try {
-                    track.write(buffer, 0, buffer.size)
-                } catch (_: Exception) {}
-            }
-        }, "MetronomeRenderThread").apply { start() }
-
+        renderThread.open()
         Log.d(TAG, "Metronome opened")
     }
 
@@ -102,21 +62,10 @@ class MetronomePlayer {
     }
 
     fun close() {
-        running = false
-        try {
-            renderThread?.join(500)
-        } catch (_: InterruptedException) {}
-        renderThread = null
+        renderThread.close()
         armed = false
         playing = false
-
-        try {
-            audioTrack?.stop()
-            audioTrack?.release()
-        } catch (e: Exception) {
-            Log.w(TAG, "Error closing metronome", e)
-        }
-        audioTrack = null
+        Log.d(TAG, "Metronome closed")
     }
 
     private fun renderBuffer(buffer: ShortArray) {
