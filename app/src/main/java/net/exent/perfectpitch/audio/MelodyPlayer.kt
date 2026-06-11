@@ -92,7 +92,7 @@ class MelodyPlayer(
     }
 
     fun setAudioOutputDelay(delayMs: Long) {
-        audioOutputDelayMs = delayMs.coerceIn(-200, 500)
+        audioOutputDelayMs = delayMs.coerceIn(0, 500)
     }
 
     fun stop() {

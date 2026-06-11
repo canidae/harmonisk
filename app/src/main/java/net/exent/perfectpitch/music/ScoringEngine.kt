@@ -132,6 +132,8 @@ enum class PitchAccuracy(val score: Float) {
 
 enum class ScoreTier { LEGENDARY, EXCELLENT, GREAT, GOOD, OK, NEEDS_WORK }
 
+private enum class BreakdownWeakness { PITCH, DURATION, MISSED_NOTES }
+
 data class MelodyScore(
     val overallScore: Float,
     val totalNotes: Int,
@@ -163,25 +165,27 @@ fun MelodyScore.toBreakdown(): ScoreBreakdown {
     val durationScore = avgDurationScore
 
     val weakest = when {
-        pitchScore < durationScore && pitchScore < 80f -> "pitch accuracy"
-        durationScore < pitchScore && durationScore < 80f -> "duration accuracy"
-        missRate > 20f -> "missing notes entirely"
+        pitchScore < durationScore && pitchScore < 80f -> BreakdownWeakness.PITCH
+        durationScore < pitchScore && durationScore < 80f -> BreakdownWeakness.DURATION
+        missRate > 20f -> BreakdownWeakness.MISSED_NOTES
         else -> null
     }
 
-    val tip = when {
-        weakest == "pitch accuracy" -> "Focus on hitting the exact notes. Try the wait mode to practice each note before moving on."
-        weakest == "duration accuracy" -> "Hold each note for its full length. Try matching the rhythm more carefully."
-        weakest == "missing notes entirely" -> "Some notes were skipped. Slow down the tempo and focus on playing every note."
-        pitchScore >= 90f && durationScore >= 90f -> "Great precision! Keep refining for a perfect score."
-        else -> "Keep practicing consistently — you're building muscle memory!"
+    val tip = when (weakest) {
+        BreakdownWeakness.PITCH -> "Focus on hitting the exact notes. Try the wait mode to practice each note before moving on."
+        BreakdownWeakness.DURATION -> "Hold each note for its full length. Try matching the rhythm more carefully."
+        BreakdownWeakness.MISSED_NOTES -> "Some notes were skipped. Slow down the tempo and focus on playing every note."
+        else -> when {
+            pitchScore >= 90f && durationScore >= 90f -> "Great precision! Keep refining for a perfect score."
+            else -> "Keep practicing consistently — you're building muscle memory!"
+        }
     }
 
     return ScoreBreakdown(
         missRatePercent = missRate,
         avgPitchScore = pitchScore,
         avgDurationScore = durationScore,
-        primaryWeakness = weakest ?: "none",
+        primaryWeakness = weakest?.name ?: "none",
         tipMessage = tip
     )
 }

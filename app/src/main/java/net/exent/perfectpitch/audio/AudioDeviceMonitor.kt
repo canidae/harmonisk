@@ -72,7 +72,7 @@ class AudioDeviceMonitor(context: Context) {
     private fun resolveActiveInputDevice(): AudioInputDevice {
         val inputs = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
 
-        firstOfTypes(inputs, AudioDeviceInfo.TYPE_BLUETOOTH_SCO, AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)?.let { bluetooth ->
+        firstOfTypes(inputs, AudioDeviceInfo.TYPE_BLUETOOTH_SCO)?.let { bluetooth ->
             val name = bluetooth.productName?.toString()?.takeIf { it.isNotBlank() } ?: "Bluetooth"
             return AudioInputDevice(type = AudioInputDeviceType.BLUETOOTH, name = name, deviceKey = "bt_mic_$name")
         }
