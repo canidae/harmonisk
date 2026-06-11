@@ -18,7 +18,7 @@ class AudioCaptureService(
     private val context: Context
 ) {
     companion object {
-        const val SAMPLE_RATE = 44100
+        const val SAMPLE_RATE = AudioConstants.SAMPLE_RATE
         const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_FLOAT
         /** Read chunk size — smaller for lower latency. Analysis uses a larger sliding window.

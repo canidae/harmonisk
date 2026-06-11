@@ -29,10 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import net.exent.perfectpitch.ui.theme.Green80
-import net.exent.perfectpitch.ui.theme.Red80
-import net.exent.perfectpitch.ui.theme.Teal80
-import net.exent.perfectpitch.ui.theme.Yellow80
+import net.exent.perfectpitch.ui.utils.scoreColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -274,11 +271,4 @@ private fun MelodyProgressSection(
             ScoreProgressGraph(scores = scoreHistory, compact = false)
         }
     }
-}
-
-private fun scoreColor(score: Float): androidx.compose.ui.graphics.Color = when {
-    score >= 95f -> Green80
-    score >= 60f -> Teal80
-    score >= 20f -> Yellow80
-    else -> Red80
 }

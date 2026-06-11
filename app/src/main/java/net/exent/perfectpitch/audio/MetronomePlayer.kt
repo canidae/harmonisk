@@ -12,7 +12,7 @@ class MetronomePlayer {
 
     companion object {
         private const val TAG = "MetronomePlayer"
-        private const val SAMPLE_RATE = 44100
+        private const val SAMPLE_RATE = AudioConstants.SAMPLE_RATE
         private const val BUFFER_FRAMES = 256
         private const val CLICK_SAMPLES = 88
         private const val CLICK_FREQ = 3000f

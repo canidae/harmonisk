@@ -903,7 +903,7 @@ class MelodyViewModel @Inject constructor(
         val expectedDurationMs = (track.noteDurationSeconds(expectedNote) * 1000).toLong()
         // Duration = time player held correct pitch, derived from the actual audio chunk size
         val frameDurationMs = net.exent.perfectpitch.audio.AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000L /
-            net.exent.perfectpitch.audio.AudioCaptureService.SAMPLE_RATE
+            net.exent.perfectpitch.audio.AudioConstants.SAMPLE_RATE
         val actualDurationMs = noteTracking.correctPitchFrameCount * frameDurationMs
 
         val effectiveCentsOff = if (noteTracking.centsOffCount > 0) noteTracking.centsOffSum / noteTracking.centsOffCount else 100f

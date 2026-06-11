@@ -10,10 +10,7 @@ import androidx.compose.ui.unit.dp
 import net.exent.perfectpitch.music.MelodyScore
 import net.exent.perfectpitch.music.ScoreBreakdown
 import net.exent.perfectpitch.music.toBreakdown
-import net.exent.perfectpitch.ui.theme.Green80
-import net.exent.perfectpitch.ui.theme.Red80
-import net.exent.perfectpitch.ui.theme.Teal80
-import net.exent.perfectpitch.ui.theme.Yellow80
+import net.exent.perfectpitch.ui.utils.scoreColor
 
 @Composable
 fun ScoreSummaryPanel(
@@ -30,12 +27,7 @@ fun ScoreSummaryPanel(
 
 @Composable
 private fun BreakdownRow(label: String, value: Float) {
-    val color = when {
-        value >= 90f -> Green80
-        value >= 60f -> Teal80
-        value >= 20f -> Yellow80
-        else -> Red80
-    }
+    val color = scoreColor(value)
 
     Row(
         modifier = Modifier

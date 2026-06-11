@@ -17,7 +17,7 @@ import net.exent.perfectpitch.data.ScoreHistoryRepository.ScoreEntry
 import net.exent.perfectpitch.music.MelodyScore
 import net.exent.perfectpitch.music.ScoringEngine
 import net.exent.perfectpitch.music.ScoreTier
-import net.exent.perfectpitch.ui.theme.*
+import net.exent.perfectpitch.ui.utils.scoreColor
 
 @Composable
 fun ScoreResultModal(
@@ -145,11 +145,4 @@ private fun StatCard(label: String, value: String) {
             )
         }
     }
-}
-
-private fun scoreColor(score: Float) = when {
-    score >= 95f -> Green80
-    score >= 60f -> Teal80
-    score >= 20f -> Yellow80
-    else -> Red80
 }

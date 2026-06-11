@@ -18,7 +18,7 @@ class MelodySynthesizer : NotePlayer {
 
     companion object {
         private const val TAG = "MelodySynthesizer"
-        private const val SAMPLE_RATE = 44100
+        private const val SAMPLE_RATE = AudioConstants.SAMPLE_RATE
         private const val BUFFER_FRAMES = 512
         private const val ATTACK_MS = 10f
         private const val DECAY_MS = 50f
