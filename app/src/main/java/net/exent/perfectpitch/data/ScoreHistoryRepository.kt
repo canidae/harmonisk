@@ -3,26 +3,22 @@ package net.exent.perfectpitch.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.ListSerializer
 
 private val Context.scoreHistoryStore: DataStore<Preferences> by preferencesDataStore(
     name = "score_history"
 )
 
 class ScoreHistoryRepository(
-    private val context: Context
+    context: Context
 ) {
     companion object {
-        private val SCORES_KEY = stringPreferencesKey("scores_json")
         private const val RECENT_COUNT = 5
-        private val json = Json { ignoreUnknownKeys = true }
     }
 
     @Serializable
@@ -38,17 +34,17 @@ class ScoreHistoryRepository(
         val avgDurationScore: Float
     )
 
-    private val allScoresFlow: Flow<Map<String, List<ScoreEntry>>> =
-        context.scoreHistoryStore.data.map { prefs ->
-            parseAll(prefs[SCORES_KEY])
-        }
+    private val store = JsonPreferenceStore<String, List<ScoreEntry>>(
+        dataStore = context.scoreHistoryStore,
+        keyName = "scores_json"
+    )
 
     fun getScores(melodyId: String): Flow<List<ScoreEntry>> {
-        return allScoresFlow.map { it[melodyId] ?: emptyList() }
+        return store.flow.map { it[melodyId] ?: emptyList() }
     }
 
     fun getRecentAverage(melodyId: String): Flow<Float?> {
-        return allScoresFlow.map { scoresMap ->
+        return store.flow.map { scoresMap ->
             val scores = scoresMap[melodyId] ?: return@map null
             val recent = scores.takeLast(RECENT_COUNT)
             if (recent.isEmpty()) null
@@ -57,21 +53,10 @@ class ScoreHistoryRepository(
     }
 
     suspend fun saveScore(melodyId: String, entry: ScoreEntry) {
-        context.scoreHistoryStore.edit { prefs ->
-            val current = parseAll(prefs[SCORES_KEY]).toMutableMap()
-            val scores = current[melodyId]?.toMutableList() ?: mutableListOf()
-            scores.add(entry)
-            current[melodyId] = scores
-            prefs[SCORES_KEY] = json.encodeToString(current)
-        }
-    }
-
-    private fun parseAll(jsonStr: String?): Map<String, List<ScoreEntry>> {
-        if (jsonStr.isNullOrBlank()) return emptyMap()
-        return try {
-            json.decodeFromString(jsonStr)
-        } catch (_: Exception) {
-            emptyMap()
+        store.update(melodyId) { existing ->
+            val list = existing?.toMutableList() ?: mutableListOf()
+            list.add(entry)
+            list
         }
     }
 }
