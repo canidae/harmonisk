@@ -9,6 +9,11 @@ class NoteUtils {
         const val A4_MIDI_NUMBER = 69
         const val DEFAULT_A4_FREQ = 440.0f
         private const val SEMITONES_PER_OCTAVE = 12
+
+        const val PERFECT_CENTS = 10f
+        const val GREAT_CENTS = 20f
+        const val GOOD_CENTS = 30f
+        const val OK_CENTS = 40f
     }
 
     fun frequencyToNote(frequency: Float, refA4: Float = DEFAULT_A4_FREQ): NoteInfo {

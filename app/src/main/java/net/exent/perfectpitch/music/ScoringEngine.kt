@@ -11,11 +11,10 @@ import kotlin.math.max
 class ScoringEngine {
 
     companion object {
-        // Pitch scoring thresholds (cents)
-        const val PERFECT_CENTS = 10f
-        const val GREAT_CENTS = 20f
-        const val GOOD_CENTS = 30f
-        const val OK_CENTS = 40f
+        private val PERFECT_CENTS = NoteUtils.PERFECT_CENTS
+        private val GREAT_CENTS = NoteUtils.GREAT_CENTS
+        private val GOOD_CENTS = NoteUtils.GOOD_CENTS
+        private val OK_CENTS = NoteUtils.OK_CENTS
 
         // Duration scoring ratio thresholds
         const val PERFECT_DURATION_RATIO = 0.85f

@@ -177,7 +177,7 @@ class ScoringEngineTest {
     fun `PitchAccuracy boundary at PERFECT_CENTS returns PERFECT`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = ScoringEngine.PERFECT_CENTS,
+            centsOff = NoteUtils.PERFECT_CENTS,
             expectedDurationMs = 500, actualDurationMs = 500
         ))
         assertEquals(PitchAccuracy.PERFECT, result.pitchAccuracy)
@@ -187,7 +187,7 @@ class ScoringEngineTest {
     fun `PitchAccuracy just above PERFECT_CENTS returns GREAT`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = ScoringEngine.PERFECT_CENTS + 0.01f,
+            centsOff = NoteUtils.PERFECT_CENTS + 0.01f,
             expectedDurationMs = 500, actualDurationMs = 500
         ))
         assertEquals(PitchAccuracy.GREAT, result.pitchAccuracy)
@@ -197,7 +197,7 @@ class ScoringEngineTest {
     fun `PitchAccuracy boundary at GREAT_CENTS returns GREAT`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = ScoringEngine.GREAT_CENTS,
+            centsOff = NoteUtils.GREAT_CENTS,
             expectedDurationMs = 500, actualDurationMs = 500
         ))
         assertEquals(PitchAccuracy.GREAT, result.pitchAccuracy)
@@ -207,7 +207,7 @@ class ScoringEngineTest {
     fun `PitchAccuracy just above GREAT_CENTS returns GOOD`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = ScoringEngine.GREAT_CENTS + 0.01f,
+            centsOff = NoteUtils.GREAT_CENTS + 0.01f,
             expectedDurationMs = 500, actualDurationMs = 500
         ))
         assertEquals(PitchAccuracy.GOOD, result.pitchAccuracy)
@@ -217,7 +217,7 @@ class ScoringEngineTest {
     fun `PitchAccuracy boundary at GOOD_CENTS returns GOOD`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = ScoringEngine.GOOD_CENTS,
+            centsOff = NoteUtils.GOOD_CENTS,
             expectedDurationMs = 500, actualDurationMs = 500
         ))
         assertEquals(PitchAccuracy.GOOD, result.pitchAccuracy)
@@ -227,7 +227,7 @@ class ScoringEngineTest {
     fun `PitchAccuracy just above GOOD_CENTS returns OK`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = ScoringEngine.GOOD_CENTS + 0.01f,
+            centsOff = NoteUtils.GOOD_CENTS + 0.01f,
             expectedDurationMs = 500, actualDurationMs = 500
         ))
         assertEquals(PitchAccuracy.OK, result.pitchAccuracy)
@@ -237,7 +237,7 @@ class ScoringEngineTest {
     fun `PitchAccuracy boundary at OK_CENTS returns OK`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = ScoringEngine.OK_CENTS,
+            centsOff = NoteUtils.OK_CENTS,
             expectedDurationMs = 500, actualDurationMs = 500
         ))
         assertEquals(PitchAccuracy.OK, result.pitchAccuracy)
@@ -247,7 +247,7 @@ class ScoringEngineTest {
     fun `PitchAccuracy just above OK_CENTS returns MISS`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = ScoringEngine.OK_CENTS + 0.01f,
+            centsOff = NoteUtils.OK_CENTS + 0.01f,
             expectedDurationMs = 500, actualDurationMs = 500
         ))
         assertEquals(PitchAccuracy.MISS, result.pitchAccuracy)
