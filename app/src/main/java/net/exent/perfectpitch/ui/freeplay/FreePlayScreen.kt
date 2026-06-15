@@ -44,6 +44,7 @@ import net.exent.perfectpitch.ui.OVERLAY_ICON_TINT
 import net.exent.perfectpitch.ui.PANEL_BG
 import net.exent.perfectpitch.ui.PANEL_BTN_SIZE
 import net.exent.perfectpitch.ui.PANEL_ROW2_BG
+import net.exent.perfectpitch.ui.theme.*
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -136,13 +137,13 @@ fun FreePlayScreen(
                     if (state.midiInputEnabled) Icons.Filled.MusicNote else Icons.Filled.Mic,
                     contentDescription = null,
                     modifier = Modifier.size(14.dp),
-                    tint = if (state.midiInputEnabled) Color(0xFF7E57C2) else OVERLAY_ICON_TINT
+                    tint = if (state.midiInputEnabled) MidiPurple else OVERLAY_ICON_TINT
                 )
                 Spacer(Modifier.width(3.dp))
                 Text(
                     text = if (state.midiInputEnabled) (state.midiInputDeviceName?.take(9) ?: "MIDI") else "Mic",
                     fontSize = 11.sp,
-                    color = if (state.midiInputEnabled) Color(0xFF7E57C2) else OVERLAY_ICON_TINT,
+                    color = if (state.midiInputEnabled) MidiPurple else OVERLAY_ICON_TINT,
                     maxLines = 1
                 )
                 Icon(Icons.Filled.ArrowDropDown, null, modifier = Modifier.size(14.dp), tint = OVERLAY_ICON_TINT)
@@ -155,7 +156,7 @@ fun FreePlayScreen(
                 val inputDeviceName = state.midiInputDeviceName
                 if (inputDeviceName != null) {
                     DropdownMenuItem(
-                        text = { Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.MusicNote, null, Modifier.size(16.dp), tint = Color(0xFF7E57C2)); Text(inputDeviceName) } },
+                        text = { Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.MusicNote, null, Modifier.size(16.dp), tint = MidiPurple); Text(inputDeviceName) } },
                         onClick = { viewModel.setMidiInputEnabled(true); showInputMenu = false }
                     )
                 }
@@ -169,7 +170,7 @@ fun FreePlayScreen(
                 OutputDevice.SYNTH -> "Synth"
                 OutputDevice.NONE -> "None"
             }
-            val outputTint = if (state.outputDevice == OutputDevice.MIDI) Color(0xFF7E57C2) else OVERLAY_ICON_TINT
+            val outputTint = if (state.outputDevice == OutputDevice.MIDI) MidiPurple else OVERLAY_ICON_TINT
             TextButton(
                 onClick = { showOutputMenu = true },
                 contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp),
@@ -197,7 +198,7 @@ fun FreePlayScreen(
                 val outputDeviceName = state.midiOutputDeviceName
                 if (outputDeviceName != null) {
                     DropdownMenuItem(
-                        text = { Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.MusicNote, null, Modifier.size(16.dp), tint = Color(0xFF7E57C2)); Text(outputDeviceName, fontWeight = if (state.outputDevice == OutputDevice.MIDI) FontWeight.Bold else FontWeight.Normal) } },
+                        text = { Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.MusicNote, null, Modifier.size(16.dp), tint = MidiPurple); Text(outputDeviceName, fontWeight = if (state.outputDevice == OutputDevice.MIDI) FontWeight.Bold else FontWeight.Normal) } },
                         onClick = { viewModel.setOutputDevice(OutputDevice.MIDI); showOutputMenu = false }
                     )
                 }
@@ -222,7 +223,7 @@ fun FreePlayScreen(
             Icon(
                 Icons.Filled.Timer,
                 contentDescription = if (state.metronomeEnabled) "Metronome on" else "Metronome off",
-                tint = if (state.metronomeEnabled) Color(0xFF90CAF9) else OVERLAY_ICON_TINT,
+                tint = if (state.metronomeEnabled) MetronomeBlue else OVERLAY_ICON_TINT,
                 modifier = Modifier.size(17.dp)
             )
         }
@@ -289,8 +290,8 @@ fun FreePlayScreen(
                             Triple(Icons.Filled.TouchApp,      null as Color?,     "Tap a note bar"       to "Select note for editing."),
                             Triple(Icons.Filled.OpenWith,      null,               "Drag a selected note" to "Change time/semitone."),
                             Triple(Icons.Filled.SwipeVertical, null,               "Drag a handle"        to "Adjust start/end."),
-                            Triple(Icons.Filled.ContentCut,    Color(0xFFFFB74D),  "Split (✂)"            to "Halves the note."),
-                            Triple(Icons.Filled.Delete,        Color(0xFFEF5350),  "Delete (🗑)"           to "Removes the note."),
+                            Triple(Icons.Filled.ContentCut,    AmberAccent,  "Split (✂)"            to "Halves the note."),
+                            Triple(Icons.Filled.Delete,        DeleteRed,  "Delete (🗑)"           to "Removes the note."),
                             Triple(Icons.Filled.TouchApp,      null,               "Tap empty space"      to "Deselect the note.")
                         )
                         noteItems.forEach { (icon, color, labelAndDesc) ->
@@ -314,10 +315,10 @@ fun FreePlayScreen(
                                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Text("Loop", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                     Text("1", fontSize = 13.sp, color = Color.White,
-                                        modifier = Modifier.background(Color(0xFF1A1A2E), MaterialTheme.shapes.extraSmall).padding(horizontal = 4.dp, vertical = 1.dp))
+                                        modifier = Modifier.background(DarkBg, MaterialTheme.shapes.extraSmall).padding(horizontal = 4.dp, vertical = 1.dp))
                                     Text("–", fontSize = 12.sp)
-                                    Text("4", fontSize = 13.sp, color = Color(0xFFFFB74D),
-                                        modifier = Modifier.background(Color(0xFF1A1A2E), MaterialTheme.shapes.extraSmall).padding(horizontal = 4.dp, vertical = 1.dp))
+                                    Text("4", fontSize = 13.sp, color = AmberAccent,
+                                        modifier = Modifier.background(DarkBg, MaterialTheme.shapes.extraSmall).padding(horizontal = 4.dp, vertical = 1.dp))
                                 }
                                 Text("Tap a bar number to lock it to the current position (turns orange). Tap the same locked number again to unlock it.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
@@ -383,7 +384,7 @@ fun FreePlayScreen(
             Text(
                 text = state.bpm.roundToInt().toString(),
                 fontSize = 13.sp,
-                color = if (bpmDragging) Color(0xFF7E57C2) else Color.White,
+                color = if (bpmDragging) MidiPurple else Color.White,
                 modifier = Modifier.widthIn(min = 28.dp)
             )
         }
@@ -475,7 +476,7 @@ fun FreePlayScreen(
             Text(
                 text = effectiveLoopStartBar.toString(),
                 fontSize = 11.sp,
-                color = if (state.loopStartBar != null) Color(0xFFFFB74D) else Color.White,
+                color = if (state.loopStartBar != null) AmberAccent else Color.White,
                 modifier = Modifier
                     .clickable { viewModel.setLoopStart() }
                     .padding(horizontal = 4.dp, vertical = 2.dp)
@@ -484,7 +485,7 @@ fun FreePlayScreen(
             Text(
                 text = effectiveLoopEndBar.toString(),
                 fontSize = 11.sp,
-                color = if (state.loopEndBar != null) Color(0xFFFFB74D) else Color.White,
+                color = if (state.loopEndBar != null) AmberAccent else Color.White,
                 modifier = Modifier
                     .clickable { viewModel.setLoopEnd() }
                     .padding(horizontal = 4.dp, vertical = 2.dp)
@@ -700,20 +701,20 @@ fun FreePlayScreen(
                     IconButton(
                         onClick = { viewModel.splitNote(state.selectedNoteId!!) },
                         modifier = Modifier.size(btnSize)
-                            .background(Color(0xDD1A1A2E), CircleShape)
-                            .border(1.dp, Color(0xFFFFB74D).copy(alpha = 0.7f), CircleShape)
+                            .background(DarkBg.copy(alpha = 0.87f), CircleShape)
+                            .border(1.dp, AmberAccent.copy(alpha = 0.7f), CircleShape)
                     ) {
                         Icon(Icons.Filled.ContentCut, contentDescription = "Split note",
-                            tint = Color(0xFFFFB74D), modifier = Modifier.size(18.dp))
+                            tint = AmberAccent, modifier = Modifier.size(18.dp))
                     }
                     IconButton(
                         onClick = { viewModel.deleteNote(state.selectedNoteId!!) },
                         modifier = Modifier.size(btnSize)
-                            .background(Color(0xDD1A1A2E), CircleShape)
-                            .border(1.dp, Color(0xFFEF5350).copy(alpha = 0.7f), CircleShape)
+                            .background(DarkBg.copy(alpha = 0.87f), CircleShape)
+                            .border(1.dp, DeleteRed.copy(alpha = 0.7f), CircleShape)
                     ) {
                         Icon(Icons.Filled.Delete, contentDescription = "Delete note",
-                            tint = Color(0xFFEF5350), modifier = Modifier.size(18.dp))
+                            tint = DeleteRed, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -734,21 +735,21 @@ fun FreePlayScreen(
                         onClick = { viewModel.togglePlaying() },
                         modifier = Modifier
                             .size(72.dp)
-                            .background(Color(0xFF66BB6A).copy(alpha = 0.25f), CircleShape)
-                            .border(2.dp, Color(0xFF66BB6A).copy(alpha = 0.7f), CircleShape)
+                            .background(PlayGreen.copy(alpha = 0.25f), CircleShape)
+                            .border(2.dp, PlayGreen.copy(alpha = 0.7f), CircleShape)
                     ) {
                         Icon(Icons.Filled.PlayArrow, contentDescription = "Play",
-                            modifier = Modifier.size(40.dp), tint = Color(0xFF66BB6A).copy(alpha = 0.9f))
+                            modifier = Modifier.size(40.dp), tint = PlayGreen.copy(alpha = 0.9f))
                     }
                     IconButton(
                         onClick = { viewModel.toggleRecording() },
                         modifier = Modifier
                             .size(72.dp)
-                            .background(Color(0xFFEF5350).copy(alpha = 0.25f), CircleShape)
-                            .border(2.dp, Color(0xFFEF5350).copy(alpha = 0.7f), CircleShape)
+                            .background(DeleteRed.copy(alpha = 0.25f), CircleShape)
+                            .border(2.dp, DeleteRed.copy(alpha = 0.7f), CircleShape)
                     ) {
                         Icon(Icons.Filled.FiberManualRecord, contentDescription = "Record",
-                            modifier = Modifier.size(40.dp), tint = Color(0xFFEF5350).copy(alpha = 0.9f))
+                            modifier = Modifier.size(40.dp), tint = DeleteRed.copy(alpha = 0.9f))
                     }
                 }
             }

@@ -33,6 +33,9 @@ import net.exent.perfectpitch.midi.MelodyTrack
 import net.exent.perfectpitch.ui.freeplay.PianoVisibility
 import net.exent.perfectpitch.ui.freeplay.PlayedNote
 import net.exent.perfectpitch.ui.melody.NoteResultState
+import net.exent.perfectpitch.ui.theme.AmberAccent
+import net.exent.perfectpitch.ui.theme.DarkBg
+import net.exent.perfectpitch.ui.theme.Orange40
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -44,7 +47,7 @@ private val NOTE_COLOR_UPCOMING = Color(0xBB7C4DFF)
 private val OVERLAY_PERFECT = Color(0xFF4CAF50)
 private val OVERLAY_GREAT = Color(0xFF81C784)
 private val OVERLAY_GOOD = Color(0xFFFFC107)
-private val OVERLAY_OK = Color(0xFFFF9800)
+private val OVERLAY_OK = Orange40
 private val OVERLAY_MISS = Color(0xFFF44336)
 
 private const val BAR_GAP_PX = 2f
@@ -347,7 +350,7 @@ private fun DrawScope.drawBarLines(
     val loopStartBeatIndex = loopStartMs?.let { (it / beatDurationMs).roundToLong() }
     val loopEndBeatIndex   = loopEndMs?.let   { (it / beatDurationMs).roundToLong() }
     val loopBarLineStyle = TextStyle(
-        color = Color(0xFFFFB74D).copy(alpha = 0.85f),
+        color = AmberAccent.copy(alpha = 0.85f),
         fontSize = (9f * density / 2.75f).sp,
         fontWeight = FontWeight.Bold
     )
@@ -365,7 +368,7 @@ private fun DrawScope.drawBarLines(
         val isLoopMarker = isBar && (beatIndex == loopStartBeatIndex || beatIndex == loopEndBeatIndex)
         if (y <= visibleBottom + 2f) {
             drawLine(
-                color = if (isLoopMarker) Color(0xCCFFB74D)
+                color = if (isLoopMarker) AmberAccent.copy(alpha = 0.80f)
                         else Color.White.copy(alpha = if (isBar) 0.20f else 0.08f),
                 start = Offset(0f, y),
                 end = Offset(size.width, y),

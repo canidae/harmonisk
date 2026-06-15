@@ -29,6 +29,14 @@ val Teal40 = Color(0xFF00897B)
 // Level colors
 val Blue40 = Color(0xFF2196F3)
 
+// Shared UI accent colors
+val MidiPurple = Color(0xFF7E57C2)
+val AmberAccent = Color(0xFFFFB74D)
+val PlayGreen = Color(0xFF66BB6A)
+val DeleteRed = Color(0xFFEF5350)
+val MetronomeBlue = Color(0xFF90CAF9)
+val DarkBg = Color(0xFF1A1A2E)
+
 // Backgrounds
 val DarkBackground = Color(0xFF121218)
 val DarkSurface = Color(0xFF1E1E2A)

@@ -122,12 +122,12 @@ class ScoringEngine {
     }
 
     private fun getEncouragingMessage(score: Float): String = when (scoreTier(score)) {
-        ScoreTier.LEGENDARY -> "🌟 Outstanding! 🌟"
-        ScoreTier.EXCELLENT -> "🎉 Excellent! 🎉"
-        ScoreTier.GREAT -> "👏 Well done! 👏"
-        ScoreTier.GOOD -> "💪 Keep it up! 💪"
-        ScoreTier.OK -> "🎵 Getting there! 🎵"
-        ScoreTier.NEEDS_WORK -> "🎶 Keep practicing! 🎶"
+        ScoreTier.LEGENDARY -> "Outstanding!"
+        ScoreTier.EXCELLENT -> "Excellent!"
+        ScoreTier.GREAT -> "Well done!"
+        ScoreTier.GOOD -> "Keep it up!"
+        ScoreTier.OK -> "Getting there!"
+        ScoreTier.NEEDS_WORK -> "Keep practicing!"
     }
 }
 
@@ -166,7 +166,7 @@ data class MelodyScore(
     val encouragingMessage: String = ""
 ) {
     companion object {
-        val EMPTY = MelodyScore(0f, 0, 0, 0, 0, 0, 0f, 0f, "🎶 Keep practicing! 🎶")
+        val EMPTY = MelodyScore(0f, 0, 0, 0, 0, 0, 0f, 0f, "Keep practicing!")
     }
 }
 

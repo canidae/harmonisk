@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.exent.perfectpitch.data.ScoreHistoryRepository.ScoreEntry
+import net.exent.perfectpitch.ui.theme.Purple40
 import net.exent.perfectpitch.ui.utils.levelColor
 
 @Composable
@@ -27,7 +28,7 @@ fun ScoreProgressGraph(
 ) {
     if (scores.isEmpty()) return
 
-    val lineColor = Color(0xFF7C4DFF)
+    val lineColor = Purple40
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
 

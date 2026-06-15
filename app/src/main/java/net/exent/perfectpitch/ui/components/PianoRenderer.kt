@@ -9,6 +9,7 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import net.exent.perfectpitch.music.NoteUtils
+import net.exent.perfectpitch.ui.theme.DarkBg
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -108,7 +109,7 @@ fun DrawScope.drawPianoKeyboard(
 
     // Background behind piano
     drawRect(
-        color = Color(0xFF1A1A2E),
+        color = DarkBg,
         topLeft = Offset(0f, pianoTop),
         size = Size(size.width, pianoHeight)
     )

@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import net.exent.perfectpitch.R
 import net.exent.perfectpitch.ui.utils.scoreColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -141,7 +142,7 @@ fun MelodyScreen(
                 }
             } else {
                 Text(
-                    text = "No bundled melodies available.\nImport a MIDI file to get started.",
+                    text = context.getString(R.string.no_melodies_available),
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

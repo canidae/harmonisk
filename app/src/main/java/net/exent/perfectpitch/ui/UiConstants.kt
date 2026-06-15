@@ -2,11 +2,12 @@ package net.exent.perfectpitch.ui
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import net.exent.perfectpitch.ui.theme.DarkBg
 
 // Panel / overlay style tokens shared across play screens
 internal val PANEL_BG = Color(0xDD0D0D1A)
 internal val PANEL_ROW2_BG = Color(0xBB0D0D1A)
-internal val OVERLAY_BG = Color(0xAA1A1A2E)
+internal val OVERLAY_BG = DarkBg.copy(alpha = 0.67f)
 internal val OVERLAY_ICON_TINT = Color.White.copy(alpha = 0.9f)
 internal val PANEL_BTN_SIZE = 32.dp
 internal val OVERLAY_BUTTON_SIZE = 40.dp

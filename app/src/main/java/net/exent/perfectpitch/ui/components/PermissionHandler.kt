@@ -17,6 +17,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import android.app.Activity
+import net.exent.perfectpitch.R
 
 @Composable
 fun RequireMicPermission(
@@ -78,6 +79,7 @@ private fun PermissionRequest(
     permanentlyDenied: Boolean,
     onRequestPermission: () -> Unit
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -98,14 +100,9 @@ private fun PermissionRequest(
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = when {
-                permanentlyDenied ->
-                    "Microphone access was permanently denied. Please enable it in your device settings."
-                showRationale ->
-                    "Perfect Pitch needs microphone access to detect the notes you play. " +
-                        "Please grant the permission."
-                else ->
-                    "Perfect Pitch needs access to your microphone to listen to your " +
-                        "instrument and detect pitch in real time."
+                permanentlyDenied -> context.getString(R.string.permission_permanently_denied)
+                showRationale -> context.getString(R.string.permission_rationale)
+                else -> context.getString(R.string.permission_description)
             },
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,

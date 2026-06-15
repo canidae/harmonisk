@@ -37,6 +37,7 @@ import net.exent.perfectpitch.ui.OVERLAY_BUTTON_SIZE
 import net.exent.perfectpitch.ui.OVERLAY_ICON_TINT
 import net.exent.perfectpitch.ui.PANEL_BG
 import net.exent.perfectpitch.ui.PANEL_BTN_SIZE
+import net.exent.perfectpitch.ui.theme.*
 import kotlin.math.roundToInt
 
 @Composable
@@ -111,12 +112,12 @@ fun MelodyPlayScreen(
                         IconButton(
                             onClick = { viewModel.toggleMidiInput() },
                             modifier = Modifier.size(PANEL_BTN_SIZE)
-                                .then(if (isMidi) Modifier.border(1.dp, Color(0xFF7E57C2), CircleShape) else Modifier)
+                                .then(if (isMidi) Modifier.border(1.dp, MidiPurple, CircleShape) else Modifier)
                         ) {
                             Icon(
                                 if (isMidi) Icons.Filled.MusicNote else Icons.Filled.Mic,
                                 contentDescription = if (isMidi) "MIDI input" else "Mic input",
-                                tint = if (isMidi) Color(0xFF7E57C2) else OVERLAY_ICON_TINT,
+                                tint = if (isMidi) MidiPurple else OVERLAY_ICON_TINT,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -127,12 +128,12 @@ fun MelodyPlayScreen(
                         IconButton(
                             onClick = { viewModel.toggleMidiOutput() },
                             modifier = Modifier.size(PANEL_BTN_SIZE)
-                                .then(if (isMidi) Modifier.border(1.dp, Color(0xFF7E57C2), CircleShape) else Modifier)
+                                .then(if (isMidi) Modifier.border(1.dp, MidiPurple, CircleShape) else Modifier)
                         ) {
                             Icon(
                                 Icons.Filled.MusicNote,
                                 contentDescription = if (isMidi) "MIDI output active" else "MIDI output off",
-                                tint = if (isMidi) Color(0xFF7E57C2) else OVERLAY_ICON_TINT,
+                                tint = if (isMidi) MidiPurple else OVERLAY_ICON_TINT,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -181,7 +182,7 @@ fun MelodyPlayScreen(
                             Icon(
                                 Icons.Filled.MusicNote,
                                 contentDescription = if (isPreviewPlaying) "Stop preview" else "Preview melody",
-                                tint = if (isPreviewPlaying) Color(0xFF90CAF9) else OVERLAY_ICON_TINT,
+                                tint = if (isPreviewPlaying) MetronomeBlue else OVERLAY_ICON_TINT,
                                 modifier = Modifier.size(17.dp)
                             )
                         }
@@ -195,7 +196,7 @@ fun MelodyPlayScreen(
                         Icon(
                             Icons.Filled.Timer,
                             contentDescription = if (gameState.metronomeEnabled) "Metronome on" else "Metronome off",
-                            tint = if (gameState.metronomeEnabled) Color(0xFF90CAF9) else OVERLAY_ICON_TINT,
+                            tint = if (gameState.metronomeEnabled) MetronomeBlue else OVERLAY_ICON_TINT,
                             modifier = Modifier.size(17.dp)
                         )
                     }
@@ -277,13 +278,13 @@ fun MelodyPlayScreen(
                                     .align(Alignment.BottomCenter)
                                     .padding(bottom = PIANO_HEIGHT_DP.dp + 24.dp)
                                     .size(72.dp)
-                                    .background(Color(0xFF66BB6A).copy(alpha = 0.25f), CircleShape)
-                                    .border(2.dp, Color(0xFF66BB6A).copy(alpha = 0.7f), CircleShape)
+                                    .background(PlayGreen.copy(alpha = 0.25f), CircleShape)
+                                    .border(2.dp, PlayGreen.copy(alpha = 0.7f), CircleShape)
                             ) {
                                 Icon(
                                     Icons.Filled.PlayArrow,
                                     contentDescription = if (gameState.phase == PlayPhase.READY) "Start" else "Resume",
-                                    tint = Color(0xFF66BB6A).copy(alpha = 0.9f),
+                                    tint = PlayGreen.copy(alpha = 0.9f),
                                     modifier = Modifier.size(40.dp)
                                 )
                             }

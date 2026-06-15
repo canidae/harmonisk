@@ -10,9 +10,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import net.exent.perfectpitch.R
 import net.exent.perfectpitch.data.ScoreHistoryRepository.ScoreEntry
 import net.exent.perfectpitch.music.MelodyScore
 import net.exent.perfectpitch.music.ScoringEngine
@@ -100,17 +102,18 @@ fun ScoreResultModal(
                     }
 
                     if (canAdvance) {
+                        val context = LocalContext.current
                         Spacer(modifier = Modifier.height(16.dp))
                         HorizontalDivider()
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(onClick = onAdvance) {
-                            Text("Advance to Level ${currentLevel + 1}")
+                            Text(context.getString(R.string.advance_to_level, currentLevel + 1))
                         }
                         val change = when (currentLevel + 1) {
-                            2 -> "On level 2 pitch accuracy will count toward your score"
-                            3 -> "On level 3 playing wrong notes will penalize your score"
-                            4 -> "On level 4 notes will advance automatically while you play"
-                            5 -> "On level 5 visual guides on the piano will be hidden"
+                            2 -> context.getString(R.string.level_2_change)
+                            3 -> context.getString(R.string.level_3_change)
+                            4 -> context.getString(R.string.level_4_change)
+                            5 -> context.getString(R.string.level_5_change)
                             else -> null
                         }
                         if (change != null) {
