@@ -31,7 +31,8 @@ class ScoreHistoryRepository(
         val greatNotes: Int,
         val longestStreak: Int,
         val avgPitchScore: Float,
-        val avgDurationScore: Float
+        val avgDurationScore: Float,
+        val level: Int = 1
     )
 
     private val store = JsonPreferenceStore<String, List<ScoreEntry>>(

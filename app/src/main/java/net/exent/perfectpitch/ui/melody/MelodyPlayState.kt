@@ -30,7 +30,9 @@ data class MelodyGameState(
     // Non-zero during a mid-song countdown resume: the game-time value at which scoring starts
     val countdownResumeTarget: Double = 0.0,
     // Metronome
-    val metronomeEnabled: Boolean = false
+    val metronomeEnabled: Boolean = false,
+    val currentLevel: Int = 1,
+    val hideNoteBars: Boolean = false
 ) {
     /**
      * True when the view is already scrolled to (or before) the first note.

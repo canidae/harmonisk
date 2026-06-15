@@ -23,7 +23,8 @@ class MelodySettingsRepository(
         val tempoMultiplier: Float = 1.0f,
         val transposeSemitones: Int = 0,
         val playMelodyAudio: Boolean = false,
-        val fallSpeedPxPerSec: Float = 150f
+        val fallSpeedPxPerSec: Float = 150f,
+        val level: Int = 1
     )
 
     private val store = JsonPreferenceStore<String, MelodySettings>(
