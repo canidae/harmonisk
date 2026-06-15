@@ -20,16 +20,6 @@ class AudioDeviceMonitor(context: Context) {
 
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-    // Estimated output latency: framesPerBuffer × 2 / nativeSampleRate × 1000ms (double-buffered), clamped to [10, 200].
-    val estimatedOutputLatencyMs: Int by lazy {
-        val nativeSrStr = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)
-        val nativeFpbStr = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER)
-        val nativeSr = nativeSrStr?.toIntOrNull() ?: 48000
-        val nativeFpb = nativeFpbStr?.toIntOrNull() ?: 256
-        val estimateMs = (nativeFpb.toLong() * 2 * 1000 / nativeSr).toInt()
-        estimateMs.coerceIn(10, 200)
-    }
-
     private val _currentDevice = MutableStateFlow(resolveActiveOutputDevice())
     val currentDevice: StateFlow<AudioOutputDevice> = _currentDevice.asStateFlow()
 

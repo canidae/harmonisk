@@ -7,7 +7,6 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.MapSerializer
 
 private val Context.melodySettingsStore: DataStore<Preferences> by preferencesDataStore(
     name = "melody_settings"
@@ -34,12 +33,6 @@ class MelodySettingsRepository(
 
     fun getSettings(melodyId: String): Flow<MelodySettings> {
         return store.flow.map { it[melodyId] ?: MelodySettings() }
-    }
-
-    fun getAllLevels(): Flow<Map<String, Int>> {
-        return store.flow.map { settingsMap ->
-            settingsMap.mapValues { (_, settings) -> settings.level }
-        }
     }
 
     suspend fun saveSettings(melodyId: String, settings: MelodySettings) {
