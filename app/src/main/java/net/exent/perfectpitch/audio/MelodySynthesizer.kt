@@ -1,6 +1,7 @@
 package net.exent.perfectpitch.audio
 
 import android.util.Log
+import net.exent.perfectpitch.BuildConfig
 import net.exent.perfectpitch.music.NoteUtils
 import kotlin.math.PI
 import kotlin.math.sin
@@ -53,7 +54,7 @@ class MelodySynthesizer : NotePlayer {
 
     fun open() {
         renderThread.open()
-        Log.d(TAG, "Sine wave synthesizer opened")
+        if (BuildConfig.DEBUG) Log.d(TAG, "Sine wave synthesizer opened")
     }
 
     override fun noteOn(channel: Int, note: Int, velocity: Int) {
@@ -92,7 +93,7 @@ class MelodySynthesizer : NotePlayer {
     fun close() {
         renderThread.close()
         synchronized(noteLock) { activeNotes.clear() }
-        Log.d(TAG, "Synthesizer closed")
+        if (BuildConfig.DEBUG) Log.d(TAG, "Synthesizer closed")
     }
 
     private fun renderBuffer(buffer: ShortArray) {

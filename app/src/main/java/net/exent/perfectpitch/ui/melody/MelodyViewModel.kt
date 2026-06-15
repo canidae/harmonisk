@@ -1,6 +1,7 @@
 package net.exent.perfectpitch.ui.melody
 
 import android.os.SystemClock
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import net.exent.perfectpitch.audio.AudioConstants
@@ -26,6 +27,7 @@ import net.exent.perfectpitch.ui.MIN_FALL_SPEED
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import net.exent.perfectpitch.BuildConfig
 import javax.inject.Inject
 import kotlin.math.abs
 
@@ -49,6 +51,7 @@ class MelodyViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
+        private val TAG = "MelodyViewModel"
         const val NOTE_RANGE_PADDING = 3
         /** Grace time for wait-for-note mode — musically acceptable lateness. */
         const val GRACE_PERIOD_EXTRA_MS = 150L
@@ -374,7 +377,7 @@ class MelodyViewModel @Inject constructor(
             try {
                 melodySynthesizer.open()
             } catch (e: Exception) {
-                android.util.Log.w("MelodyViewModel", "Synth init failed", e)
+                if (BuildConfig.DEBUG) Log.w(TAG, "Synth init failed", e)
             }
         }
     }

@@ -2,6 +2,7 @@ package net.exent.perfectpitch.audio
 
 import android.media.AudioAttributes
 import android.util.Log
+import net.exent.perfectpitch.BuildConfig
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.PI
 import kotlin.math.sin
@@ -32,7 +33,7 @@ class MetronomePlayer {
 
     fun open() {
         renderThread.open()
-        Log.d(TAG, "Metronome opened")
+        if (BuildConfig.DEBUG) Log.d(TAG, "Metronome opened")
     }
 
     fun setArmed(armed: Boolean) {
@@ -65,7 +66,7 @@ class MetronomePlayer {
         renderThread.close()
         armed = false
         playing = false
-        Log.d(TAG, "Metronome closed")
+        if (BuildConfig.DEBUG) Log.d(TAG, "Metronome closed")
     }
 
     private fun renderBuffer(buffer: ShortArray) {

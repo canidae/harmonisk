@@ -1,6 +1,7 @@
 package net.exent.perfectpitch.midi
 
 import android.util.Log
+import net.exent.perfectpitch.BuildConfig
 
 internal class MidiTrackReader(private val data: ByteArray) {
 
@@ -134,7 +135,7 @@ internal class MidiTrackReader(private val data: ByteArray) {
                 }
 
                 else -> {
-                    Log.w(tag, "Unknown MIDI event: 0x${statusByte.toString(16)} at pos $p, skipping rest of track")
+                    if (BuildConfig.DEBUG) Log.w(tag, "Unknown MIDI event: 0x${statusByte.toString(16)} at pos $p, skipping rest of track")
                     break
                 }
             }
