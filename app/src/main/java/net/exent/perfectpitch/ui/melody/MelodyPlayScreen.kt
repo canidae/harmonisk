@@ -352,9 +352,14 @@ fun MelodyPlayScreen(
             scoreHistory = scoreHistory,
             currentLevel = gameState.currentLevel,
             canAdvance = canAdvance,
+            onRetry = {
+                showResultsModal = false
+                viewModel.startPlaying()
+            },
             onAdvance = {
                 viewModel.advanceLevel()
                 showResultsModal = false
+                viewModel.startPlaying()
             }
         )
     }

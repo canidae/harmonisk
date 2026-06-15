@@ -28,6 +28,7 @@ fun ScoreResultModal(
     scoreHistory: List<ScoreEntry> = emptyList(),
     currentLevel: Int = 1,
     canAdvance: Boolean = false,
+    onRetry: () -> Unit = {},
     onAdvance: () -> Unit = {}
 ) {
     val animatedScore by animateFloatAsState(
@@ -38,6 +39,7 @@ fun ScoreResultModal(
 
     val score = melodyScore.overallScore
     val enthusiasm = enthusiasmLevel(score)
+    val context = LocalContext.current
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -101,28 +103,20 @@ fun ScoreResultModal(
                         )
                     }
 
-                    if (canAdvance) {
-                        val context = LocalContext.current
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider()
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Button(onClick = onAdvance) {
-                            Text(context.getString(R.string.advance_to_level, currentLevel + 1))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)
+                    ) {
+                        Button(onClick = onRetry) {
+                            Text(context.getString(R.string.retry))
                         }
-                        val change = when (currentLevel + 1) {
-                            2 -> context.getString(R.string.level_2_change)
-                            3 -> context.getString(R.string.level_3_change)
-                            4 -> context.getString(R.string.level_4_change)
-                            5 -> context.getString(R.string.level_5_change)
-                            else -> null
-                        }
-                        if (change != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = change,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        if (canAdvance) {
+                            Button(onClick = onAdvance) {
+                                Text(context.getString(R.string.next_level))
+                            }
                         }
                     }
                 }
