@@ -53,6 +53,7 @@ fun MelodyPlayScreen(
     val audioDelay by viewModel.activeAudioDelay.collectAsState()
     val visualDelay by viewModel.activeVisualDelay.collectAsState()
     val scoreHistory by viewModel.currentScoreHistory.collectAsStateWithLifecycle()
+    val canAdvance by viewModel.canAdvanceLevel.collectAsStateWithLifecycle()
     val density = LocalDensity.current
     var showResultsModal by remember { mutableStateOf(false) }
     var showConfigMenu by remember { mutableStateOf(false) }
@@ -344,10 +345,18 @@ fun MelodyPlayScreen(
     }
 
     if (showResultsModal && gameState.melodyScore != null) {
+        val playCountAtLevel = scoreHistory.count { it.level == gameState.currentLevel } + 1
         ScoreResultModal(
             melodyScore = gameState.melodyScore!!,
             onDismiss = { showResultsModal = false },
-            scoreHistory = scoreHistory
+            scoreHistory = scoreHistory,
+            currentLevel = gameState.currentLevel,
+            canAdvance = canAdvance,
+            playCountAtLevel = playCountAtLevel,
+            onAdvance = {
+                viewModel.advanceLevel()
+                showResultsModal = false
+            }
         )
     }
 }
