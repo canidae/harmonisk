@@ -328,7 +328,7 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun setMinNoteDivision(division: Int) {
-        val valid = listOf(4, 8, 16, 32, 64)
+        val valid = listOf(4, 8, 16, 32)
         val clamped = valid.minByOrNull { abs(it - division) } ?: 16
         _state.update { it.copy(minNoteDivision = clamped) }
         viewModelScope.launch { settingsRepository.updateFreeplayMinNoteDivision(clamped) }
@@ -587,6 +587,11 @@ class FreePlayViewModel @Inject constructor(
     private fun gridIntervalMs(): Long {
         val s = _state.value
         return ((60_000.0 / s.bpm) * (4.0 / s.minNoteDivision)).toLong().coerceAtLeast(1L)
+    }
+
+    private fun min48thNoteMs(): Long {
+        val bpm = _state.value.bpm
+        return if (bpm > 0f) (5000.0 / bpm).toLong().coerceAtLeast(1L) else 1L
     }
 
     private fun snapToGrid(timeMs: Long): Long {
@@ -848,6 +853,14 @@ class FreePlayViewModel @Inject constructor(
             } else now
             val finalNote = activeNote.copy(endTimeMs = snappedEnd, averageCentsOff = centsSamples.average().toFloat())
 
+            // Noise filter: discard notes shorter than a 48th note
+            if (snappedEnd - activeNote.startTimeMs < min48thNoteMs()) {
+                _state.update { it.copy(activeNote = null) }
+                currentNoteMidi = null
+                centsSamples.clear()
+                return
+            }
+
             // Re-record: delete notes in same voice that overlap the new note
             val voice = finalNote.voiceIndex
             val newStart = finalNote.startTimeMs
@@ -922,6 +935,17 @@ class FreePlayViewModel @Inject constructor(
 
                 if (!isRecording || activeNote.startTimeMs < 0) {
                     _state.update { it.copy(activeNote = activeMidiNotes.values.lastOrNull()) }
+                    return
+                }
+
+                // Noise filter: discard notes shorter than a 48th note
+                if (endMs - activeNote.startTimeMs < min48thNoteMs()) {
+                    _state.update { current ->
+                        current.copy(
+                            playedNotes = current.playedNotes.filter { it.id != activeNote.id },
+                            activeNote = activeMidiNotes.values.lastOrNull()
+                        )
+                    }
                     return
                 }
 

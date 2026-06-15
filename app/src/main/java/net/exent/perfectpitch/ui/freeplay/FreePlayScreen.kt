@@ -243,9 +243,9 @@ fun FreePlayScreen(
                 )
                 if (state.snapEnabled) {
                     val divIndex = NOTE_DIVISION_OPTIONS.indexOfFirst { it.division == state.minNoteDivision }.takeIf { it >= 0 } ?: 2
-                    val reversedIndex = 4 - divIndex
+                    val reversedIndex = 3 - divIndex
                     DropdownMenuItem(text = { Text("Min note duration: ${NOTE_DIVISION_OPTIONS.find { it.division == state.minNoteDivision }?.label ?: "${state.minNoteDivision}th"}") }, onClick = {})
-                    Slider(value = reversedIndex.toFloat(), onValueChange = { viewModel.setMinNoteDivision(NOTE_DIVISION_OPTIONS[4 - it.roundToInt()].division) }, valueRange = 0f..4f, steps = 3, modifier = Modifier.padding(horizontal = 16.dp))
+                    Slider(value = reversedIndex.toFloat(), onValueChange = { viewModel.setMinNoteDivision(NOTE_DIVISION_OPTIONS[3 - it.roundToInt()].division) }, valueRange = 0f..3f, steps = 2, modifier = Modifier.padding(horizontal = 16.dp))
                 }
                 HorizontalDivider()
                 var showPianoVisMenu by remember { mutableStateOf(false) }

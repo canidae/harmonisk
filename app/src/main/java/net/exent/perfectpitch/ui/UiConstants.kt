@@ -21,6 +21,5 @@ internal val NOTE_DIVISION_OPTIONS = listOf(
     NoteDivisionOption(4, "♩ Quarter"),
     NoteDivisionOption(8, "♪ 8th"),
     NoteDivisionOption(16, "♬ 16th"),
-    NoteDivisionOption(32, "32nd"),
-    NoteDivisionOption(64, "64th")
+    NoteDivisionOption(32, "32nd")
 )
