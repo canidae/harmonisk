@@ -87,31 +87,6 @@ class MidiWriter {
 
         return output.toByteArray()
     }
-
-    private fun writeVarLen(value: Long): ByteArray {
-        if (value <= 0) return byteArrayOf(0x00)
-        val result = mutableListOf<Byte>()
-        var v = value
-        result.add(0, (v and 0x7F).toByte())
-        v = v shr 7
-        while (v > 0) {
-            result.add(0, ((v and 0x7F) or 0x80).toByte())
-            v = v shr 7
-        }
-        return result.toByteArray()
-    }
-
-    private fun writeInt32(value: Int): ByteArray = byteArrayOf(
-        ((value shr 24) and 0xFF).toByte(),
-        ((value shr 16) and 0xFF).toByte(),
-        ((value shr 8) and 0xFF).toByte(),
-        (value and 0xFF).toByte()
-    )
-
-    private fun writeInt16(value: Int): ByteArray = byteArrayOf(
-        ((value shr 8) and 0xFF).toByte(),
-        (value and 0xFF).toByte()
-    )
 }
 
 private data class MidiEvt(val tick: Long, val isNoteOn: Boolean, val noteNum: Int, val velocity: Int)

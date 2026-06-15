@@ -1,8 +1,8 @@
 package net.exent.perfectpitch.audio
 
 import android.util.Log
+import net.exent.perfectpitch.music.NoteUtils
 import kotlin.math.PI
-import kotlin.math.pow
 import kotlin.math.sin
 
 /**
@@ -57,7 +57,7 @@ class MelodySynthesizer : NotePlayer {
     }
 
     override fun noteOn(channel: Int, note: Int, velocity: Int) {
-        val freq = midiToFrequency(note)
+        val freq = NoteUtils.midiToFrequency(note)
         val vel = (velocity.coerceIn(0, 127)) / 127f
         synchronized(noteLock) {
             activeNotes[note] = NoteState(
@@ -147,7 +147,4 @@ class MelodySynthesizer : NotePlayer {
         }
     }
 
-    private fun midiToFrequency(note: Int): Float {
-        return 440f * 2f.pow((note - 69) / 12f)
-    }
 }

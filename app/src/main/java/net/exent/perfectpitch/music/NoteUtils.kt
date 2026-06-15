@@ -16,6 +16,9 @@ class NoteUtils {
         const val GREAT_CENTS = 20f
         const val GOOD_CENTS = 30f
         const val OK_CENTS = 40f
+
+        fun midiToFrequency(midiNumber: Int, refA4: Float = DEFAULT_A4_FREQ): Float =
+            (refA4.toDouble() * 2.0.pow((midiNumber - A4_MIDI_NUMBER).toDouble() / 12.0)).toFloat()
     }
 
     fun frequencyToNote(frequency: Float, refA4: Float = DEFAULT_A4_FREQ): NoteInfo {
@@ -30,9 +33,6 @@ class NoteUtils {
 
         return NoteInfo(name = NOTE_NAMES[noteIndex], octave = octave, centsOff = centsOff, midiNumber = midiNumber)
     }
-
-    fun midiToFrequency(midiNumber: Int, refA4: Float = DEFAULT_A4_FREQ): Float =
-        (refA4.toDouble() * 2.0.pow((midiNumber - A4_MIDI_NUMBER).toDouble() / 12.0)).toFloat()
 
     fun noteToFrequency(noteName: String, octave: Int, refA4: Float = DEFAULT_A4_FREQ): Float {
         val noteIndex = NOTE_NAMES.indexOf(noteName)

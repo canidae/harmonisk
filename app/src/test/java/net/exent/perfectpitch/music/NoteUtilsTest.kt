@@ -63,13 +63,13 @@ class NoteUtilsTest {
 
     @Test
     fun `midiToFrequency for A4 returns 440`() {
-        val freq = noteUtils.midiToFrequency(69)
+        val freq = NoteUtils.midiToFrequency(69)
         assertEquals(440f, freq, 0.01f)
     }
 
     @Test
     fun `midiToFrequency for C4 returns 261_63`() {
-        val freq = noteUtils.midiToFrequency(60)
+        val freq = NoteUtils.midiToFrequency(60)
         assertEquals(261.63f, freq, 0.1f)
     }
 

@@ -3,6 +3,7 @@ package net.exent.perfectpitch.ui.melody
 import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import net.exent.perfectpitch.audio.AudioConstants
 import net.exent.perfectpitch.audio.AudioDeviceMonitor
 import net.exent.perfectpitch.audio.MelodyPlayer
 import net.exent.perfectpitch.audio.MelodySynthesizer
@@ -206,7 +207,7 @@ class MelodyViewModel @Inject constructor(
                     }
                 }
                 combine(flows) { pairs ->
-                    pairs.filter { it.second != null }.associate { it.first to it.second!! }
+                    pairs.filter { it.second > 0f }.associate { it.first to it.second }
                 }.collect { result ->
                     _allMelodyCombinedScores.value = result
                 }
@@ -727,7 +728,7 @@ class MelodyViewModel @Inject constructor(
         val noteIndex = ((midiNote % 12) + 12) % 12
         val octave = (midiNote / 12) - 1
         return PitchResult(
-            frequency = noteUtils.midiToFrequency(midiNote),
+            frequency = NoteUtils.midiToFrequency(midiNote),
             noteName = NoteUtils.NOTE_NAMES[noteIndex],
             octave = octave,
             centsOff = 0f,
@@ -824,7 +825,7 @@ class MelodyViewModel @Inject constructor(
         val noteIndex = _gameState.value.currentNoteIndex
         if (noteIndex < 0 || noteIndex >= track.notes.size) return
         val expectedNote = track.notes[noteIndex]
-        val expectedFreq = noteUtils.midiToFrequency(expectedNote.noteNumber)
+        val expectedFreq = NoteUtils.midiToFrequency(expectedNote.noteNumber)
         val centsOff = noteUtils.frequencyToCents(result.frequency, expectedFreq)
 
         if (result.isValid) {
@@ -839,8 +840,7 @@ class MelodyViewModel @Inject constructor(
 
         val isCorrectNote = abs(centsOff) <= 50f
         val isMidi = _deviceState.value.midiInputEnabled
-        val frameDurationMs = net.exent.perfectpitch.audio.AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000L /
-            net.exent.perfectpitch.audio.AudioConstants.SAMPLE_RATE
+        val frameDurationMs = AudioConstants.FRAME_DURATION_MS
         val isNoise = !isMidi && noteTracking.detectedPitchFrameCount * frameDurationMs < current48thNoteMs()
 
         if (noteTracking.isWaitingForNote) {
@@ -887,7 +887,7 @@ class MelodyViewModel @Inject constructor(
             val noteDurationSeconds = track.noteDurationSeconds(note)
             if (noteDurationSeconds <= 0.0) return@update current
             val noteStartSeconds = track.noteStartSeconds(note)
-            val expectedFreq = noteUtils.midiToFrequency(note.noteNumber)
+            val expectedFreq = NoteUtils.midiToFrequency(note.noteNumber)
             if (abs(noteUtils.frequencyToCents(current.pitchResult.frequency, expectedFreq)) > 50f) {
                 return@update current
             }
@@ -913,8 +913,7 @@ class MelodyViewModel @Inject constructor(
         val level = _gameState.value.currentLevel
         val expectedDurationMs = (track.noteDurationSeconds(expectedNote) * 1000).toLong()
         // Duration = time player held correct pitch, derived from the actual audio chunk size
-        val frameDurationMs = net.exent.perfectpitch.audio.AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000L /
-            net.exent.perfectpitch.audio.AudioConstants.SAMPLE_RATE
+        val frameDurationMs = AudioConstants.FRAME_DURATION_MS
 
         val score = if (level == 1) {
             // Level 1: only duration matters, pitch is ignored

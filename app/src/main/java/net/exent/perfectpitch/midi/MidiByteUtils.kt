@@ -27,3 +27,28 @@ internal fun readMidiVarLen(data: ByteArray, pos: Int): Pair<Long, Int> {
     } while (current and 0x80 != 0 && bytesRead < 4)
     return value to bytesRead
 }
+
+internal fun writeVarLen(value: Long): ByteArray {
+    if (value <= 0) return byteArrayOf(0x00)
+    val result = mutableListOf<Byte>()
+    var v = value
+    result.add(0, (v and 0x7F).toByte())
+    v = v shr 7
+    while (v > 0) {
+        result.add(0, ((v and 0x7F) or 0x80).toByte())
+        v = v shr 7
+    }
+    return result.toByteArray()
+}
+
+internal fun writeInt32(value: Int): ByteArray = byteArrayOf(
+    ((value shr 24) and 0xFF).toByte(),
+    ((value shr 16) and 0xFF).toByte(),
+    ((value shr 8) and 0xFF).toByte(),
+    (value and 0xFF).toByte()
+)
+
+internal fun writeInt16(value: Int): ByteArray = byteArrayOf(
+    ((value shr 8) and 0xFF).toByte(),
+    (value and 0xFF).toByte()
+)
