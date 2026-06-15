@@ -41,6 +41,7 @@ fun MelodyScreen(
     val context = LocalContext.current
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsStateWithLifecycle()
     val allAverages by viewModel.allMelodyAverages.collectAsStateWithLifecycle()
+    val allLevels by viewModel.allMelodyLevels.collectAsStateWithLifecycle()
     var previewingMelody by remember { mutableStateOf<String?>(null) }
     var expandedMelodyId by remember { mutableStateOf<String?>(null) }
 
@@ -110,6 +111,7 @@ fun MelodyScreen(
                             viewModel = viewModel,
                             info = info,
                             averageScore = allAverages[info.id],
+                            level = allLevels[info.id] ?: 1,
                             isPreviewing = previewingMelody == info.name && isPreviewPlaying,
                             isExpanded = expandedMelodyId == info.id,
                             onPlay = {
@@ -168,6 +170,7 @@ private fun MelodyCard(
     viewModel: MelodyViewModel,
     info: net.exent.perfectpitch.data.MelodyRepository.MelodyInfo,
     averageScore: Float?,
+    level: Int = 1,
     isPreviewing: Boolean,
     isExpanded: Boolean,
     onPlay: () -> Unit,
@@ -202,6 +205,12 @@ private fun MelodyCard(
                     ScoreBadge(score = averageScore, onClick = onToggleExpand)
                     Spacer(modifier = Modifier.width(4.dp))
                 }
+                Text(
+                    text = "Lv.$level",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(4.dp))
 
                 IconButton(onClick = onTogglePreview) {
                     Icon(

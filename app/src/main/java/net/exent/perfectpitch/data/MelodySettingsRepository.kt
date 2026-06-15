@@ -36,6 +36,12 @@ class MelodySettingsRepository(
         return store.flow.map { it[melodyId] ?: MelodySettings() }
     }
 
+    fun getAllLevels(): Flow<Map<String, Int>> {
+        return store.flow.map { settingsMap ->
+            settingsMap.mapValues { (_, settings) -> settings.level }
+        }
+    }
+
     suspend fun saveSettings(melodyId: String, settings: MelodySettings) {
         store.set(melodyId, settings)
     }
