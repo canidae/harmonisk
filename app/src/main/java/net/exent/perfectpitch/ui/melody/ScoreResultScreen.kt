@@ -115,7 +115,7 @@ fun ScoreResultModal(
                         }
                         if (canAdvance) {
                             Button(onClick = onAdvance) {
-                                Text("Level ${currentLevel + 1}")
+                                Text(context.getString(R.string.next_level, currentLevel + 1))
                             }
                         }
                     }

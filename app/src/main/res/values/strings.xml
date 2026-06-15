@@ -6,8 +6,9 @@
     <string name="permission_rationale">Perfect Pitch needs microphone access to detect the notes you play. Please grant the permission.</string>
     <string name="permission_description">Perfect Pitch needs access to your microphone to listen to your instrument and detect pitch in real time.</string>
     <string name="retry">Retry</string>
+    <string name="next_level">Level %d</string>
     <string name="level_2_change">On level 2 pitch accuracy will count toward your score</string>
     <string name="level_3_change">On level 3 playing wrong notes will penalize your score</string>
-    <string name="level_4_change">On level 4 notes will advance automatically while you play</string>
-    <string name="level_5_change">On level 5 visual guides on the piano will be hidden</string>
+    <string name="level_4_change">On level 4 the game will not wait for you to play the note</string>
+    <string name="level_5_change">On level 5 the falling note bars will not be shown</string>
 </resources>
