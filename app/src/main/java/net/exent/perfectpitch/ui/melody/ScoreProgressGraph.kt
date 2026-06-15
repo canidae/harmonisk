@@ -17,7 +17,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.exent.perfectpitch.data.ScoreHistoryRepository.ScoreEntry
-import net.exent.perfectpitch.ui.utils.scoreColor
+import net.exent.perfectpitch.ui.utils.levelColor
 
 @Composable
 fun ScoreProgressGraph(
@@ -48,7 +48,7 @@ fun ScoreProgressGraph(
         }
 
         val scoreMin = 0f
-        val scoreMax = 100f
+        val scoreMax = 500f
 
         Canvas(
             modifier = Modifier
@@ -114,9 +114,9 @@ fun ScoreProgressGraph(
             }
 
             // Draw dots
-            val dotRadius = if (compact) 3f else 4f
+            val dotRadius = if (compact) 5f else 6f
             for (i in points.indices) {
-                val dotColor = scoreColor(scores[i].overallScore)
+                val dotColor = levelColor(scores[i].level)
                 drawCircle(dotColor, dotRadius, points[i])
                 drawCircle(Color.White, dotRadius * 0.5f, points[i])
             }

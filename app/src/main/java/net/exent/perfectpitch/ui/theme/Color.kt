@@ -26,6 +26,9 @@ val Purple40 = Color(0xFF7C4DFF)
 val Teal80 = Color(0xFF80CBC4)
 val Teal40 = Color(0xFF00897B)
 
+// Level colors
+val Blue40 = Color(0xFF2196F3)
+
 // Backgrounds
 val DarkBackground = Color(0xFF121218)
 val DarkSurface = Color(0xFF1E1E2A)

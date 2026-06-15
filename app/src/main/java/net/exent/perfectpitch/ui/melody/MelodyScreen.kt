@@ -40,8 +40,7 @@ fun MelodyScreen(
 ) {
     val context = LocalContext.current
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsStateWithLifecycle()
-    val allAverages by viewModel.allMelodyAverages.collectAsStateWithLifecycle()
-    val allLevels by viewModel.allMelodyLevels.collectAsStateWithLifecycle()
+    val combinedScores by viewModel.allMelodyCombinedScores.collectAsStateWithLifecycle()
     var previewingMelody by remember { mutableStateOf<String?>(null) }
     var expandedMelodyId by remember { mutableStateOf<String?>(null) }
 
@@ -110,8 +109,7 @@ fun MelodyScreen(
                         MelodyCard(
                             viewModel = viewModel,
                             info = info,
-                            averageScore = allAverages[info.id],
-                            level = allLevels[info.id] ?: 1,
+                            combinedScore = combinedScores[info.id],
                             isPreviewing = previewingMelody == info.name && isPreviewPlaying,
                             isExpanded = expandedMelodyId == info.id,
                             onPlay = {
@@ -169,8 +167,7 @@ fun MelodyScreen(
 private fun MelodyCard(
     viewModel: MelodyViewModel,
     info: net.exent.perfectpitch.data.MelodyRepository.MelodyInfo,
-    averageScore: Float?,
-    level: Int = 1,
+    combinedScore: Float?,
     isPreviewing: Boolean,
     isExpanded: Boolean,
     onPlay: () -> Unit,
@@ -201,16 +198,10 @@ private fun MelodyCard(
                     }
                 }
 
-                if (averageScore != null) {
-                    ScoreBadge(score = averageScore, onClick = onToggleExpand)
+                if (combinedScore != null) {
+                    CombinedScoreBadge(score = combinedScore, onClick = onToggleExpand)
                     Spacer(modifier = Modifier.width(4.dp))
                 }
-                Text(
-                    text = "Lv.$level",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(4.dp))
 
                 IconButton(onClick = onTogglePreview) {
                     Icon(
@@ -233,14 +224,15 @@ private fun MelodyCard(
 }
 
 @Composable
-private fun ScoreBadge(
+private fun CombinedScoreBadge(
     score: Float,
     onClick: () -> Unit
 ) {
-    val color = scoreColor(score)
+    val avgPerLevel = score / 5f
+    val color = scoreColor(avgPerLevel)
     Box(
         modifier = Modifier
-            .size(36.dp)
+            .size(40.dp)
             .clip(CircleShape)
             .background(color.copy(alpha = 0.2f))
             .clickable(onClick = onClick),

@@ -68,11 +68,8 @@ class MelodyViewModel @Inject constructor(
     val currentScoreHistory: StateFlow<List<ScoreHistoryRepository.ScoreEntry>> =
         MutableStateFlow(emptyList())
 
-    private val _allMelodyAverages = MutableStateFlow<Map<String, Float>>(emptyMap())
-    val allMelodyAverages: StateFlow<Map<String, Float>> = _allMelodyAverages.asStateFlow()
-
-    private val _allMelodyLevels = MutableStateFlow<Map<String, Int>>(emptyMap())
-    val allMelodyLevels: StateFlow<Map<String, Int>> = _allMelodyLevels.asStateFlow()
+    private val _allMelodyCombinedScores = MutableStateFlow<Map<String, Float>>(emptyMap())
+    val allMelodyCombinedScores: StateFlow<Map<String, Float>> = _allMelodyCombinedScores.asStateFlow()
 
     private val _canAdvanceLevel = MutableStateFlow(false)
     val canAdvanceLevel: StateFlow<Boolean> = _canAdvanceLevel.asStateFlow()
@@ -145,9 +142,7 @@ class MelodyViewModel @Inject constructor(
                 melodyPlayer.setNotePlayer(player)
             }
         }
-        // Load score averages for all melodies
-        loadAllMelodyAverages()
-        loadAllMelodyLevels()
+        loadAllMelodyCombinedScores()
     }
 
     val activeAudioDelay: StateFlow<Int> = audioDelayRepository.activeAudioDelay
@@ -202,29 +197,36 @@ class MelodyViewModel @Inject constructor(
     fun getAvailableMelodies(): List<MelodyRepository.MelodyInfo> =
         melodyRepository.getAvailableMelodies()
 
-    fun loadAllMelodyAverages() {
+    private fun loadAllMelodyCombinedScores() {
         viewModelScope.launch {
             melodyRepository.getAvailableMelodies().let { melodies ->
                 val flows = melodies.map { info ->
-                    scoreHistoryRepository.getRecentAverage(info.id).map { avg ->
-                        info.id to avg
+                    scoreHistoryRepository.getScores(info.id).map { scores ->
+                        info.id to computeCombinedScore(scores)
                     }
                 }
                 combine(flows) { pairs ->
                     pairs.filter { it.second != null }.associate { it.first to it.second!! }
                 }.collect { result ->
-                    _allMelodyAverages.value = result
+                    _allMelodyCombinedScores.value = result
                 }
             }
         }
     }
 
-    private fun loadAllMelodyLevels() {
-        viewModelScope.launch {
-            melodySettingsRepository.getAllLevels().collect { levels ->
-                _allMelodyLevels.value = levels
-            }
+    private fun computeCombinedScore(scores: List<ScoreHistoryRepository.ScoreEntry>): Float? {
+        if (scores.isEmpty()) return null
+        val bestPerLevel = scores.groupBy { it.level }.mapValues { (_, entries) ->
+            entries.maxOf { it.overallScore }
         }
+        var runningMax = 0f
+        var total = 0f
+        for (level in 5 downTo 1) {
+            val levelBest = bestPerLevel[level] ?: 0f
+            if (levelBest > runningMax) runningMax = levelBest
+            total += runningMax
+        }
+        return total
     }
 
     private fun levelToSettings(level: Int): Triple<Boolean, Boolean, Boolean> {
