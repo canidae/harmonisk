@@ -115,8 +115,25 @@ fun ScoreResultModal(
                         }
                         if (canAdvance) {
                             Button(onClick = onAdvance) {
-                                Text(context.getString(R.string.next_level))
+                                Text("Level ${currentLevel + 1}")
                             }
+                        }
+                    }
+                    if (canAdvance) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        val change = when (currentLevel + 1) {
+                            2 -> context.getString(R.string.level_2_change)
+                            3 -> context.getString(R.string.level_3_change)
+                            4 -> context.getString(R.string.level_4_change)
+                            5 -> context.getString(R.string.level_5_change)
+                            else -> null
+                        }
+                        if (change != null) {
+                            Text(
+                                text = change,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
