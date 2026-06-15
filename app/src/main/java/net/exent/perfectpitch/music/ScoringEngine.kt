@@ -61,7 +61,7 @@ class ScoringEngine {
         }
     }
 
-    private fun scoreDuration(actualMs: Long, expectedMs: Long): Float {
+    fun scoreDuration(actualMs: Long, expectedMs: Long): Float {
         if (expectedMs <= 0) return 100f
         val ratio = min(actualMs, expectedMs).toFloat() / max(actualMs, expectedMs).toFloat()
         return if (ratio >= PERFECT_DURATION_RATIO) 100f else ratio * 100f

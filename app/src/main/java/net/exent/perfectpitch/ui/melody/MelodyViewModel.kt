@@ -71,6 +71,9 @@ class MelodyViewModel @Inject constructor(
     private val _allMelodyAverages = MutableStateFlow<Map<String, Float>>(emptyMap())
     val allMelodyAverages: StateFlow<Map<String, Float>> = _allMelodyAverages.asStateFlow()
 
+    private val _canAdvanceLevel = MutableStateFlow(false)
+    val canAdvanceLevel: StateFlow<Boolean> = _canAdvanceLevel.asStateFlow()
+
     private var playbackJob: Job? = null
     private var pitchJob: Job? = null
     private var playbackStartTime = 0L
@@ -212,6 +215,22 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
+    private fun levelToSettings(level: Int): Triple<Boolean, Boolean, Boolean> {
+        return when (level) {
+            1 -> Triple(true, false, false)
+            2 -> Triple(true, false, false)
+            3 -> Triple(true, false, false)
+            4 -> Triple(false, false, false)
+            5 -> Triple(false, false, true)
+            else -> Triple(true, false, false)
+        }
+    }
+
+    private fun current48thNoteMs(): Long {
+        val bpm = currentMelodyBpm()
+        return if (bpm > 0f) (5000.0 / bpm).toLong().coerceAtLeast(1L) else 1L
+    }
+
     fun loadMelody(info: MelodyRepository.MelodyInfo): Boolean {
         val track = melodyRepository.loadMelody(info)
         if (track != null) {
@@ -229,10 +248,14 @@ class MelodyViewModel @Inject constructor(
             // Load per-melody settings
             viewModelScope.launch {
                 melodySettingsRepository.getSettings(info.id).first().let { saved ->
+                    val level = saved.level.coerceIn(1, 5)
+                    val (wm, awn, hnb) = levelToSettings(level)
                     _gameState.update {
                         it.copy(
-                            waitMode = saved.waitMode,
-                            allowWrongNotes = saved.allowWrongNotes,
+                            waitMode = wm,
+                            allowWrongNotes = awn,
+                            currentLevel = level,
+                            hideNoteBars = hnb,
                             tempoMultiplier = saved.tempoMultiplier,
                             playMelodyAudio = saved.playMelodyAudio
                         )
@@ -271,10 +294,14 @@ class MelodyViewModel @Inject constructor(
             // Load any previously saved per-melody settings for this URI
             viewModelScope.launch {
                 melodySettingsRepository.getSettings(currentMelodyId!!).first().let { saved ->
+                    val level = saved.level.coerceIn(1, 5)
+                    val (wm, awn, hnb) = levelToSettings(level)
                     _gameState.update {
                         it.copy(
-                            waitMode = saved.waitMode,
-                            allowWrongNotes = saved.allowWrongNotes,
+                            waitMode = wm,
+                            allowWrongNotes = awn,
+                            currentLevel = level,
+                            hideNoteBars = hnb,
                             tempoMultiplier = saved.tempoMultiplier,
                             playMelodyAudio = saved.playMelodyAudio
                         )
@@ -296,14 +323,23 @@ class MelodyViewModel @Inject constructor(
         return false
     }
 
-    fun setWaitMode(enabled: Boolean) {
-        _gameState.update { it.copy(waitMode = enabled) }
+    fun setLevel(level: Int) {
+        val clamped = level.coerceIn(1, 5)
+        val (wm, awn, hnb) = levelToSettings(clamped)
+        _gameState.update {
+            it.copy(
+                currentLevel = clamped,
+                waitMode = wm,
+                allowWrongNotes = awn,
+                hideNoteBars = hnb
+            )
+        }
         saveMelodySettings()
     }
 
-    fun setAllowWrongNotes(enabled: Boolean) {
-        _gameState.update { it.copy(allowWrongNotes = enabled) }
-        saveMelodySettings()
+    fun advanceLevel() {
+        val current = _gameState.value.currentLevel
+        if (current < 5) setLevel(current + 1)
     }
 
     fun setTempoMultiplier(multiplier: Float) {
@@ -345,7 +381,8 @@ class MelodyViewModel @Inject constructor(
                 tempoMultiplier = g.tempoMultiplier,
                 transposeSemitones = g.transposeSemitones,
                 playMelodyAudio = g.playMelodyAudio,
-                fallSpeedPxPerSec = v.fallSpeedPxPerSec
+                fallSpeedPxPerSec = v.fallSpeedPxPerSec,
+                level = g.currentLevel
             ))
         }
     }
@@ -501,6 +538,7 @@ class MelodyViewModel @Inject constructor(
         _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
 
         noteTracking.reset()
+        _canAdvanceLevel.value = false
         currentNoteDetectedCorrectly = false
 
         // Stop any preview playback and reset game sync
@@ -810,12 +848,18 @@ class MelodyViewModel @Inject constructor(
         val track = _gameState.value.melodyTrack ?: return
         val noteIndex = _gameState.value.currentNoteIndex
         if (noteIndex < 0 || noteIndex >= track.notes.size) return
+        val level = _gameState.value.currentLevel
 
         val expectedNote = track.notes[noteIndex]
         val expectedMidi = expectedNote.noteNumber
 
         val expectedFreq = noteUtils.midiToFrequency(expectedMidi)
         val centsOff = noteUtils.frequencyToCents(result.frequency, expectedFreq)
+
+        // Count all valid pitch detection frames (for level 1 duration and noise filtering)
+        if (result.isValid) {
+            noteTracking.detectedPitchFrameCount++
+        }
 
         // Count frames where the detected frequency is within the acceptance window of the
         // expected note. Using centsOff (relative to the expected note) as the sole gate means
@@ -828,9 +872,22 @@ class MelodyViewModel @Inject constructor(
         }
 
         val isCorrectNote = abs(centsOff) <= 50f
+        val isMidi = _deviceState.value.midiInputEnabled
+        val frameDurationMs = net.exent.perfectpitch.audio.AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000L /
+            net.exent.perfectpitch.audio.AudioConstants.SAMPLE_RATE
+        val isNoise = !isMidi && noteTracking.detectedPitchFrameCount * frameDurationMs < current48thNoteMs()
 
         if (noteTracking.isWaitingForNote) {
-            if (isCorrectNote) {
+            if (level == 1) {
+                // Level 1: any valid (non-noise) pitch advances, pitch doesn't matter
+                if (result.isValid && !isNoise) {
+                    currentNoteDetectedCorrectly = true
+                    noteTracking.isWaitingForNote = false
+                    pauseOffset = _gameState.value.currentTimeSeconds
+                    playbackStartTime = SystemClock.elapsedRealtime()
+                    _gameState.update { it.copy(phase = PlayPhase.PLAYING) }
+                }
+            } else if (isCorrectNote) {
                 // Correct note played — unfreeze
                 currentNoteDetectedCorrectly = true
                 noteTracking.isWaitingForNote = false
@@ -838,15 +895,15 @@ class MelodyViewModel @Inject constructor(
                 pauseOffset = _gameState.value.currentTimeSeconds
                 playbackStartTime = SystemClock.elapsedRealtime()
                 _gameState.update { it.copy(phase = PlayPhase.PLAYING) }
-            } else if (_gameState.value.allowWrongNotes) {
-                // Wrong note while waiting — score as miss and move on
+            } else if (level >= 3 && !isNoise) {
+                // Level 3+: deliberate wrong note — penalize and advance
                 scoreCurrentNote(expectedNote, noteIndex)
                 noteTracking.isWaitingForNote = false
                 pauseOffset = _gameState.value.currentTimeSeconds
                 playbackStartTime = SystemClock.elapsedRealtime()
                 _gameState.update { it.copy(phase = PlayPhase.PLAYING) }
             }
-            // If !allowWrongNotes && !isCorrectNote, ignore the input
+            // Level 2: wrong notes just ignored (keep waiting)
         } else {
             // Continuous mode (not waiting)
             if (isCorrectNote && !currentNoteDetectedCorrectly) {
@@ -900,23 +957,36 @@ class MelodyViewModel @Inject constructor(
 
     private fun scoreCurrentNote(expectedNote: net.exent.perfectpitch.midi.NoteEvent, noteIndex: Int) {
         val track = _gameState.value.melodyTrack ?: return
+        val level = _gameState.value.currentLevel
         val expectedDurationMs = (track.noteDurationSeconds(expectedNote) * 1000).toLong()
         // Duration = time player held correct pitch, derived from the actual audio chunk size
         val frameDurationMs = net.exent.perfectpitch.audio.AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000L /
             net.exent.perfectpitch.audio.AudioConstants.SAMPLE_RATE
-        val actualDurationMs = noteTracking.correctPitchFrameCount * frameDurationMs
 
-        val effectiveCentsOff = if (noteTracking.centsOffCount > 0) noteTracking.centsOffSum / noteTracking.centsOffCount else 100f
+        val score = if (level == 1) {
+            // Level 1: only duration matters, pitch is ignored
+            val actualDurationMs = noteTracking.detectedPitchFrameCount * frameDurationMs
+            val durationScore = scoringEngine.scoreDuration(actualDurationMs, expectedDurationMs)
+            NoteScore(
+                pitchScore = 100f,
+                durationScore = durationScore,
+                overallScore = durationScore,
+                pitchAccuracy = PitchAccuracy.PERFECT
+            )
+        } else {
+            val actualDurationMs = noteTracking.correctPitchFrameCount * frameDurationMs
+            val effectiveCentsOff = if (noteTracking.centsOffCount > 0) noteTracking.centsOffSum / noteTracking.centsOffCount else 100f
+            val performance = NotePerformance(
+                expectedMidiNote = expectedNote.noteNumber,
+                detectedMidiNote = _gameState.value.pitchResult.midiNoteNumber,
+                centsOff = effectiveCentsOff,
+                expectedDurationMs = expectedDurationMs,
+                actualDurationMs = actualDurationMs
+            )
+            scoringEngine.scoreNote(performance)
+        }
 
-        val performance = NotePerformance(
-            expectedMidiNote = expectedNote.noteNumber,
-            detectedMidiNote = _gameState.value.pitchResult.midiNoteNumber,
-            centsOff = effectiveCentsOff,
-            expectedDurationMs = expectedDurationMs,
-            actualDurationMs = actualDurationMs
-        )
-
-        val score = scoringEngine.scoreNote(performance)
+        val actualDurationMs = (noteTracking.correctPitchFrameCount * frameDurationMs).coerceAtLeast(1L)
         val resultState = when (score.pitchAccuracy) {
             PitchAccuracy.PERFECT -> NoteResultState.PERFECT
             PitchAccuracy.GREAT -> NoteResultState.GREAT
@@ -977,6 +1047,17 @@ class MelodyViewModel @Inject constructor(
         val noteScores = _gameState.value.noteScores
         val melodyScore = scoringEngine.calculateMelodyScore(noteScores)
 
+        // Apply playback speed modifier
+        val tempoPercent = (_gameState.value.tempoMultiplier * 100).toInt()
+        val speedModifier = (100 - abs(100 - tempoPercent)) / 100f
+        val adjustedScore = melodyScore.overallScore * speedModifier
+        val adjustedMelodyScore = melodyScore.copy(overallScore = adjustedScore)
+
+        // Check advancement eligibility (including this playthrough)
+        val currentLevel = _gameState.value.currentLevel
+        val pastPlaythroughs = currentScoreHistory.value.count { it.level == currentLevel }
+        _canAdvanceLevel.value = currentLevel < 5 && adjustedScore >= 90f && (pastPlaythroughs + 1) >= 3
+
         // Scroll to beginning without changing zoom level
         val firstNoteStart = track.notes.firstOrNull()?.let { track.noteStartSeconds(it) } ?: 0.0
         val currentTimeSeconds = _gameState.value.currentTimeSeconds
@@ -984,7 +1065,7 @@ class MelodyViewModel @Inject constructor(
         _gameState.update {
             it.copy(
                 phase = PlayPhase.FINISHED,
-                melodyScore = melodyScore,
+                melodyScore = adjustedMelodyScore,
                 isListening = false
             )
         }
@@ -996,14 +1077,15 @@ class MelodyViewModel @Inject constructor(
             viewModelScope.launch {
                 scoreHistoryRepository.saveScore(melodyId, ScoreHistoryRepository.ScoreEntry(
                     timestamp = System.currentTimeMillis(),
-                    overallScore = melodyScore.overallScore,
-                    totalNotes = melodyScore.totalNotes,
-                    notesHit = melodyScore.notesHit,
-                    perfectNotes = melodyScore.perfectNotes,
-                    greatNotes = melodyScore.greatNotes,
-                    longestStreak = melodyScore.longestStreak,
-                    avgPitchScore = melodyScore.avgPitchScore,
-                    avgDurationScore = melodyScore.avgDurationScore
+                    overallScore = adjustedScore,
+                    totalNotes = adjustedMelodyScore.totalNotes,
+                    notesHit = adjustedMelodyScore.notesHit,
+                    perfectNotes = adjustedMelodyScore.perfectNotes,
+                    greatNotes = adjustedMelodyScore.greatNotes,
+                    longestStreak = adjustedMelodyScore.longestStreak,
+                    avgPitchScore = adjustedMelodyScore.avgPitchScore,
+                    avgDurationScore = adjustedMelodyScore.avgDurationScore,
+                    level = currentLevel
                 ))
             }
         }
@@ -1025,6 +1107,7 @@ private class NoteTrackingState {
     var centsOffSum = 0f
     var centsOffCount = 0
     var correctPitchFrameCount = 0
+    var detectedPitchFrameCount = 0
     var isWaitingForNote = false
     var wasWaitingForNote = false
     var waitGraceStartTime = 0L
@@ -1034,6 +1117,7 @@ private class NoteTrackingState {
         centsOffSum = 0f
         centsOffCount = 0
         correctPitchFrameCount = 0
+        detectedPitchFrameCount = 0
         isWaitingForNote = false
         wasWaitingForNote = false
         waitGraceStartTime = 0L
@@ -1045,5 +1129,6 @@ private class NoteTrackingState {
         centsOffSum = 0f
         centsOffCount = 0
         correctPitchFrameCount = 0
+        detectedPitchFrameCount = 0
     }
 }
