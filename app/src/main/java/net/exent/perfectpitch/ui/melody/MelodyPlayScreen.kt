@@ -55,6 +55,7 @@ fun MelodyPlayScreen(
     val visualDelay by viewModel.activeVisualDelay.collectAsState()
     val scoreHistory by viewModel.currentScoreHistory.collectAsStateWithLifecycle()
     val canAdvance by viewModel.canAdvanceLevel.collectAsStateWithLifecycle()
+    val celebrationLevel by viewModel.celebrationLevel.collectAsStateWithLifecycle()
     val density = LocalDensity.current
     var showResultsModal by remember { mutableStateOf(false) }
     var showConfigMenu by remember { mutableStateOf(false) }
@@ -360,7 +361,8 @@ fun MelodyPlayScreen(
                 viewModel.advanceLevel()
                 showResultsModal = false
                 viewModel.startPlaying()
-            }
+            },
+            celebrationLevel = celebrationLevel
         )
     }
 }

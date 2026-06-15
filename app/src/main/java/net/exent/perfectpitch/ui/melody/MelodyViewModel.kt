@@ -24,6 +24,8 @@ import net.exent.perfectpitch.midi.MidiOutputSender
 import net.exent.perfectpitch.music.*
 import net.exent.perfectpitch.ui.MAX_FALL_SPEED
 import net.exent.perfectpitch.ui.MIN_FALL_SPEED
+import net.exent.perfectpitch.ui.celebration.CelebrationLevel
+import kotlinx.coroutines.delay
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -77,6 +79,9 @@ class MelodyViewModel @Inject constructor(
 
     private val _canAdvanceLevel = MutableStateFlow(false)
     val canAdvanceLevel: StateFlow<Boolean> = _canAdvanceLevel.asStateFlow()
+
+    private val _celebrationLevel = MutableStateFlow(CelebrationLevel.NONE)
+    val celebrationLevel: StateFlow<CelebrationLevel> = _celebrationLevel.asStateFlow()
 
     private var playbackJob: Job? = null
     private var pitchJob: Job? = null
@@ -1030,9 +1035,19 @@ class MelodyViewModel @Inject constructor(
         if (melodyId != null) {
             // Compute running cumulative combined score
             val existing = currentScoreHistory.value
+            val previousBestCombinedScore = existing.maxOfOrNull { it.combinedScore } ?: 0f
             val combinedScore = ScoringEngine.computeCombinedScore(
                 existing.map { it.level to it.overallScore } + (currentLevel to adjustedScore)
             )
+            val scoreImproved = combinedScore > previousBestCombinedScore
+            _celebrationLevel.value = if (scoreImproved) CelebrationLevel.fromScore(combinedScore)
+            else CelebrationLevel.NONE
+
+            viewModelScope.launch {
+                delay(4000)
+                _celebrationLevel.value = CelebrationLevel.NONE
+            }
+
             viewModelScope.launch {
                 scoreHistoryRepository.saveScore(melodyId, ScoreHistoryRepository.ScoreEntry(
                     timestamp = System.currentTimeMillis(),

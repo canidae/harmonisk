@@ -86,6 +86,9 @@ dependencies {
     // TensorFlow Lite — CREPE pitch detection model
     implementation("org.tensorflow:tensorflow-lite:2.17.0")
 
+    // Celebration — Konfetti particle physics
+    implementation("nl.dionsegijn:konfetti-compose:2.0.4")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("io.mockk:mockk:1.13.13")
