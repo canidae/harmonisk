@@ -7,7 +7,9 @@ import android.os.Handler
 import android.os.Looper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
 
 /**
@@ -101,5 +103,6 @@ class MidiDeviceManager(context: Context) {
 
     fun close() {
         midiManager?.unregisterDeviceCallback(deviceCallback)
+        scope.cancel()
     }
 }

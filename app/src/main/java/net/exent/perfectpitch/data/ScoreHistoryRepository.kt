@@ -7,8 +7,6 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.ListSerializer
 
 private val Context.scoreHistoryStore: DataStore<Preferences> by preferencesDataStore(
     name = "score_history"
@@ -17,24 +15,10 @@ private val Context.scoreHistoryStore: DataStore<Preferences> by preferencesData
 class ScoreHistoryRepository(
     context: Context
 ) {
-    companion object {
-        private const val RECENT_COUNT = 5
-    }
-
     private val store = JsonPreferenceStore<String, List<ScoreEntry>>(
         dataStore = context.scoreHistoryStore,
         keyName = "scores_json"
     )
-
-    init {
-        val prefs = context.getSharedPreferences("score_history_migration", Context.MODE_PRIVATE)
-        if (!prefs.getBoolean("migrated_v2", false)) {
-            kotlinx.coroutines.runBlocking {
-                store.clearAll()
-            }
-            prefs.edit().putBoolean("migrated_v2", true).apply()
-        }
-    }
 
     @Serializable
     data class ScoreEntry(
@@ -53,15 +37,6 @@ class ScoreHistoryRepository(
 
     fun getScores(melodyId: String): Flow<List<ScoreEntry>> {
         return store.flow.map { it[melodyId] ?: emptyList() }
-    }
-
-    fun getRecentAverage(melodyId: String): Flow<Float?> {
-        return store.flow.map { scoresMap ->
-            val scores = scoresMap[melodyId] ?: return@map null
-            val recent = scores.takeLast(RECENT_COUNT)
-            if (recent.isEmpty()) null
-            else recent.map { it.overallScore }.average().toFloat()
-        }
     }
 
     suspend fun saveScore(melodyId: String, entry: ScoreEntry) {

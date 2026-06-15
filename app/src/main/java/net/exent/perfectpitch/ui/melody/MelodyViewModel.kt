@@ -65,8 +65,8 @@ class MelodyViewModel @Inject constructor(
     val availableMelodies: StateFlow<List<MelodyRepository.MelodyInfo>> =
         MutableStateFlow(melodyRepository.getAvailableMelodies()).asStateFlow()
 
-    val currentScoreHistory: StateFlow<List<ScoreHistoryRepository.ScoreEntry>> =
-        MutableStateFlow(emptyList())
+    private val _currentScoreHistory = MutableStateFlow<List<ScoreHistoryRepository.ScoreEntry>>(emptyList())
+    val currentScoreHistory: StateFlow<List<ScoreHistoryRepository.ScoreEntry>> = _currentScoreHistory.asStateFlow()
 
     private val _allMelodyCombinedScores = MutableStateFlow<Map<String, Float>>(emptyMap())
     val allMelodyCombinedScores: StateFlow<Map<String, Float>> = _allMelodyCombinedScores.asStateFlow()
@@ -202,7 +202,7 @@ class MelodyViewModel @Inject constructor(
             melodyRepository.getAvailableMelodies().let { melodies ->
                 val flows = melodies.map { info ->
                     scoreHistoryRepository.getScores(info.id).map { scores ->
-                        info.id to computeCombinedScore(scores)
+                        info.id to ScoringEngine.computeCombinedScore(scores.map { it.level to it.overallScore })
                     }
                 }
                 combine(flows) { pairs ->
@@ -212,21 +212,6 @@ class MelodyViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    private fun computeCombinedScore(scores: List<ScoreHistoryRepository.ScoreEntry>): Float? {
-        if (scores.isEmpty()) return null
-        val bestPerLevel = scores.groupBy { it.level }.mapValues { (_, entries) ->
-            entries.maxOf { it.overallScore }
-        }
-        var runningMax = 0f
-        var total = 0f
-        for (level in 5 downTo 1) {
-            val levelBest = bestPerLevel[level] ?: 0f
-            if (levelBest > runningMax) runningMax = levelBest
-            total += runningMax
-        }
-        return total
     }
 
     private fun levelToSettings(level: Int): Triple<Boolean, Boolean, Boolean> {
@@ -259,33 +244,7 @@ class MelodyViewModel @Inject constructor(
                 )
             }
             _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
-            // Load per-melody settings
-            viewModelScope.launch {
-                melodySettingsRepository.getSettings(info.id).first().let { saved ->
-                    val level = saved.level.coerceIn(1, 5)
-                    val (wm, awn, hnb) = levelToSettings(level)
-                    _gameState.update {
-                        it.copy(
-                            waitMode = wm,
-                            allowWrongNotes = awn,
-                            currentLevel = level,
-                            hideNoteBars = hnb,
-                            tempoMultiplier = saved.tempoMultiplier,
-                            playMelodyAudio = saved.playMelodyAudio
-                        )
-                    }
-                    _viewState.update { it.copy(fallSpeedPxPerSec = saved.fallSpeedPxPerSec) }
-                    if (saved.transposeSemitones != 0) {
-                        setTranspose(saved.transposeSemitones)
-                    }
-                }
-            }
-            // Load score history for this melody
-            viewModelScope.launch {
-                scoreHistoryRepository.getScores(info.id).collect { scores ->
-                    (currentScoreHistory as MutableStateFlow).value = scores
-                }
-            }
+            loadMelodySettingsAndHistory(info.id)
             return true
         }
         return false
@@ -305,36 +264,38 @@ class MelodyViewModel @Inject constructor(
                 )
             }
             _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
-            // Load any previously saved per-melody settings for this URI
-            viewModelScope.launch {
-                melodySettingsRepository.getSettings(currentMelodyId!!).first().let { saved ->
-                    val level = saved.level.coerceIn(1, 5)
-                    val (wm, awn, hnb) = levelToSettings(level)
-                    _gameState.update {
-                        it.copy(
-                            waitMode = wm,
-                            allowWrongNotes = awn,
-                            currentLevel = level,
-                            hideNoteBars = hnb,
-                            tempoMultiplier = saved.tempoMultiplier,
-                            playMelodyAudio = saved.playMelodyAudio
-                        )
-                    }
-                    _viewState.update { it.copy(fallSpeedPxPerSec = saved.fallSpeedPxPerSec) }
-                    if (saved.transposeSemitones != 0) {
-                        setTranspose(saved.transposeSemitones)
-                    }
-                }
-            }
-            // Load score history for this melody
-            viewModelScope.launch {
-                scoreHistoryRepository.getScores(currentMelodyId!!).collect { scores ->
-                    (currentScoreHistory as MutableStateFlow).value = scores
-                }
-            }
+            loadMelodySettingsAndHistory(currentMelodyId!!)
             return true
         }
         return false
+    }
+
+    private fun loadMelodySettingsAndHistory(melodyId: String) {
+        viewModelScope.launch {
+            melodySettingsRepository.getSettings(melodyId).first().let { saved ->
+                val level = saved.level.coerceIn(1, 5)
+                val (wm, awn, hnb) = levelToSettings(level)
+                _gameState.update {
+                    it.copy(
+                        waitMode = wm,
+                        allowWrongNotes = awn,
+                        currentLevel = level,
+                        hideNoteBars = hnb,
+                        tempoMultiplier = saved.tempoMultiplier,
+                        playMelodyAudio = saved.playMelodyAudio
+                    )
+                }
+                _viewState.update { it.copy(fallSpeedPxPerSec = saved.fallSpeedPxPerSec) }
+                if (saved.transposeSemitones != 0) {
+                    setTranspose(saved.transposeSemitones)
+                }
+            }
+        }
+        viewModelScope.launch {
+            scoreHistoryRepository.getScores(melodyId).collect { scores ->
+                _currentScoreHistory.value = scores
+            }
+        }
     }
 
     fun setLevel(level: Int) {
@@ -1068,15 +1029,9 @@ class MelodyViewModel @Inject constructor(
         if (melodyId != null) {
             // Compute running cumulative combined score
             val existing = currentScoreHistory.value
-            val allLevelScores = existing.map { it.level to it.overallScore } + (currentLevel to adjustedScore)
-            val bestPerLevel = allLevelScores.groupBy { it.first }.mapValues { (_, pairs) -> pairs.maxOf { it.second } }
-            var runningMax = 0f
-            var combinedScore = 0f
-            for (lvl in 5 downTo 1) {
-                val levelBest = bestPerLevel[lvl] ?: 0f
-                if (levelBest > runningMax) runningMax = levelBest
-                combinedScore += runningMax
-            }
+            val combinedScore = ScoringEngine.computeCombinedScore(
+                existing.map { it.level to it.overallScore } + (currentLevel to adjustedScore)
+            )
             viewModelScope.launch {
                 scoreHistoryRepository.saveScore(melodyId, ScoreHistoryRepository.ScoreEntry(
                     timestamp = System.currentTimeMillis(),

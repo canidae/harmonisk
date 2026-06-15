@@ -23,6 +23,26 @@ class ScoringEngine {
         const val PITCH_WEIGHT = 0.6f
         const val DURATION_WEIGHT = 0.4f
 
+        /**
+         * Computes the running cumulative combined score across 5 levels.
+         * For each level (5 down to 1), the best score at that level is capped
+         * to the running max of higher levels, then summed.
+         */
+        fun computeCombinedScore(levelScores: List<Pair<Int, Float>>): Float {
+            if (levelScores.isEmpty()) return 0f
+            val bestPerLevel = levelScores.groupBy { it.first }.mapValues { (_, pairs) ->
+                pairs.maxOf { it.second }
+            }
+            var runningMax = 0f
+            var total = 0f
+            for (level in 5 downTo 1) {
+                val levelBest = bestPerLevel[level] ?: 0f
+                if (levelBest > runningMax) runningMax = levelBest
+                total += runningMax
+            }
+            return total
+        }
+
         fun scoreTier(score: Float): ScoreTier = when {
             score >= 95f -> ScoreTier.LEGENDARY
             score >= 80f -> ScoreTier.EXCELLENT
