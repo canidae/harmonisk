@@ -9,12 +9,3 @@ fun scoreColor(score: Float): Color = when {
     score >= 20f -> Yellow80
     else -> Red80
 }
-
-fun levelColor(level: Int): Color = when (level) {
-    1 -> Green40
-    2 -> Blue40
-    3 -> Yellow40
-    4 -> Orange40
-    5 -> Red40
-    else -> Purple40
-}
