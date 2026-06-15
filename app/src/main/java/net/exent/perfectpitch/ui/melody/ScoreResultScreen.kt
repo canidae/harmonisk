@@ -106,6 +106,21 @@ fun ScoreResultModal(
                         Button(onClick = onAdvance) {
                             Text("Advance to Level ${currentLevel + 1}")
                         }
+                        val change = when (currentLevel + 1) {
+                            2 -> "On level 2 pitch accuracy will count toward your score"
+                            3 -> "On level 3 playing wrong notes will penalize your score"
+                            4 -> "On level 4 notes will advance automatically while you play"
+                            5 -> "On level 5 visual guides on the piano will be hidden"
+                            else -> null
+                        }
+                        if (change != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = change,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

@@ -875,10 +875,20 @@ class MelodyViewModel @Inject constructor(
         }
 
         val isCorrectNote = abs(centsOff) <= 50f
+        val isMidi = _deviceState.value.midiInputEnabled
+        val frameDurationMs = net.exent.perfectpitch.audio.AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000L /
+            net.exent.perfectpitch.audio.AudioConstants.SAMPLE_RATE
+        val isNoise = !isMidi && noteTracking.detectedPitchFrameCount * frameDurationMs < current48thNoteMs()
 
         if (noteTracking.isWaitingForNote) {
             if (isCorrectNote) {
                 currentNoteDetectedCorrectly = true
+                noteTracking.isWaitingForNote = false
+                pauseOffset = _gameState.value.currentTimeSeconds
+                playbackStartTime = SystemClock.elapsedRealtime()
+                _gameState.update { it.copy(phase = PlayPhase.PLAYING) }
+            } else if (_gameState.value.currentLevel >= 3 && !isNoise) {
+                scoreCurrentNote(expectedNote, noteIndex)
                 noteTracking.isWaitingForNote = false
                 pauseOffset = _gameState.value.currentTimeSeconds
                 playbackStartTime = SystemClock.elapsedRealtime()
