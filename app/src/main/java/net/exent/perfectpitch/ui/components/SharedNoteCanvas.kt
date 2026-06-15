@@ -91,7 +91,8 @@ sealed interface CanvasMode {
         val songTimeOffsetSeconds: Double,
         val fallSpeedPxPerSec: Float,
         val detectedMidiNote: Int?,
-        val detectedCentsOff: Float?
+        val detectedCentsOff: Float?,
+        val hideNoteBars: Boolean = false
     ) : CanvasMode
 }
 
@@ -614,6 +615,8 @@ private fun DrawScope.drawMelodyNotes(
     pianoAtBottom: Boolean,
     density: Float
 ) {
+    if (mode.hideNoteBars) return
+
     val pixelsPerSecond = mode.fallSpeedPxPerSec * density
     val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
     val minGapPx = 4f * density
