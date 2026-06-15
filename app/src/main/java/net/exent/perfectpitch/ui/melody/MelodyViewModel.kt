@@ -1008,10 +1008,9 @@ class MelodyViewModel @Inject constructor(
         val adjustedScore = melodyScore.overallScore * speedModifier
         val adjustedMelodyScore = melodyScore.copy(overallScore = adjustedScore)
 
-        // Check advancement eligibility (including this playthrough)
+        // Check advancement eligibility
         val currentLevel = _gameState.value.currentLevel
-        val pastPlaythroughs = currentScoreHistory.value.count { it.level == currentLevel }
-        _canAdvanceLevel.value = currentLevel < 5 && adjustedScore >= 90f && (pastPlaythroughs + 1) >= 3
+        _canAdvanceLevel.value = currentLevel < 5 && adjustedScore >= 90f
 
         // Scroll to beginning without changing zoom level
         val firstNoteStart = track.notes.firstOrNull()?.let { track.noteStartSeconds(it) } ?: 0.0
