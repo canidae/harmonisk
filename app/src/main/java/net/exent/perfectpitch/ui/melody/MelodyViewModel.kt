@@ -1066,10 +1066,22 @@ class MelodyViewModel @Inject constructor(
         // Persist the score
         val melodyId = currentMelodyId
         if (melodyId != null) {
+            // Compute running cumulative combined score
+            val existing = currentScoreHistory.value
+            val allLevelScores = existing.map { it.level to it.overallScore } + (currentLevel to adjustedScore)
+            val bestPerLevel = allLevelScores.groupBy { it.first }.mapValues { (_, pairs) -> pairs.maxOf { it.second } }
+            var runningMax = 0f
+            var combinedScore = 0f
+            for (lvl in 5 downTo 1) {
+                val levelBest = bestPerLevel[lvl] ?: 0f
+                if (levelBest > runningMax) runningMax = levelBest
+                combinedScore += runningMax
+            }
             viewModelScope.launch {
                 scoreHistoryRepository.saveScore(melodyId, ScoreHistoryRepository.ScoreEntry(
                     timestamp = System.currentTimeMillis(),
                     overallScore = adjustedScore,
+                    combinedScore = combinedScore,
                     totalNotes = adjustedMelodyScore.totalNotes,
                     notesHit = adjustedMelodyScore.notesHit,
                     perfectNotes = adjustedMelodyScore.perfectNotes,

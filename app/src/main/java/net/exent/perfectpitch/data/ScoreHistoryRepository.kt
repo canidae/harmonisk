@@ -21,10 +21,26 @@ class ScoreHistoryRepository(
         private const val RECENT_COUNT = 5
     }
 
+    private val store = JsonPreferenceStore<String, List<ScoreEntry>>(
+        dataStore = context.scoreHistoryStore,
+        keyName = "scores_json"
+    )
+
+    init {
+        val prefs = context.getSharedPreferences("score_history_migration", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("migrated_v2", false)) {
+            kotlinx.coroutines.runBlocking {
+                store.clearAll()
+            }
+            prefs.edit().putBoolean("migrated_v2", true).apply()
+        }
+    }
+
     @Serializable
     data class ScoreEntry(
         val timestamp: Long,
         val overallScore: Float,
+        val combinedScore: Float = 0f,
         val totalNotes: Int,
         val notesHit: Int,
         val perfectNotes: Int,
@@ -33,11 +49,6 @@ class ScoreHistoryRepository(
         val avgPitchScore: Float,
         val avgDurationScore: Float,
         val level: Int = 1
-    )
-
-    private val store = JsonPreferenceStore<String, List<ScoreEntry>>(
-        dataStore = context.scoreHistoryStore,
-        keyName = "scores_json"
     )
 
     fun getScores(melodyId: String): Flow<List<ScoreEntry>> {

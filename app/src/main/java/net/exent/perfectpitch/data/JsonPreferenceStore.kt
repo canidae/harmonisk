@@ -42,6 +42,12 @@ class JsonPreferenceStore<K, V>(
         }
     }
 
+    suspend fun clearAll() {
+        dataStore.edit { prefs ->
+            prefs.remove(preferencesKey)
+        }
+    }
+
     suspend fun set(key: K, value: V) = update(key) { value }
 
     private fun parse(jsonStr: String?): Map<K, V> {

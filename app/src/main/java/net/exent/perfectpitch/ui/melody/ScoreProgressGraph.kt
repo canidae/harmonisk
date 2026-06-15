@@ -90,7 +90,7 @@ fun ScoreProgressGraph(
             val points = scores.mapIndexed { index, entry ->
                 val t = if (scores.size == 1) 1f else index.toFloat() / (scores.size - 1)
                 val x = chartLeft + chartWidth * t
-                val y = chartTop + chartHeight * (1f - (entry.overallScore - scoreMin) / (scoreMax - scoreMin))
+                val y = chartTop + chartHeight * (1f - (entry.combinedScore - scoreMin) / (scoreMax - scoreMin))
                 Offset(x, y.coerceIn(chartTop, chartTop + chartHeight))
             }
 
