@@ -345,14 +345,12 @@ fun MelodyPlayScreen(
     }
 
     if (showResultsModal && gameState.melodyScore != null) {
-        val playCountAtLevel = scoreHistory.count { it.level == gameState.currentLevel } + 1
         ScoreResultModal(
             melodyScore = gameState.melodyScore!!,
             onDismiss = { showResultsModal = false },
             scoreHistory = scoreHistory,
             currentLevel = gameState.currentLevel,
             canAdvance = canAdvance,
-            playCountAtLevel = playCountAtLevel,
             onAdvance = {
                 viewModel.advanceLevel()
                 showResultsModal = false
@@ -394,9 +392,9 @@ private fun MelodySettingsMenu(
                 onClick = {}
             )
             Slider(
-                value = (currentLevel - 1).toFloat(),
-                onValueChange = { onLevelChange((it + 0.5f).toInt().coerceIn(1, 5)) },
-                valueRange = 0f..4f,
+                value = currentLevel.toFloat(),
+                onValueChange = { onLevelChange(it.roundToInt().coerceIn(1, 5)) },
+                valueRange = 1f..5f,
                 steps = 3,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )

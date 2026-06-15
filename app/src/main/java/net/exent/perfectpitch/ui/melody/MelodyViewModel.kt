@@ -860,23 +860,14 @@ class MelodyViewModel @Inject constructor(
         val track = _gameState.value.melodyTrack ?: return
         val noteIndex = _gameState.value.currentNoteIndex
         if (noteIndex < 0 || noteIndex >= track.notes.size) return
-        val level = _gameState.value.currentLevel
-
         val expectedNote = track.notes[noteIndex]
-        val expectedMidi = expectedNote.noteNumber
-
-        val expectedFreq = noteUtils.midiToFrequency(expectedMidi)
+        val expectedFreq = noteUtils.midiToFrequency(expectedNote.noteNumber)
         val centsOff = noteUtils.frequencyToCents(result.frequency, expectedFreq)
 
-        // Count all valid pitch detection frames (for level 1 duration and noise filtering)
         if (result.isValid) {
             noteTracking.detectedPitchFrameCount++
         }
 
-        // Count frames where the detected frequency is within the acceptance window of the
-        // expected note. Using centsOff (relative to the expected note) as the sole gate means
-        // vibrato peaks that round to a neighbouring MIDI number are still counted correctly,
-        // instead of being dropped by a strict MIDI equality check.
         if (abs(centsOff) <= 50f) {
             noteTracking.centsOffSum += abs(centsOff)
             noteTracking.centsOffCount++
@@ -884,38 +875,15 @@ class MelodyViewModel @Inject constructor(
         }
 
         val isCorrectNote = abs(centsOff) <= 50f
-        val isMidi = _deviceState.value.midiInputEnabled
-        val frameDurationMs = net.exent.perfectpitch.audio.AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000L /
-            net.exent.perfectpitch.audio.AudioConstants.SAMPLE_RATE
-        val isNoise = !isMidi && noteTracking.detectedPitchFrameCount * frameDurationMs < current48thNoteMs()
 
         if (noteTracking.isWaitingForNote) {
-            if (level == 1) {
-                // Level 1: any valid (non-noise) pitch advances, pitch doesn't matter
-                if (result.isValid && !isNoise) {
-                    currentNoteDetectedCorrectly = true
-                    noteTracking.isWaitingForNote = false
-                    pauseOffset = _gameState.value.currentTimeSeconds
-                    playbackStartTime = SystemClock.elapsedRealtime()
-                    _gameState.update { it.copy(phase = PlayPhase.PLAYING) }
-                }
-            } else if (isCorrectNote) {
-                // Correct note played — unfreeze
+            if (isCorrectNote) {
                 currentNoteDetectedCorrectly = true
-                noteTracking.isWaitingForNote = false
-                // Recalculate playback offset so time resumes from current position
-                pauseOffset = _gameState.value.currentTimeSeconds
-                playbackStartTime = SystemClock.elapsedRealtime()
-                _gameState.update { it.copy(phase = PlayPhase.PLAYING) }
-            } else if (level >= 3 && !isNoise) {
-                // Level 3+: deliberate wrong note — penalize and advance
-                scoreCurrentNote(expectedNote, noteIndex)
                 noteTracking.isWaitingForNote = false
                 pauseOffset = _gameState.value.currentTimeSeconds
                 playbackStartTime = SystemClock.elapsedRealtime()
                 _gameState.update { it.copy(phase = PlayPhase.PLAYING) }
             }
-            // Level 2: wrong notes just ignored (keep waiting)
         } else {
             // Continuous mode (not waiting)
             if (isCorrectNote && !currentNoteDetectedCorrectly) {

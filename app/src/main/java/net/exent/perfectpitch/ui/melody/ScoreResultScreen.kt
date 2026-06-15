@@ -26,7 +26,6 @@ fun ScoreResultModal(
     scoreHistory: List<ScoreEntry> = emptyList(),
     currentLevel: Int = 1,
     canAdvance: Boolean = false,
-    playCountAtLevel: Int = 0,
     onAdvance: () -> Unit = {}
 ) {
     val animatedScore by animateFloatAsState(
@@ -104,22 +103,9 @@ fun ScoreResultModal(
                         Spacer(modifier = Modifier.height(16.dp))
                         HorizontalDivider()
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Played $playCountAtLevel/3 times at this level",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
                         Button(onClick = onAdvance) {
                             Text("Advance to Level ${currentLevel + 1}")
                         }
-                    } else if (playCountAtLevel > 0) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Played $playCountAtLevel/3 times at this level",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 }
             }
