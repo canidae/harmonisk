@@ -145,7 +145,7 @@ fun MelodyPlayScreen(
                         val currentTimeSig = track.timeSignatureAt(currentTick)
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = "$currentBpm  ${currentTimeSig.numerator}/${currentTimeSig.denominator}",
+                            text = "Lv.${gameState.currentLevel}  $currentBpm  ${currentTimeSig.numerator}/${currentTimeSig.denominator}",
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White.copy(alpha = 0.85f)
                         )
@@ -204,10 +204,8 @@ fun MelodyPlayScreen(
                         expanded = showConfigMenu,
                         onDismiss = { showConfigMenu = false },
                         onOpen = { showConfigMenu = true },
-                        waitMode = gameState.waitMode,
-                        onWaitModeChange = { viewModel.setWaitMode(it) },
-                        allowWrongNotes = gameState.allowWrongNotes,
-                        onAllowWrongNotesChange = { viewModel.setAllowWrongNotes(it) },
+                        currentLevel = gameState.currentLevel,
+                        onLevelChange = { viewModel.setLevel(it) },
                         tempoMultiplier = gameState.tempoMultiplier,
                         onTempoChange = { viewModel.setTempoMultiplier(it) },
                         transposeSemitones = gameState.transposeSemitones,
@@ -258,7 +256,8 @@ fun MelodyPlayScreen(
                                 songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
                                 fallSpeedPxPerSec = viewState.fallSpeedPxPerSec,
                                 detectedMidiNote = if (gameState.pitchResult.isValid) gameState.pitchResult.midiNoteNumber else null,
-                                detectedCentsOff = if (gameState.pitchResult.isValid) gameState.pitchResult.centsOff else null
+                                detectedCentsOff = if (gameState.pitchResult.isValid) gameState.pitchResult.centsOff else null,
+                                hideNoteBars = gameState.hideNoteBars
                             ),
                             pianoAtBottom = true,
                             viewMinMidi = viewState.viewMinMidi,
@@ -358,10 +357,8 @@ private fun MelodySettingsMenu(
     expanded: Boolean,
     onDismiss: () -> Unit,
     onOpen: () -> Unit,
-    waitMode: Boolean,
-    onWaitModeChange: (Boolean) -> Unit,
-    allowWrongNotes: Boolean,
-    onAllowWrongNotesChange: (Boolean) -> Unit,
+    currentLevel: Int,
+    onLevelChange: (Int) -> Unit,
     tempoMultiplier: Float,
     onTempoChange: (Float) -> Unit,
     transposeSemitones: Int,
@@ -384,21 +381,17 @@ private fun MelodySettingsMenu(
             offset = DpOffset((-180).dp, 0.dp)
         ) {
             DropdownMenuItem(
-                text = { Text("Wait for note") },
-                trailingIcon = {
-                    Switch(checked = waitMode, onCheckedChange = onWaitModeChange, modifier = Modifier.height(20.dp))
-                },
-                onClick = { onWaitModeChange(!waitMode) }
+                text = { Text("Level: $currentLevel") },
+                onClick = {}
             )
-            if (waitMode) {
-                DropdownMenuItem(
-                    text = { Text("Allow wrong notes") },
-                    trailingIcon = {
-                        Switch(checked = allowWrongNotes, onCheckedChange = onAllowWrongNotesChange, modifier = Modifier.height(20.dp))
-                    },
-                    onClick = { onAllowWrongNotesChange(!allowWrongNotes) }
-                )
-            }
+            Slider(
+                value = (currentLevel - 1).toFloat(),
+                onValueChange = { onLevelChange((it + 0.5f).toInt().coerceIn(1, 5)) },
+                valueRange = 0f..4f,
+                steps = 3,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            HorizontalDivider()
             DropdownMenuItem(text = { Text("Tempo: ${"%.0f".format(tempoMultiplier * 100)}%") }, onClick = {})
             Slider(
                 value = tempoMultiplier,
