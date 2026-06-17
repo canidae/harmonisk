@@ -1,6 +1,7 @@
 package net.exent.perfectpitch.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
@@ -22,7 +23,17 @@ class SettingsRepository(
         private val FREEPLAY_SNAP_ENABLED = booleanPreferencesKey("freeplay_snap_enabled")
         private val FREEPLAY_METRONOME_ENABLED = booleanPreferencesKey("freeplay_metronome_enabled")
         private val MELODY_METRONOME_ENABLED = booleanPreferencesKey("melody_metronome_enabled")
+        private val LANGUAGE_CODE = stringPreferencesKey("language_code")
+
+        private const val PREFS_NAME = "locale_prefs"
+        private const val KEY_LANGUAGE = "language_code"
     }
+
+    private val sharedPrefs: SharedPreferences =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    fun getLanguageCodeSync(): String =
+        sharedPrefs.getString(KEY_LANGUAGE, "system") ?: "system"
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
         AppSettings(
@@ -34,7 +45,8 @@ class SettingsRepository(
             freeplayMinNoteDivision = prefs[FREEPLAY_MIN_NOTE_DIVISION] ?: 16,
             freeplaySnapEnabled = prefs[FREEPLAY_SNAP_ENABLED] ?: true,
             freeplayMetronomeEnabled = prefs[FREEPLAY_METRONOME_ENABLED] ?: false,
-            melodyMetronomeEnabled = prefs[MELODY_METRONOME_ENABLED] ?: false
+            melodyMetronomeEnabled = prefs[MELODY_METRONOME_ENABLED] ?: false,
+            languageCode = prefs[LANGUAGE_CODE] ?: "system"
         )
     }
 
@@ -74,8 +86,14 @@ class SettingsRepository(
         context.dataStore.edit { it[MELODY_METRONOME_ENABLED] = enabled }
     }
 
+    suspend fun updateLanguageCode(code: String) {
+        context.dataStore.edit { it[LANGUAGE_CODE] = code }
+        sharedPrefs.edit().putString(KEY_LANGUAGE, code).apply()
+    }
+
     suspend fun resetToDefaults() {
         context.dataStore.edit { it.clear() }
+        sharedPrefs.edit().clear().apply()
     }
 }
 
@@ -88,5 +106,6 @@ data class AppSettings(
     val freeplayMinNoteDivision: Int = 16,
     val freeplaySnapEnabled: Boolean = true,
     val freeplayMetronomeEnabled: Boolean = false,
-    val melodyMetronomeEnabled: Boolean = false
+    val melodyMetronomeEnabled: Boolean = false,
+    val languageCode: String = "system"
 )
