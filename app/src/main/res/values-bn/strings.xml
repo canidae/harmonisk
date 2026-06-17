@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">পারফেক্ট পিচ</string>
+
+    <!-- Global -->
+    <string name="back">পেছনে</string>
+    <string name="settings">সেটিংস</string>
+    <string name="microphone">মাইক্রোফোন</string>
+    <string name="speaker">স্পিকার</string>
+    <string name="save">সংরক্ষণ</string>
+    <string name="cancel">বাতিল</string>
+    <string name="edit">সম্পাদনা</string>
+    <string name="stop">থামান</string>
+    <string name="auto">অটো</string>
+
+    <!-- Home screen -->
+    <string name="home_title">পারফেক্ট পিচ</string>
+    <string name="home_heading">🎵 পারফেক্ট পিচ</string>
+    <string name="home_free_play_title">মুক্ত বাজনা</string>
+    <string name="home_free_play_desc">মুক্তভাবে বাজান এবং একটি গান রেকর্ড করুন</string>
+    <string name="home_free_play_desc_short">পিচ প্রতিক্রিয়া</string>
+    <string name="home_melody_title">সুর বাজান</string>
+    <string name="home_melody_desc">একটি MIDI সুর অনুসরণ করুন</string>
+    <string name="home_melody_desc_short">সুর অনুসরণ করুন</string>
+    <string name="home_tuner_title">যন্ত্র টিউন করুন</string>
+    <string name="home_tuner_desc">আপনার পিচ দেখুন এবং টিউন করুন</string>
+    <string name="home_tuner_desc_short">টিউন করুন</string>
+    <string name="home_uncalibrated">অডিও ক্যালিব্রেট করা হয়নি: %1$s</string>
+
+    <!-- Permissions -->
+    <string name="permission_title">মাইক্রোফোন অ্যাক্সেস প্রয়োজন</string>
+    <string name="permission_permanently_denied">মাইক্রোফোন অ্যাক্সেস স্থায়ীভাবে অস্বীকার করা হয়েছে। অনুগ্রহ করে ডিভাইস সেটিংসে এটি সক্ষম করুন।</string>
+    <string name="permission_rationale">পারফেক্ট পিচের আপনি যে নোট বাজান তা শনাক্ত করতে মাইক্রোফোন অ্যাক্সেস প্রয়োজন। অনুগ্রহ করে অনুমতি দিন।</string>
+    <string name="permission_description">পারফেক্ট পিচের আপনার যন্ত্র শুনতে এবং রিয়েল টাইমে পিচ শনাক্ত করতে আপনার মাইক্রোফোনে অ্যাক্সেস প্রয়োজন।</string>
+    <string name="permission_open_settings">সেটিংস খুলুন</string>
+    <string name="permission_grant">অনুমতি দিন</string>
+
+    <!-- Settings -->
+    <string name="settings_title">সেটিংস</string>
+    <string name="settings_concert_pitch">কনসার্ট পিচ</string>
+    <string name="settings_concert_pitch_value">A4 = %1$.1f Hz</string>
+    <string name="settings_concert_pitch_min">420 Hz</string>
+    <string name="settings_concert_pitch_max">460 Hz</string>
+    <string name="settings_mic_sensitivity">মাইক্রোফোন সংবেদনশীলতা</string>
+    <string name="settings_silence_threshold">নীরবতা সীমা: %1$.0f dB</string>
+    <string name="settings_audio_visual_delay">অডিও/ভিজ্যুয়াল বিলম্ব</string>
+    <string name="settings_in_out">ইনপুট/আউটপুট: %1$s / %2$s</string>
+    <string name="settings_audio_delay">অডিও বিলম্ব: %1$d ms</string>
+    <string name="settings_edit_audio_delay">অডিও বিলম্ব সম্পাদনা করুন</string>
+    <string name="settings_delay_ms">বিলম্ব (ms)</string>
+    <string name="settings_auto_calibrate">অটো</string>
+    <string name="settings_calibrating_stop">থামান</string>
+    <string name="settings_no_detection">মাইক্রোফোন কোনো স্বর সনাক্ত করতে পারে না</string>
+    <string name="settings_calibrating">ক্যালিব্রেট করছে… %1$d/5 স্বর সনাক্ত</string>
+    <string name="settings_visual_delay">ভিজ্যুয়াল বিলম্ব: %1$d ms</string>
+    <string name="settings_visual_delay_min">0 ms</string>
+    <string name="settings_visual_delay_max">50 ms</string>
+    <string name="settings_reset_dialog_title">ডিফল্টে রিসেট করবেন?</string>
+    <string name="settings_reset_dialog_body">সমস্ত সেটিংস তাদের ডিফল্ট মানগুলিতে ফিরে যাবে, যার মধ্যে রয়েছে:\n\n\u2022 কনসার্ট পিচ (A = 440 Hz)\n\u2022 নীরবতা সীমা\n\u2022 মুক্ত বাজনার গতি, টেম্পো, সময়ের স্বরলিপি, নোট স্ন্যাপ</string>
+    <string name="settings_reset">রিসেট</string>
+    <string name="settings_reset_to_defaults">ডিফল্টে রিসেট করুন</string>
+    <string name="settings_language">ভাষা</string>
+
+    <!-- Free Play -->
+    <string name="freeplay_mic">মাইক</string>
+    <string name="freeplay_midi">MIDI</string>
+    <string name="freeplay_synth">সিন্থ</string>
+    <string name="freeplay_none">কিছুই নয়</string>
+    <string name="freeplay_microphone">মাইক্রোফোন</string>
+    <string name="freeplay_internal_synth">অভ্যন্তরীণ সিন্থেসাইজার</string>
+    <string name="freeplay_none_silent">কিছুই নয় (নীরব)</string>
+    <string name="freeplay_help">সাহায্য</string>
+    <string name="freeplay_metronome_on">মেট্রোনোম চালু</string>
+    <string name="freeplay_metronome_off">মেট্রোনোম বন্ধ</string>
+    <string name="freeplay_settings">সেটিংস</string>
+    <string name="freeplay_snap_notes">নোট স্ন্যাপ</string>
+    <string name="freeplay_min_note_duration">সর্বনিম্ন নোট সময়: %1$s</string>
+    <string name="freeplay_piano">পিয়ানো: %1$s</string>
+    <string name="freeplay_import_midi">MIDI আমদানি</string>
+    <string name="freeplay_export_midi">MIDI রপ্তানি</string>
+    <string name="freeplay_help_title">মুক্ত বাজনা — সাহায্য</string>
+    <string name="freeplay_help_got_it">বুঝেছি</string>
+    <string name="freeplay_help_note_editing">নোট সম্পাদনা</string>
+    <string name="freeplay_help_looping">লুপ</string>
+    <string name="freeplay_help_tap_note">একটি নোট বারে ট্যাপ করুন</string>
+    <string name="freeplay_help_tap_note_desc">সম্পাদনার জন্য নোট নির্বাচন করুন।</string>
+    <string name="freeplay_help_drag_note">নির্বাচিত নোট টেনে আনুন</string>
+    <string name="freeplay_help_drag_note_desc">সময়/সেমিটোন পরিবর্তন করুন।</string>
+    <string name="freeplay_help_drag_handle">একটি হ্যান্ডেল টেনে আনুন</string>
+    <string name="freeplay_help_drag_handle_desc">শুরু/শেষ সামঞ্জস্য করুন।</string>
+    <string name="freeplay_help_split">বিভক্ত (\u2702)</string>
+    <string name="freeplay_help_split_desc">নোটটি অর্ধেক করে।</string>
+    <string name="freeplay_help_delete">মুছুন (\uD83D\uDDD1)</string>
+    <string name="freeplay_help_delete_desc">নোটটি সরিয়ে দেয়।</string>
+    <string name="freeplay_help_tap_empty">খালি জায়গায় ট্যাপ করুন</string>
+    <string name="freeplay_help_tap_empty_desc">নোট নির্বাচন বাতিল করুন।</string>
+    <string name="freeplay_help_loop_info">বর্তমান অবস্থানে লক করতে একটি বার নম্বরে ট্যাপ করুন (কমলা হয়ে যায়)। আবার একই লক করা নম্বরে ট্যাপ করে আনলক করুন।</string>
+    <string name="freeplay_bpm">BPM</string>
+    <string name="freeplay_meter">মিটার</string>
+    <string name="freeplay_loop">লুপ</string>
+    <string name="freeplay_voice">ভয়েস %1$d</string>
+    <string name="freeplay_add_voice">+ ভয়েস যোগ করুন</string>
+    <string name="freeplay_split_note">নোট বিভক্ত করুন</string>
+    <string name="freeplay_delete_note">নোট মুছুন</string>
+    <string name="freeplay_play">বাজান</string>
+    <string name="freeplay_record">রেকর্ড করুন</string>
+    <string name="freeplay_piano_both">উপরের + নিচের কীবোর্ড</string>
+    <string name="freeplay_piano_upper">শুধু উপরের কীবোর্ড</string>
+    <string name="freeplay_piano_lower">শুধু নিচের কীবোর্ড</string>
+    <string name="freeplay_piano_none">কোনো পিয়ানো কীবোর্ড নেই</string>
+    <string name="freeplay_end_bar_mismatch">শেষ বার শুরু বার থেকে ভিন্ন হতে হবে</string>
+
+    <!-- Tuner -->
+    <string name="tuner_title">যন্ত্র টিউন করুন</string>
+    <string name="tuner_frequency">%1$.1f Hz</string>
+    <string name="tuner_reference">রেফারেন্স: %1$.0f Hz</string>
+
+    <!-- Melody screen -->
+    <string name="melody_title">সুর বাজান</string>
+    <string name="melody_choose">একটি সুর চয়ন করুন</string>
+    <string name="melody_import_file">MIDI ফাইল আমদানি করুন</string>
+    <string name="melody_stop_preview">পূর্বরূপ বন্ধ করুন</string>
+    <string name="melody_preview">পূর্বরূপ</string>
+    <string name="melody_failed_load_midi">MIDI ফাইল লোড করতে ব্যর্থ</string>
+    <string name="melody_failed_load_melody">সুর লোড করতে ব্যর্থ</string>
+    <string name="melody_difficulty">কঠিনতা: </string>
+    <string name="melody_no_playthroughs">এখনও কোনো প্লেথ্রু নেই</string>
+    <string name="melody_no_melodies">কোনো বান্ডিল সুর উপলব্ধ নেই।\nশুরু করতে একটি MIDI ফাইল আমদানি করুন।</string>
+    <string name="no_melodies_available">কোনো বান্ডিল সুর উপলব্ধ নেই।\nশুরু করতে একটি MIDI ফাইল আমদানি করুন।</string>
+
+    <!-- Melody Play -->
+    <string name="melody_play_midi_input">MIDI ইনপুট</string>
+    <string name="melody_play_mic_input">মাইক ইনপুট</string>
+    <string name="melody_play_midi_output_on">MIDI আউটপুট সক্রিয়</string>
+    <string name="melody_play_midi_output_off">MIDI আউটপুট বন্ধ</string>
+    <string name="melody_play_status">Lv.%1$d  %2$d  %3$d/%4$d</string>
+    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
+    <string name="melody_play_start">শুরু</string>
+    <string name="melody_play_resume">চালিয়ে যান</string>
+    <string name="melody_play_scroll_start">শুরুতে স্ক্রোল করুন</string>
+    <string name="melody_play_results">ফলাফল</string>
+    <string name="melody_play_again">আবার খেলুন</string>
+    <string name="melody_play_go_back">পেছনে যান</string>
+    <string name="melody_play_level">স্তর: %1$d</string>
+    <string name="melody_play_tempo">টেম্পো: %1$.0f%%</string>
+    <string name="melody_play_transpose_0">ট্রান্সপোজ: 0</string>
+    <string name="melody_play_transpose_plus">ট্রান্সপোজ: +%1$d</string>
+    <string name="melody_play_transpose">ট্রান্সপোজ: %1$d</string>
+    <string name="melody_play_melody_audio">সুর অডিও বাজান</string>
+    <string name="melody_play_audio_delay">অডিও বিলম্ব: %1$d ms</string>
+    <string name="melody_play_visual_delay">ভিজ্যুয়াল বিলম্ব: %1$d ms</string>
+    <string name="melody_play_uncalibrated">%1$s ক্যালিব্রেট করা হয়নি</string>
+
+    <!-- Score results -->
+    <string name="score_dismiss">বাতিল করুন</string>
+    <string name="score_level">স্তর %1$d</string>
+    <string name="score_notes_hit">হিট নোট</string>
+    <string name="score_perfect">পারফেক্ট</string>
+    <string name="score_great">দুর্দান্ত</string>
+    <string name="retry">পুনরায় চেষ্টা করুন</string>
+    <string name="next_level">স্তর %d</string>
+    <string name="level_2_change">স্তর 2-এ পিচ নির্ভুলতা আপনার স্কোরে গণনা করবে</string>
+    <string name="level_3_change">স্তর 3-এ ভুল নোট আপনার স্কোর কমিয়ে দেবে</string>
+    <string name="level_4_change">স্তর 4-এ গেমটি আপনার নোট বাজানোর অপেক্ষা করবে না</string>
+    <string name="level_5_change">স্তর 5-এ পতনশীল নোট বারগুলি দেখানো হবে না</string>
+
+    <!-- Score summary -->
+    <string name="score_pitch_accuracy">পিচ নির্ভুলতা</string>
+    <string name="score_duration_accuracy">সময় নির্ভুলতা</string>
+    <string name="score_progress">অগ্রগতি</string>
+
+    <!-- Note divisions -->
+    <string name="note_quarter">\u2669 চতুর্থাংশ</string>
+    <string name="note_eighth">\u266A অষ্টমাংশ</string>
+    <string name="note_sixteenth">\u266C ষোড়শাংশ</string>
+    <string name="note_thirty_second">বত্রিশতম</string>
+</resources>
