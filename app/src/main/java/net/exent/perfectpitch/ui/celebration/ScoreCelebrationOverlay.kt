@@ -127,7 +127,7 @@ fun ScoreCelebrationOverlay(
                     .spread(120)
                     .setSpeedBetween(10f, 25f)
                     .setDamping(0.85f)
-                    .sizes(listOf(Size(6), Size(10)))
+                    .sizes(celebrationLevel.confettiSizes)
                     .colors(CELEBRATION_COLORS)
                     .shapes(listOf(Shape.Circle, Shape.Square, Shape.Rectangle(0.5f)))
                     .timeToLive(5000L)
@@ -140,7 +140,7 @@ fun ScoreCelebrationOverlay(
                     .spread(60)
                     .setSpeedBetween(15f, 30f)
                     .setDamping(0.85f)
-                    .sizes(listOf(Size(6), Size(10)))
+                    .sizes(celebrationLevel.confettiSizes)
                     .colors(CELEBRATION_COLORS)
                     .shapes(listOf(Shape.Circle, Shape.Square, Shape.Rectangle(0.5f)))
                     .timeToLive(5000L)
@@ -153,7 +153,7 @@ fun ScoreCelebrationOverlay(
                     .spread(60)
                     .setSpeedBetween(15f, 30f)
                     .setDamping(0.85f)
-                    .sizes(listOf(Size(6), Size(10)))
+                    .sizes(celebrationLevel.confettiSizes)
                     .colors(CELEBRATION_COLORS)
                     .shapes(listOf(Shape.Circle, Shape.Square, Shape.Rectangle(0.5f)))
                     .timeToLive(5000L)
@@ -182,6 +182,16 @@ fun ScoreCelebrationOverlay(
             parties,
             null
         )
+
+        // Music note particles
+        val musicNotePayload = payloads.filterIsInstance<CelebrationPayload.MusicNotes>().firstOrNull()
+        if (musicNotePayload != null) {
+            MusicNoteParticles(
+                modifier = Modifier.fillMaxSize(),
+                count = musicNotePayload.count,
+                triggerKey = celebrationLevel
+            )
+        }
 
         // Firework bursts (on top of everything)
         if (fireworkBursts > 0) {
