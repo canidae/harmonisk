@@ -5,8 +5,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import net.exent.perfectpitch.R
 import net.exent.perfectpitch.music.MelodyScore
 import net.exent.perfectpitch.music.ScoreBreakdown
 import net.exent.perfectpitch.music.toBreakdown
@@ -20,8 +22,8 @@ fun ScoreSummaryPanel(
     val breakdown = score.toBreakdown()
 
     Column(modifier = modifier.padding(top = 8.dp)) {
-        BreakdownRow("Pitch accuracy", breakdown.avgPitchScore)
-        BreakdownRow("Duration accuracy", breakdown.avgDurationScore)
+        BreakdownRow(stringResource(R.string.score_pitch_accuracy), breakdown.avgPitchScore)
+        BreakdownRow(stringResource(R.string.score_duration_accuracy), breakdown.avgDurationScore)
     }
 }
 

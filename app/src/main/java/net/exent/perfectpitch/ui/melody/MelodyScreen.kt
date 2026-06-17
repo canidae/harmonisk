@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -75,7 +76,7 @@ fun MelodyScreen(
                 previewingMelody = null
                 onStartPlay()
             } else {
-                Toast.makeText(context, "Failed to load MIDI file", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.melody_failed_load_midi), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -83,10 +84,10 @@ fun MelodyScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Play by Melody") },
+                title = { Text(stringResource(R.string.melody_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 }
             )
@@ -99,7 +100,7 @@ fun MelodyScreen(
                 .padding(16.dp)
         ) {
             Text(
-                text = "Choose a Melody",
+                text = stringResource(R.string.melody_choose),
                 style = MaterialTheme.typography.headlineMedium
             )
 
@@ -125,7 +126,7 @@ fun MelodyScreen(
                                 if (viewModel.loadMelody(info)) {
                                     onStartPlay()
                                 } else {
-                                    Toast.makeText(context, "Failed to load melody", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.melody_failed_load_melody), Toast.LENGTH_SHORT).show()
                                 }
                             },
                             onTogglePreview = {
@@ -164,7 +165,7 @@ fun MelodyScreen(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Import MIDI File")
+                Text(stringResource(R.string.melody_import_file))
             }
         }
     }
@@ -210,7 +211,7 @@ private fun MelodyCard(
                 IconButton(onClick = onTogglePreview) {
                     Icon(
                         imageVector = if (isPreviewing) Icons.Filled.Close else Icons.Filled.PlayArrow,
-                        contentDescription = if (isPreviewing) "Stop preview" else "Preview melody",
+                        contentDescription = if (isPreviewing) stringResource(R.string.melody_stop_preview) else stringResource(R.string.melody_preview),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -262,7 +263,7 @@ private fun DifficultyBadge(difficulty: Float) {
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = "Difficulty: ",
+            text = stringResource(R.string.melody_difficulty),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -293,7 +294,7 @@ private fun MelodyProgressSection(
 
         if (scoreHistory.isEmpty()) {
             Text(
-                "No playthroughs yet",
+                stringResource(R.string.melody_no_playthroughs),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

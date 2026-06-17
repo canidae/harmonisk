@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
@@ -93,7 +94,7 @@ private fun PermissionRequest(
         )
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = "Microphone Access Required",
+            text = stringResource(R.string.permission_title),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center
         )
@@ -110,7 +111,7 @@ private fun PermissionRequest(
         )
         Spacer(modifier = Modifier.height(32.dp))
         Button(onClick = onRequestPermission) {
-            Text(if (permanentlyDenied) "Open Settings" else "Grant Permission")
+            Text(if (permanentlyDenied) stringResource(R.string.permission_open_settings) else stringResource(R.string.permission_grant))
         }
     }
 }

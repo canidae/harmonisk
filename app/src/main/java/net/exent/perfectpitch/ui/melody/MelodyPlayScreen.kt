@@ -22,11 +22,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import net.exent.perfectpitch.R
 import net.exent.perfectpitch.ui.components.CanvasMode
 import net.exent.perfectpitch.ui.components.KeepScreenOn
 import net.exent.perfectpitch.ui.components.PIANO_HEIGHT_DP
@@ -57,6 +60,7 @@ fun MelodyPlayScreen(
     val canAdvance by viewModel.canAdvanceLevel.collectAsStateWithLifecycle()
     val celebrationLevel by viewModel.celebrationLevel.collectAsStateWithLifecycle()
     val density = LocalDensity.current
+    val context = LocalContext.current
     var showResultsModal by remember { mutableStateOf(false) }
     var showConfigMenu by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -82,8 +86,8 @@ fun MelodyPlayScreen(
         val deviceName = uncalibratedDevice
         if (deviceName != null && viewModel.shouldShowCalibrationPrompt()) {
             val result = snackbarHostState.showSnackbar(
-                message = "$deviceName is not calibrated",
-                actionLabel = "Settings",
+                message = context.getString(R.string.melody_play_uncalibrated, deviceName),
+                actionLabel = context.getString(R.string.settings),
                 duration = SnackbarDuration.Long
             )
             if (result == SnackbarResult.ActionPerformed) {
@@ -117,7 +121,7 @@ fun MelodyPlayScreen(
                         ) {
                             Icon(
                                 if (isMidi) Icons.Filled.MusicNote else Icons.Filled.Mic,
-                                contentDescription = if (isMidi) "MIDI input" else "Mic input",
+                                contentDescription = if (isMidi) stringResource(R.string.melody_play_midi_input) else stringResource(R.string.melody_play_mic_input),
                                 tint = if (isMidi) MidiPurple else OVERLAY_ICON_TINT,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -133,7 +137,7 @@ fun MelodyPlayScreen(
                         ) {
                             Icon(
                                 Icons.Filled.MusicNote,
-                                contentDescription = if (isMidi) "MIDI output active" else "MIDI output off",
+                                contentDescription = if (isMidi) stringResource(R.string.melody_play_midi_output_on) else stringResource(R.string.melody_play_midi_output_off),
                                 tint = if (isMidi) MidiPurple else OVERLAY_ICON_TINT,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -148,7 +152,7 @@ fun MelodyPlayScreen(
                         val currentTimeSig = track.timeSignatureAt(currentTick)
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = "Lv.${gameState.currentLevel}  $currentBpm  ${currentTimeSig.numerator}/${currentTimeSig.denominator}",
+                            text = stringResource(R.string.melody_play_status, gameState.currentLevel, currentBpm, currentTimeSig.numerator, currentTimeSig.denominator),
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White.copy(alpha = 0.85f)
                         )
@@ -164,7 +168,7 @@ fun MelodyPlayScreen(
                             }
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "$progress%  $notesHit/${track.notes.size}",
+                                text = stringResource(R.string.melody_play_progress, progress, notesHit, track.notes.size),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(alpha = 0.7f)
                             )
@@ -182,7 +186,7 @@ fun MelodyPlayScreen(
                         ) {
                             Icon(
                                 Icons.Filled.MusicNote,
-                                contentDescription = if (isPreviewPlaying) "Stop preview" else "Preview melody",
+                                contentDescription = if (isPreviewPlaying) stringResource(R.string.melody_stop_preview) else stringResource(R.string.melody_preview),
                                 tint = if (isPreviewPlaying) MetronomeBlue else OVERLAY_ICON_TINT,
                                 modifier = Modifier.size(17.dp)
                             )
@@ -196,7 +200,7 @@ fun MelodyPlayScreen(
                     ) {
                         Icon(
                             Icons.Filled.Timer,
-                            contentDescription = if (gameState.metronomeEnabled) "Metronome on" else "Metronome off",
+                            contentDescription = if (gameState.metronomeEnabled) stringResource(R.string.freeplay_metronome_on) else stringResource(R.string.freeplay_metronome_off),
                             tint = if (gameState.metronomeEnabled) MetronomeBlue else OVERLAY_ICON_TINT,
                             modifier = Modifier.size(17.dp)
                         )
@@ -284,7 +288,7 @@ fun MelodyPlayScreen(
                             ) {
                                 Icon(
                                     Icons.Filled.PlayArrow,
-                                    contentDescription = if (gameState.phase == PlayPhase.READY) "Start" else "Resume",
+                                    contentDescription = if (gameState.phase == PlayPhase.READY) stringResource(R.string.melody_play_start) else stringResource(R.string.melody_play_resume),
                                     tint = PlayGreen.copy(alpha = 0.9f),
                                     modifier = Modifier.size(40.dp)
                                 )
@@ -307,7 +311,7 @@ fun MelodyPlayScreen(
                                 ) {
                                     Icon(
                                         Icons.Filled.KeyboardArrowDown,
-                                        contentDescription = "Scroll to beginning",
+                                        contentDescription = stringResource(R.string.melody_play_scroll_start),
                                         tint = OVERLAY_ICON_TINT,
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -318,13 +322,13 @@ fun MelodyPlayScreen(
                                     onClick = { showResultsModal = true },
                                     modifier = Modifier.size(OVERLAY_BUTTON_SIZE).background(OVERLAY_BG, CircleShape)
                                 ) {
-                                    Icon(Icons.Filled.Star, contentDescription = "Results", tint = OVERLAY_ICON_TINT, modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Filled.Star, contentDescription = stringResource(R.string.melody_play_results), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(20.dp))
                                 }
                                 IconButton(
                                     onClick = { viewModel.startPlaying() },
                                     modifier = Modifier.size(OVERLAY_BUTTON_SIZE).background(OVERLAY_BG, CircleShape)
                                 ) {
-                                    Icon(Icons.Filled.Refresh, contentDescription = "Play Again", tint = OVERLAY_ICON_TINT, modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.melody_play_again), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(20.dp))
                                 }
                             }
                         }
@@ -333,9 +337,9 @@ fun MelodyPlayScreen(
                         // Error fallback — melody failed to load
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Failed to load melody", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
+                                Text(stringResource(R.string.melody_failed_load_melody), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
                                 Spacer(Modifier.height(16.dp))
-                                Button(onClick = onBack) { Text("Go Back") }
+                                Button(onClick = onBack) { Text(stringResource(R.string.melody_play_go_back)) }
                             }
                         }
                     }
@@ -388,7 +392,7 @@ private fun MelodySettingsMenu(
             onClick = onOpen,
             modifier = Modifier.size(PANEL_BTN_SIZE)
         ) {
-            Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
+            Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
         }
         DropdownMenu(
             expanded = expanded,
@@ -396,7 +400,7 @@ private fun MelodySettingsMenu(
             offset = DpOffset((-180).dp, 0.dp)
         ) {
             DropdownMenuItem(
-                text = { Text("Level: $currentLevel") },
+                text = { Text(stringResource(R.string.melody_play_level, currentLevel)) },
                 onClick = {}
             )
             Slider(
@@ -407,7 +411,7 @@ private fun MelodySettingsMenu(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
             HorizontalDivider()
-            DropdownMenuItem(text = { Text("Tempo: ${"%.0f".format(tempoMultiplier * 100)}%") }, onClick = {})
+            DropdownMenuItem(text = { Text(stringResource(R.string.melody_play_tempo, tempoMultiplier * 100)) }, onClick = {})
             Slider(
                 value = tempoMultiplier,
                 onValueChange = onTempoChange,
@@ -420,9 +424,9 @@ private fun MelodySettingsMenu(
                 text = {
                     Text(
                         when {
-                            transposeSemitones == 0 -> "Transpose: 0"
-                            transposeSemitones > 0  -> "Transpose: +$transposeSemitones"
-                            else                    -> "Transpose: $transposeSemitones"
+                            transposeSemitones == 0 -> stringResource(R.string.melody_play_transpose_0)
+                            transposeSemitones > 0  -> stringResource(R.string.melody_play_transpose_plus, transposeSemitones)
+                            else                    -> stringResource(R.string.melody_play_transpose, transposeSemitones)
                         }
                     )
                 },
@@ -437,7 +441,7 @@ private fun MelodySettingsMenu(
             )
             HorizontalDivider()
             DropdownMenuItem(
-                text = { Text("Play melody audio") },
+                text = { Text(stringResource(R.string.melody_play_melody_audio)) },
                 trailingIcon = {
                     Switch(checked = playMelodyAudio, onCheckedChange = onPlayMelodyAudioChange, modifier = Modifier.height(20.dp))
                 },
@@ -445,11 +449,11 @@ private fun MelodySettingsMenu(
             )
             HorizontalDivider()
             DropdownMenuItem(
-                text = { Text("Audio delay: ${audioDelay}ms") },
+                text = { Text(stringResource(R.string.melody_play_audio_delay, audioDelay)) },
                 onClick = {}
             )
             DropdownMenuItem(
-                text = { Text("Visual delay: ${visualDelay}ms") },
+                text = { Text(stringResource(R.string.melody_play_visual_delay, visualDelay)) },
                 onClick = {}
             )
         }

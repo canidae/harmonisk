@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -60,7 +61,7 @@ fun ScoreResultModal(
                         onClick = onDismiss,
                         modifier = Modifier.align(Alignment.TopEnd)
                     ) {
-                        Icon(Icons.Filled.Close, contentDescription = "Dismiss")
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.score_dismiss))
                     }
 
                     Column(
@@ -71,7 +72,7 @@ fun ScoreResultModal(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Level $currentLevel",
+                            text = stringResource(R.string.score_level, currentLevel),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -90,9 +91,9 @@ fun ScoreResultModal(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            StatCard("Notes Hit", "${melodyScore.notesHit}/${melodyScore.totalNotes}")
-                            StatCard("Perfect", "${melodyScore.perfectNotes}")
-                            StatCard("Great", "${melodyScore.greatNotes}")
+                            StatCard(stringResource(R.string.score_notes_hit), "${melodyScore.notesHit}/${melodyScore.totalNotes}")
+                            StatCard(stringResource(R.string.score_perfect), "${melodyScore.perfectNotes}")
+                            StatCard(stringResource(R.string.score_great), "${melodyScore.greatNotes}")
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))

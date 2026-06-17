@@ -20,6 +20,7 @@ import net.exent.perfectpitch.midi.MidiOutputSender
 import net.exent.perfectpitch.midi.MidiWriter
 import net.exent.perfectpitch.music.NoteUtils
 import net.exent.perfectpitch.music.PitchResult
+import net.exent.perfectpitch.R
 import net.exent.perfectpitch.ui.MAX_FALL_SPEED
 import net.exent.perfectpitch.ui.MIN_FALL_SPEED
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -394,7 +395,7 @@ class FreePlayViewModel @Inject constructor(
         // Unlock if tapping the already-locked bar
         if (locked != null && locked == nowBar) { _state.update { it.copy(loopEndBar = null) }; return }
         val effectiveStart = s.loopStartBar ?: 1
-        if (nowBar == effectiveStart) { _snackbarMessage.tryEmit("End bar must differ from start bar"); return }
+        if (nowBar == effectiveStart) { _snackbarMessage.tryEmit(appContext.getString(R.string.freeplay_end_bar_mismatch)); return }
         if (s.loopStartBar != null && nowBar < s.loopStartBar) {
             _state.update { it.copy(loopStartBar = nowBar, loopEndBar = s.loopStartBar) }; return
         }

@@ -9,9 +9,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import net.exent.perfectpitch.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,16 +32,18 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val uncalibratedMsg by viewModel.uncalibratedDevices.collectAsState()
+    val uncalibratedDeviceNames by viewModel.uncalibratedDeviceNames.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(uncalibratedMsg) {
-        val msg = uncalibratedMsg
-        if (msg != null && viewModel.shouldShowPrompt()) {
+    LaunchedEffect(uncalibratedDeviceNames) {
+        val names = uncalibratedDeviceNames
+        if (names != null && viewModel.shouldShowPrompt()) {
+            val msg = context.getString(R.string.home_uncalibrated, names.joinToString(", "))
             val result = snackbarHostState.showSnackbar(
                 message = msg,
-                actionLabel = "Settings",
+                actionLabel = context.getString(R.string.settings),
                 duration = SnackbarDuration.Indefinite
             )
             if (result == SnackbarResult.ActionPerformed) {
@@ -52,10 +57,10 @@ fun HomeScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Perfect Pitch") },
+                title = { Text(stringResource(R.string.home_title)) },
                 actions = {
                     IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
                     }
                 }
             )
@@ -98,7 +103,7 @@ private fun PortraitContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "🎵 Perfect Pitch",
+            text = stringResource(R.string.home_heading),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center
         )
@@ -107,8 +112,8 @@ private fun PortraitContent(
 
         ModeCard(
             emoji = "🎵",
-            title = "Free Play",
-            description = "Play freely and get pitch feedback",
+            title = stringResource(R.string.home_free_play_title),
+            description = stringResource(R.string.home_free_play_desc),
             onClick = onNavigateToFreePlay
         )
 
@@ -116,8 +121,8 @@ private fun PortraitContent(
 
         ModeCard(
             emoji = "🎼",
-            title = "Play by Melody",
-            description = "Follow along with a MIDI melody",
+            title = stringResource(R.string.home_melody_title),
+            description = stringResource(R.string.home_melody_desc),
             onClick = onNavigateToMelody
         )
 
@@ -125,8 +130,8 @@ private fun PortraitContent(
 
         ModeCard(
             emoji = "🎸",
-            title = "Tune Instrument",
-            description = "See your pitch and tune up",
+            title = stringResource(R.string.home_tuner_title),
+            description = stringResource(R.string.home_tuner_desc),
             onClick = onNavigateToTuner
         )
     }
@@ -148,24 +153,24 @@ private fun LandscapeContent(
             modifier = Modifier.weight(1f),
             isLandscape = true,
             emoji = "🎵",
-            title = "Free Play",
-            description = "Pitch feedback",
+            title = stringResource(R.string.home_free_play_title),
+            description = stringResource(R.string.home_free_play_desc_short),
             onClick = onNavigateToFreePlay
         )
         ModeCard(
             modifier = Modifier.weight(1f),
             isLandscape = true,
             emoji = "🎼",
-            title = "Play by Melody",
-            description = "Follow a melody",
+            title = stringResource(R.string.home_melody_title),
+            description = stringResource(R.string.home_melody_desc_short),
             onClick = onNavigateToMelody
         )
         ModeCard(
             modifier = Modifier.weight(1f),
             isLandscape = true,
             emoji = "🎸",
-            title = "Tune Instrument",
-            description = "Tune up",
+            title = stringResource(R.string.home_tuner_title),
+            description = stringResource(R.string.home_tuner_desc_short),
             onClick = onNavigateToTuner
         )
     }
@@ -242,7 +247,7 @@ class HomeViewModel @Inject constructor(
     private val audioDelayRepository: AudioDelayRepository
 ) : ViewModel() {
 
-    val uncalibratedDevices: StateFlow<String?> = combine(
+    val uncalibratedDeviceNames: StateFlow<List<String>?> = combine(
         audioDeviceMonitor.currentInputDevice,
         audioDeviceMonitor.currentDevice,
         audioDelayRepository.allProfiles
@@ -254,8 +259,7 @@ class HomeViewModel @Inject constructor(
         if (!profiles.containsKey(outputDevice.deviceKey)) {
             uncalibrated.add(outputDevice.name)
         }
-        if (uncalibrated.isEmpty()) null
-        else "Audio not calibrated: ${uncalibrated.joinToString(", ")}"
+        uncalibrated.ifEmpty { null }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private var promptDismissed = false

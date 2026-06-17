@@ -8,6 +8,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.res.stringResource
+import net.exent.perfectpitch.R
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -29,10 +31,10 @@ fun TunerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Tune Instrument") },
+                title = { Text(stringResource(R.string.tuner_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 }
             )
@@ -73,7 +75,7 @@ fun TunerScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "${"%.1f".format(state.displayedResult.frequency)} Hz",
+                        text = stringResource(R.string.tuner_frequency, state.displayedResult.frequency),
                         style = MaterialTheme.typography.headlineMedium,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.alpha(if (state.displayedResult.isValid) 1f else 0f)
@@ -82,7 +84,7 @@ fun TunerScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Reference: ${"%.0f".format(state.referenceFrequency)} Hz",
+                        text = stringResource(R.string.tuner_reference, state.referenceFrequency),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center

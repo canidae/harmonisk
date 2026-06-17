@@ -10,9 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import net.exent.perfectpitch.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,14 +29,15 @@ fun SettingsScreen(
     val calibrationNoDetection by viewModel.calibrationNoDetection.collectAsState()
     var showEditAudioDialog by remember { mutableStateOf(false) }
     var editAudioText by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 }
             )
@@ -44,22 +48,17 @@ fun SettingsScreen(
         if (showResetConfirm) {
             AlertDialog(
                 onDismissRequest = { showResetConfirm = false },
-                title = { Text("Reset to defaults?") },
+                title = { Text(stringResource(R.string.settings_reset_dialog_title)) },
                 text = {
-                    Text(
-                        "All settings will be returned to their default values, including:\n\n" +
-                        "\u2022 Concert pitch (A = 440 Hz)\n" +
-                        "\u2022 Silence threshold\n" +
-                        "\u2022 Free Play speed, tempo, time signature, note snapping"
-                    )
+                    Text(stringResource(R.string.settings_reset_dialog_body))
                 },
                 confirmButton = {
                     TextButton(onClick = { viewModel.resetToDefaults(); showResetConfirm = false }) {
-                        Text("Reset")
+                        Text(stringResource(R.string.settings_reset))
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showResetConfirm = false }) { Text("Cancel") }
+                    TextButton(onClick = { showResetConfirm = false }) { Text(stringResource(R.string.cancel)) }
                 }
             )
         }
@@ -67,12 +66,12 @@ fun SettingsScreen(
         if (showEditAudioDialog) {
             AlertDialog(
                 onDismissRequest = { showEditAudioDialog = false },
-                title = { Text("Edit Audio Delay") },
+                title = { Text(stringResource(R.string.settings_edit_audio_delay)) },
                 text = {
                     OutlinedTextField(
                         value = editAudioText,
                         onValueChange = { editAudioText = it },
-                        label = { Text("Delay (ms)") },
+                        label = { Text(stringResource(R.string.settings_delay_ms)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true
                     )
@@ -81,10 +80,10 @@ fun SettingsScreen(
                     TextButton(onClick = {
                         viewModel.setAudioDelayFromText(editAudioText)
                         showEditAudioDialog = false
-                    }) { Text("Save") }
+                    }) { Text(stringResource(R.string.save)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showEditAudioDialog = false }) { Text("Cancel") }
+                    TextButton(onClick = { showEditAudioDialog = false }) { Text(stringResource(R.string.cancel)) }
                 }
             )
         }
@@ -98,9 +97,9 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // Concert pitch slider
-            SettingSection(title = "Concert Pitch") {
+            SettingSection(title = stringResource(R.string.settings_concert_pitch)) {
                 Text(
-                    text = "A4 = ${"%.1f".format(settings.concertPitch)} Hz",
+                    text = stringResource(R.string.settings_concert_pitch_value, settings.concertPitch),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Slider(
@@ -113,15 +112,15 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("420 Hz", style = MaterialTheme.typography.labelLarge)
-                    Text("460 Hz", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.settings_concert_pitch_min), style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.settings_concert_pitch_max), style = MaterialTheme.typography.labelLarge)
                 }
             }
 
             // Microphone sensitivity
-            SettingSection(title = "Microphone Sensitivity") {
+            SettingSection(title = stringResource(R.string.settings_mic_sensitivity)) {
                 Text(
-                    text = "Silence threshold: ${"%.0f".format(settings.silenceThresholdDb)} dB",
+                    text = stringResource(R.string.settings_silence_threshold, settings.silenceThresholdDb),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Slider(
@@ -133,16 +132,16 @@ fun SettingsScreen(
             }
 
             // Audio/Visual delay
-            SettingSection(title = "Audio/Visual Delay") {
+            SettingSection(title = stringResource(R.string.settings_audio_visual_delay)) {
                 val device by viewModel.currentDevice.collectAsState()
                 val inputDevice by viewModel.currentInputDevice.collectAsState()
                 val audioDelay by viewModel.activeAudioDelay.collectAsState()
                 val visualDelay by viewModel.activeVisualDelay.collectAsState()
 
-                val inName = inputDevice?.name ?: "microphone"
-                val outName = device?.name ?: "speaker"
+                val inName = inputDevice?.name ?: context.getString(R.string.microphone)
+                val outName = device?.name ?: context.getString(R.string.speaker)
                 Text(
-                    text = "In/Out: $inName / $outName",
+                    text = stringResource(R.string.settings_in_out, inName, outName),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -154,7 +153,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Audio delay: ${audioDelay}ms",
+                        text = stringResource(R.string.settings_audio_delay, audioDelay),
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.weight(1f)
                     )
@@ -164,10 +163,10 @@ fun SettingsScreen(
                             showEditAudioDialog = true
                         },
                         enabled = !isCalibrating
-                    ) { Text("Edit") }
+                    ) { Text(stringResource(R.string.edit)) }
                     Button(
                         onClick = { viewModel.autoCalibrateAudioDelay() }
-                    ) { Text(if (isCalibrating) "Stop" else "Auto") }
+                    ) { Text(if (isCalibrating) stringResource(R.string.settings_calibrating_stop) else stringResource(R.string.settings_auto_calibrate)) }
                 }
 
                 if (isCalibrating) {
@@ -175,13 +174,13 @@ fun SettingsScreen(
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     if (calibrationNoDetection) {
                         Text(
-                            text = "Microphone can\u2019t detect any tones",
+                            text = stringResource(R.string.settings_no_detection),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
                     } else {
                         Text(
-                            text = "Calibrating\u2026 $calibrationTonesDetected/5 tones detected",
+                            text = stringResource(R.string.settings_calibrating, calibrationTonesDetected),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -191,7 +190,7 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "Visual delay: ${visualDelay}ms",
+                    text = stringResource(R.string.settings_visual_delay, visualDelay),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Slider(
@@ -205,8 +204,8 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("0ms", style = MaterialTheme.typography.labelSmall)
-                    Text("50ms", style = MaterialTheme.typography.labelSmall)
+                    Text(stringResource(R.string.settings_visual_delay_min), style = MaterialTheme.typography.labelSmall)
+                    Text(stringResource(R.string.settings_visual_delay_max), style = MaterialTheme.typography.labelSmall)
                 }
             }
 
@@ -217,7 +216,7 @@ fun SettingsScreen(
                 onClick = { showResetConfirm = true },
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
-                Text("Reset to defaults")
+                Text(stringResource(R.string.settings_reset_to_defaults))
             }
         }
     }

@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import net.exent.perfectpitch.R
 import net.exent.perfectpitch.data.ScoreHistoryRepository.ScoreEntry
 import net.exent.perfectpitch.ui.theme.Purple40
 import net.exent.perfectpitch.ui.utils.scoreColor
@@ -41,7 +43,7 @@ fun ScoreProgressGraph(
     Column(modifier = modifier) {
         if (!compact) {
             Text(
-                "Progress",
+                stringResource(R.string.score_progress),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 4.dp)
