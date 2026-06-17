@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Perfect Pitch</string>
+
+    <!-- Global -->
+    <string name="back">Назад</string>
+    <string name="settings">Налаштування</string>
+    <string name="microphone">Мікрофон</string>
+    <string name="speaker">Динамік</string>
+    <string name="save">Зберегти</string>
+    <string name="cancel">Скасувати</string>
+    <string name="edit">Редагувати</string>
+    <string name="stop">Стоп</string>
+    <string name="auto">Авто</string>
+
+    <!-- Home screen -->
+    <string name="home_title">Perfect Pitch</string>
+    <string name="home_heading">🎵 Perfect Pitch</string>
+    <string name="home_free_play_title">Вільна гра</string>
+    <string name="home_free_play_desc">Грайте вільно та записуйте пісню</string>
+    <string name="home_free_play_desc_short">Висота звуку</string>
+    <string name="home_melody_title">Грати мелодію</string>
+    <string name="home_melody_desc">Слідкуйте за MIDI-мелодією</string>
+    <string name="home_melody_desc_short">Слідувати мелодії</string>
+    <string name="home_tuner_title">Налаштувати інструмент</string>
+    <string name="home_tuner_desc">Побачити висоту та налаштувати</string>
+    <string name="home_tuner_desc_short">Налаштувати</string>
+    <string name="home_uncalibrated">Аудіо не відкалібровано: %1$s</string>
+
+    <!-- Permissions -->
+    <string name="permission_title">Потрібен доступ до мікрофона</string>
+    <string name="permission_permanently_denied">Доступ до мікрофона було назавжди заборонено. Увімкніть його в налаштуваннях пристрою.</string>
+    <string name="permission_rationale">Perfect Pitch потребує доступу до мікрофона, щоб виявляти ноти, які ви граєте. Будь ласка, надайте дозвіл.</string>
+    <string name="permission_description">Perfect Pitch потребує доступу до вашого мікрофона, щоб слухати ваш інструмент і визначати висоту звуку в реальному часі.</string>
+    <string name="permission_open_settings">Відкрити налаштування</string>
+    <string name="permission_grant">Надати дозвіл</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Налаштування</string>
+    <string name="settings_concert_pitch">Камертон</string>
+    <string name="settings_concert_pitch_value">A4 = %1$.1f Hz</string>
+    <string name="settings_concert_pitch_min">420 Гц</string>
+    <string name="settings_concert_pitch_max">460 Гц</string>
+    <string name="settings_mic_sensitivity">Чутливість мікрофона</string>
+    <string name="settings_silence_threshold">Поріг тиші: %1$.0f дБ</string>
+    <string name="settings_audio_visual_delay">Аудіо/візуальна затримка</string>
+    <string name="settings_in_out">Вхід/Вихід: %1$s / %2$s</string>
+    <string name="settings_audio_delay">Аудіозатримка: %1$d мс</string>
+    <string name="settings_edit_audio_delay">Редагувати аудіозатримку</string>
+    <string name="settings_delay_ms">Затримка (мс)</string>
+    <string name="settings_auto_calibrate">Авто</string>
+    <string name="settings_calibrating_stop">Стоп</string>
+    <string name="settings_no_detection">Мікрофон не може виявити жодного тону</string>
+    <string name="settings_calibrating">Калібрування… %1$d/5 тонів виявлено</string>
+    <string name="settings_visual_delay">Візуальна затримка: %1$d мс</string>
+    <string name="settings_visual_delay_min">0 мс</string>
+    <string name="settings_visual_delay_max">50 мс</string>
+    <string name="settings_reset_dialog_title">Скинути до стандартних?</string>
+    <string name="settings_reset_dialog_body">Усі налаштування буде скинуто до значень за замовчуванням, зокрема:\n\n\u2022 Камертон (A = 440 Гц)\n\u2022 Поріг тиші\n\u2022 Швидкість, темп, тактовий розмір, прив\'язка нот у Вільній грі</string>
+    <string name="settings_reset">Скинути</string>
+    <string name="settings_reset_to_defaults">Скинути до стандартних</string>
+    <string name="settings_language">Мова</string>
+
+    <!-- Free Play -->
+    <string name="freeplay_mic">Мік</string>
+    <string name="freeplay_midi">MIDI</string>
+    <string name="freeplay_synth">Синт</string>
+    <string name="freeplay_none">Немає</string>
+    <string name="freeplay_microphone">Мікрофон</string>
+    <string name="freeplay_internal_synth">Внутрішній синтезатор</string>
+    <string name="freeplay_none_silent">Немає (тихо)</string>
+    <string name="freeplay_help">Довідка</string>
+    <string name="freeplay_metronome_on">Метроном увімкнено</string>
+    <string name="freeplay_metronome_off">Метроном вимкнено</string>
+    <string name="freeplay_settings">Налаштування</string>
+    <string name="freeplay_snap_notes">Прив\'язка нот</string>
+    <string name="freeplay_min_note_duration">Мін. тривалість ноти: %1$s</string>
+    <string name="freeplay_piano">Фортепіано: %1$s</string>
+    <string name="freeplay_import_midi">Імпортувати MIDI</string>
+    <string name="freeplay_export_midi">Експортувати MIDI</string>
+    <string name="freeplay_help_title">Вільна гра — Довідка</string>
+    <string name="freeplay_help_got_it">Зрозуміло</string>
+    <string name="freeplay_help_note_editing">Редагування нот</string>
+    <string name="freeplay_help_looping">Цикл</string>
+    <string name="freeplay_help_tap_note">Торкніться ноти</string>
+    <string name="freeplay_help_tap_note_desc">Виберіть ноту для редагування.</string>
+    <string name="freeplay_help_drag_note">Перетягніть вибрану ноту</string>
+    <string name="freeplay_help_drag_note_desc">Змінити час/півтон.</string>
+    <string name="freeplay_help_drag_handle">Перетягніть ручку</string>
+    <string name="freeplay_help_drag_handle_desc">Налаштувати початок/кінець.</string>
+    <string name="freeplay_help_split">Розділити (\u2702)</string>
+    <string name="freeplay_help_split_desc">Ділить ноту навпіл.</string>
+    <string name="freeplay_help_delete">Видалити (\uD83D\uDDD1)</string>
+    <string name="freeplay_help_delete_desc">Видаляє ноту.</string>
+    <string name="freeplay_help_tap_empty">Торкніться порожнього місця</string>
+    <string name="freeplay_help_tap_empty_desc">Скасувати вибір ноти.</string>
+    <string name="freeplay_help_loop_info">Торкніться номера такту, щоб зафіксувати його на поточній позиції (стає помаранчевим). Торкніться того ж зафіксованого номера знову, щоб розблокувати.</string>
+    <string name="freeplay_bpm">BPM</string>
+    <string name="freeplay_meter">Розмір</string>
+    <string name="freeplay_loop">Цикл</string>
+    <string name="freeplay_voice">Голос %1$d</string>
+    <string name="freeplay_add_voice">+ Додати голос</string>
+    <string name="freeplay_split_note">Розділити ноту</string>
+    <string name="freeplay_delete_note">Видалити ноту</string>
+    <string name="freeplay_play">Грати</string>
+    <string name="freeplay_record">Запис</string>
+    <string name="freeplay_piano_both">Верхня + нижня клавіатури</string>
+    <string name="freeplay_piano_upper">Лише верхня клавіатура</string>
+    <string name="freeplay_piano_lower">Лише нижня клавіатура</string>
+    <string name="freeplay_piano_none">Без клавіатур</string>
+    <string name="freeplay_end_bar_mismatch">Кінцевий такт має відрізнятися від початкового</string>
+
+    <!-- Tuner -->
+    <string name="tuner_title">Налаштувати інструмент</string>
+    <string name="tuner_frequency">%1$.1f Гц</string>
+    <string name="tuner_reference">Еталон: %1$.0f Гц</string>
+
+    <!-- Melody screen -->
+    <string name="melody_title">Грати мелодію</string>
+    <string name="melody_choose">Виберіть мелодію</string>
+    <string name="melody_import_file">Імпортувати MIDI-файл</string>
+    <string name="melody_stop_preview">Зупинити попередній перегляд</string>
+    <string name="melody_preview">Попередній перегляд</string>
+    <string name="melody_failed_load_midi">Не вдалося завантажити MIDI-файл</string>
+    <string name="melody_failed_load_melody">Не вдалося завантажити мелодію</string>
+    <string name="melody_difficulty">Складність: </string>
+    <string name="melody_no_playthroughs">Ще немає проходжень</string>
+    <string name="melody_no_melodies">Немає доступних мелодій.\nІмпортуйте MIDI-файл, щоб почати.</string>
+    <string name="no_melodies_available">Немає доступних мелодій.\nІмпортуйте MIDI-файл, щоб почати.</string>
+
+    <!-- Melody Play -->
+    <string name="melody_play_midi_input">MIDI-вхід</string>
+    <string name="melody_play_mic_input">Мік-вхід</string>
+    <string name="melody_play_midi_output_on">MIDI-вихід активний</string>
+    <string name="melody_play_midi_output_off">MIDI-вихід вимкнено</string>
+    <string name="melody_play_status">Рів.%1$d  %2$d  %3$d/%4$d</string>
+    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
+    <string name="melody_play_start">Старт</string>
+    <string name="melody_play_resume">Продовжити</string>
+    <string name="melody_play_scroll_start">Прокрутити до початку</string>
+    <string name="melody_play_results">Результати</string>
+    <string name="melody_play_again">Грати знову</string>
+    <string name="melody_play_go_back">Повернутися</string>
+    <string name="melody_play_level">Рівень: %1$d</string>
+    <string name="melody_play_tempo">Темп: %1$.0f%%</string>
+    <string name="melody_play_transpose_0">Транспозиція: 0</string>
+    <string name="melody_play_transpose_plus">Транспозиція: +%1$d</string>
+    <string name="melody_play_transpose">Транспозиція: %1$d</string>
+    <string name="melody_play_melody_audio">Грати аудіо мелодії</string>
+    <string name="melody_play_audio_delay">Аудіозатримка: %1$d мс</string>
+    <string name="melody_play_visual_delay">Візуальна затримка: %1$d мс</string>
+    <string name="melody_play_uncalibrated">%1$s не відкалібровано</string>
+
+    <!-- Score results -->
+    <string name="score_dismiss">Закрити</string>
+    <string name="score_level">Рівень %1$d</string>
+    <string name="score_notes_hit">Влучні ноти</string>
+    <string name="score_perfect">Ідеально</string>
+    <string name="score_great">Чудово</string>
+    <string name="retry">Спробувати знову</string>
+    <string name="next_level">Рівень %d</string>
+    <string name="level_2_change">На рівні 2 точність висоти звуку впливатиме на ваш рахунок</string>
+    <string name="level_3_change">На рівні 3 неправильні ноти штрафуватимуть ваш рахунок</string>
+    <string name="level_4_change">На рівні 4 гра не чекатиме, поки ви зіграєте ноту</string>
+    <string name="level_5_change">На рівні 5 падаючі смуги нот не відображатимуться</string>
+
+    <!-- Score summary -->
+    <string name="score_pitch_accuracy">Точність висоти</string>
+    <string name="score_duration_accuracy">Точність тривалості</string>
+    <string name="score_progress">Прогрес</string>
+
+    <!-- Note divisions -->
+    <string name="note_quarter">\u2669 Чверть</string>
+    <string name="note_eighth">\u266A Восьма</string>
+    <string name="note_sixteenth">\u266C Шістнадцята</string>
+    <string name="note_thirty_second">Тридцять друга</string>
+</resources>
