@@ -154,15 +154,7 @@ fun SettingsScreen(
                             onClick = { expanded = true },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                text = when (selected.code) {
-                                    "system" -> stringResource(R.string.lang_system)
-                                    "en" -> stringResource(R.string.lang_en)
-                                    "nb" -> stringResource(R.string.lang_nb)
-                                    "de" -> stringResource(R.string.lang_de)
-                                    else -> selected.displayName
-                                }
-                            )
+                            Text(text = selected.displayName)
                         }
                         DropdownMenu(
                             expanded = expanded,
@@ -173,14 +165,8 @@ fun SettingsScreen(
                                 DropdownMenuItem(
                                     text = {
                                         Text(
-                                            text = when (lang.code) {
-                                                "system" -> stringResource(R.string.lang_system)
-                                                "en" -> stringResource(R.string.lang_en)
-                                                "nb" -> stringResource(R.string.lang_nb)
-                                                "de" -> stringResource(R.string.lang_de)
-                                                else -> lang.displayName
-                                            },
-                                            fontWeight = if (lang.code == selected.code) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                                            text = lang.displayName,
+                                            fontWeight = if (lang.code == selected.code) FontWeight.Bold else FontWeight.Normal
                                         )
                                     },
                                     onClick = {

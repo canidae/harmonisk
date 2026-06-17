@@ -176,8 +176,4 @@
     <string name="note_thirty_second">32.-del</string>
 
     <!-- Language selector -->
-    <string name="lang_system">Auto</string>
-    <string name="lang_en">English</string>
-    <string name="lang_nb">Norsk</string>
-    <string name="lang_de">Deutsch</string>
 </resources>
