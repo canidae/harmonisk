@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">完美音准</string>
+
+    <!-- Global -->
+    <string name="back">返回</string>
+    <string name="settings">设置</string>
+    <string name="microphone">麦克风</string>
+    <string name="speaker">扬声器</string>
+    <string name="save">保存</string>
+    <string name="cancel">取消</string>
+    <string name="edit">编辑</string>
+    <string name="stop">停止</string>
+    <string name="auto">自动</string>
+
+    <!-- Home screen -->
+    <string name="home_title">完美音准</string>
+    <string name="home_heading">🎵 完美音准</string>
+    <string name="home_free_play_title">自由演奏</string>
+    <string name="home_free_play_desc">自由演奏并录制歌曲</string>
+    <string name="home_free_play_desc_short">音高反馈</string>
+    <string name="home_melody_title">按旋律演奏</string>
+    <string name="home_melody_desc">跟随 MIDI 旋律</string>
+    <string name="home_melody_desc_short">跟随旋律</string>
+    <string name="home_tuner_title">调音</string>
+    <string name="home_tuner_desc">查看音高并调音</string>
+    <string name="home_tuner_desc_short">调音</string>
+    <string name="home_uncalibrated">音频未校准：%1$s</string>
+
+    <!-- Permissions -->
+    <string name="permission_title">需要麦克风访问权限</string>
+    <string name="permission_permanently_denied">麦克风访问权限已被永久拒绝。请在设备设置中启用。</string>
+    <string name="permission_rationale">完美音准需要访问麦克风以检测您演奏的音符。请授予权限。</string>
+    <string name="permission_description">完美音准需要访问您的麦克风，以实时聆听您的乐器并检测音高。</string>
+    <string name="permission_open_settings">打开设置</string>
+    <string name="permission_grant">授予权限</string>
+
+    <!-- Settings -->
+    <string name="settings_title">设置</string>
+    <string name="settings_concert_pitch">标准音高</string>
+    <string name="settings_concert_pitch_value">A4 = %1$.1f 赫兹</string>
+    <string name="settings_concert_pitch_min">420 赫兹</string>
+    <string name="settings_concert_pitch_max">460 赫兹</string>
+    <string name="settings_mic_sensitivity">麦克风灵敏度</string>
+    <string name="settings_silence_threshold">静音阈值：%1$.0f dB</string>
+    <string name="settings_audio_visual_delay">音频/视觉延迟</string>
+    <string name="settings_in_out">输入/输出：%1$s / %2$s</string>
+    <string name="settings_audio_delay">音频延迟：%1$d 毫秒</string>
+    <string name="settings_edit_audio_delay">编辑音频延迟</string>
+    <string name="settings_delay_ms">延迟（毫秒）</string>
+    <string name="settings_auto_calibrate">自动</string>
+    <string name="settings_calibrating_stop">停止</string>
+    <string name="settings_no_detection">麦克风无法检测到任何音调</string>
+    <string name="settings_calibrating">校准中… %1$d/5 个音调已检测</string>
+    <string name="settings_visual_delay">视觉延迟：%1$d 毫秒</string>
+    <string name="settings_visual_delay_min">0 毫秒</string>
+    <string name="settings_visual_delay_max">50 毫秒</string>
+    <string name="settings_reset_dialog_title">重置为默认值？</string>
+    <string name="settings_reset_dialog_body">所有设置将恢复为默认值，包括：\n\n\u2022 标准音高（A = 440 赫兹）\n\u2022 静音阈值\n\u2022 自由演奏的速度、节拍、拍号、音符吸附</string>
+    <string name="settings_reset">重置</string>
+    <string name="settings_reset_to_defaults">重置为默认值</string>
+    <string name="settings_language">语言</string>
+
+    <!-- Free Play -->
+    <string name="freeplay_mic">麦克</string>
+    <string name="freeplay_midi">MIDI</string>
+    <string name="freeplay_synth">合成器</string>
+    <string name="freeplay_none">无</string>
+    <string name="freeplay_microphone">麦克风</string>
+    <string name="freeplay_internal_synth">内置合成器</string>
+    <string name="freeplay_none_silent">无（静音）</string>
+    <string name="freeplay_help">帮助</string>
+    <string name="freeplay_metronome_on">节拍器开</string>
+    <string name="freeplay_metronome_off">节拍器关</string>
+    <string name="freeplay_settings">设置</string>
+    <string name="freeplay_snap_notes">音符吸附</string>
+    <string name="freeplay_min_note_duration">最小音符时长：%1$s</string>
+    <string name="freeplay_piano">钢琴：%1$s</string>
+    <string name="freeplay_import_midi">导入 MIDI</string>
+    <string name="freeplay_export_midi">导出 MIDI</string>
+    <string name="freeplay_help_title">自由演奏 — 帮助</string>
+    <string name="freeplay_help_got_it">知道了</string>
+    <string name="freeplay_help_note_editing">音符编辑</string>
+    <string name="freeplay_help_looping">循环</string>
+    <string name="freeplay_help_tap_note">点击音符条</string>
+    <string name="freeplay_help_tap_note_desc">选择音符进行编辑。</string>
+    <string name="freeplay_help_drag_note">拖拽选中的音符</string>
+    <string name="freeplay_help_drag_note_desc">更改时间/半音。</string>
+    <string name="freeplay_help_drag_handle">拖拽手柄</string>
+    <string name="freeplay_help_drag_handle_desc">调整开始/结束。</string>
+    <string name="freeplay_help_split">拆分（\u2702）</string>
+    <string name="freeplay_help_split_desc">将音符一分为二。</string>
+    <string name="freeplay_help_delete">删除（\uD83D\uDDD1）</string>
+    <string name="freeplay_help_delete_desc">移除音符。</string>
+    <string name="freeplay_help_tap_empty">点击空白区域</string>
+    <string name="freeplay_help_tap_empty_desc">取消选择音符。</string>
+    <string name="freeplay_help_loop_info">点击小节编号将其锁定到当前位置（变为橙色）。再次点击同一锁定编号可解锁。</string>
+    <string name="freeplay_bpm">BPM</string>
+    <string name="freeplay_meter">拍号</string>
+    <string name="freeplay_loop">循环</string>
+    <string name="freeplay_voice">声部 %1$d</string>
+    <string name="freeplay_add_voice">+ 添加声部</string>
+    <string name="freeplay_split_note">拆分音符</string>
+    <string name="freeplay_delete_note">删除音符</string>
+    <string name="freeplay_play">播放</string>
+    <string name="freeplay_record">录制</string>
+    <string name="freeplay_piano_both">上键盘 + 下键盘</string>
+    <string name="freeplay_piano_upper">仅上键盘</string>
+    <string name="freeplay_piano_lower">仅下键盘</string>
+    <string name="freeplay_piano_none">无钢琴键盘</string>
+    <string name="freeplay_end_bar_mismatch">结束小节必须与开始小节不同</string>
+
+    <!-- Tuner -->
+    <string name="tuner_title">调音</string>
+    <string name="tuner_frequency">%1$.1f 赫兹</string>
+    <string name="tuner_reference">参考：%1$.0f 赫兹</string>
+
+    <!-- Melody screen -->
+    <string name="melody_title">按旋律演奏</string>
+    <string name="melody_choose">选择旋律</string>
+    <string name="melody_import_file">导入 MIDI 文件</string>
+    <string name="melody_stop_preview">停止预览</string>
+    <string name="melody_preview">预览旋律</string>
+    <string name="melody_failed_load_midi">无法加载 MIDI 文件</string>
+    <string name="melody_failed_load_melody">无法加载旋律</string>
+    <string name="melody_difficulty">难度：</string>
+    <string name="melody_no_playthroughs">尚无演奏记录</string>
+    <string name="melody_no_melodies">没有可用的内置旋律。\n导入 MIDI 文件以开始。</string>
+    <string name="no_melodies_available">没有可用的内置旋律。\n导入 MIDI 文件以开始。</string>
+
+    <!-- Melody Play -->
+    <string name="melody_play_midi_input">MIDI 输入</string>
+    <string name="melody_play_mic_input">麦克风输入</string>
+    <string name="melody_play_midi_output_on">MIDI 输出已开启</string>
+    <string name="melody_play_midi_output_off">MIDI 输出已关闭</string>
+    <string name="melody_play_status">Lv.%1$d  %2$d  %3$d/%4$d</string>
+    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
+    <string name="melody_play_start">开始</string>
+    <string name="melody_play_resume">继续</string>
+    <string name="melody_play_scroll_start">滚动到开头</string>
+    <string name="melody_play_results">结果</string>
+    <string name="melody_play_again">再玩一次</string>
+    <string name="melody_play_go_back">返回</string>
+    <string name="melody_play_level">等级：%1$d</string>
+    <string name="melody_play_tempo">速度：%1$.0f%%</string>
+    <string name="melody_play_transpose_0">移调：0</string>
+    <string name="melody_play_transpose_plus">移调：+%1$d</string>
+    <string name="melody_play_transpose">移调：%1$d</string>
+    <string name="melody_play_melody_audio">播放旋律音频</string>
+    <string name="melody_play_audio_delay">音频延迟：%1$d 毫秒</string>
+    <string name="melody_play_visual_delay">视觉延迟：%1$d 毫秒</string>
+    <string name="melody_play_uncalibrated">%1$s 未校准</string>
+
+    <!-- Score results -->
+    <string name="score_dismiss">关闭</string>
+    <string name="score_level">等级 %1$d</string>
+    <string name="score_notes_hit">命中音符</string>
+    <string name="score_perfect">完美</string>
+    <string name="score_great">优秀</string>
+    <string name="retry">重试</string>
+    <string name="next_level">等级 %d</string>
+    <string name="level_2_change">在等级 2，音高准确度将计入得分</string>
+    <string name="level_3_change">在等级 3，演奏错误音符将扣分</string>
+    <string name="level_4_change">在等级 4，游戏不会等待您演奏音符</string>
+    <string name="level_5_change">在等级 5，下落音符条将不会显示</string>
+
+    <!-- Score summary -->
+    <string name="score_pitch_accuracy">音高准确度</string>
+    <string name="score_duration_accuracy">时长准确度</string>
+    <string name="score_progress">进度</string>
+
+    <!-- Note divisions -->
+    <string name="note_quarter">\u2669 四分音符</string>
+    <string name="note_eighth">\u266A 八分音符</string>
+    <string name="note_sixteenth">\u266C 十六分音符</string>
+    <string name="note_thirty_second">三十二分音符</string>
+</resources>
