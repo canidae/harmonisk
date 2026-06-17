@@ -7,6 +7,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,6 +18,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import net.exent.perfectpitch.R
+import net.exent.perfectpitch.data.LocaleManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -129,6 +132,68 @@ fun SettingsScreen(
                     valueRange = -60f..-20f,
                     steps = 39
                 )
+            }
+
+            // Language
+            SettingSection(title = stringResource(R.string.settings_language)) {
+                var expanded by remember { mutableStateOf(false) }
+                val languages = remember { LocaleManager.supportedLanguages }
+                val selected = languages.find { it.code == settings.languageCode } ?: languages.first()
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.Language,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedButton(
+                            onClick = { expanded = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = when (selected.code) {
+                                    "system" -> stringResource(R.string.lang_system)
+                                    "en" -> stringResource(R.string.lang_en)
+                                    "nb" -> stringResource(R.string.lang_nb)
+                                    "de" -> stringResource(R.string.lang_de)
+                                    else -> selected.displayName
+                                }
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            modifier = Modifier.fillMaxWidth(0.8f)
+                        ) {
+                            languages.forEach { lang ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = when (lang.code) {
+                                                "system" -> stringResource(R.string.lang_system)
+                                                "en" -> stringResource(R.string.lang_en)
+                                                "nb" -> stringResource(R.string.lang_nb)
+                                                "de" -> stringResource(R.string.lang_de)
+                                                else -> lang.displayName
+                                            },
+                                            fontWeight = if (lang.code == selected.code) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                                        )
+                                    },
+                                    onClick = {
+                                        expanded = false
+                                        if (lang.code != selected.code) {
+                                            viewModel.updateLanguageCode(lang.code, context as android.app.Activity)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             // Audio/Visual delay

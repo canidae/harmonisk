@@ -1,5 +1,6 @@
 package net.exent.perfectpitch.ui.settings
 
+import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -63,6 +64,17 @@ class SettingsViewModel @Inject constructor(
     val calibrationNoDetection: StateFlow<Boolean> = _calibrationNoDetection.asStateFlow()
 
     private var calibrationJob: Job? = null
+
+    private val _languageChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val languageChanged: SharedFlow<Unit> = _languageChanged.asSharedFlow()
+
+    fun updateLanguageCode(code: String, activity: Activity) {
+        viewModelScope.launch {
+            settingsRepository.updateLanguageCode(code)
+            _languageChanged.tryEmit(Unit)
+            activity.recreate()
+        }
+    }
 
     fun updateConcertPitch(pitch: Float) {
         viewModelScope.launch { settingsRepository.updateConcertPitch(pitch) }
