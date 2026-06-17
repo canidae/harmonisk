@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">パーフェクトピッチ</string>
+
+    <!-- Global -->
+    <string name="back">戻る</string>
+    <string name="settings">設定</string>
+    <string name="microphone">マイク</string>
+    <string name="speaker">スピーカー</string>
+    <string name="save">保存</string>
+    <string name="cancel">キャンセル</string>
+    <string name="edit">編集</string>
+    <string name="stop">停止</string>
+    <string name="auto">自動</string>
+
+    <!-- Home screen -->
+    <string name="home_title">パーフェクトピッチ</string>
+    <string name="home_heading">🎵 パーフェクトピッチ</string>
+    <string name="home_free_play_title">フリープレイ</string>
+    <string name="home_free_play_desc">自由に演奏して録音</string>
+    <string name="home_free_play_desc_short">ピッチ</string>
+    <string name="home_melody_title">メロディを演奏</string>
+    <string name="home_melody_desc">MIDIメロディに合わせて演奏</string>
+    <string name="home_melody_desc_short">メロディに従う</string>
+    <string name="home_tuner_title">楽器をチューニング</string>
+    <string name="home_tuner_desc">ピッチを確認してチューニング</string>
+    <string name="home_tuner_desc_short">チューニング</string>
+    <string name="home_uncalibrated">オーディオが調整されていません：%1$s</string>
+
+    <!-- Permissions -->
+    <string name="permission_title">マイクへのアクセスが必要です</string>
+    <string name="permission_permanently_denied">マイクへのアクセスが永久的に拒否されました。デバイス設定で有効にしてください。</string>
+    <string name="permission_rationale">パーフェクトピッチは、あなたが演奏する音を検出するためにマイクへのアクセスが必要です。許可を付与してください。</string>
+    <string name="permission_description">パーフェクトピッチは、あなたの楽器を聴き、リアルタイムでピッチを検出するためにマイクへのアクセスが必要です。</string>
+    <string name="permission_open_settings">設定を開く</string>
+    <string name="permission_grant">許可する</string>
+
+    <!-- Settings -->
+    <string name="settings_title">設定</string>
+    <string name="settings_concert_pitch">基準ピッチ</string>
+    <string name="settings_concert_pitch_value">A4 = %1$.1f Hz</string>
+    <string name="settings_concert_pitch_min">420 Hz</string>
+    <string name="settings_concert_pitch_max">460 Hz</string>
+    <string name="settings_mic_sensitivity">マイク感度</string>
+    <string name="settings_silence_threshold">無音しきい値：%1$.0f dB</string>
+    <string name="settings_audio_visual_delay">音声/視覚遅延</string>
+    <string name="settings_in_out">入力/出力：%1$s / %2$s</string>
+    <string name="settings_audio_delay">音声遅延：%1$d ms</string>
+    <string name="settings_edit_audio_delay">音声遅延を編集</string>
+    <string name="settings_delay_ms">遅延（ms）</string>
+    <string name="settings_auto_calibrate">自動</string>
+    <string name="settings_calibrating_stop">停止</string>
+    <string name="settings_no_detection">マイクが音を検出できません</string>
+    <string name="settings_calibrating">キャリブレーション中… %1$d/5 音検出</string>
+    <string name="settings_visual_delay">視覚遅延：%1$d ms</string>
+    <string name="settings_visual_delay_min">0 ms</string>
+    <string name="settings_visual_delay_max">50 ms</string>
+    <string name="settings_reset_dialog_title">デフォルトにリセットしますか？</string>
+    <string name="settings_reset_dialog_body">すべての設定がデフォルト値にリセットされます。以下を含みます：\n\n\u2022 基準ピッチ（A = 440 Hz）\n\u2022 無音しきい値\n\u2022 フリープレイの速度、テンポ、拍子記号、音符スナップ</string>
+    <string name="settings_reset">リセット</string>
+    <string name="settings_reset_to_defaults">デフォルトにリセット</string>
+    <string name="settings_language">言語</string>
+
+    <!-- Free Play -->
+    <string name="freeplay_mic">マイク</string>
+    <string name="freeplay_midi">MIDI</string>
+    <string name="freeplay_synth">シンセ</string>
+    <string name="freeplay_none">なし</string>
+    <string name="freeplay_microphone">マイク</string>
+    <string name="freeplay_internal_synth">内蔵シンセサイザー</string>
+    <string name="freeplay_none_silent">なし（無音）</string>
+    <string name="freeplay_help">ヘルプ</string>
+    <string name="freeplay_metronome_on">メトロノーム ON</string>
+    <string name="freeplay_metronome_off">メトロノーム OFF</string>
+    <string name="freeplay_settings">設定</string>
+    <string name="freeplay_snap_notes">スナップ</string>
+    <string name="freeplay_min_note_duration">最小音符長：%1$s</string>
+    <string name="freeplay_piano">ピアノ：%1$s</string>
+    <string name="freeplay_import_midi">MIDIをインポート</string>
+    <string name="freeplay_export_midi">MIDIをエクスポート</string>
+    <string name="freeplay_help_title">フリープレイ — ヘルプ</string>
+    <string name="freeplay_help_got_it">了解</string>
+    <string name="freeplay_help_note_editing">音符編集</string>
+    <string name="freeplay_help_looping">ループ</string>
+    <string name="freeplay_help_tap_note">音符をタップ</string>
+    <string name="freeplay_help_tap_note_desc">編集する音符を選択。</string>
+    <string name="freeplay_help_drag_note">選択した音符をドラッグ</string>
+    <string name="freeplay_help_drag_note_desc">時間/半音を変更。</string>
+    <string name="freeplay_help_drag_handle">ハンドルをドラッグ</string>
+    <string name="freeplay_help_drag_handle_desc">開始/終了を調整。</string>
+    <string name="freeplay_help_split">分割（\u2702）</string>
+    <string name="freeplay_help_split_desc">音符を半分に分割。</string>
+    <string name="freeplay_help_delete">削除（\uD83D\uDDD1）</string>
+    <string name="freeplay_help_delete_desc">音符を削除。</string>
+    <string name="freeplay_help_tap_empty">空きスペースをタップ</string>
+    <string name="freeplay_help_tap_empty_desc">選択を解除。</string>
+    <string name="freeplay_help_loop_info">小節番号をタップして現在位置に固定します（オレンジ色になります）。同じ固定番号をもう一度タップしてロックを解除します。</string>
+    <string name="freeplay_bpm">BPM</string>
+    <string name="freeplay_meter">拍子</string>
+    <string name="freeplay_loop">ループ</string>
+    <string name="freeplay_voice">ボイス %1$d</string>
+    <string name="freeplay_add_voice">+ ボイスを追加</string>
+    <string name="freeplay_split_note">音符を分割</string>
+    <string name="freeplay_delete_note">音符を削除</string>
+    <string name="freeplay_play">再生</string>
+    <string name="freeplay_record">録音</string>
+    <string name="freeplay_piano_both">上下キーボード</string>
+    <string name="freeplay_piano_upper">上キーボードのみ</string>
+    <string name="freeplay_piano_lower">下キーボードのみ</string>
+    <string name="freeplay_piano_none">ピアノ表示なし</string>
+    <string name="freeplay_end_bar_mismatch">終了小節は開始小節と異なる必要があります</string>
+
+    <!-- Tuner -->
+    <string name="tuner_title">楽器をチューニング</string>
+    <string name="tuner_frequency">%1$.1f Hz</string>
+    <string name="tuner_reference">基準：%1$.0f Hz</string>
+
+    <!-- Melody screen -->
+    <string name="melody_title">メロディを演奏</string>
+    <string name="melody_choose">メロディを選択</string>
+    <string name="melody_import_file">MIDIファイルをインポート</string>
+    <string name="melody_stop_preview">プレビューを停止</string>
+    <string name="melody_preview">プレビュー</string>
+    <string name="melody_failed_load_midi">MIDIファイルを読み込めませんでした</string>
+    <string name="melody_failed_load_melody">メロディを読み込めませんでした</string>
+    <string name="melody_difficulty">難易度：</string>
+    <string name="melody_no_playthroughs">まだ演奏記録がありません</string>
+    <string name="melody_no_melodies">利用可能なメロディがありません。\nMIDIファイルをインポートして始めてください。</string>
+    <string name="no_melodies_available">利用可能なメロディがありません。\nMIDIファイルをインポートして始めてください。</string>
+
+    <!-- Melody Play -->
+    <string name="melody_play_midi_input">MIDI入力</string>
+    <string name="melody_play_mic_input">マイク入力</string>
+    <string name="melody_play_midi_output_on">MIDI出力 ON</string>
+    <string name="melody_play_midi_output_off">MIDI出力 OFF</string>
+    <string name="melody_play_status">Lv.%1$d  %2$d  %3$d/%4$d</string>
+    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
+    <string name="melody_play_start">スタート</string>
+    <string name="melody_play_resume">再開</string>
+    <string name="melody_play_scroll_start">先頭にスクロール</string>
+    <string name="melody_play_results">結果</string>
+    <string name="melody_play_again">もう一度プレイ</string>
+    <string name="melody_play_go_back">戻る</string>
+    <string name="melody_play_level">レベル：%1$d</string>
+    <string name="melody_play_tempo">テンポ：%1$.0f%%</string>
+    <string name="melody_play_transpose_0">移調：0</string>
+    <string name="melody_play_transpose_plus">移調：+%1$d</string>
+    <string name="melody_play_transpose">移調：%1$d</string>
+    <string name="melody_play_melody_audio">メロディ音声を再生</string>
+    <string name="melody_play_audio_delay">音声遅延：%1$d ms</string>
+    <string name="melody_play_visual_delay">視覚遅延：%1$d ms</string>
+    <string name="melody_play_uncalibrated">%1$s は調整されていません</string>
+
+    <!-- Score results -->
+    <string name="score_dismiss">閉じる</string>
+    <string name="score_level">レベル %1$d</string>
+    <string name="score_notes_hit">ヒット音符</string>
+    <string name="score_perfect">パーフェクト</string>
+    <string name="score_great">グレート</string>
+    <string name="retry">リトライ</string>
+    <string name="next_level">レベル %d</string>
+    <string name="level_2_change">レベル2では、ピッチの正確さがスコアに影響します</string>
+    <string name="level_3_change">レベル3では、間違った音符を演奏するとスコアが減点されます</string>
+    <string name="level_4_change">レベル4では、ゲームはあなたが音符を演奏するのを待ちません</string>
+    <string name="level_5_change">レベル5では、落下する音符バーは表示されません</string>
+
+    <!-- Score summary -->
+    <string name="score_pitch_accuracy">ピッチ精度</string>
+    <string name="score_duration_accuracy">長さ精度</string>
+    <string name="score_progress">進捗</string>
+
+    <!-- Note divisions -->
+    <string name="note_quarter">\u2669 四分音符</string>
+    <string name="note_eighth">\u266A 八分音符</string>
+    <string name="note_sixteenth">\u266C 十六分音符</string>
+    <string name="note_thirty_second">三十二分音符</string>
+</resources>
