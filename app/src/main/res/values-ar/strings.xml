@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">الحدة المثالية</string>
+
+    <!-- Global -->
+    <string name="back">رجوع</string>
+    <string name="settings">الإعدادات</string>
+    <string name="microphone">ميكروفون</string>
+    <string name="speaker">مكبر الصوت</string>
+    <string name="save">حفظ</string>
+    <string name="cancel">إلغاء</string>
+    <string name="edit">تعديل</string>
+    <string name="stop">إيقاف</string>
+    <string name="auto">تلقائي</string>
+
+    <!-- Home screen -->
+    <string name="home_title">الحدة المثالية</string>
+    <string name="home_heading">🎵 الحدة المثالية</string>
+    <string name="home_free_play_title">عزف حر</string>
+    <string name="home_free_play_desc">اعزف بحرية وسجل أغنية</string>
+    <string name="home_free_play_desc_short">الحدة</string>
+    <string name="home_melody_title">اعزف لحناً</string>
+    <string name="home_melody_desc">اتبع لحناً بصيغة MIDI</string>
+    <string name="home_melody_desc_short">اتبع لحناً</string>
+    <string name="home_tuner_title">ضبط آلة موسيقية</string>
+    <string name="home_tuner_desc">شاهد الحدة واضبط</string>
+    <string name="home_tuner_desc_short">ضبط</string>
+    <string name="home_uncalibrated">الصوت غير معاير: %1$s</string>
+
+    <!-- Permissions -->
+    <string name="permission_title">الوصول إلى الميكروفون مطلوب</string>
+    <string name="permission_permanently_denied">تم رفض الوصول إلى الميكروفون بشكل دائم. يرجى تمكينه في إعدادات الجهاز.</string>
+    <string name="permission_rationale">تطبيق الحدة المثالية يحتاج إلى الوصول إلى الميكروفون لاكتشاف النغمات التي تعزفها. يرجى منح الإذن.</string>
+    <string name="permission_description">تطبيق الحدة المثالية يحتاج إلى الوصول إلى الميكروفون الخاص بك للاستماع إلى آلتك الموسيقية واكتشاف الحدة في الوقت الفعلي.</string>
+    <string name="permission_open_settings">فتح الإعدادات</string>
+    <string name="permission_grant">منح الإذن</string>
+
+    <!-- Settings -->
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_concert_pitch">الضبط القياسي</string>
+    <string name="settings_concert_pitch_value">A4 = %1$.1f هرتز</string>
+    <string name="settings_concert_pitch_min">420 هرتز</string>
+    <string name="settings_concert_pitch_max">460 هرتز</string>
+    <string name="settings_mic_sensitivity">حساسية الميكروفون</string>
+    <string name="settings_silence_threshold">حد الصمت: %1$.0f ديسيبل</string>
+    <string name="settings_audio_visual_delay">تأخير الصوت/البصر</string>
+    <string name="settings_in_out">داخل/خارج: %1$s / %2$s</string>
+    <string name="settings_audio_delay">تأخير الصوت: %1$d مللي</string>
+    <string name="settings_edit_audio_delay">تعديل تأخير الصوت</string>
+    <string name="settings_delay_ms">التأخير (مللي)</string>
+    <string name="settings_auto_calibrate">تلقائي</string>
+    <string name="settings_calibrating_stop">إيقاف</string>
+    <string name="settings_no_detection">الميكروفون لا يستطيع اكتشاف أي نغمات</string>
+    <string name="settings_calibrating">معايرة… %1$d/5 نغمات مكتشفة</string>
+    <string name="settings_visual_delay">تأخير بصري: %1$d مللي</string>
+    <string name="settings_visual_delay_min">0 مللي</string>
+    <string name="settings_visual_delay_max">50 مللي</string>
+    <string name="settings_reset_dialog_title">إعادة تعيين إلى الإعدادات الافتراضية؟</string>
+    <string name="settings_reset_dialog_body">سيتم إعادة تعيين جميع الإعدادات إلى قيمها الافتراضية، بما في ذلك:\n\n\u2022 الضبط القياسي (A = 440 هرتز)\n\u2022 حد الصمت\n\u2022 سرعة العزف الحر، الإيقاع، الميزان، التقاط النغمات</string>
+    <string name="settings_reset">إعادة تعيين</string>
+    <string name="settings_reset_to_defaults">إعادة تعيين إلى الإعدادات الافتراضية</string>
+    <string name="settings_language">اللغة</string>
+
+    <!-- Free Play -->
+    <string name="freeplay_mic">ميك</string>
+    <string name="freeplay_midi">MIDI</string>
+    <string name="freeplay_synth">سينث</string>
+    <string name="freeplay_none">لا شيء</string>
+    <string name="freeplay_microphone">ميكروفون</string>
+    <string name="freeplay_internal_synth">سينثيسيزر داخلي</string>
+    <string name="freeplay_none_silent">لا شيء (صامت)</string>
+    <string name="freeplay_help">مساعدة</string>
+    <string name="freeplay_metronome_on">بندول الإيقاع قيد التشغيل</string>
+    <string name="freeplay_metronome_off">بندول الإيقاع متوقف</string>
+    <string name="freeplay_settings">الإعدادات</string>
+    <string name="freeplay_snap_notes">التقاط النغمات</string>
+    <string name="freeplay_min_note_duration">الحد الأدنى لمدة النغمة: %1$s</string>
+    <string name="freeplay_piano">بيانو: %1$s</string>
+    <string name="freeplay_import_midi">استيراد MIDI</string>
+    <string name="freeplay_export_midi">تصدير MIDI</string>
+    <string name="freeplay_help_title">العزف الحر — مساعدة</string>
+    <string name="freeplay_help_got_it">فهمت</string>
+    <string name="freeplay_help_note_editing">تحرير النغمات</string>
+    <string name="freeplay_help_looping">تكرار</string>
+    <string name="freeplay_help_tap_note">اضغط على شريط النغمة</string>
+    <string name="freeplay_help_tap_note_desc">اختر نغمة للتحرير.</string>
+    <string name="freeplay_help_drag_note">اسحب نغمة محددة</string>
+    <string name="freeplay_help_drag_note_desc">تغيير الوقت/نصف النغمة.</string>
+    <string name="freeplay_help_drag_handle">اسحب مقبضاً</string>
+    <string name="freeplay_help_drag_handle_desc">ضبط البداية/النهاية.</string>
+    <string name="freeplay_help_split">تقسيم (\u2702)</string>
+    <string name="freeplay_help_split_desc">يقسم النغمة إلى نصفين.</string>
+    <string name="freeplay_help_delete">حذف (\uD83D\uDDD1)</string>
+    <string name="freeplay_help_delete_desc">يزيل النغمة.</string>
+    <string name="freeplay_help_tap_empty">اضغط على مساحة فارغة</string>
+    <string name="freeplay_help_tap_empty_desc">إلغاء تحديد النغمة.</string>
+    <string name="freeplay_help_loop_info">اضغط على رقم مقطع لتثبيته في الموضع الحالي (يصبح برتقالياً). اضغط على نفس الرقم المثبت مرة أخرى لإلغاء التثبيت.</string>
+    <string name="freeplay_bpm">BPM</string>
+    <string name="freeplay_meter">الميزان</string>
+    <string name="freeplay_loop">تكرار</string>
+    <string name="freeplay_voice">صوت %1$d</string>
+    <string name="freeplay_add_voice">+ إضافة صوت</string>
+    <string name="freeplay_split_note">تقسيم النغمة</string>
+    <string name="freeplay_delete_note">حذف النغمة</string>
+    <string name="freeplay_play">تشغيل</string>
+    <string name="freeplay_record">تسجيل</string>
+    <string name="freeplay_piano_both">لوحات المفاتيح العلوية + السفلية</string>
+    <string name="freeplay_piano_upper">لوحة المفاتيح العلوية فقط</string>
+    <string name="freeplay_piano_lower">لوحة المفاتيح السفلية فقط</string>
+    <string name="freeplay_piano_none">لا توجد لوحات بيانو</string>
+    <string name="freeplay_end_bar_mismatch">يجب أن يختلف مقطع النهاية عن مقطع البداية</string>
+
+    <!-- Tuner -->
+    <string name="tuner_title">ضبط آلة موسيقية</string>
+    <string name="tuner_frequency">%1$.1f هرتز</string>
+    <string name="tuner_reference">المرجع: %1$.0f هرتز</string>
+
+    <!-- Melody screen -->
+    <string name="melody_title">اعزف لحناً</string>
+    <string name="melody_choose">اختر لحناً</string>
+    <string name="melody_import_file">استيراد ملف MIDI</string>
+    <string name="melody_stop_preview">إيقاف المعاينة</string>
+    <string name="melody_preview">معاينة</string>
+    <string name="melody_failed_load_midi">فشل تحميل ملف MIDI</string>
+    <string name="melody_failed_load_melody">فشل تحميل اللحن</string>
+    <string name="melody_difficulty">الصعوبة: </string>
+    <string name="melody_no_playthroughs">لا توجد مشاهدات بعد</string>
+    <string name="melody_no_melodies">لا توجد ألحان مرفقة متاحة.\nاستورد ملف MIDI للبدء.</string>
+    <string name="no_melodies_available">لا توجد ألحان مرفقة متاحة.\nاستورد ملف MIDI للبدء.</string>
+
+    <!-- Melody Play -->
+    <string name="melody_play_midi_input">مدخل MIDI</string>
+    <string name="melody_play_mic_input">مدخل ميك</string>
+    <string name="melody_play_midi_output_on">مخرج MIDI نشط</string>
+    <string name="melody_play_midi_output_off">مخرج MIDI متوقف</string>
+    <string name="melody_play_status">المستوى%1$d  %2$d  %3$d/%4$d</string>
+    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
+    <string name="melody_play_start">بدء</string>
+    <string name="melody_play_resume">استئناف</string>
+    <string name="melody_play_scroll_start">التمرير إلى البداية</string>
+    <string name="melody_play_results">النتائج</string>
+    <string name="melody_play_again">العزف مجدداً</string>
+    <string name="melody_play_go_back">العودة</string>
+    <string name="melody_play_level">المستوى: %1$d</string>
+    <string name="melody_play_tempo">الإيقاع: %1$.0f%%</string>
+    <string name="melody_play_transpose_0">تحويل: 0</string>
+    <string name="melody_play_transpose_plus">تحويل: +%1$d</string>
+    <string name="melody_play_transpose">تحويل: %1$d</string>
+    <string name="melody_play_melody_audio">تشغيل صوت اللحن</string>
+    <string name="melody_play_audio_delay">تأخير الصوت: %1$d مللي</string>
+    <string name="melody_play_visual_delay">تأخير بصري: %1$d مللي</string>
+    <string name="melody_play_uncalibrated">%1$s غير معاير</string>
+
+    <!-- Score results -->
+    <string name="score_dismiss">إغلاق</string>
+    <string name="score_level">المستوى %1$d</string>
+    <string name="score_notes_hit">النغمات المصابة</string>
+    <string name="score_perfect">ممتاز</string>
+    <string name="score_great">رائع</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="next_level">المستوى %d</string>
+    <string name="level_2_change">في المستوى 2، دقة الحدة ستُحتسب في نتيجتك</string>
+    <string name="level_3_change">في المستوى 3، النغمات الخاطئة ستخصم من نتيجتك</string>
+    <string name="level_4_change">في المستوى 4، اللعبة لن تنتظر منك عزف النغمة</string>
+    <string name="level_5_change">في المستوى 5، أشرطة النغمات المتساقطة لن تُعرض</string>
+
+    <!-- Score summary -->
+    <string name="score_pitch_accuracy">دقة الحدة</string>
+    <string name="score_duration_accuracy">دقة المدة</string>
+    <string name="score_progress">التقدم</string>
+
+    <!-- Note divisions -->
+    <string name="note_quarter">\u2669 ربع</string>
+    <string name="note_eighth">\u266A ثمن</string>
+    <string name="note_sixteenth">\u266C سدس عشر</string>
+    <string name="note_thirty_second">ثانية وثلاثون</string>
+</resources>
