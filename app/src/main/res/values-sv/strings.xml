@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Perfect Pitch</string>
+
+    <!-- Global -->
+    <string name="back">Tillbaka</string>
+    <string name="settings">Inställningar</string>
+    <string name="microphone">Mikrofon</string>
+    <string name="speaker">Högtalare</string>
+    <string name="save">Spara</string>
+    <string name="cancel">Avbryt</string>
+    <string name="edit">Redigera</string>
+    <string name="stop">Stopp</string>
+    <string name="auto">Auto</string>
+
+    <!-- Home screen -->
+    <string name="home_title">Perfect Pitch</string>
+    <string name="home_heading">🎵 Perfect Pitch</string>
+    <string name="home_free_play_title">Fritt spel</string>
+    <string name="home_free_play_desc">Spela fritt och spela in en sång</string>
+    <string name="home_free_play_desc_short">Tonhöjd</string>
+    <string name="home_melody_title">Spela melodi</string>
+    <string name="home_melody_desc">Följ en MIDI-melodi</string>
+    <string name="home_melody_desc_short">Följ en melodi</string>
+    <string name="home_tuner_title">Stäm instrument</string>
+    <string name="home_tuner_desc">Se din tonhöjd och stäm</string>
+    <string name="home_tuner_desc_short">Stäm</string>
+    <string name="home_uncalibrated">Ljud inte kalibrerat: %1$s</string>
+
+    <!-- Permissions -->
+    <string name="permission_title">Mikrofonåtkomst krävs</string>
+    <string name="permission_permanently_denied">Mikrofonåtkomst nekades permanent. Aktivera det i enhetens inställningar.</string>
+    <string name="permission_rationale">Perfect Pitch behöver åtkomst till mikrofonen för att upptäcka tonerna du spelar. Vänligen bevilja tillståndet.</string>
+    <string name="permission_description">Perfect Pitch behöver åtkomst till din mikrofon för att lyssna på ditt instrument och upptäcka tonhöjd i realtid.</string>
+    <string name="permission_open_settings">Öppna inställningar</string>
+    <string name="permission_grant">Bevilja tillstånd</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Inställningar</string>
+    <string name="settings_concert_pitch">Kammarton</string>
+    <string name="settings_concert_pitch_value">A4 = %1$.1f Hz</string>
+    <string name="settings_concert_pitch_min">420 Hz</string>
+    <string name="settings_concert_pitch_max">460 Hz</string>
+    <string name="settings_mic_sensitivity">Mikrofonkänslighet</string>
+    <string name="settings_silence_threshold">Tystnadströskel: %1$.0f dB</string>
+    <string name="settings_audio_visual_delay">Ljud-/Visuell fördröjning</string>
+    <string name="settings_in_out">In/Ut: %1$s / %2$s</string>
+    <string name="settings_audio_delay">Ljudfördröjning: %1$d ms</string>
+    <string name="settings_edit_audio_delay">Redigera ljudfördröjning</string>
+    <string name="settings_delay_ms">Fördröjning (ms)</string>
+    <string name="settings_auto_calibrate">Auto</string>
+    <string name="settings_calibrating_stop">Stopp</string>
+    <string name="settings_no_detection">Mikrofonen kan inte upptäcka toner</string>
+    <string name="settings_calibrating">Kalibrerar… %1$d/5 toner upptäckta</string>
+    <string name="settings_visual_delay">Visuell fördröjning: %1$d ms</string>
+    <string name="settings_visual_delay_min">0 ms</string>
+    <string name="settings_visual_delay_max">50 ms</string>
+    <string name="settings_reset_dialog_title">Återställ till standard?</string>
+    <string name="settings_reset_dialog_body">Alla inställningar kommer att återställas till sina standardvärden, inklusive:\n\n\u2022 Kammarton (A = 440 Hz)\n\u2022 Tystnadströskel\n\u2022 Fritt spel-hastighet, tempo, taktart, notsnäppning</string>
+    <string name="settings_reset">Återställ</string>
+    <string name="settings_reset_to_defaults">Återställ till standard</string>
+    <string name="settings_language">Språk</string>
+
+    <!-- Free Play -->
+    <string name="freeplay_mic">Mik</string>
+    <string name="freeplay_midi">MIDI</string>
+    <string name="freeplay_synth">Synth</string>
+    <string name="freeplay_none">Ingen</string>
+    <string name="freeplay_microphone">Mikrofon</string>
+    <string name="freeplay_internal_synth">Intern synth</string>
+    <string name="freeplay_none_silent">Ingen (tyst)</string>
+    <string name="freeplay_help">Hjälp</string>
+    <string name="freeplay_metronome_on">Metronom på</string>
+    <string name="freeplay_metronome_off">Metronom av</string>
+    <string name="freeplay_settings">Inställningar</string>
+    <string name="freeplay_snap_notes">Notsnäppning</string>
+    <string name="freeplay_min_note_duration">Min. notlängd: %1$s</string>
+    <string name="freeplay_piano">Piano: %1$s</string>
+    <string name="freeplay_import_midi">Importera MIDI</string>
+    <string name="freeplay_export_midi">Exportera MIDI</string>
+    <string name="freeplay_help_title">Fritt spel — Hjälp</string>
+    <string name="freeplay_help_got_it">Jag förstår</string>
+    <string name="freeplay_help_note_editing">Notredigering</string>
+    <string name="freeplay_help_looping">Slinga</string>
+    <string name="freeplay_help_tap_note">Tryck på en not</string>
+    <string name="freeplay_help_tap_note_desc">Välj not för redigering.</string>
+    <string name="freeplay_help_drag_note">Dra en vald not</string>
+    <string name="freeplay_help_drag_note_desc">Ändra tid/halvton.</string>
+    <string name="freeplay_help_drag_handle">Dra ett handtag</string>
+    <string name="freeplay_help_drag_handle_desc">Justera start/slut.</string>
+    <string name="freeplay_help_split">Dela (\u2702)</string>
+    <string name="freeplay_help_split_desc">Halverar noten.</string>
+    <string name="freeplay_help_delete">Radera (\uD83D\uDDD1)</string>
+    <string name="freeplay_help_delete_desc">Tar bort noten.</string>
+    <string name="freeplay_help_tap_empty">Tryck på tomt utrymme</string>
+    <string name="freeplay_help_tap_empty_desc">Avmarkera noten.</string>
+    <string name="freeplay_help_loop_info">Tryck på ett taktnummer för att låsa det till aktuell position (blir orange). Tryck på samma låsta nummer igen för att låsa upp.</string>
+    <string name="freeplay_bpm">BPM</string>
+    <string name="freeplay_meter">Taktart</string>
+    <string name="freeplay_loop">Slinga</string>
+    <string name="freeplay_voice">Röst %1$d</string>
+    <string name="freeplay_add_voice">+ Lägg till röst</string>
+    <string name="freeplay_split_note">Dela not</string>
+    <string name="freeplay_delete_note">Radera not</string>
+    <string name="freeplay_play">Spela</string>
+    <string name="freeplay_record">Spela in</string>
+    <string name="freeplay_piano_both">Övre + nedre tangentbord</string>
+    <string name="freeplay_piano_upper">Endast övre tangentbord</string>
+    <string name="freeplay_piano_lower">Endast nedre tangentbord</string>
+    <string name="freeplay_piano_none">Inga tangentbord</string>
+    <string name="freeplay_end_bar_mismatch">Sluttakt måste skilja sig från starttakt</string>
+
+    <!-- Tuner -->
+    <string name="tuner_title">Stäm instrument</string>
+    <string name="tuner_frequency">%1$.1f Hz</string>
+    <string name="tuner_reference">Referens: %1$.0f Hz</string>
+
+    <!-- Melody screen -->
+    <string name="melody_title">Spela melodi</string>
+    <string name="melody_choose">Välj en melodi</string>
+    <string name="melody_import_file">Importera MIDI-fil</string>
+    <string name="melody_stop_preview">Stoppa förhandsvisning</string>
+    <string name="melody_preview">Förhandsvisa</string>
+    <string name="melody_failed_load_midi">Kunde inte ladda MIDI-fil</string>
+    <string name="melody_failed_load_melody">Kunde inte ladda melodi</string>
+    <string name="melody_difficulty">Svårighetsgrad: </string>
+    <string name="melody_no_playthroughs">Inga genomspelningar än</string>
+    <string name="melody_no_melodies">Inga tillgängliga melodier.\nImportera en MIDI-fil för att komma igång.</string>
+    <string name="no_melodies_available">Inga tillgängliga melodier.\nImportera en MIDI-fil för att komma igång.</string>
+
+    <!-- Melody Play -->
+    <string name="melody_play_midi_input">MIDI-ingång</string>
+    <string name="melody_play_mic_input">Mik-ingång</string>
+    <string name="melody_play_midi_output_on">MIDI-utgång aktiv</string>
+    <string name="melody_play_midi_output_off">MIDI-utgång av</string>
+    <string name="melody_play_status">Niv.%1$d  %2$d  %3$d/%4$d</string>
+    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
+    <string name="melody_play_start">Starta</string>
+    <string name="melody_play_resume">Fortsätt</string>
+    <string name="melody_play_scroll_start">Rulla till början</string>
+    <string name="melody_play_results">Resultat</string>
+    <string name="melody_play_again">Spela igen</string>
+    <string name="melody_play_go_back">Gå tillbaka</string>
+    <string name="melody_play_level">Nivå: %1$d</string>
+    <string name="melody_play_tempo">Tempo: %1$.0f%%</string>
+    <string name="melody_play_transpose_0">Transponering: 0</string>
+    <string name="melody_play_transpose_plus">Transponering: +%1$d</string>
+    <string name="melody_play_transpose">Transponering: %1$d</string>
+    <string name="melody_play_melody_audio">Spela melodiljud</string>
+    <string name="melody_play_audio_delay">Ljudfördröjning: %1$d ms</string>
+    <string name="melody_play_visual_delay">Visuell fördröjning: %1$d ms</string>
+    <string name="melody_play_uncalibrated">%1$s är inte kalibrerad</string>
+
+    <!-- Score results -->
+    <string name="score_dismiss">Stäng</string>
+    <string name="score_level">Nivå %1$d</string>
+    <string name="score_notes_hit">Noter träffade</string>
+    <string name="score_perfect">Perfekt</string>
+    <string name="score_great">Bra</string>
+    <string name="retry">Försök igen</string>
+    <string name="next_level">Nivå %d</string>
+    <string name="level_2_change">På nivå 2 kommer tonhöjdsnoggrannhet att räknas mot din poäng</string>
+    <string name="level_3_change">På nivå 3 kommer felaktiga noter att straffa din poäng</string>
+    <string name="level_4_change">På nivå 4 väntar spelet inte på att du spelar noten</string>
+    <string name="level_5_change">På nivå 5 visas inte de fallande notstaplarna</string>
+
+    <!-- Score summary -->
+    <string name="score_pitch_accuracy">Tonhöjdsnoggrannhet</string>
+    <string name="score_duration_accuracy">Varaktighetsnoggrannhet</string>
+    <string name="score_progress">Framsteg</string>
+
+    <!-- Note divisions -->
+    <string name="note_quarter">\u2669 Fjärdedel</string>
+    <string name="note_eighth">\u266A Åttondel</string>
+    <string name="note_sixteenth">\u266C Sextondel</string>
+    <string name="note_thirty_second">Trettiotvåondel</string>
+</resources>
