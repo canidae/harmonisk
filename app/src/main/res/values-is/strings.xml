@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Perfect Pitch</string>
+
+    <!-- Global -->
+    <string name="back">Til baka</string>
+    <string name="settings">Stillingar</string>
+    <string name="microphone">Hljóðnemi</string>
+    <string name="speaker">Hátalari</string>
+    <string name="save">Vista</string>
+    <string name="cancel">Hætta við</string>
+    <string name="edit">Breyta</string>
+    <string name="stop">Stöðva</string>
+    <string name="auto">Sjálfvirkt</string>
+
+    <!-- Home screen -->
+    <string name="home_title">Perfect Pitch</string>
+    <string name="home_heading">🎵 Perfect Pitch</string>
+    <string name="home_free_play_title">Frjáls spilun</string>
+    <string name="home_free_play_desc">Spilaðu frjálslega og taktu upp lag</string>
+    <string name="home_free_play_desc_short">Tónhæð</string>
+    <string name="home_melody_title">Spila lag</string>
+    <string name="home_melody_desc">Fylgdu MIDI-lagi</string>
+    <string name="home_melody_desc_short">Fylgja lagi</string>
+    <string name="home_tuner_title">Stilla hljóðfæri</string>
+    <string name="home_tuner_desc">Sjá tónhæð og stilla</string>
+    <string name="home_tuner_desc_short">Stilla</string>
+    <string name="home_uncalibrated">Hljóð ekki kvarðað: %1$s</string>
+
+    <!-- Permissions -->
+    <string name="permission_title">Aðgangur að hljóðnema krafist</string>
+    <string name="permission_permanently_denied">Aðgangur að hljóðnema var varanlega hafnað. Vinsamlegast virkjaðu hann í stillingum tækisins.</string>
+    <string name="permission_rationale">Perfect Pitch þarf aðgang að hljóðnemanum til að greina tónana sem þú spilar. Vinsamlegast veittu leyfið.</string>
+    <string name="permission_description">Perfect Pitch þarf aðgang að hljóðnemanum þínum til að hlusta á hljóðfærið þitt og greina tónhæð í rauntíma.</string>
+    <string name="permission_open_settings">Opna stillingar</string>
+    <string name="permission_grant">Veita leyfi</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Stillingar</string>
+    <string name="settings_concert_pitch">Kammertónn</string>
+    <string name="settings_concert_pitch_value">A4 = %1$.1f Hz</string>
+    <string name="settings_concert_pitch_min">420 Hz</string>
+    <string name="settings_concert_pitch_max">460 Hz</string>
+    <string name="settings_mic_sensitivity">Næmni hljóðnema</string>
+    <string name="settings_silence_threshold">Þöglunarmörk: %1$.0f dB</string>
+    <string name="settings_audio_visual_delay">Hljóð-/Sjónræn töf</string>
+    <string name="settings_in_out">Inn/Út: %1$s / %2$s</string>
+    <string name="settings_audio_delay">Hljóðtöf: %1$d ms</string>
+    <string name="settings_edit_audio_delay">Breyta hljóðtöf</string>
+    <string name="settings_delay_ms">Töf (ms)</string>
+    <string name="settings_auto_calibrate">Sjálfvirkt</string>
+    <string name="settings_calibrating_stop">Stöðva</string>
+    <string name="settings_no_detection">Hljóðnemi getur ekki greint neina tóna</string>
+    <string name="settings_calibrating">Kvarða… %1$d/5 tónar greindir</string>
+    <string name="settings_visual_delay">Sjónræn töf: %1$d ms</string>
+    <string name="settings_visual_delay_min">0 ms</string>
+    <string name="settings_visual_delay_max">50 ms</string>
+    <string name="settings_reset_dialog_title">Endurstilla í sjálfgefið?</string>
+    <string name="settings_reset_dialog_body">Öllum stillingum verður endurstillt í sjálfgefin gildi, þar á meðal:\n\n\u2022 Kammertónn (A = 440 Hz)\n\u2022 Þöglunarmörk\n\u2022 Frjáls spilun hraði, tempó, taktur, nótnastrenging</string>
+    <string name="settings_reset">Endurstilla</string>
+    <string name="settings_reset_to_defaults">Endurstilla í sjálfgefið</string>
+    <string name="settings_language">Tungumál</string>
+
+    <!-- Free Play -->
+    <string name="freeplay_mic">Mic</string>
+    <string name="freeplay_midi">MIDI</string>
+    <string name="freeplay_synth">Synt</string>
+    <string name="freeplay_none">Ekkert</string>
+    <string name="freeplay_microphone">Hljóðnemi</string>
+    <string name="freeplay_internal_synth">Innri hljóðgervill</string>
+    <string name="freeplay_none_silent">Ekkert (hljóðlaust)</string>
+    <string name="freeplay_help">Hjálp</string>
+    <string name="freeplay_metronome_on">Kvika á</string>
+    <string name="freeplay_metronome_off">Kvika af</string>
+    <string name="freeplay_settings">Stillingar</string>
+    <string name="freeplay_snap_notes">Nótnastrenging</string>
+    <string name="freeplay_min_note_duration">Lágmarks nótnalengd: %1$s</string>
+    <string name="freeplay_piano">Píanó: %1$s</string>
+    <string name="freeplay_import_midi">Flytja inn MIDI</string>
+    <string name="freeplay_export_midi">Flytja út MIDI</string>
+    <string name="freeplay_help_title">Frjáls spilun — Hjálp</string>
+    <string name="freeplay_help_got_it">Skilið</string>
+    <string name="freeplay_help_note_editing">Nótnabreytingar</string>
+    <string name="freeplay_help_looping">Lykkja</string>
+    <string name="freeplay_help_tap_note">Bankið á nótu</string>
+    <string name="freeplay_help_tap_note_desc">Veldu nótu til breytinga.</string>
+    <string name="freeplay_help_drag_note">Dragðu valda nótu</string>
+    <string name="freeplay_help_drag_note_desc">Breyta tíma/hálftóni.</string>
+    <string name="freeplay_help_drag_handle">Dragðu handfang</string>
+    <string name="freeplay_help_drag_handle_desc">Stilltu upphaf/endir.</string>
+    <string name="freeplay_help_split">Skipta (\u2702)</string>
+    <string name="freeplay_help_split_desc">Helmingar nótuna.</string>
+    <string name="freeplay_help_delete">Eyða (\uD83D\uDDD1)</string>
+    <string name="freeplay_help_delete_desc">Fjarlægir nótuna.</string>
+    <string name="freeplay_help_tap_empty">Bankið á tómt svæði</string>
+    <string name="freeplay_help_tap_empty_desc">Afvelja nótuna.</string>
+    <string name="freeplay_help_loop_info">Bankið á taktnúmer til að læsa því á núverandi staðsetningu (verður appelsínugult). Bankið aftur á sama læsta númerið til að opna það.</string>
+    <string name="freeplay_bpm">BPM</string>
+    <string name="freeplay_meter">Taktur</string>
+    <string name="freeplay_loop">Lykkja</string>
+    <string name="freeplay_voice">Rödd %1$d</string>
+    <string name="freeplay_add_voice">+ Bæta við rödd</string>
+    <string name="freeplay_split_note">Skipta nótu</string>
+    <string name="freeplay_delete_note">Eyða nótu</string>
+    <string name="freeplay_play">Spila</string>
+    <string name="freeplay_record">Taka upp</string>
+    <string name="freeplay_piano_both">Efri + neðri hljómborð</string>
+    <string name="freeplay_piano_upper">Aðeins efra hljómborð</string>
+    <string name="freeplay_piano_lower">Aðeins neðra hljómborð</string>
+    <string name="freeplay_piano_none">Engin hljómborð</string>
+    <string name="freeplay_end_bar_mismatch">Lokataktur verður að vera frábrugðinn upphafstakt</string>
+
+    <!-- Tuner -->
+    <string name="tuner_title">Stilla hljóðfæri</string>
+    <string name="tuner_frequency">%1$.1f Hz</string>
+    <string name="tuner_reference">Viðmið: %1$.0f Hz</string>
+
+    <!-- Melody screen -->
+    <string name="melody_title">Spila lag</string>
+    <string name="melody_choose">Veldu lag</string>
+    <string name="melody_import_file">Flytja inn MIDI skrá</string>
+    <string name="melody_stop_preview">Stöðva forskoðun</string>
+    <string name="melody_preview">Forskoða</string>
+    <string name="melody_failed_load_midi">Ekki tókst að hlaða MIDI skrá</string>
+    <string name="melody_failed_load_melody">Ekki tókst að hlaða lag</string>
+    <string name="melody_difficulty">Erfiðleikastig: </string>
+    <string name="melody_no_playthroughs">Engar spilanir ennþá</string>
+    <string name="melody_no_melodies">Engin lög í boði.\nFlyttu inn MIDI skrá til að byrja.</string>
+    <string name="no_melodies_available">Engin lög í boði.\nFlyttu inn MIDI skrá til að byrja.</string>
+
+    <!-- Melody Play -->
+    <string name="melody_play_midi_input">MIDI inntak</string>
+    <string name="melody_play_mic_input">Mic inntak</string>
+    <string name="melody_play_midi_output_on">MIDI úttak virkt</string>
+    <string name="melody_play_midi_output_off">MIDI úttak óvirkt</string>
+    <string name="melody_play_status">Stig%1$d  %2$d  %3$d/%4$d</string>
+    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
+    <string name="melody_play_start">Byrja</string>
+    <string name="melody_play_resume">Halda áfram</string>
+    <string name="melody_play_scroll_start">Skruna til upphafs</string>
+    <string name="melody_play_results">Niðurstöður</string>
+    <string name="melody_play_again">Spila aftur</string>
+    <string name="melody_play_go_back">Fara til baka</string>
+    <string name="melody_play_level">Stig: %1$d</string>
+    <string name="melody_play_tempo">Tempó: %1$.0f%%</string>
+    <string name="melody_play_transpose_0">Tónflutningur: 0</string>
+    <string name="melody_play_transpose_plus">Tónflutningur: +%1$d</string>
+    <string name="melody_play_transpose">Tónflutningur: %1$d</string>
+    <string name="melody_play_melody_audio">Spila laghljóð</string>
+    <string name="melody_play_audio_delay">Hljóðtöf: %1$d ms</string>
+    <string name="melody_play_visual_delay">Sjónræn töf: %1$d ms</string>
+    <string name="melody_play_uncalibrated">%1$s er ekki kvarðað</string>
+
+    <!-- Score results -->
+    <string name="score_dismiss">Hafna</string>
+    <string name="score_level">Stig %1$d</string>
+    <string name="score_notes_hit">Nótur hittar</string>
+    <string name="score_perfect">Fullkomið</string>
+    <string name="score_great">Frábært</string>
+    <string name="retry">Reyna aftur</string>
+    <string name="next_level">Stig %d</string>
+    <string name="level_2_change">Á stigi 2 mun tónhæðarnákvæmni telja með í skori þínu</string>
+    <string name="level_3_change">Á stigi 3 munu rangar nótur draga frá skori þínu</string>
+    <string name="level_4_change">Á stigi 4 mun leikurinn ekki bíða eftir að þú spilir nótuna</string>
+    <string name="level_5_change">Á stigi 5 verða fallandi nótustikur ekki sýndar</string>
+
+    <!-- Score summary -->
+    <string name="score_pitch_accuracy">Tónhæðarnákvæmni</string>
+    <string name="score_duration_accuracy">Lengdarnákvæmni</string>
+    <string name="score_progress">Framfarir</string>
+
+    <!-- Note divisions -->
+    <string name="note_quarter">\u2669 Fjórðungsnóta</string>
+    <string name="note_eighth">\u266A Áttundanóta</string>
+    <string name="note_sixteenth">\u266C Sextándanóta</string>
+    <string name="note_thirty_second">Tvö og þríræðanóta</string>
+</resources>
