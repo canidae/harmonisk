@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Perfect Pitch</string>
+
+    <!-- Global -->
+    <string name="back">Atrás</string>
+    <string name="settings">Ajustes</string>
+    <string name="microphone">Micrófono</string>
+    <string name="speaker">Altavoz</string>
+    <string name="save">Guardar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="edit">Editar</string>
+    <string name="stop">Detener</string>
+    <string name="auto">Auto</string>
+
+    <!-- Home screen -->
+    <string name="home_title">Perfect Pitch</string>
+    <string name="home_heading">🎵 Perfect Pitch</string>
+    <string name="home_free_play_title">Juego libre</string>
+    <string name="home_free_play_desc">Toca libremente y graba una canción</string>
+    <string name="home_free_play_desc_short">Tono</string>
+    <string name="home_melody_title">Tocar una melodía</string>
+    <string name="home_melody_desc">Sigue una melodía MIDI</string>
+    <string name="home_melody_desc_short">Seguir una melodía</string>
+    <string name="home_tuner_title">Afinar instrumento</string>
+    <string name="home_tuner_desc">Ver el tono y afinar</string>
+    <string name="home_tuner_desc_short">Afinar</string>
+    <string name="home_uncalibrated">Audio no calibrado: %1$s</string>
+
+    <!-- Permissions -->
+    <string name="permission_title">Acceso al micrófono requerido</string>
+    <string name="permission_permanently_denied">El acceso al micrófono fue denegado permanentemente. Actívalo en los ajustes del dispositivo.</string>
+    <string name="permission_rationale">Perfect Pitch necesita acceso al micrófono para detectar las notas que tocas. Por favor, concede el permiso.</string>
+    <string name="permission_description">Perfect Pitch necesita acceso a tu micrófono para escuchar tu instrumento y detectar el tono en tiempo real.</string>
+    <string name="permission_open_settings">Abrir ajustes</string>
+    <string name="permission_grant">Conceder permiso</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_concert_pitch">Diapasón</string>
+    <string name="settings_concert_pitch_value">A4 = %1$.1f Hz</string>
+    <string name="settings_concert_pitch_min">420 Hz</string>
+    <string name="settings_concert_pitch_max">460 Hz</string>
+    <string name="settings_mic_sensitivity">Sensibilidad del micrófono</string>
+    <string name="settings_silence_threshold">Umbral de silencio: %1$.0f dB</string>
+    <string name="settings_audio_visual_delay">Retardo audio/visual</string>
+    <string name="settings_in_out">Entrada/Salida: %1$s / %2$s</string>
+    <string name="settings_audio_delay">Retardo audio: %1$d ms</string>
+    <string name="settings_edit_audio_delay">Editar retardo audio</string>
+    <string name="settings_delay_ms">Retardo (ms)</string>
+    <string name="settings_auto_calibrate">Auto</string>
+    <string name="settings_calibrating_stop">Detener</string>
+    <string name="settings_no_detection">El micrófono no puede detectar tonos</string>
+    <string name="settings_calibrating">Calibrando… %1$d/5 tonos detectados</string>
+    <string name="settings_visual_delay">Retardo visual: %1$d ms</string>
+    <string name="settings_visual_delay_min">0 ms</string>
+    <string name="settings_visual_delay_max">50 ms</string>
+    <string name="settings_reset_dialog_title">¿Restablecer valores predeterminados?</string>
+    <string name="settings_reset_dialog_body">Todos los ajustes se restablecerán a sus valores predeterminados, incluyendo:\n\n\u2022 Diapasón (A = 440 Hz)\n\u2022 Umbral de silencio\n\u2022 Velocidad, tempo, compás, ajuste de notas en Juego libre</string>
+    <string name="settings_reset">Restablecer</string>
+    <string name="settings_reset_to_defaults">Restablecer valores predeterminados</string>
+    <string name="settings_language">Idioma</string>
+
+    <!-- Free Play -->
+    <string name="freeplay_mic">Mic</string>
+    <string name="freeplay_midi">MIDI</string>
+    <string name="freeplay_synth">Sint</string>
+    <string name="freeplay_none">Ninguno</string>
+    <string name="freeplay_microphone">Micrófono</string>
+    <string name="freeplay_internal_synth">Sintetizador interno</string>
+    <string name="freeplay_none_silent">Ninguno (silencio)</string>
+    <string name="freeplay_help">Ayuda</string>
+    <string name="freeplay_metronome_on">Metrónomo activado</string>
+    <string name="freeplay_metronome_off">Metrónomo desactivado</string>
+    <string name="freeplay_settings">Ajustes</string>
+    <string name="freeplay_snap_notes">Ajuste de notas</string>
+    <string name="freeplay_min_note_duration">Duración min. nota: %1$s</string>
+    <string name="freeplay_piano">Piano: %1$s</string>
+    <string name="freeplay_import_midi">Importar MIDI</string>
+    <string name="freeplay_export_midi">Exportar MIDI</string>
+    <string name="freeplay_help_title">Juego libre — Ayuda</string>
+    <string name="freeplay_help_got_it">Entendido</string>
+    <string name="freeplay_help_note_editing">Edición de notas</string>
+    <string name="freeplay_help_looping">Bucle</string>
+    <string name="freeplay_help_tap_note">Toca una nota</string>
+    <string name="freeplay_help_tap_note_desc">Selecciona nota para editar.</string>
+    <string name="freeplay_help_drag_note">Arrastra una nota seleccionada</string>
+    <string name="freeplay_help_drag_note_desc">Cambiar tiempo/semitono.</string>
+    <string name="freeplay_help_drag_handle">Arrastra un mango</string>
+    <string name="freeplay_help_drag_handle_desc">Ajustar inicio/fin.</string>
+    <string name="freeplay_help_split">Dividir (\u2702)</string>
+    <string name="freeplay_help_split_desc">Divide la nota en dos.</string>
+    <string name="freeplay_help_delete">Eliminar (\uD83D\uDDD1)</string>
+    <string name="freeplay_help_delete_desc">Elimina la nota.</string>
+    <string name="freeplay_help_tap_empty">Toca espacio vacío</string>
+    <string name="freeplay_help_tap_empty_desc">Deseleccionar la nota.</string>
+    <string name="freeplay_help_loop_info">Toca un número de compás para fijarlo a la posición actual (se vuelve naranja). Toca el mismo número fijado de nuevo para desbloquearlo.</string>
+    <string name="freeplay_bpm">BPM</string>
+    <string name="freeplay_meter">Compás</string>
+    <string name="freeplay_loop">Bucle</string>
+    <string name="freeplay_voice">Voz %1$d</string>
+    <string name="freeplay_add_voice">+ Añadir voz</string>
+    <string name="freeplay_split_note">Dividir nota</string>
+    <string name="freeplay_delete_note">Eliminar nota</string>
+    <string name="freeplay_play">Reproducir</string>
+    <string name="freeplay_record">Grabar</string>
+    <string name="freeplay_piano_both">Teclados superior + inferior</string>
+    <string name="freeplay_piano_upper">Solo teclado superior</string>
+    <string name="freeplay_piano_lower">Solo teclado inferior</string>
+    <string name="freeplay_piano_none">Sin teclados</string>
+    <string name="freeplay_end_bar_mismatch">El compás final debe ser diferente del compás inicial</string>
+
+    <!-- Tuner -->
+    <string name="tuner_title">Afinar instrumento</string>
+    <string name="tuner_frequency">%1$.1f Hz</string>
+    <string name="tuner_reference">Referencia: %1$.0f Hz</string>
+
+    <!-- Melody screen -->
+    <string name="melody_title">Tocar una melodía</string>
+    <string name="melody_choose">Elige una melodía</string>
+    <string name="melody_import_file">Importar archivo MIDI</string>
+    <string name="melody_stop_preview">Detener vista previa</string>
+    <string name="melody_preview">Vista previa</string>
+    <string name="melody_failed_load_midi">Error al cargar el archivo MIDI</string>
+    <string name="melody_failed_load_melody">Error al cargar la melodía</string>
+    <string name="melody_difficulty">Dificultad: </string>
+    <string name="melody_no_playthroughs">Aún sin reproducciones</string>
+    <string name="melody_no_melodies">No hay melodías disponibles.\nImporta un archivo MIDI para empezar.</string>
+    <string name="no_melodies_available">No hay melodías disponibles.\nImporta un archivo MIDI para empezar.</string>
+
+    <!-- Melody Play -->
+    <string name="melody_play_midi_input">Entrada MIDI</string>
+    <string name="melody_play_mic_input">Entrada mic</string>
+    <string name="melody_play_midi_output_on">Salida MIDI activa</string>
+    <string name="melody_play_midi_output_off">Salida MIDI desactivada</string>
+    <string name="melody_play_status">Niv.%1$d  %2$d  %3$d/%4$d</string>
+    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
+    <string name="melody_play_start">Iniciar</string>
+    <string name="melody_play_resume">Reanudar</string>
+    <string name="melody_play_scroll_start">Desplazar al inicio</string>
+    <string name="melody_play_results">Resultados</string>
+    <string name="melody_play_again">Jugar de nuevo</string>
+    <string name="melody_play_go_back">Volver</string>
+    <string name="melody_play_level">Nivel: %1$d</string>
+    <string name="melody_play_tempo">Tempo: %1$.0f%%</string>
+    <string name="melody_play_transpose_0">Transporte: 0</string>
+    <string name="melody_play_transpose_plus">Transporte: +%1$d</string>
+    <string name="melody_play_transpose">Transporte: %1$d</string>
+    <string name="melody_play_melody_audio">Reproducir audio melodía</string>
+    <string name="melody_play_audio_delay">Retardo audio: %1$d ms</string>
+    <string name="melody_play_visual_delay">Retardo visual: %1$d ms</string>
+    <string name="melody_play_uncalibrated">%1$s no está calibrado</string>
+
+    <!-- Score results -->
+    <string name="score_dismiss">Descartar</string>
+    <string name="score_level">Nivel %1$d</string>
+    <string name="score_notes_hit">Notas acertadas</string>
+    <string name="score_perfect">Perfecto</string>
+    <string name="score_great">Excelente</string>
+    <string name="retry">Reintentar</string>
+    <string name="next_level">Nivel %d</string>
+    <string name="level_2_change">En el nivel 2 la precisión del tono contará para tu puntuación</string>
+    <string name="level_3_change">En el nivel 3 las notas incorrectas penalizarán tu puntuación</string>
+    <string name="level_4_change">En el nivel 4 el juego no esperará a que toques la nota</string>
+    <string name="level_5_change">En el nivel 5 las barras de notas descendentes no se mostrarán</string>
+
+    <!-- Score summary -->
+    <string name="score_pitch_accuracy">Precisión del tono</string>
+    <string name="score_duration_accuracy">Precisión de la duración</string>
+    <string name="score_progress">Progreso</string>
+
+    <!-- Note divisions -->
+    <string name="note_quarter">\u2669 Negra</string>
+    <string name="note_eighth">\u266A Corchea</string>
+    <string name="note_sixteenth">\u266C Semicorchea</string>
+    <string name="note_thirty_second">Fusa</string>
+</resources>
