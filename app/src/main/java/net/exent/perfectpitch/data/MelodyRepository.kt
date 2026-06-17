@@ -6,6 +6,7 @@ import android.util.Log
 import net.exent.perfectpitch.R
 import net.exent.perfectpitch.midi.MelodyTrack
 import net.exent.perfectpitch.midi.MidiParser
+import net.exent.perfectpitch.music.DifficultyCalculator
 
 private const val TAG = "MelodyRepository"
 
@@ -13,7 +14,8 @@ private const val TAG = "MelodyRepository"
  * Repository for managing MIDI melodies (bundled and user-imported).
  */
 class MelodyRepository(
-    private val context: Context
+    private val context: Context,
+    private val difficultyRepository: DifficultyRepository
 ) {
     private val parser = MidiParser()
     private val cache = object : LinkedHashMap<String, MelodyTrack>(16, 0.75f, true) {
@@ -94,5 +96,19 @@ class MelodyRepository(
             Log.e(TAG, "Failed to load melody from URI: $uri", e)
             null
         }
+    }
+
+    suspend fun getDifficulty(info: MelodyInfo): Float {
+        val cached = difficultyRepository.get(info.id)
+        if (cached != null && cached.algorithmVersion == DifficultyCalculator.ALGORITHM_VERSION) {
+            return cached.difficulty
+        }
+        val track = loadMelody(info) ?: return 0.0f
+        val difficulty = DifficultyCalculator.calculate(track)
+        difficultyRepository.set(
+            info.id,
+            DifficultyRepository.DifficultyData(difficulty, DifficultyCalculator.ALGORITHM_VERSION)
+        )
+        return difficulty
     }
 }

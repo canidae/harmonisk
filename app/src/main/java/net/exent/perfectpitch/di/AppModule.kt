@@ -9,6 +9,7 @@ import net.exent.perfectpitch.audio.MelodySynthesizer
 import net.exent.perfectpitch.audio.MetronomePlayer
 import net.exent.perfectpitch.audio.PitchProcessor
 import net.exent.perfectpitch.data.AudioDelayRepository
+import net.exent.perfectpitch.data.DifficultyRepository
 import net.exent.perfectpitch.data.MelodyRepository
 import net.exent.perfectpitch.data.MelodySettingsRepository
 import net.exent.perfectpitch.data.ScoreHistoryRepository
@@ -62,8 +63,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideMelodyRepository(
-        @ApplicationContext context: Context
-    ): MelodyRepository = MelodyRepository(context)
+        @ApplicationContext context: Context,
+        difficultyRepository: DifficultyRepository
+    ): MelodyRepository = MelodyRepository(context, difficultyRepository)
 
     @Provides
     @Singleton
@@ -123,6 +125,12 @@ object AppModule {
     fun provideScoreHistoryRepository(
         @ApplicationContext context: Context
     ): ScoreHistoryRepository = ScoreHistoryRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideDifficultyRepository(
+        @ApplicationContext context: Context
+    ): DifficultyRepository = DifficultyRepository(context)
 
     @Provides
     @Singleton

@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,6 +24,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,6 +46,7 @@ fun MelodyScreen(
     val context = LocalContext.current
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsStateWithLifecycle()
     val combinedScores by viewModel.allMelodyCombinedScores.collectAsStateWithLifecycle()
+    val difficulties by viewModel.allMelodyDifficulties.collectAsStateWithLifecycle()
     var previewingMelody by remember { mutableStateOf<String?>(null) }
     var expandedMelodyId by remember { mutableStateOf<String?>(null) }
 
@@ -111,6 +116,7 @@ fun MelodyScreen(
                             viewModel = viewModel,
                             info = info,
                             combinedScore = combinedScores[info.id],
+                            difficulty = difficulties[info.id],
                             isPreviewing = previewingMelody == info.name && isPreviewPlaying,
                             isExpanded = expandedMelodyId == info.id,
                             onPlay = {
@@ -169,6 +175,7 @@ private fun MelodyCard(
     viewModel: MelodyViewModel,
     info: net.exent.perfectpitch.data.MelodyRepository.MelodyInfo,
     combinedScore: Float?,
+    difficulty: Float?,
     isPreviewing: Boolean,
     isExpanded: Boolean,
     onPlay: () -> Unit,
@@ -190,12 +197,8 @@ private fun MelodyCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(info.name, style = MaterialTheme.typography.titleMedium)
-                    if (info.isBundled) {
-                        Text(
-                            "Built-in",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    if (difficulty != null) {
+                        DifficultyBadge(difficulty = difficulty)
                     }
                 }
 
@@ -245,6 +248,33 @@ private fun CombinedScoreBadge(
             fontWeight = FontWeight.Bold,
             color = color
         )
+    }
+}
+
+@Composable
+private fun DifficultyBadge(difficulty: Float) {
+    val color = when {
+        difficulty < 0.33f -> lerp(Color.Green, Color.Yellow, difficulty / 0.33f)
+        difficulty < 0.66f -> lerp(Color.Yellow, Color(0xFFFF9800), (difficulty - 0.33f) / 0.33f)
+        else -> lerp(Color(0xFFFF9800), Color.Red, (difficulty - 0.66f) / 0.34f)
+    }
+    val triangleHeight = difficulty.coerceIn(0.05f, 1f)
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = "Difficulty: ",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Canvas(modifier = Modifier.size(width = 32.dp, height = 10.dp)) {
+            val path = Path().apply {
+                moveTo(0f, size.height)
+                lineTo(size.width, size.height)
+                lineTo(size.width, size.height - size.height * triangleHeight)
+                close()
+            }
+            drawPath(path, color = color)
+        }
     }
 }
 

@@ -77,6 +77,9 @@ class MelodyViewModel @Inject constructor(
     private val _allMelodyCombinedScores = MutableStateFlow<Map<String, Float>>(emptyMap())
     val allMelodyCombinedScores: StateFlow<Map<String, Float>> = _allMelodyCombinedScores.asStateFlow()
 
+    private val _allMelodyDifficulties = MutableStateFlow<Map<String, Float>>(emptyMap())
+    val allMelodyDifficulties: StateFlow<Map<String, Float>> = _allMelodyDifficulties.asStateFlow()
+
     private val _canAdvanceLevel = MutableStateFlow(false)
     val canAdvanceLevel: StateFlow<Boolean> = _canAdvanceLevel.asStateFlow()
 
@@ -152,6 +155,7 @@ class MelodyViewModel @Inject constructor(
             }
         }
         loadAllMelodyCombinedScores()
+        loadAllMelodyDifficulties()
     }
 
     val activeAudioDelay: StateFlow<Int> = audioDelayRepository.activeAudioDelay
@@ -220,6 +224,18 @@ class MelodyViewModel @Inject constructor(
                     _allMelodyCombinedScores.value = result
                 }
             }
+        }
+    }
+
+    private fun loadAllMelodyDifficulties() {
+        viewModelScope.launch {
+            val melodies = melodyRepository.getAvailableMelodies()
+            val results = melodies.map { info ->
+                async {
+                    info.id to melodyRepository.getDifficulty(info)
+                }
+            }
+            _allMelodyDifficulties.value = results.awaitAll().toMap()
         }
     }
 
