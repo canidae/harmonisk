@@ -75,31 +75,47 @@ object MidiImporter {
     fun convertToPlayedNotes(multiTrackMidi: MultiTrackMidi): MidiImportResult {
         val tpq = multiTrackMidi.ticksPerQuarterNote.toDouble()
         val bpmD = multiTrackMidi.bpm.toDouble()
+        val usPerBeat = (60_000_000.0 / bpmD).toLong()
 
         fun tickToMs(tick: Long): Long =
             (tick.toDouble() / tpq * 60_000.0 / bpmD).toLong()
 
         val playedNotes = mutableListOf<PlayedNote>()
-        for ((voiceIdx, voiceNotes) in multiTrackMidi.voiceTracks.withIndex()) {
-            for (note in voiceNotes) {
-                val startMs = tickToMs(note.startTick)
-                val endMs = tickToMs(note.endTick)
-                if (endMs <= startMs) continue
+        var globalVoiceIdx = 0
 
-                val noteIdx = ((note.noteNumber % 12) + 12) % 12
-                val octave = (note.noteNumber / 12) - 1
-                val noteName = NoteUtils.NOTE_NAMES[noteIdx]
+        for ((trackOrigin, voiceNotes) in multiTrackMidi.voiceTracks.withIndex()) {
+            // Build a temporary MelodyTrack so we can use splitIntoVoices()
+            val tmpTrack = MelodyTrack(
+                name = "",
+                notes = voiceNotes,
+                tempoChanges = listOf(TempoEvent(0, usPerBeat)),
+                timeSignatures = emptyList(),
+                ticksPerQuarterNote = multiTrackMidi.ticksPerQuarterNote
+            )
+            val splitTracks = tmpTrack.splitIntoVoices()
+            for (voiceTrack in splitTracks) {
+                for (note in voiceTrack.notes) {
+                    val startMs = tickToMs(note.startTick)
+                    val endMs = tickToMs(note.endTick)
+                    if (endMs <= startMs) continue
 
-                playedNotes.add(PlayedNote(
-                    noteName = noteName,
-                    octave = octave,
-                    midiNumber = note.noteNumber,
-                    startTimeMs = startMs,
-                    endTimeMs = endMs,
-                    averageCentsOff = 0f,
-                    id = UUID.randomUUID().toString(),
-                    voiceIndex = voiceIdx
-                ))
+                    val noteIdx = ((note.noteNumber % 12) + 12) % 12
+                    val octave = (note.noteNumber / 12) - 1
+                    val noteName = NoteUtils.NOTE_NAMES[noteIdx]
+
+                    playedNotes.add(PlayedNote(
+                        noteName = noteName,
+                        octave = octave,
+                        midiNumber = note.noteNumber,
+                        startTimeMs = startMs,
+                        endTimeMs = endMs,
+                        averageCentsOff = 0f,
+                        id = UUID.randomUUID().toString(),
+                        voiceIndex = globalVoiceIdx,
+                        trackOrigin = trackOrigin
+                    ))
+                }
+                globalVoiceIdx++
             }
         }
         return MidiImportResult(

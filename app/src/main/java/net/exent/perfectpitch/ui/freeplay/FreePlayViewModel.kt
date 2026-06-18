@@ -995,7 +995,7 @@ class FreePlayViewModel @Inject constructor(
                 OutputDevice.NONE -> null
             }
 
-            data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean, val voiceIndex: Int = 0)
+            data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean, val voiceIndex: Int = 0, val trackOrigin: Int = 0)
 
             fun buildEvents(startTime: Long): List<Event> {
                 val evts = mutableListOf<Event>()
@@ -1003,8 +1003,8 @@ class FreePlayViewModel @Inject constructor(
                     val endMs = note.endTimeMs!!
                     if (endMs <= startTime) continue
                     val onTime = if (note.startTimeMs <= startTime) startTime else note.startTimeMs
-                    evts.add(Event(onTime, note.midiNumber, true, note.voiceIndex))
-                    evts.add(Event(endMs, note.midiNumber, false, note.voiceIndex))
+                    evts.add(Event(onTime, note.midiNumber, true, note.voiceIndex, note.trackOrigin))
+                    evts.add(Event(endMs, note.midiNumber, false, note.voiceIndex, note.trackOrigin))
                 }
                 evts.sortBy { it.timeMs }
                 return evts
@@ -1054,8 +1054,8 @@ class FreePlayViewModel @Inject constructor(
                 // Fire due events
                 while (eventIndex < events.size && events[eventIndex].timeMs <= replayPositionMs) {
                     val ev = events[eventIndex++]
-                    if (ev.isOn) player?.noteOn(ev.voiceIndex, ev.midiNote, 80)
-                    else player?.noteOff(ev.voiceIndex, ev.midiNote)
+                    if (ev.isOn) player?.noteOn(ev.trackOrigin, ev.midiNote, 80)
+                    else player?.noteOff(ev.trackOrigin, ev.midiNote)
                 }
 
                 // Loop-at-end: re-read bounds each frame so user changes take effect immediately

@@ -46,7 +46,8 @@ data class PlayedNote(
     val averageCentsOff: Float = 0f,
     val centsHistory: List<Float> = emptyList(),
     val id: String,
-    val voiceIndex: Int = 0
+    val voiceIndex: Int = 0,
+    val trackOrigin: Int = 0
 ) {
     val isActive: Boolean get() = endTimeMs == null
 }

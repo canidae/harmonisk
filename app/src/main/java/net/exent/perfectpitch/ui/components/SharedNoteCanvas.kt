@@ -523,7 +523,7 @@ private fun DrawScope.drawFreePlayNotes(
         // Color based on voice; non-active voices are slightly dimmed, black keys slightly darker.
         // No position-based color changes: all notes look the same regardless of where they are
         // relative to the now-line (avoids jarring colour shift as notes scroll past).
-        val baseVoiceColor = VOICE_COLORS[note.voiceIndex % VOICE_COLORS.size]
+        val baseVoiceColor = VOICE_COLORS[note.trackOrigin % VOICE_COLORS.size]
         val isActiveVoice = note.voiceIndex == mode.activeVoiceIndex || note.isActive
         var barColor = if (isActiveVoice) baseVoiceColor else baseVoiceColor.copy(alpha = 0.6f)
         if (key.isBlack) {
@@ -589,7 +589,7 @@ private fun DrawScope.drawFreePlayNotes(
             val rawBottomY = (pianoEdgeY + (now - selectedNote.startTimeMs) * pxPerMs).coerceIn(noteAreaTop, noteAreaBottom)
             val barX = key.x + BAR_GAP_PX
             val barW = key.width - BAR_GAP_PX * 2f
-            val baseVoiceColor = VOICE_COLORS[selectedNote.voiceIndex % VOICE_COLORS.size]
+            val baseVoiceColor = VOICE_COLORS[selectedNote.trackOrigin % VOICE_COLORS.size]
             var barColor = if (selectedNote.voiceIndex == mode.activeVoiceIndex || selectedNote.isActive) baseVoiceColor
                            else baseVoiceColor.copy(alpha = 0.6f)
             if (key.isBlack) barColor = barColor.copy(red = barColor.red * 0.75f, green = barColor.green * 0.75f, blue = barColor.blue * 0.75f)
