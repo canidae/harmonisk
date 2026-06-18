@@ -235,6 +235,20 @@ private fun MelodyCard(
                         viewModel.resetScore(info.id)
                     }
                 )
+                if (!info.isBundled) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(R.string.melody_remove_imported),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            viewModel.removeImportedMelody(info.id)
+                        }
+                    )
+                }
             }
 
             AnimatedVisibility(

@@ -734,6 +734,13 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
+    fun removeImportedMelody(melodyId: String) {
+        viewModelScope.launch {
+            melodyRepository.removeImportedMelody(melodyId)
+            scoreHistoryRepository.resetScores(melodyId)
+        }
+    }
+
     // --- Gesture callbacks ---
 
     fun onVerticalZoom(scaleFactor: Float) {
