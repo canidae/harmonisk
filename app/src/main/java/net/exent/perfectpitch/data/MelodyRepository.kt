@@ -107,6 +107,43 @@ class MelodyRepository(
     fun uriMelodyId(uri: Uri): String = "user_${uri}"
 
     /**
+     * Resolve a content URI to a human-readable display name using ContentResolver metadata.
+     * Falls back to extracting from the URI path if the provider doesn't expose DISPLAY_NAME.
+     */
+    fun resolveDisplayName(uri: Uri): String {
+        return try {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIdx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (nameIdx >= 0) cursor.getString(nameIdx) else null
+                } else null
+            }
+        } catch (_: Exception) {
+            null
+        }?.let { raw ->
+            raw.removeSuffix(".mid")
+                .removeSuffix(".midi")
+                .removeSuffix(".MID")
+                .removeSuffix(".MIDI")
+                .replace('_', ' ')
+                .trim()
+                .ifEmpty { null }
+        } ?: run {
+            // Fallback: decode last path segment
+            val rawPath = uri.lastPathSegment ?: return "Imported MIDI"
+            android.net.Uri.decode(rawPath)
+                .substringAfterLast('/')
+                .removeSuffix(".mid")
+                .removeSuffix(".midi")
+                .removeSuffix(".MID")
+                .removeSuffix(".MIDI")
+                .replace('_', ' ')
+                .trim()
+                .ifEmpty { "Imported MIDI" }
+        }
+    }
+
+    /**
      * Load a melody from a user-selected file URI.
      */
     fun loadFromUri(uri: Uri, name: String): MelodyTrack? {
