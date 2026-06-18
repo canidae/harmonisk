@@ -489,12 +489,14 @@ class MelodyViewModel @Inject constructor(
         val infos = _gameState.value.voiceInfos
         if (index < 0 || index >= infos.size) return
         val selectedTrack = infos[index].melodyTrack
+        val (viewMin, viewMax) = viewRangeFor(selectedTrack)
         _gameState.update {
             it.copy(
                 activeVoiceIndex = index,
                 melodyTrack = selectedTrack
             )
         }
+        _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
         saveMelodySettings()
     }
 
