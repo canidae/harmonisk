@@ -292,7 +292,7 @@ private fun CombinedScoreBadge(
 private fun DifficultyBadge(difficulty: Float) {
     val outlineColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f)
     val fillColors = listOf(Color.Green, Color.Yellow, Color(0xFFFF9800), Color.Red)
-    val badgeHeight = 16.dp
+    val badgeHeight = 14.dp
     val badgeWidth = 32.dp
 
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -301,6 +301,7 @@ private fun DifficultyBadge(difficulty: Float) {
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(Modifier.width(4.dp))
         Canvas(modifier = Modifier.size(width = badgeWidth, height = badgeHeight)) {
             val path = Path().apply {
                 moveTo(0f, size.height)
