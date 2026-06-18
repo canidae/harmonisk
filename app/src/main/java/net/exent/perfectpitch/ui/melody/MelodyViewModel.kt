@@ -214,30 +214,43 @@ class MelodyViewModel @Inject constructor(
 
     private fun loadAllMelodyCombinedScores() {
         viewModelScope.launch {
-            availableMelodies.first().let { melodies ->
-                val flows = melodies.map { info ->
-                    scoreHistoryRepository.getScores(info.id).map { scores ->
-                        info.id to ScoringEngine.computeCombinedScore(scores.map { it.level to it.overallScore })
+            availableMelodies
+                .flatMapLatest { melodies ->
+                    if (melodies.isEmpty()) {
+                        flowOf(emptyMap())
+                    } else {
+                        val flows = melodies.map { info ->
+                            scoreHistoryRepository.getScores(info.id).map { scores ->
+                                info.id to ScoringEngine.computeCombinedScore(
+                                    scores.map { it.level to it.overallScore }
+                                )
+                            }
+                        }
+                        combine(flows) { pairs ->
+                            pairs.filter { it.second > 0f }.associate { it.first to it.second }
+                        }
                     }
                 }
-                combine(flows) { pairs ->
-                    pairs.filter { it.second > 0f }.associate { it.first to it.second }
-                }.collect { result ->
+                .collect { result ->
                     _allMelodyCombinedScores.value = result
                 }
-            }
         }
     }
 
     private fun loadAllMelodyDifficulties() {
         viewModelScope.launch {
-            val melodies = availableMelodies.first()
-            val results = melodies.map { info ->
-                async {
-                    info.id to melodyRepository.getDifficulty(info)
+            availableMelodies
+                .flatMapLatest { melodies ->
+                    flow {
+                        val results = melodies.map { info ->
+                            async { info.id to melodyRepository.getDifficulty(info) }
+                        }
+                        emit(results.awaitAll().toMap())
+                    }
                 }
-            }
-            _allMelodyDifficulties.value = results.awaitAll().toMap()
+                .collect { result ->
+                    _allMelodyDifficulties.value = result
+                }
         }
     }
 
@@ -338,9 +351,7 @@ class MelodyViewModel @Inject constructor(
                     uri = uri
                 )
                 melodyRepository.addImportedMelody(info)
-                val diff = melodyRepository.getDifficulty(info)
-                _allMelodyDifficulties.update { it + (info.id to diff) }
-                // combined score starts empty (no playthroughs yet), map already shows 0
+                melodyRepository.getDifficulty(info)
             }
             return true
         }
@@ -730,7 +741,6 @@ class MelodyViewModel @Inject constructor(
     fun resetScore(melodyId: String) {
         viewModelScope.launch {
             scoreHistoryRepository.resetScores(melodyId)
-            loadAllMelodyCombinedScores()
         }
     }
 

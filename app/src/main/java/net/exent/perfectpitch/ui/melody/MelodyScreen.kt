@@ -239,7 +239,7 @@ private fun MelodyCard(
                     DropdownMenuItem(
                         text = {
                             Text(
-                                stringResource(R.string.melody_remove_imported),
+                                stringResource(R.string.melody_remove_song),
                                 color = MaterialTheme.colorScheme.error
                             )
                         },
