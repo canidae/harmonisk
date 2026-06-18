@@ -340,7 +340,7 @@ class MelodyViewModel @Inject constructor(
                 val accompanimentMode = try {
                     AccompanimentMode.valueOf(saved.accompanimentMode)
                 } catch (_: IllegalArgumentException) {
-                    if (saved.playMelodyAudio) AccompanimentMode.ALL else AccompanimentMode.NONE
+                    AccompanimentMode.ALL
                 }
                 _gameState.update {
                     it.copy(
@@ -349,7 +349,6 @@ class MelodyViewModel @Inject constructor(
                         currentLevel = level,
                         hideNoteBars = hnb,
                         tempoMultiplier = saved.tempoMultiplier,
-                        playMelodyAudio = saved.playMelodyAudio,
                         activeVoiceIndex = saved.activeVoiceIndex,
                         accompanimentMode = accompanimentMode
                     )
@@ -436,7 +435,6 @@ class MelodyViewModel @Inject constructor(
                 allowWrongNotes = g.allowWrongNotes,
                 tempoMultiplier = g.tempoMultiplier,
                 transposeSemitones = g.transposeSemitones,
-                playMelodyAudio = g.playMelodyAudio,
                 fallSpeedPxPerSec = v.fallSpeedPxPerSec,
                 level = g.currentLevel,
                 activeVoiceIndex = g.activeVoiceIndex,
@@ -506,11 +504,6 @@ class MelodyViewModel @Inject constructor(
             melodyPlayer.resetGameSync()
         }
         saveMelodySettings()
-    }
-
-    fun setPlayMelodyAudio(enabled: Boolean) {
-        val mode = if (enabled) AccompanimentMode.ALL else AccompanimentMode.NONE
-        setAccompanimentMode(mode)
     }
 
     fun toggleMetronome() {

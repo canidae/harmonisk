@@ -34,7 +34,6 @@ data class MelodyGameState(
     val transposeSemitones: Int = 0,
     val melodyScore: MelodyScore? = null,
     val isListening: Boolean = false,
-    val playMelodyAudio: Boolean = false,
     val noteCentsHistory: Map<Int, List<Float>> = emptyMap(),
     val noteCentsPositions: Map<Int, List<Float>> = emptyMap(),
     val notePlayProgress: Map<Int, Float> = emptyMap(),

@@ -21,7 +21,6 @@ class MelodySettingsRepository(
         val allowWrongNotes: Boolean = false,
         val tempoMultiplier: Float = 1.0f,
         val transposeSemitones: Int = 0,
-        val playMelodyAudio: Boolean = false,
         val fallSpeedPxPerSec: Float = 150f,
         val level: Int = 1,
         val activeVoiceIndex: Int = 0,

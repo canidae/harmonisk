@@ -27,13 +27,15 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.perfectpitch.R
-import net.exent.perfectpitch.midi.VoiceInfo
 import net.exent.perfectpitch.ui.components.CanvasMode
+import net.exent.perfectpitch.ui.components.VOICE_COLORS
 import net.exent.perfectpitch.ui.components.KeepScreenOn
 import net.exent.perfectpitch.ui.components.PIANO_HEIGHT_DP
 import net.exent.perfectpitch.ui.components.RequireMicPermission
@@ -209,6 +211,50 @@ fun MelodyPlayScreen(
                         )
                     }
 
+                    // Voice selector (top-panel chip, like Free Play)
+                    if (gameState.voiceInfos.size > 1) {
+                        var showVoiceMenu by remember { mutableStateOf(false) }
+                        val currentVi = gameState.voiceInfos.getOrNull(gameState.activeVoiceIndex)
+                        val voiceColor = if (currentVi != null) VOICE_COLORS[currentVi.trackOrigin % VOICE_COLORS.size] else Color.Gray
+                        Box {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(PANEL_BTN_SIZE)
+                                    .background(voiceColor.copy(alpha = 0.3f), CircleShape)
+                                    .border(1.dp, voiceColor, CircleShape)
+                                    .clickable { showVoiceMenu = true }
+                            ) {
+                                Text("V${gameState.activeVoiceIndex + 1}", fontSize = 10.sp, color = voiceColor)
+                            }
+                            DropdownMenu(
+                                expanded = showVoiceMenu,
+                                onDismissRequest = { showVoiceMenu = false },
+                                offset = DpOffset((-80).dp, 0.dp)
+                            ) {
+                                for (vi in gameState.voiceInfos) {
+                                    val vColor = VOICE_COLORS[vi.trackOrigin % VOICE_COLORS.size]
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Box(Modifier.size(10.dp).background(vColor, CircleShape))
+                                                Text(
+                                                    "V${vi.globalIndex + 1}",
+                                                    fontWeight = if (vi.globalIndex == gameState.activeVoiceIndex) FontWeight.Bold
+                                                                 else FontWeight.Normal
+                                                )
+                                            }
+                                        },
+                                        onClick = { viewModel.setActiveVoice(vi.globalIndex); showVoiceMenu = false }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     // Settings
                     MelodySettingsMenu(
                         expanded = showConfigMenu,
@@ -220,13 +266,8 @@ fun MelodyPlayScreen(
                         onTempoChange = { viewModel.setTempoMultiplier(it) },
                         transposeSemitones = gameState.transposeSemitones,
                         onTransposeChange = { viewModel.setTranspose(it) },
-                        playMelodyAudio = gameState.playMelodyAudio,
-                        onPlayMelodyAudioChange = { viewModel.setPlayMelodyAudio(it) },
                         audioDelay = audioDelay,
                         visualDelay = visualDelay,
-                        voiceInfos = gameState.voiceInfos,
-                        activeVoiceIndex = gameState.activeVoiceIndex,
-                        onVoiceChange = { viewModel.setActiveVoice(it) },
                         accompanimentMode = gameState.accompanimentMode,
                         onAccompanimentModeChange = { viewModel.setAccompanimentMode(it) }
                     )
@@ -390,13 +431,8 @@ private fun MelodySettingsMenu(
     onTempoChange: (Float) -> Unit,
     transposeSemitones: Int,
     onTransposeChange: (Int) -> Unit,
-    playMelodyAudio: Boolean,
-    onPlayMelodyAudioChange: (Boolean) -> Unit,
     audioDelay: Int,
     visualDelay: Int,
-    voiceInfos: List<VoiceInfo>,
-    activeVoiceIndex: Int,
-    onVoiceChange: (Int) -> Unit,
     accompanimentMode: AccompanimentMode,
     onAccompanimentModeChange: (AccompanimentMode) -> Unit
 ) {
@@ -453,38 +489,6 @@ private fun MelodySettingsMenu(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
             HorizontalDivider()
-            // Voice selector (only when more than one voice)
-            if (voiceInfos.size > 1) {
-                DropdownMenuItem(
-                    text = { Text("Voice:") },
-                    onClick = {}
-                )
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    for (vi in voiceInfos) {
-                        val isSelected = vi.globalIndex == activeVoiceIndex
-                        val bg = if (isSelected) MaterialTheme.colorScheme.primary else Color.DarkGray.copy(alpha = 0.3f)
-                        val fg = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.7f)
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(bg)
-                                .clickable { onVoiceChange(vi.globalIndex) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "V${vi.globalIndex + 1}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = fg
-                            )
-                        }
-                    }
-                }
-                HorizontalDivider()
-            }
             // Accompaniment mode selector
             DropdownMenuItem(
                 text = { Text("Play:") },
@@ -519,15 +523,6 @@ private fun MelodySettingsMenu(
                     }
                 }
             }
-            HorizontalDivider()
-            // Legacy play melody audio toggle (maps to ALL/NONE)
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.melody_play_melody_audio)) },
-                trailingIcon = {
-                    Switch(checked = playMelodyAudio, onCheckedChange = onPlayMelodyAudioChange, modifier = Modifier.height(20.dp))
-                },
-                onClick = { onPlayMelodyAudioChange(!playMelodyAudio) }
-            )
             HorizontalDivider()
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.melody_play_audio_delay, audioDelay)) },
