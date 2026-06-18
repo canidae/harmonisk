@@ -694,7 +694,7 @@ class MelodyViewModel @Inject constructor(
     fun stop() {
         playbackJob?.cancel()
         pitchJob?.cancel()
-        melodyPlayer.resetGameSync()
+        melodyPlayer.stop()
         metronomePlayer.stopSync()
         pauseOffset = 0.0
         noteTracking.isWaitingForNote = false
