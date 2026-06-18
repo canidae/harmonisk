@@ -50,7 +50,11 @@ class MidiParser {
         name: String
     ): List<MelodyTrack> {
         var pos = reader.firstTrackPosition
-        val tracks = mutableListOf<MelodyTrack>()
+
+        // First pass: read all tracks to collect global tempo/time-sig events
+        val allTrackData = mutableListOf<MutableList<NoteEvent>>()
+        val allTempos = mutableListOf<TempoEvent>()
+        val allTimeSigs = mutableListOf<TimeSignatureEvent>()
 
         for (trackIdx in 0 until header.numTracks) {
             if (pos + 8 > data.size) break
@@ -59,16 +63,14 @@ class MidiParser {
             val trackEnd = pos + 8 + trackLength
 
             val notes = mutableListOf<NoteEvent>()
-            val tempos = mutableListOf<TempoEvent>()
-            val timeSigs = mutableListOf<TimeSignatureEvent>()
 
             val callback = object : MidiTrackReader.EventCallback {
                 override fun onNoteEvent(note: NoteEvent) { notes.add(note) }
                 override fun onTempoEvent(tick: Long, usPerBeat: Long) {
-                    tempos.add(TempoEvent(tick, usPerBeat))
+                    allTempos.add(TempoEvent(tick, usPerBeat))
                 }
                 override fun onTimeSignature(tick: Long, numerator: Int, denominator: Int) {
-                    timeSigs.add(TimeSignatureEvent(tick, numerator, denominator))
+                    allTimeSigs.add(TimeSignatureEvent(tick, numerator, denominator))
                 }
                 override fun onEndOfTrack(tick: Long, activeNotes: List<MidiTrackReader.ActiveNote>) {
                     for (an in activeNotes) {
@@ -79,12 +81,16 @@ class MidiParser {
 
             pos = reader.readTrack(pos, trackEnd, callback, TAG)
             notes.sortBy { it.startTick }
-
-            val trackName = if (header.numTracks > 1) "$name - Track ${trackIdx + 1}" else name
-            val mergedTempos = if (tempos.isEmpty()) listOf(TempoEvent(0, 500_000)) else tempos
-            tracks.add(MelodyTrack(trackName, notes, mergedTempos, timeSigs, header.timeDivision))
+            allTrackData.add(notes)
         }
-        return tracks
+
+        val globalTempos = if (allTempos.isEmpty()) listOf(TempoEvent(0, 500_000)) else allTempos
+
+        // Second pass: build MelodyTrack with shared global tempo/time-sig map
+        return allTrackData.mapIndexed { trackIdx, notes ->
+            val trackName = if (header.numTracks > 1) "$name - Track ${trackIdx + 1}" else name
+            MelodyTrack(trackName, notes, globalTempos, allTimeSigs, header.timeDivision)
+        }
     }
 
     companion object {
