@@ -128,6 +128,7 @@
     <string name="no_melodies_available">No bundled melodies available.\nImport a MIDI file to get started.</string>
     <string name="melody_no_melodies">No bundled melodies available.\nImport a MIDI file to get started.</string>
     <string name="melody_reset_score">Reset score</string>
+    <string name="melody_import_success">MIDI imported</string>
 
     <!-- Melody Play -->
     <string name="melody_play_midi_input">MIDI input</string>

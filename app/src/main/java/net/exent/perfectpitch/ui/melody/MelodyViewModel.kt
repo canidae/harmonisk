@@ -305,11 +305,16 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun loadMelodyFromUri(uri: android.net.Uri): Boolean {
-        val name = uri.lastPathSegment?.substringAfterLast('/')
-            ?.removeSuffix(".mid")
-            ?.removeSuffix(".midi")
-            ?.replace('_', ' ')
-            ?: "Imported MIDI"
+        val rawPath = uri.lastPathSegment ?: "Imported MIDI"
+        val name = android.net.Uri.decode(rawPath)
+            .substringAfterLast('/')
+            .removeSuffix(".mid")
+            .removeSuffix(".midi")
+            .removeSuffix(".MID")
+            .removeSuffix(".MIDI")
+            .replace('_', ' ')
+            .trim()
+            .ifEmpty { "Imported MIDI" }
         val tracks = melodyRepository.loadMultiTrackFromUri(uri, name)
         if (tracks.isNotEmpty()) {
             val voiceInfos = buildVoiceInfos(tracks)

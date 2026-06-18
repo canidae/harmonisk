@@ -76,7 +76,7 @@ fun MelodyScreen(
             if (viewModel.loadMelodyFromUri(it)) {
                 viewModel.stopPreview()
                 previewingMelody = null
-                onStartPlay()
+                Toast.makeText(context, context.getString(R.string.melody_import_success), Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(context, context.getString(R.string.melody_failed_load_midi), Toast.LENGTH_SHORT).show()
             }
@@ -201,7 +201,7 @@ private fun MelodyCard(
                     .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("🎵", style = MaterialTheme.typography.headlineMedium)
+                Text(if (info.isBundled) "🎵" else "🎶", style = MaterialTheme.typography.headlineMedium)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(info.name, style = MaterialTheme.typography.titleMedium)
