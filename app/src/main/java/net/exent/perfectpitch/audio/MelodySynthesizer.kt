@@ -19,10 +19,11 @@ class MelodySynthesizer : NotePlayer {
         private const val TAG = "MelodySynthesizer"
         private const val SAMPLE_RATE = AudioConstants.SAMPLE_RATE
         private const val BUFFER_FRAMES = 512
-        private const val ATTACK_MS = 10f
+        private const val ATTACK_MS = 40f
         private const val DECAY_MS = 50f
         private const val SUSTAIN_LEVEL = 0.7f
-        private const val RELEASE_MS = 30f
+        private const val RELEASE_MS = 80f
+        private const val MASTER_GAIN = 0.5f
         private const val NUM_VOICES = 8
         private const val MIDI_NOTE_MASK = 0x7F
 
@@ -92,12 +93,14 @@ class MelodySynthesizer : NotePlayer {
         val profileIndex = (channel % NUM_VOICES).coerceAtLeast(0)
         val key = noteKey(channel, note)
         synchronized(noteLock) {
+            val oldState = activeNotes[key]
+            val inheriting = oldState != null && oldState.envelope > 0f
             activeNotes[key] = NoteState(
                 frequency = freq,
                 velocity = vel,
                 profileIndex = profileIndex,
-                phase = activeNotes[key]?.phase ?: 0.0,
-                envelope = 0f,
+                phase = oldState?.phase ?: 0.0,
+                envelope = if (inheriting) oldState!!.envelope.coerceAtMost(1f) else 0f,
                 stage = EnvelopeStage.ATTACK,
                 releasing = false
             )
@@ -180,7 +183,8 @@ class MelodySynthesizer : NotePlayer {
                     state.phase += PHASE_INC
                 }
 
-                val clipped = sample.coerceIn(-1f, 1f)
+                val scaled = sample * MASTER_GAIN
+                val clipped = kotlin.math.tanh(scaled.toDouble()).toFloat()
                 buffer[i] = (clipped * Short.MAX_VALUE).toInt().toShort()
             }
             toRemove.forEach { activeNotes.remove(it) }
