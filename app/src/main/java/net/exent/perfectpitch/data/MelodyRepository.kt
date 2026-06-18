@@ -98,6 +98,21 @@ class MelodyRepository(
         }
     }
 
+    /**
+     * Load a multi-track MIDI file from a URI. Returns one [MelodyTrack] per original MIDI track.
+     * Useful for MIDI files with separate instrument tracks.
+     */
+    fun loadMultiTrackFromUri(uri: Uri, name: String): List<MelodyTrack> {
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                parser.parseMultiTrack(stream, name)
+            } ?: emptyList()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load multi-track MIDI from URI: $uri", e)
+            emptyList()
+        }
+    }
+
     suspend fun getDifficulty(info: MelodyInfo): Float {
         val cached = difficultyRepository.get(info.id)
         if (cached != null && cached.algorithmVersion == DifficultyCalculator.ALGORITHM_VERSION) {

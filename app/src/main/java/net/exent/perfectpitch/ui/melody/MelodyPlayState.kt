@@ -10,7 +10,10 @@ const val COUNTDOWN_BARS = 2
 /** Active session tracking state. */
 data class MelodyGameState(
     val phase: PlayPhase = PlayPhase.NOT_STARTED,
+    /** Primary melody track used for scoring (first track when loaded from multi-track MIDI). */
     val melodyTrack: MelodyTrack? = null,
+    /** All tracks loaded for this melody; first entry is the scoring track. */
+    val melodyTracks: List<MelodyTrack> = emptyList(),
     val currentTimeSeconds: Double = 0.0,
     val noteResults: Map<Int, NoteResultState> = emptyMap(),
     val noteScores: List<NoteScore> = emptyList(),
