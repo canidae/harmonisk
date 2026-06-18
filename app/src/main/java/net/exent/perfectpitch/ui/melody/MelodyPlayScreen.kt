@@ -3,6 +3,7 @@ package net.exent.perfectpitch.ui.melody
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
@@ -20,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -30,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.perfectpitch.R
+import net.exent.perfectpitch.midi.VoiceInfo
 import net.exent.perfectpitch.ui.components.CanvasMode
 import net.exent.perfectpitch.ui.components.KeepScreenOn
 import net.exent.perfectpitch.ui.components.PIANO_HEIGHT_DP
@@ -220,7 +223,12 @@ fun MelodyPlayScreen(
                         playMelodyAudio = gameState.playMelodyAudio,
                         onPlayMelodyAudioChange = { viewModel.setPlayMelodyAudio(it) },
                         audioDelay = audioDelay,
-                        visualDelay = visualDelay
+                        visualDelay = visualDelay,
+                        voiceInfos = gameState.voiceInfos,
+                        activeVoiceIndex = gameState.activeVoiceIndex,
+                        onVoiceChange = { viewModel.setActiveVoice(it) },
+                        accompanimentMode = gameState.accompanimentMode,
+                        onAccompanimentModeChange = { viewModel.setAccompanimentMode(it) }
                     )
                 }
 
@@ -385,7 +393,12 @@ private fun MelodySettingsMenu(
     playMelodyAudio: Boolean,
     onPlayMelodyAudioChange: (Boolean) -> Unit,
     audioDelay: Int,
-    visualDelay: Int
+    visualDelay: Int,
+    voiceInfos: List<VoiceInfo>,
+    activeVoiceIndex: Int,
+    onVoiceChange: (Int) -> Unit,
+    accompanimentMode: AccompanimentMode,
+    onAccompanimentModeChange: (AccompanimentMode) -> Unit
 ) {
     Box {
         IconButton(
@@ -440,6 +453,74 @@ private fun MelodySettingsMenu(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
             HorizontalDivider()
+            // Voice selector (only when more than one voice)
+            if (voiceInfos.size > 1) {
+                DropdownMenuItem(
+                    text = { Text("Voice:") },
+                    onClick = {}
+                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    for (vi in voiceInfos) {
+                        val isSelected = vi.globalIndex == activeVoiceIndex
+                        val bg = if (isSelected) MaterialTheme.colorScheme.primary else Color.DarkGray.copy(alpha = 0.3f)
+                        val fg = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.7f)
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(bg)
+                                .clickable { onVoiceChange(vi.globalIndex) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "V${vi.globalIndex + 1}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = fg
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider()
+            }
+            // Accompaniment mode selector
+            DropdownMenuItem(
+                text = { Text("Play:") },
+                onClick = {}
+            )
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf(
+                    AccompanimentMode.ALL to "All",
+                    AccompanimentMode.SELECTED_ONLY to "Selected",
+                    AccompanimentMode.NONE to "None"
+                ).forEach { (mode, label) ->
+                    val isSelected = accompanimentMode == mode
+                    val bg = if (isSelected) MaterialTheme.colorScheme.primary else Color.DarkGray.copy(alpha = 0.3f)
+                    val fg = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.7f)
+                    Box(
+                        modifier = Modifier
+                            .height(28.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .background(bg)
+                            .clickable { onAccompanimentModeChange(mode) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = fg,
+                            modifier = Modifier.padding(horizontal = 10.dp)
+                        )
+                    }
+                }
+            }
+            HorizontalDivider()
+            // Legacy play melody audio toggle (maps to ALL/NONE)
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.melody_play_melody_audio)) },
                 trailingIcon = {
