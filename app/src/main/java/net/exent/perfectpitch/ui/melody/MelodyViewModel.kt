@@ -70,7 +70,9 @@ class MelodyViewModel @Inject constructor(
     val deviceState: StateFlow<MelodyDeviceState> = _deviceState.asStateFlow()
 
     val availableMelodies: StateFlow<List<MelodyRepository.MelodyInfo>> =
-        MutableStateFlow(melodyRepository.getAvailableMelodies()).asStateFlow()
+        melodyRepository.importedMelodies
+            .map { imported -> melodyRepository.getBundledMelodies() + imported }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, melodyRepository.getBundledMelodies())
 
     private val _currentScoreHistory = MutableStateFlow<List<ScoreHistoryRepository.ScoreEntry>>(emptyList())
     val currentScoreHistory: StateFlow<List<ScoreHistoryRepository.ScoreEntry>> = _currentScoreHistory.asStateFlow()
@@ -210,12 +212,9 @@ class MelodyViewModel @Inject constructor(
         else -> true             // off → force on
     }
 
-    fun getAvailableMelodies(): List<MelodyRepository.MelodyInfo> =
-        melodyRepository.getAvailableMelodies()
-
     private fun loadAllMelodyCombinedScores() {
         viewModelScope.launch {
-            melodyRepository.getAvailableMelodies().let { melodies ->
+            availableMelodies.first().let { melodies ->
                 val flows = melodies.map { info ->
                     scoreHistoryRepository.getScores(info.id).map { scores ->
                         info.id to ScoringEngine.computeCombinedScore(scores.map { it.level to it.overallScore })
@@ -232,7 +231,7 @@ class MelodyViewModel @Inject constructor(
 
     private fun loadAllMelodyDifficulties() {
         viewModelScope.launch {
-            val melodies = melodyRepository.getAvailableMelodies()
+            val melodies = availableMelodies.first()
             val results = melodies.map { info ->
                 async {
                     info.id to melodyRepository.getDifficulty(info)
@@ -306,7 +305,12 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun loadMelodyFromUri(uri: android.net.Uri): Boolean {
-        val tracks = melodyRepository.loadMultiTrackFromUri(uri, "Imported MIDI")
+        val name = uri.lastPathSegment?.substringAfterLast('/')
+            ?.removeSuffix(".mid")
+            ?.removeSuffix(".midi")
+            ?.replace('_', ' ')
+            ?: "Imported MIDI"
+        val tracks = melodyRepository.loadMultiTrackFromUri(uri, name)
         if (tracks.isNotEmpty()) {
             val voiceInfos = buildVoiceInfos(tracks)
             originalMelodyTrack = tracks.first()
@@ -328,6 +332,20 @@ class MelodyViewModel @Inject constructor(
             }
             _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
             loadMelodySettingsAndHistory(currentMelodyId!!)
+
+            // Persist the imported melody and compute difficulty
+            viewModelScope.launch {
+                val info = MelodyRepository.MelodyInfo(
+                    id = currentMelodyId!!,
+                    name = name,
+                    isBundled = false,
+                    uri = uri
+                )
+                melodyRepository.addImportedMelody(info)
+                val diff = melodyRepository.getDifficulty(info)
+                _allMelodyDifficulties.update { it + (info.id to diff) }
+                // combined score starts empty (no playthroughs yet), map already shows 0
+            }
             return true
         }
         return false
@@ -710,6 +728,13 @@ class MelodyViewModel @Inject constructor(
                 noteFirstDetectionStart = emptyMap(),
                 countdownResumeTarget = 0.0
             )
+        }
+    }
+
+    fun resetScore(melodyId: String) {
+        viewModelScope.launch {
+            scoreHistoryRepository.resetScores(melodyId)
+            loadAllMelodyCombinedScores()
         }
     }
 

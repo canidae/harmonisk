@@ -46,4 +46,8 @@ class ScoreHistoryRepository(
             list
         }
     }
+
+    suspend fun resetScores(melodyId: String) {
+        store.remove(melodyId)
+    }
 }

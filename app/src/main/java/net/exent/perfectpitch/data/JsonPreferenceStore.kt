@@ -44,6 +44,14 @@ class JsonPreferenceStore<K, V>(
 
     suspend fun set(key: K, value: V) = update(key) { value }
 
+    suspend fun remove(key: K) {
+        dataStore.edit { prefs ->
+            val current = parse(prefs[preferencesKey]).toMutableMap()
+            current.remove(key)
+            prefs[preferencesKey] = json.encodeToString(keySerializer, current)
+        }
+    }
+
     private fun parse(jsonStr: String?): Map<K, V> {
         if (jsonStr.isNullOrBlank()) return emptyMap()
         return try {

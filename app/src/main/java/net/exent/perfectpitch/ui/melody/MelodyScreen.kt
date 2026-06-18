@@ -9,7 +9,9 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -171,6 +173,7 @@ fun MelodyScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MelodyCard(
     viewModel: MelodyViewModel,
@@ -183,6 +186,7 @@ private fun MelodyCard(
     onTogglePreview: () -> Unit,
     onToggleExpand: () -> Unit
 ) {
+    var showMenu by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -190,7 +194,10 @@ private fun MelodyCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onPlay)
+                    .combinedClickable(
+                        onClick = onPlay,
+                        onLongClick = { showMenu = true }
+                    )
                     .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -215,6 +222,19 @@ private fun MelodyCard(
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
+            }
+
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.melody_reset_score)) },
+                    onClick = {
+                        showMenu = false
+                        viewModel.resetScore(info.id)
+                    }
+                )
             }
 
             AnimatedVisibility(
