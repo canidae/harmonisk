@@ -21,6 +21,7 @@ import net.exent.perfectpitch.midi.MidiDeviceManager
 import net.exent.perfectpitch.midi.MidiInputReceiver
 import net.exent.perfectpitch.midi.MidiNoteEvent
 import net.exent.perfectpitch.midi.MidiOutputSender
+import net.exent.perfectpitch.midi.VoiceInfo
 import net.exent.perfectpitch.music.*
 import net.exent.perfectpitch.ui.MAX_FALL_SPEED
 import net.exent.perfectpitch.ui.MIN_FALL_SPEED
@@ -97,6 +98,7 @@ class MelodyViewModel @Inject constructor(
 
     private var originalMelodyTrack: MelodyTrack? = null
     private var originalMelodyTracks: List<MelodyTrack> = emptyList()
+    private var originalVoiceInfos: List<VoiceInfo> = emptyList()
     private var currentMelodyId: String? = null
 
     // Melody audio output delay
@@ -251,6 +253,24 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Split a list of MIDI tracks into individual voice lines.
+     * Each track with simultaneous notes is decomposed into multiple
+     * monophonic voice tracks.  Voices from the same original track
+     * share [VoiceInfo.trackOrigin] (same sound/colour).
+     */
+    private fun buildVoiceInfos(tracks: List<MelodyTrack>): List<VoiceInfo> {
+        val result = mutableListOf<VoiceInfo>()
+        var globalIndex = 0
+        for ((trackOrigin, track) in tracks.withIndex()) {
+            for (voiceTrack in track.splitIntoVoices()) {
+                result.add(VoiceInfo(globalIndex, trackOrigin, voiceTrack))
+                globalIndex++
+            }
+        }
+        return result
+    }
+
     private fun current48thNoteMs(): Long {
         val bpm = currentMelodyBpm()
         return if (bpm > 0f) (5000.0 / bpm).toLong().coerceAtLeast(1L) else 1L
@@ -261,12 +281,18 @@ class MelodyViewModel @Inject constructor(
         if (track != null) {
             originalMelodyTrack = track
             originalMelodyTracks = listOf(track)
+            val voiceInfos = buildVoiceInfos(listOf(track))
+            originalVoiceInfos = voiceInfos
             currentMelodyId = info.id
-            val (viewMin, viewMax) = viewRangeFor(track)
+            val primary = voiceInfos.first().melodyTrack
+            val (viewMin, viewMax) = viewRangeFor(primary)
             _gameState.update {
                 it.copy(
-                    melodyTrack = track,
-                    melodyTracks = listOf(track),
+                    melodyTrack = primary,
+                    melodyTracks = voiceInfos.map { it.melodyTrack },
+                    voiceInfos = voiceInfos,
+                    activeVoiceIndex = 0,
+                    accompanimentMode = _gameState.value.accompanimentMode,
                     phase = PlayPhase.NOT_STARTED,
                     transposeSemitones = 0
                 )
@@ -281,15 +307,20 @@ class MelodyViewModel @Inject constructor(
     fun loadMelodyFromUri(uri: android.net.Uri): Boolean {
         val tracks = melodyRepository.loadMultiTrackFromUri(uri, "Imported MIDI")
         if (tracks.isNotEmpty()) {
-            val primary = tracks.first()
-            originalMelodyTrack = primary
+            val voiceInfos = buildVoiceInfos(tracks)
+            originalMelodyTrack = tracks.first()
             originalMelodyTracks = tracks
+            originalVoiceInfos = voiceInfos
             currentMelodyId = melodyRepository.uriMelodyId(uri)
+            val primary = voiceInfos.first().melodyTrack
             val (viewMin, viewMax) = viewRangeFor(primary)
             _gameState.update {
                 it.copy(
                     melodyTrack = primary,
-                    melodyTracks = tracks,
+                    melodyTracks = voiceInfos.map { vi -> vi.melodyTrack },
+                    voiceInfos = voiceInfos,
+                    activeVoiceIndex = 0,
+                    accompanimentMode = _gameState.value.accompanimentMode,
                     phase = PlayPhase.NOT_STARTED,
                     transposeSemitones = 0
                 )
@@ -306,6 +337,11 @@ class MelodyViewModel @Inject constructor(
             melodySettingsRepository.getSettings(melodyId).first().let { saved ->
                 val level = saved.level.coerceIn(1, 5)
                 val (wm, awn, hnb) = levelToSettings(level)
+                val accompanimentMode = try {
+                    AccompanimentMode.valueOf(saved.accompanimentMode)
+                } catch (_: IllegalArgumentException) {
+                    if (saved.playMelodyAudio) AccompanimentMode.ALL else AccompanimentMode.NONE
+                }
                 _gameState.update {
                     it.copy(
                         waitMode = wm,
@@ -313,10 +349,18 @@ class MelodyViewModel @Inject constructor(
                         currentLevel = level,
                         hideNoteBars = hnb,
                         tempoMultiplier = saved.tempoMultiplier,
-                        playMelodyAudio = saved.playMelodyAudio
+                        playMelodyAudio = saved.playMelodyAudio,
+                        activeVoiceIndex = saved.activeVoiceIndex,
+                        accompanimentMode = accompanimentMode
                     )
                 }
                 _viewState.update { it.copy(fallSpeedPxPerSec = saved.fallSpeedPxPerSec) }
+                // Restore voice selection after state is built
+                val vi = _gameState.value.voiceInfos
+                if (vi.isNotEmpty()) {
+                    val idx = saved.activeVoiceIndex.coerceIn(0, vi.lastIndex)
+                    setActiveVoice(idx)
+                }
                 if (saved.transposeSemitones != 0) {
                     setTranspose(saved.transposeSemitones)
                 }
@@ -355,15 +399,18 @@ class MelodyViewModel @Inject constructor(
 
     fun setTranspose(semitones: Int) {
         val clamped = semitones.coerceIn(-24, 24)
-        val base = originalMelodyTrack ?: return
-        if (originalMelodyTracks.isEmpty()) return
-        val transposed = base.transpose(clamped)
-        val transposedTracks = originalMelodyTracks.map { it.transpose(clamped) }
-        val (viewMin, viewMax) = viewRangeFor(transposed)
+        if (originalVoiceInfos.isEmpty()) return
+        val voiceInfos = originalVoiceInfos.map { vi ->
+            vi.copy(melodyTrack = vi.melodyTrack.transpose(clamped))
+        }
+        val activeIdx = _gameState.value.activeVoiceIndex.coerceAtMost(voiceInfos.lastIndex)
+        val primary = voiceInfos[activeIdx].melodyTrack
+        val (viewMin, viewMax) = viewRangeFor(primary)
         _gameState.update {
             it.copy(
-                melodyTrack = transposed,
-                melodyTracks = transposedTracks,
+                melodyTrack = primary,
+                melodyTracks = voiceInfos.map { vi -> vi.melodyTrack },
+                voiceInfos = voiceInfos,
                 transposeSemitones = clamped
             )
         }
@@ -391,7 +438,9 @@ class MelodyViewModel @Inject constructor(
                 transposeSemitones = g.transposeSemitones,
                 playMelodyAudio = g.playMelodyAudio,
                 fallSpeedPxPerSec = v.fallSpeedPxPerSec,
-                level = g.currentLevel
+                level = g.currentLevel,
+                activeVoiceIndex = g.activeVoiceIndex,
+                accompanimentMode = g.accompanimentMode.name
             ))
         }
     }
@@ -419,6 +468,8 @@ class MelodyViewModel @Inject constructor(
         melodyPlayer.playWithTiming(tracks, viewModelScope, _gameState.value.tempoMultiplier)
     }
 
+    /** Preview a specific melody from its info (uses all voice tracks). */
+
     /** Preview a specific melody info (loads and plays). */
     fun previewMelody(info: MelodyRepository.MelodyInfo) {
         val track = melodyRepository.loadMelody(info) ?: return
@@ -436,12 +487,30 @@ class MelodyViewModel @Inject constructor(
     val isPreviewPlaying: StateFlow<Boolean> = melodyPlayer.isPlaying
 
     /** Toggle in-game melody audio playback. */
-    fun setPlayMelodyAudio(enabled: Boolean) {
-        _gameState.update { it.copy(playMelodyAudio = enabled) }
-        if (!enabled) {
+    fun setActiveVoice(index: Int) {
+        val infos = _gameState.value.voiceInfos
+        if (index < 0 || index >= infos.size) return
+        val selectedTrack = infos[index].melodyTrack
+        _gameState.update {
+            it.copy(
+                activeVoiceIndex = index,
+                melodyTrack = selectedTrack
+            )
+        }
+        saveMelodySettings()
+    }
+
+    fun setAccompanimentMode(mode: AccompanimentMode) {
+        _gameState.update { it.copy(accompanimentMode = mode) }
+        if (mode == AccompanimentMode.NONE) {
             melodyPlayer.resetGameSync()
         }
         saveMelodySettings()
+    }
+
+    fun setPlayMelodyAudio(enabled: Boolean) {
+        val mode = if (enabled) AccompanimentMode.ALL else AccompanimentMode.NONE
+        setAccompanimentMode(mode)
     }
 
     fun toggleMetronome() {
@@ -747,10 +816,20 @@ class MelodyViewModel @Inject constructor(
                 // Feed melody audio earlier than t=0 to compensate for output latency.
                 // updateGameTime uses lookahead internally, so we must call it
                 // starting at currentTime = -outputDelay so the first note fires on time.
-                val tracks = _gameState.value.melodyTracks
-                if (_gameState.value.playMelodyAudio && melodySynthesizer.isReady &&
-                    currentTime >= -(audioOutputDelayMs / 1000.0) && tracks.isNotEmpty()) {
-                    melodyPlayer.updateGameTime(currentTime, tracks)
+                val gs = _gameState.value
+                val playTracks = when (gs.accompanimentMode) {
+                    AccompanimentMode.ALL -> gs.melodyTracks
+                    AccompanimentMode.SELECTED_ONLY -> {
+                        val vi = gs.voiceInfos
+                        if (gs.activeVoiceIndex in vi.indices)
+                            listOf(vi[gs.activeVoiceIndex].melodyTrack)
+                        else emptyList()
+                    }
+                    AccompanimentMode.NONE -> emptyList()
+                }
+                if (playTracks.isNotEmpty() && melodySynthesizer.isReady &&
+                    currentTime >= -(audioOutputDelayMs / 1000.0)) {
+                    melodyPlayer.updateGameTime(currentTime, playTracks)
                 }
 
                 delay(16)

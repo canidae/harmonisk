@@ -23,7 +23,9 @@ class MelodySettingsRepository(
         val transposeSemitones: Int = 0,
         val playMelodyAudio: Boolean = false,
         val fallSpeedPxPerSec: Float = 150f,
-        val level: Int = 1
+        val level: Int = 1,
+        val activeVoiceIndex: Int = 0,
+        val accompanimentMode: String = "ALL"
     )
 
     private val store = JsonPreferenceStore<String, MelodySettings>(
