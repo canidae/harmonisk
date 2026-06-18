@@ -28,7 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -288,12 +290,10 @@ private fun CombinedScoreBadge(
 
 @Composable
 private fun DifficultyBadge(difficulty: Float) {
-    val color = when {
-        difficulty < 0.33f -> lerp(Color.Green, Color.Yellow, difficulty / 0.33f)
-        difficulty < 0.66f -> lerp(Color.Yellow, Color(0xFFFF9800), (difficulty - 0.33f) / 0.33f)
-        else -> lerp(Color(0xFFFF9800), Color.Red, (difficulty - 0.66f) / 0.34f)
-    }
-    val triangleHeight = difficulty.coerceIn(0.05f, 1f)
+    val outlineColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f)
+    val fillColors = listOf(Color.Green, Color.Yellow, Color(0xFFFF9800), Color.Red)
+    val badgeHeight = 16.dp
+    val badgeWidth = 32.dp
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
@@ -301,14 +301,25 @@ private fun DifficultyBadge(difficulty: Float) {
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Canvas(modifier = Modifier.size(width = 32.dp, height = 10.dp)) {
+        Canvas(modifier = Modifier.size(width = badgeWidth, height = badgeHeight)) {
             val path = Path().apply {
                 moveTo(0f, size.height)
                 lineTo(size.width, size.height)
-                lineTo(size.width, size.height - size.height * triangleHeight)
+                lineTo(size.width, 0f)
                 close()
             }
-            drawPath(path, color = color)
+            drawPath(path, color = outlineColor, style = Stroke(width = 1.dp.toPx()))
+            clipPath(path) {
+                val fillEnd = size.width * difficulty.coerceIn(0f, 1f)
+                drawRect(
+                    brush = Brush.horizontalGradient(
+                        colors = fillColors,
+                        startX = 0f,
+                        endX = size.width
+                    ),
+                    size = size.copy(width = fillEnd)
+                )
+            }
         }
     }
 }
