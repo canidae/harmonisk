@@ -264,6 +264,7 @@ class MelodyViewModel @Inject constructor(
         var globalIndex = 0
         for ((trackOrigin, track) in tracks.withIndex()) {
             for (voiceTrack in track.splitIntoVoices()) {
+                if (voiceTrack.notes.isEmpty()) continue
                 result.add(VoiceInfo(globalIndex, trackOrigin, voiceTrack))
                 globalIndex++
             }
