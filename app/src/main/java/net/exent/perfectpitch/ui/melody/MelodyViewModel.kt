@@ -96,6 +96,7 @@ class MelodyViewModel @Inject constructor(
     private var currentNoteDetectedCorrectly = false
 
     private var originalMelodyTrack: MelodyTrack? = null
+    private var originalMelodyTracks: List<MelodyTrack> = emptyList()
     private var currentMelodyId: String? = null
 
     // Melody audio output delay
@@ -259,11 +260,13 @@ class MelodyViewModel @Inject constructor(
         val track = melodyRepository.loadMelody(info)
         if (track != null) {
             originalMelodyTrack = track
+            originalMelodyTracks = listOf(track)
             currentMelodyId = info.id
             val (viewMin, viewMax) = viewRangeFor(track)
             _gameState.update {
                 it.copy(
                     melodyTrack = track,
+                    melodyTracks = listOf(track),
                     phase = PlayPhase.NOT_STARTED,
                     transposeSemitones = 0
                 )
@@ -276,14 +279,17 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun loadMelodyFromUri(uri: android.net.Uri): Boolean {
-        val track = melodyRepository.loadFromUri(uri, "Imported MIDI")
-        if (track != null) {
-            originalMelodyTrack = track
+        val tracks = melodyRepository.loadMultiTrackFromUri(uri, "Imported MIDI")
+        if (tracks.isNotEmpty()) {
+            val primary = tracks.first()
+            originalMelodyTrack = primary
+            originalMelodyTracks = tracks
             currentMelodyId = melodyRepository.uriMelodyId(uri)
-            val (viewMin, viewMax) = viewRangeFor(track)
+            val (viewMin, viewMax) = viewRangeFor(primary)
             _gameState.update {
                 it.copy(
-                    melodyTrack = track,
+                    melodyTrack = primary,
+                    melodyTracks = tracks,
                     phase = PlayPhase.NOT_STARTED,
                     transposeSemitones = 0
                 )
@@ -350,11 +356,14 @@ class MelodyViewModel @Inject constructor(
     fun setTranspose(semitones: Int) {
         val clamped = semitones.coerceIn(-24, 24)
         val base = originalMelodyTrack ?: return
+        if (originalMelodyTracks.isEmpty()) return
         val transposed = base.transpose(clamped)
+        val transposedTracks = originalMelodyTracks.map { it.transpose(clamped) }
         val (viewMin, viewMax) = viewRangeFor(transposed)
         _gameState.update {
             it.copy(
                 melodyTrack = transposed,
+                melodyTracks = transposedTracks,
                 transposeSemitones = clamped
             )
         }
@@ -405,9 +414,9 @@ class MelodyViewModel @Inject constructor(
 
     /** Preview the loaded melody (audio only, standalone playback). */
     fun previewMelody() {
-        val track = _gameState.value.melodyTrack ?: return
-        if (!melodySynthesizer.isReady) return
-        melodyPlayer.playWithTiming(track, viewModelScope, _gameState.value.tempoMultiplier)
+        val tracks = _gameState.value.melodyTracks
+        if (tracks.isEmpty() || !melodySynthesizer.isReady) return
+        melodyPlayer.playWithTiming(tracks, viewModelScope, _gameState.value.tempoMultiplier)
     }
 
     /** Preview a specific melody info (loads and plays). */
@@ -738,9 +747,10 @@ class MelodyViewModel @Inject constructor(
                 // Feed melody audio earlier than t=0 to compensate for output latency.
                 // updateGameTime uses lookahead internally, so we must call it
                 // starting at currentTime = -outputDelay so the first note fires on time.
+                val tracks = _gameState.value.melodyTracks
                 if (_gameState.value.playMelodyAudio && melodySynthesizer.isReady &&
-                    currentTime >= -(audioOutputDelayMs / 1000.0)) {
-                    melodyPlayer.updateGameTime(currentTime, track)
+                    currentTime >= -(audioOutputDelayMs / 1000.0) && tracks.isNotEmpty()) {
+                    melodyPlayer.updateGameTime(currentTime, tracks)
                 }
 
                 delay(16)
