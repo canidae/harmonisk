@@ -8,7 +8,7 @@ import net.exent.perfectpitch.music.PitchResult
 
 const val COUNTDOWN_BARS = 2
 
-enum class AccompanimentMode { ALL, SELECTED_ONLY, NONE }
+enum class AccompanimentMode { ALL, EXCEPT, SELECTED_ONLY, NONE }
 
 /** Active session tracking state. */
 data class MelodyGameState(

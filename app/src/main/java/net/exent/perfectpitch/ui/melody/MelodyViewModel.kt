@@ -812,6 +812,10 @@ class MelodyViewModel @Inject constructor(
                 val gs = _gameState.value
                 val playTracks = when (gs.accompanimentMode) {
                     AccompanimentMode.ALL -> gs.melodyTracks
+                    AccompanimentMode.EXCEPT -> {
+                        val vi = gs.voiceInfos
+                        vi.filterIndexed { i, _ -> i != gs.activeVoiceIndex }.map { it.melodyTrack }
+                    }
                     AccompanimentMode.SELECTED_ONLY -> {
                         val vi = gs.voiceInfos
                         if (gs.activeVoiceIndex in vi.indices)

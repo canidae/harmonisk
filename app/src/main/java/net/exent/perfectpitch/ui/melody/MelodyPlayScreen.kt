@@ -491,7 +491,7 @@ private fun MelodySettingsMenu(
             HorizontalDivider()
             // Accompaniment mode selector
             DropdownMenuItem(
-                text = { Text("Play:") },
+                text = { Text("Play voices:") },
                 onClick = {}
             )
             Row(
@@ -500,6 +500,7 @@ private fun MelodySettingsMenu(
             ) {
                 listOf(
                     AccompanimentMode.ALL to "All",
+                    AccompanimentMode.EXCEPT to "Except",
                     AccompanimentMode.SELECTED_ONLY to "Selected",
                     AccompanimentMode.NONE to "None"
                 ).forEach { (mode, label) ->
