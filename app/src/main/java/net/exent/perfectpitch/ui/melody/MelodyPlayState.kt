@@ -1,11 +1,14 @@
 package net.exent.perfectpitch.ui.melody
 
 import net.exent.perfectpitch.midi.MelodyTrack
+import net.exent.perfectpitch.midi.VoiceInfo
 import net.exent.perfectpitch.music.MelodyScore
 import net.exent.perfectpitch.music.NoteScore
 import net.exent.perfectpitch.music.PitchResult
 
 const val COUNTDOWN_BARS = 2
+
+enum class AccompanimentMode { ALL, SELECTED_ONLY, NONE }
 
 /** Active session tracking state. */
 data class MelodyGameState(
@@ -14,6 +17,12 @@ data class MelodyGameState(
     val melodyTrack: MelodyTrack? = null,
     /** All tracks loaded for this melody; first entry is the scoring track. */
     val melodyTracks: List<MelodyTrack> = emptyList(),
+    /** Split voice info for multi-voice melodies (empty when monophonic). */
+    val voiceInfos: List<VoiceInfo> = emptyList(),
+    /** Which voice the user has selected to sing (index into voiceInfos). */
+    val activeVoiceIndex: Int = 0,
+    /** Whether to play all voices, only the selected one, or none. */
+    val accompanimentMode: AccompanimentMode = AccompanimentMode.ALL,
     val currentTimeSeconds: Double = 0.0,
     val noteResults: Map<Int, NoteResultState> = emptyMap(),
     val noteScores: List<NoteScore> = emptyList(),

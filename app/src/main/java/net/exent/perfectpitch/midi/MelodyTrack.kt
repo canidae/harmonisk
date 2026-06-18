@@ -126,4 +126,104 @@ class MelodyTrack(
         }
         return seg.startTick + (elapsedInSegment * ticksPerQuarterNote * 1_000_000.0 / seg.usPerBeat).toLong()
     }
+
+    /**
+     * Decompose a polyphonic track into separate monophonic voice tracks.
+     *
+     * At every point in time, voice V is the (V+1)-th highest pitch among
+     * all simultaneously active original notes.  Each original note may be
+     * split across multiple voices as other notes enter and exit.
+     *
+     * Returns [this] unchanged if the track is already monophonic.
+     */
+    fun splitIntoVoices(): List<MelodyTrack> {
+        if (notes.size <= 1) return listOf(this)
+
+        val sorted = notes.sortedBy { it.startTick }
+
+        // Collect all unique event times
+        val times = sortedSetOf<Long>()
+        for (n in sorted) {
+            times.add(n.startTick)
+            times.add(n.endTick)
+        }
+        val eventTimes = times.toList()
+        if (eventTimes.size < 2) return listOf(this)
+
+        // Determine max simultaneous notes (polyphony)
+        var maxActive = 0
+        for (i in 0 until eventTimes.size - 1) {
+            val mid = (eventTimes[i] + eventTimes[i + 1]) / 2
+            val count = sorted.count { it.startTick <= mid && mid < it.endTick }
+            if (count > maxActive) maxActive = count
+        }
+        if (maxActive <= 1) return listOf(this)
+
+        // Build voice tracks by scanning intervals
+        val voiceNotes = Array(maxActive) { mutableListOf<NoteEvent>() }
+        val currentNote = arrayOfNulls<NoteEvent>(maxActive)
+        val currentStart = arrayOfNulls<Long>(maxActive)
+
+        for (i in 0 until eventTimes.size - 1) {
+            val intervalStart = eventTimes[i]
+            val intervalEnd = eventTimes[i + 1]
+            if (intervalStart == intervalEnd) continue
+            val mid = (intervalStart + intervalEnd) / 2
+
+            val active = sorted
+                .filter { it.startTick <= mid && mid < it.endTick }
+                .sortedByDescending { it.noteNumber }
+
+            for (v in 0 until maxActive) {
+                if (v < active.size) {
+                    val note = active[v]
+                    if (currentNote[v] !== note) {
+                        // Finalize previous note on this voice
+                        if (currentNote[v] != null && currentStart[v] != null) {
+                            val prev = currentNote[v]!!
+                            val dur = intervalStart - currentStart[v]!!
+                            if (dur > 0) {
+                                voiceNotes[v].add(NoteEvent(prev.noteNumber, prev.velocity, currentStart[v]!!, dur))
+                            }
+                        }
+                        currentNote[v] = note
+                        currentStart[v] = intervalStart
+                    }
+                } else {
+                    // Voice goes silent
+                    if (currentNote[v] != null && currentStart[v] != null) {
+                        val prev = currentNote[v]!!
+                        val dur = intervalStart - currentStart[v]!!
+                        if (dur > 0) {
+                            voiceNotes[v].add(NoteEvent(prev.noteNumber, prev.velocity, currentStart[v]!!, dur))
+                        }
+                        currentNote[v] = null
+                        currentStart[v] = null
+                    }
+                }
+            }
+        }
+
+        // Finalize any remaining active notes
+        val lastTime = eventTimes.last()
+        for (v in 0 until maxActive) {
+            if (currentNote[v] != null && currentStart[v] != null) {
+                val prev = currentNote[v]!!
+                val dur = lastTime - currentStart[v]!!
+                if (dur > 0) {
+                    voiceNotes[v].add(NoteEvent(prev.noteNumber, prev.velocity, currentStart[v]!!, dur))
+                }
+            }
+        }
+
+        return voiceNotes.map { notes ->
+            MelodyTrack(
+                name = name,
+                notes = notes,
+                tempoChanges = tempoChanges,
+                timeSignatures = timeSignatures,
+                ticksPerQuarterNote = ticksPerQuarterNote
+            )
+        }
+    }
 }
