@@ -509,6 +509,7 @@ class FreePlayViewModel @Inject constructor(
             val voice = snapped.voiceIndex
             val filtered = current.playedNotes.filter { other ->
                 other.id == id || other.voiceIndex != voice ||
+                other.midiNumber != snapped.midiNumber ||
                 other.endTimeMs == null || other.endTimeMs <= snappedStart || other.startTimeMs >= snappedEnd
             }
             current.copy(playedNotes = filtered.map { if (it.id == id) snapped else it })
@@ -862,13 +863,15 @@ class FreePlayViewModel @Inject constructor(
                 return
             }
 
-            // Re-record: delete notes in same voice that overlap the new note
+            // Remove overlapping same-pitch notes in the same voice (legato retrigger).
+            // Different-pitch overlaps are kept for polyphony.
             val voice = finalNote.voiceIndex
             val newStart = finalNote.startTimeMs
             val newEnd = snappedEnd
             _state.update { current ->
                 val filtered = (current.playedNotes + finalNote).filter { other ->
                     other.id == finalNote.id || other.voiceIndex != voice ||
+                    other.midiNumber != finalNote.midiNumber ||
                     other.endTimeMs == null || other.endTimeMs <= newStart || other.startTimeMs >= newEnd
                 }
                 current.copy(playedNotes = filtered, activeNote = null)
@@ -992,7 +995,7 @@ class FreePlayViewModel @Inject constructor(
                 OutputDevice.NONE -> null
             }
 
-            data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean)
+            data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean, val voiceIndex: Int = 0)
 
             fun buildEvents(startTime: Long): List<Event> {
                 val evts = mutableListOf<Event>()
@@ -1000,8 +1003,8 @@ class FreePlayViewModel @Inject constructor(
                     val endMs = note.endTimeMs!!
                     if (endMs <= startTime) continue
                     val onTime = if (note.startTimeMs <= startTime) startTime else note.startTimeMs
-                    evts.add(Event(onTime, note.midiNumber, true))
-                    evts.add(Event(endMs, note.midiNumber, false))
+                    evts.add(Event(onTime, note.midiNumber, true, note.voiceIndex))
+                    evts.add(Event(endMs, note.midiNumber, false, note.voiceIndex))
                 }
                 evts.sortBy { it.timeMs }
                 return evts
@@ -1051,8 +1054,8 @@ class FreePlayViewModel @Inject constructor(
                 // Fire due events
                 while (eventIndex < events.size && events[eventIndex].timeMs <= replayPositionMs) {
                     val ev = events[eventIndex++]
-                    if (ev.isOn) player?.noteOn(0, ev.midiNote, 80)
-                    else player?.noteOff(0, ev.midiNote)
+                    if (ev.isOn) player?.noteOn(ev.voiceIndex, ev.midiNote, 80)
+                    else player?.noteOff(ev.voiceIndex, ev.midiNote)
                 }
 
                 // Loop-at-end: re-read bounds each frame so user changes take effect immediately
