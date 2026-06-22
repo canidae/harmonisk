@@ -354,11 +354,13 @@ class MelodyViewModel @Inject constructor(
 
             // Persist the imported melody and compute difficulty
             viewModelScope.launch {
+                val localUri = melodyRepository.copyUriToLocal(uri, name)
+                val persistUri = localUri ?: uri
                 val info = MelodyRepository.MelodyInfo(
                     id = currentMelodyId!!,
                     name = name,
                     isBundled = false,
-                    uri = uri
+                    uri = persistUri
                 )
                 melodyRepository.addImportedMelody(info)
                 melodyRepository.getDifficulty(info)

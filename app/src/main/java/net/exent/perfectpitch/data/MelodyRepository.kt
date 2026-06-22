@@ -7,6 +7,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import net.exent.perfectpitch.R
@@ -193,7 +194,41 @@ class MelodyRepository(
         return difficulty
     }
 
+    /**
+     * Copy a content URI to a local file so it's available offline.
+     * Returns the local file URI, or null if copying fails.
+     */
+    fun copyUriToLocal(uri: Uri, displayName: String): Uri? {
+        val melodiesDir = java.io.File(context.filesDir, "melodies")
+        if (!melodiesDir.exists()) melodiesDir.mkdirs()
+
+        val safeName = displayName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
+        val filename = "${safeName}_${uri.hashCode().toLong() and 0xFFFFFFFFL}.mid"
+        val targetFile = java.io.File(melodiesDir, filename)
+
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                targetFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            Uri.fromFile(targetFile)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to copy URI $uri to local file", e)
+            null
+        }
+    }
+
+    private fun deleteLocalFile(uri: Uri) {
+        if (uri.scheme == "file") {
+            val file = java.io.File(uri.path!!)
+            if (file.exists()) file.delete()
+        }
+    }
+
     suspend fun removeImportedMelody(id: String) {
+        val entry = importedMelodyStore.flow.first()[id]
+        entry?.let { deleteLocalFile(Uri.parse(it.uri)) }
         importedMelodyStore.remove(id)
     }
 }
