@@ -1,109 +1,160 @@
 package net.exent.perfectpitch.audio
 
-import android.media.AudioAttributes
-import android.util.Log
-import net.exent.perfectpitch.BuildConfig
-import java.util.concurrent.atomic.AtomicLong
-import kotlin.math.PI
-import kotlin.math.sin
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
-class MetronomePlayer {
+class MetronomePlayer(
+    private val notePlayer: NotePlayer
+) {
 
     companion object {
-        private const val TAG = "MetronomePlayer"
-        private const val SAMPLE_RATE = AudioConstants.SAMPLE_RATE
-        private const val BUFFER_FRAMES = 256
-        private const val CLICK_SAMPLES = 88
-        private const val CLICK_FREQ = 3000f
-        private const val CLICK_FREQ_ACCENT = 4500f
+        private const val DRUM_CHANNEL = SoundFontSynthesizer.DRUM_CHANNEL
+        private const val CLICK_NOTE = 85
+        private const val ACCENT_NOTE = 86
+        private const val VELOCITY = 100
+        private const val NOTE_DURATION_MS = 40L
+        private const val ACCENT_VELOCITY = 120
+        private const val ACCENT_DURATION_MS = 60L
+        private const val DRIFT_TOLERANCE_MS = 200L
     }
 
     @Volatile private var armed = false
     @Volatile private var playing = false
     @Volatile private var bpm: Float = 120f
     @Volatile private var beatsPerBar: Int = 4
-    private val sampleCount = AtomicLong(0L)
+    private var scheduledOffJobs = mutableListOf<Job>()
+    private var beatJob: Job? = null
+    private var startWallNs: Long = 0L
+    private var startPositionMs: Long = 0L
+    private var lastFiredBeat: Long = Long.MIN_VALUE
+    private var playIntervalMs: Double = 500.0
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    private val renderThread = AudioRenderThread(
-        threadName = "MetronomeRenderThread",
-        contentType = AudioAttributes.CONTENT_TYPE_SONIFICATION,
-        bufferFrames = BUFFER_FRAMES,
-        render = ::renderBuffer
-    )
-
-    fun open() {
-        renderThread.open()
-        if (BuildConfig.DEBUG) Log.d(TAG, "Metronome opened")
-    }
-
-    fun setArmed(armed: Boolean) {
-        this.armed = armed
-        if (!armed) playing = false
+    fun setEnabled(enabled: Boolean) {
+        armed = enabled
+        if (!enabled) {
+            playing = false
+            beatJob?.cancel()
+            beatJob = null
+            cancelScheduledOffs()
+        }
     }
 
     fun startSync(positionMs: Long, bpm: Float, beatsPerBar: Int) {
         this.bpm = bpm
         this.beatsPerBar = beatsPerBar
-        sampleCount.set(positionMs * SAMPLE_RATE / 1000)
-        this.playing = armed
+        playing = armed
+        if (!playing) return
+
+        beatJob?.cancel()
+
+        val interval = beatIntervalMs()
+        if (interval <= 0.0) return
+        playIntervalMs = interval
+
+        startWallNs = System.nanoTime()
+        startPositionMs = positionMs
+        // Fire beat at positionMs if exactly on boundary, otherwise wait for next
+        lastFiredBeat = kotlin.math.ceil(positionMs.toDouble() / interval).toLong() - 1
+
+        beatJob = scope.launch { runBeatLoop() }
+    }
+
+    private fun resync(positionMs: Long, bpm: Float, beatsPerBar: Int) {
+        this.bpm = bpm
+        this.beatsPerBar = beatsPerBar
+        if (!playing) return
+
+        beatJob?.cancel()
+
+        val interval = beatIntervalMs()
+        if (interval <= 0.0) return
+        playIntervalMs = interval
+
+        startWallNs = System.nanoTime()
+        startPositionMs = positionMs
+        // On resync, don't re-fire the beat at positionMs
+        lastFiredBeat = (positionMs / interval).toLong()
+
+        beatJob = scope.launch { runBeatLoop() }
     }
 
     fun syncPosition(positionMs: Long, bpm: Float, beatsPerBar: Int) {
         this.bpm = bpm
         this.beatsPerBar = beatsPerBar
-        val expectedSamples = positionMs * SAMPLE_RATE / 1000
-        val drift = kotlin.math.abs(expectedSamples - sampleCount.get())
-        if (drift > (SAMPLE_RATE / 5)) {
-            sampleCount.set(expectedSamples + CLICK_SAMPLES)
+        if (armed && !playing) {
+            startSync(positionMs, bpm, beatsPerBar)
+            return
+        }
+        if (!playing) return
+
+        val elapsedMs = (System.nanoTime() - startWallNs) / 1_000_000L
+        val expectedMs = startPositionMs + elapsedMs
+        val drift = kotlin.math.abs(expectedMs - positionMs)
+
+        if (drift > DRIFT_TOLERANCE_MS) {
+            resync(positionMs, bpm, beatsPerBar)
         }
     }
 
     fun stopSync() {
         playing = false
+        beatJob?.cancel()
+        beatJob = null
+        cancelScheduledOffs()
     }
 
     fun close() {
-        renderThread.close()
-        armed = false
         playing = false
-        if (BuildConfig.DEBUG) Log.d(TAG, "Metronome closed")
+        armed = false
+        beatJob?.cancel()
+        beatJob = null
+        cancelScheduledOffs()
     }
 
-    private fun renderBuffer(buffer: ShortArray) {
-        if (!playing) {
-            buffer.fill(0)
-            sampleCount.addAndGet(buffer.size.toLong())
-            return
-        }
-        val intervalMs = 60000.0 / bpm
-        if (intervalMs <= 0) {
-            buffer.fill(0)
-            sampleCount.addAndGet(buffer.size.toLong())
-            return
-        }
+    private suspend fun runBeatLoop() {
+        val interval = playIntervalMs
 
-        val samplesPerMs = SAMPLE_RATE / 1000.0
-        val baseSample = sampleCount.get()
-        val baseTimeMs = baseSample / samplesPerMs
-        val beatIntervalSamples = (intervalMs * samplesPerMs).toLong()
+        while (playing) {
+            val elapsedMs = (System.nanoTime() - startWallNs) / 1_000_000L
+            val currentPositionMs = startPositionMs + elapsedMs
+            val currentBeat = (currentPositionMs / interval).toLong()
 
-        for (i in buffer.indices) {
-            val absSample = baseSample + i
-            val beatIndex = if (beatIntervalSamples > 0) Math.floorDiv(absSample, beatIntervalSamples) else 0L
-            val sampleInBeat = (absSample - beatIndex * beatIntervalSamples).toInt()
-
-            if (sampleInBeat < CLICK_SAMPLES) {
-                val isAccent = beatsPerBar > 0 && (beatIndex % beatsPerBar) == 0L
-                val clickFreq = if (isAccent) CLICK_FREQ_ACCENT else CLICK_FREQ
-                val vol = if (isAccent) 0.7f else 0.4f
-                val t = sampleInBeat.toFloat() / SAMPLE_RATE
-                val envelope = 1f - sampleInBeat.toFloat() / CLICK_SAMPLES
-                val sample = sin(2.0 * PI * clickFreq * t).toFloat() * envelope * vol
-                buffer[i] = (sample * Short.MAX_VALUE).toInt().toShort()
-            } else {
-                buffer[i] = 0
+            if (currentBeat > lastFiredBeat) {
+                for (b in lastFiredBeat + 1..currentBeat) {
+                    fireClick(b)
+                }
+                lastFiredBeat = currentBeat
             }
+
+            val nextMs = (lastFiredBeat + 1) * interval - currentPositionMs
+            delay(maxOf(1L, nextMs.toLong()))
         }
-        sampleCount.addAndGet(buffer.size.toLong())
+    }
+
+    private fun fireClick(beat: Long) {
+        val isAccent = beatsPerBar > 0 && (beat % beatsPerBar) == 0L
+        val note = if (isAccent) ACCENT_NOTE else CLICK_NOTE
+        val vel = if (isAccent) ACCENT_VELOCITY else VELOCITY
+        val durationMs = if (isAccent) ACCENT_DURATION_MS else NOTE_DURATION_MS
+        notePlayer.noteOn(DRUM_CHANNEL, note, vel)
+        val job = scope.launch {
+            delay(durationMs)
+            notePlayer.noteOff(DRUM_CHANNEL, note)
+        }
+        scheduledOffJobs.add(job)
+    }
+
+    private fun beatIntervalMs(): Double = 60000.0 / bpm
+
+    private fun cancelScheduledOffs() {
+        scheduledOffJobs.forEach { it.cancel() }
+        scheduledOffJobs.clear()
+        notePlayer.allNotesOff()
     }
 }

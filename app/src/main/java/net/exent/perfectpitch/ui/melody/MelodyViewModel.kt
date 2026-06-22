@@ -7,8 +7,8 @@ import androidx.lifecycle.viewModelScope
 import net.exent.perfectpitch.audio.AudioConstants
 import net.exent.perfectpitch.audio.AudioDeviceMonitor
 import net.exent.perfectpitch.audio.MelodyPlayer
-import net.exent.perfectpitch.audio.MelodySynthesizer
 import net.exent.perfectpitch.audio.MetronomePlayer
+import net.exent.perfectpitch.audio.SoundFontSynthesizer
 import net.exent.perfectpitch.audio.NotePlayer
 import net.exent.perfectpitch.audio.PitchProcessor
 import net.exent.perfectpitch.data.AudioDelayRepository
@@ -42,7 +42,7 @@ class MelodyViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val scoringEngine: ScoringEngine,
     private val noteUtils: NoteUtils,
-    private val melodySynthesizer: MelodySynthesizer,
+    private val soundFontSynthesizer: SoundFontSynthesizer,
     private val melodyPlayer: MelodyPlayer,
     private val metronomePlayer: MetronomePlayer,
     private val audioDelayRepository: AudioDelayRepository,
@@ -120,8 +120,7 @@ class MelodyViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.settings.first().let { settings ->
                 if (settings.melodyMetronomeEnabled) {
-                    metronomePlayer.open()
-                    metronomePlayer.setArmed(true)
+                    metronomePlayer.setEnabled(true)
                     _gameState.update { it.copy(metronomeEnabled = true) }
                 }
             }
@@ -155,7 +154,7 @@ class MelodyViewModel @Inject constructor(
         viewModelScope.launch {
             midiDeviceManager.effectiveMidiOutputEnabled.collect { enabled ->
                 _deviceState.update { it.copy(midiOutputEnabled = enabled) }
-                val player: NotePlayer = if (enabled && midiOutputSender.isReady) midiOutputSender else melodySynthesizer
+                val player: NotePlayer = if (enabled && midiOutputSender.isReady) midiOutputSender else soundFontSynthesizer
                 melodyPlayer.setNotePlayer(player)
             }
         }
@@ -475,10 +474,10 @@ class MelodyViewModel @Inject constructor(
      * Open the synthesizer. Call this before using audio playback.
      */
     fun initSynthesizer() {
-        if (melodySynthesizer.isReady || synthOpenJob?.isActive == true) return
+        if (soundFontSynthesizer.isReady || synthOpenJob?.isActive == true) return
         synthOpenJob = viewModelScope.launch {
             try {
-                melodySynthesizer.open()
+                soundFontSynthesizer.open()
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) Log.w(TAG, "Synth init failed", e)
             }
@@ -488,7 +487,7 @@ class MelodyViewModel @Inject constructor(
     /** Preview the loaded melody (audio only, standalone playback). */
     fun previewMelody() {
         val tracks = _gameState.value.melodyTracks
-        if (tracks.isEmpty() || !melodySynthesizer.isReady) return
+        if (tracks.isEmpty() || !soundFontSynthesizer.isReady) return
         melodyPlayer.playWithTiming(tracks, viewModelScope, _gameState.value.tempoMultiplier)
     }
 
@@ -497,7 +496,7 @@ class MelodyViewModel @Inject constructor(
     /** Preview a specific melody info (loads and plays). */
     fun previewMelody(info: MelodyRepository.MelodyInfo) {
         val track = melodyRepository.loadMelody(info) ?: return
-        if (!melodySynthesizer.isReady) return
+        if (!soundFontSynthesizer.isReady) return
         val tempo = _gameState.value.tempoMultiplier
         melodyPlayer.playWithTiming(track, viewModelScope, tempo)
     }
@@ -537,17 +536,12 @@ class MelodyViewModel @Inject constructor(
     fun toggleMetronome() {
         val newState = !_gameState.value.metronomeEnabled
         _gameState.update { it.copy(metronomeEnabled = newState) }
-        if (newState) {
-            metronomePlayer.open()
-            metronomePlayer.setArmed(true)
-        } else {
-            metronomePlayer.setArmed(false)
-        }
+        metronomePlayer.setEnabled(newState)
         viewModelScope.launch { settingsRepository.updateMelodyMetronomeEnabled(newState) }
     }
 
     fun stopMetronome() {
-        metronomePlayer.setArmed(false)
+        metronomePlayer.setEnabled(false)
         _gameState.update { it.copy(metronomeEnabled = false) }
     }
 
@@ -833,12 +827,10 @@ class MelodyViewModel @Inject constructor(
 
                 _gameState.update { it.copy(currentTimeSeconds = currentTime) }
 
-                // Sync metronome with song position during active playback.
-                // During initial COUNTDOWN (currentTime < 0) this doesn't fire;
-                // during mid-song resume COUNTDOWN (currentTime >= 0) we skip it
-                // so the downbeat-aligned startSync position is preserved.
-                if (_gameState.value.metronomeEnabled && currentTime >= 0.0 &&
-                    _gameState.value.phase != PlayPhase.COUNTDOWN) {
+                // In wait mode, metronome stops after the countdown finishes;
+                // don't let syncPosition auto-restart it.
+                if (_gameState.value.metronomeEnabled &&
+                    (!_gameState.value.waitMode || !pitchDetectionStarted)) {
                     metronomePlayer.syncPosition(melodyPositionMs() + audioOutputDelayMs, currentMelodyBpm(), currentBeatsPerBar())
                 }
 
@@ -865,7 +857,7 @@ class MelodyViewModel @Inject constructor(
                     }
                     AccompanimentMode.NONE -> emptyList()
                 }
-                if (playTracks.isNotEmpty() && melodySynthesizer.isReady &&
+                if (playTracks.isNotEmpty() && soundFontSynthesizer.isReady &&
                     currentTime >= -(audioOutputDelayMs / 1000.0)) {
                     melodyPlayer.updateGameTime(currentTime, playTracks)
                 }
@@ -1213,10 +1205,9 @@ class MelodyViewModel @Inject constructor(
         super.onCleared()
         playbackJob?.cancel()
         pitchJob?.cancel()
-        metronomePlayer.setArmed(false)
         metronomePlayer.close()
         melodyPlayer.stop()
-        melodySynthesizer.close()
+        soundFontSynthesizer.close()
     }
 }
 

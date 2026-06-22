@@ -10,6 +10,7 @@ plugins {
 android {
     namespace = "net.exent.perfectpitch"
     compileSdk = 35
+    ndkVersion = "27.2.12479018"
 
     defaultConfig {
         applicationId = "net.exent.perfectpitch"
@@ -19,6 +20,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
     }
 
     buildTypes {
@@ -43,6 +48,13 @@ android {
 
     aaptOptions {
         noCompress += "tflite"
+        noCompress += "sf2"
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/jni/CMakeLists.txt")
+        }
     }
 }
 

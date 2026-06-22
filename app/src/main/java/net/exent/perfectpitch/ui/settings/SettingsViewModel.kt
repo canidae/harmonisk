@@ -11,8 +11,8 @@ import kotlinx.coroutines.launch
 import net.exent.perfectpitch.audio.AudioDeviceMonitor
 import net.exent.perfectpitch.audio.AudioInputDevice
 import net.exent.perfectpitch.audio.AudioOutputDevice
-import net.exent.perfectpitch.audio.MelodySynthesizer
 import net.exent.perfectpitch.audio.PitchProcessor
+import net.exent.perfectpitch.audio.SoundFontSynthesizer
 import net.exent.perfectpitch.data.AppSettings
 import net.exent.perfectpitch.data.AudioDelayRepository
 import net.exent.perfectpitch.data.SettingsRepository
@@ -25,7 +25,7 @@ class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val audioDeviceMonitor: AudioDeviceMonitor,
     private val audioDelayRepository: AudioDelayRepository,
-    private val melodySynthesizer: MelodySynthesizer,
+    private val soundFontSynthesizer: SoundFontSynthesizer,
     private val pitchProcessor: PitchProcessor
 ) : ViewModel() {
 
@@ -109,8 +109,8 @@ class SettingsViewModel @Inject constructor(
 
         calibrationJob = viewModelScope.launch {
             try {
-                if (!melodySynthesizer.isReady) {
-                    melodySynthesizer.open()
+                if (!soundFontSynthesizer.isReady) {
+                    soundFontSynthesizer.open()
                 }
             } catch (e: Exception) {
                 _calibrationNoDetection.value = true
@@ -140,9 +140,9 @@ class SettingsViewModel @Inject constructor(
                 while (measurements.size < REQUIRED_DETECTIONS) {
                     val playTime = System.currentTimeMillis()
 
-                    melodySynthesizer.noteOn(0, MIDI_NOTE, MIDI_VELOCITY)
+                    soundFontSynthesizer.noteOn(0, MIDI_NOTE, MIDI_VELOCITY)
                     delay(TONE_ON_MS)
-                    melodySynthesizer.noteOff(0, MIDI_NOTE)
+                    soundFontSynthesizer.noteOff(0, MIDI_NOTE)
 
                     val deadline = playTime + TONE_ON_MS + TONE_OFF_MS
                     var detected: Pair<Long, Float>? = null
@@ -177,7 +177,7 @@ class SettingsViewModel @Inject constructor(
             } catch (_: Exception) {
             } finally {
                 pitchJob.cancel()
-                melodySynthesizer.allNotesOff()
+                soundFontSynthesizer.allNotesOff()
                 detectionChannel.close()
                 _isCalibrating.value = false
                 _calibrationNoDetection.value = false
@@ -188,8 +188,8 @@ class SettingsViewModel @Inject constructor(
     private fun stopCalibration() {
         calibrationJob?.cancel()
         calibrationJob = null
-        if (melodySynthesizer.isReady) {
-            melodySynthesizer.allNotesOff()
+        if (soundFontSynthesizer.isReady) {
+            soundFontSynthesizer.allNotesOff()
         }
         _isCalibrating.value = false
         _calibrationNoDetection.value = false
@@ -197,9 +197,9 @@ class SettingsViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        if (melodySynthesizer.isReady) {
-            melodySynthesizer.allNotesOff()
+        if (soundFontSynthesizer.isReady) {
+            soundFontSynthesizer.allNotesOff()
         }
-        melodySynthesizer.close()
+        soundFontSynthesizer.close()
     }
 }

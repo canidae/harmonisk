@@ -8,3 +8,4 @@ build/
 local.properties
 android-sdk/
 gradle-dist/
+app/.cxx/

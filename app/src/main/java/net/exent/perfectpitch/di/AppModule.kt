@@ -5,9 +5,9 @@ import net.exent.perfectpitch.audio.AudioCaptureService
 import net.exent.perfectpitch.audio.AudioDeviceMonitor
 import net.exent.perfectpitch.audio.CrepePitchDetector
 import net.exent.perfectpitch.audio.MelodyPlayer
-import net.exent.perfectpitch.audio.MelodySynthesizer
 import net.exent.perfectpitch.audio.MetronomePlayer
 import net.exent.perfectpitch.audio.PitchProcessor
+import net.exent.perfectpitch.audio.SoundFontSynthesizer
 import net.exent.perfectpitch.data.AudioDelayRepository
 import net.exent.perfectpitch.data.DifficultyRepository
 import net.exent.perfectpitch.data.MelodyRepository
@@ -79,7 +79,9 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideMelodySynthesizer(): MelodySynthesizer = MelodySynthesizer()
+    fun provideSoundFontSynthesizer(
+        @ApplicationContext context: Context
+    ): SoundFontSynthesizer = SoundFontSynthesizer(context)
 
     @Provides
     @Singleton
@@ -97,7 +99,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideMelodyPlayer(
-        synthesizer: MelodySynthesizer
+        synthesizer: SoundFontSynthesizer
     ): MelodyPlayer = MelodyPlayer(synthesizer)
 
     @Provides
@@ -134,5 +136,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideMetronomePlayer(): MetronomePlayer = MetronomePlayer()
+    fun provideMetronomePlayer(
+        synthesizer: SoundFontSynthesizer
+    ): MetronomePlayer = MetronomePlayer(synthesizer)
 }
