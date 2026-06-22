@@ -100,6 +100,7 @@ class FreePlayViewModel @Inject constructor(
     private var audioVisualDelayMs: Int = 0
     private var pendingStartDelayMs: Long = 0L
     private var lastRecordMetronomeBeat: Long = 0L
+    private var replayGeneration = 0
 
     init {
         viewModelScope.launch {
@@ -258,7 +259,10 @@ class FreePlayViewModel @Inject constructor(
         if (s.metronomeEnabled && s.isRecording) {
             val interval = (60000.0 / s.bpm).toLong()
             if (interval > 0) {
-                val currentBeat = s.songPositionMs / interval
+                // Use effective real time = canvas time + consumed delay, so clicks
+                // arrive at the speaker when the visual beat line passes the now line.
+                val effectiveRealTime = s.songPositionMs + (audioOutputDelayMs.toLong() - pendingStartDelayMs)
+                val currentBeat = effectiveRealTime / interval
                 while (currentBeat > lastRecordMetronomeBeat) {
                     lastRecordMetronomeBeat++
                     val isAccent = s.beatsPerBar > 0 && (lastRecordMetronomeBeat % s.beatsPerBar) == 0L
@@ -973,6 +977,13 @@ class FreePlayViewModel @Inject constructor(
 
     fun replayNotes() {
         replayJob?.cancel()
+        replayGeneration++
+        val gen = replayGeneration
+
+        // Ensure the synthesizer is open — it may have been closed by Settings calibration
+        if (!soundFontSynthesizer.isReady) {
+            try { soundFontSynthesizer.open() } catch (_: Exception) {}
+        }
 
         val allNotes = _state.value.playedNotes
             .filter { it.endTimeMs != null }
@@ -1003,6 +1014,8 @@ class FreePlayViewModel @Inject constructor(
 
             fun buildEvents(startTime: Long): List<Event> {
                 val evts = mutableListOf<Event>()
+                val (loopStartMs, loopEndMs) = effectiveLoopBounds()
+                val loopDuration = loopEndMs - loopStartMs
                 for (note in allNotes) {
                     val endMs = note.endTimeMs!!
                     if (endMs <= startTime) continue
@@ -1010,13 +1023,29 @@ class FreePlayViewModel @Inject constructor(
                     evts.add(Event(onTime, note.midiNumber, true, note.voiceIndex, note.trackOrigin))
                     evts.add(Event(endMs, note.midiNumber, false, note.voiceIndex, note.trackOrigin))
                 }
+                // Lookahead: shift events at the start of the next loop by loopDuration
+                // so they appear at positions [loopEndMs, loopEndMs + audioOutputDelayMs)
+                // and fire via fireAhead before the loop triggers — no gap at the boundary.
+                val lookaheadLen = audioOutputDelayMs.toLong().coerceAtMost(loopDuration)
+                if (lookaheadLen > 0) {
+                    for (note in allNotes) {
+                        if (note.startTimeMs >= loopStartMs + lookaheadLen) continue
+                        val shiftedStart = note.startTimeMs + loopDuration
+                        val shiftedEnd = note.endTimeMs!! + loopDuration
+                        if (shiftedEnd <= startTime) continue
+                        if (shiftedStart >= loopEndMs + lookaheadLen) continue
+                        val onTime = if (shiftedStart <= startTime) startTime else shiftedStart
+                        evts.add(Event(onTime, note.midiNumber, true, note.voiceIndex, note.trackOrigin))
+                        evts.add(Event(shiftedEnd, note.midiNumber, false, note.voiceIndex, note.trackOrigin))
+                    }
+                }
                 // Metronome events
                 if (_state.value.metronomeEnabled) {
                     val interval = (60000.0 / lastBuiltBpm).toLong()
                     if (interval > 0) {
-                        val (loopStartMs, loopEndMs) = effectiveLoopBounds()
                         val startMs = maxOf(startTime, loopStartMs)
-                        var beatTime = startMs - (startMs % interval) + interval
+                        var beatTime = startMs - (startMs % interval)
+                        if (beatTime < startMs) beatTime += interval
                         val durMs = 40L
                         while (beatTime < loopEndMs) {
                             val beat = beatTime / interval
@@ -1026,6 +1055,21 @@ class FreePlayViewModel @Inject constructor(
                             evts.add(Event(beatTime, note, true, -1, 9))
                             evts.add(Event(beatTime + adur, note, false, -1, 9))
                             beatTime += interval
+                        }
+                        // Metronome lookahead
+                        if (lookaheadLen > 0) {
+                            var laBeat = loopStartMs - (loopStartMs % interval)
+                            if (laBeat < loopStartMs) laBeat += interval
+                            while (laBeat < loopStartMs + lookaheadLen) {
+                                val shifted = laBeat + loopDuration
+                                val beat = laBeat / interval
+                                val isAccent = lastBuiltBeatsPerBar > 0 && (beat % lastBuiltBeatsPerBar) == 0L
+                                val note = if (isAccent) 86 else 85
+                                val adur = if (isAccent) 60L else durMs
+                                evts.add(Event(shifted, note, true, -1, 9))
+                                evts.add(Event(shifted + adur, note, false, -1, 9))
+                                laBeat += interval
+                            }
                         }
                     }
                 }
@@ -1073,8 +1117,10 @@ class FreePlayViewModel @Inject constructor(
 
                 _state.update { it.copy(songPositionMs = replayPositionMs) }
 
-                // Fire due events
-                while (eventIndex < events.size && events[eventIndex].timeMs <= replayPositionMs) {
+                // Fire due events — fire audioOutputDelayMs early so audio reaches the
+                // speaker at the same time the visual "now" line passes the note.
+                val fireAhead = audioOutputDelayMs.toLong() - pendingMs
+                while (eventIndex < events.size && events[eventIndex].timeMs <= replayPositionMs + fireAhead) {
                     val ev = events[eventIndex++]
                     if (ev.isOn) player?.noteOn(ev.trackOrigin, ev.midiNote, 80)
                     else player?.noteOff(ev.trackOrigin, ev.midiNote)
@@ -1083,21 +1129,30 @@ class FreePlayViewModel @Inject constructor(
                 // Loop-at-end: re-read bounds each frame so user changes take effect immediately
                 val (loopStartMs, loopEndMs) = effectiveLoopBounds()
                 if (replayPositionMs >= loopEndMs) {
-                    player?.allNotesOff()
+                    // Don't call allNotesOff — the shifted lookahead events already fired
+                    // before the loop and their audio is in the output pipeline.
                     replayPositionMs = loopStartMs
                     pendingMs = 0L
                     _state.update { it.copy(songPositionMs = replayPositionMs) }
                     events = buildEvents(replayPositionMs)
                     eventIndex = 0
                     lastWallMs = System.currentTimeMillis()
+                    // Skip events at the loop start that already fired as shifted
+                    // lookahead events in the previous loop iteration.
+                    val lookaheadLen = audioOutputDelayMs.toLong().coerceAtMost(loopEndMs - loopStartMs)
+                    while (eventIndex < events.size && events[eventIndex].timeMs < loopStartMs + lookaheadLen) {
+                        eventIndex++
+                    }
                 }
 
                 delay(16L)
             }
 
-            player?.allNotesOff()
-            lastAdvanceWallMs = System.currentTimeMillis()
-            _state.update { it.copy(isPlaying = false) }
+            if (replayGeneration == gen) {
+                player?.allNotesOff()
+                lastAdvanceWallMs = System.currentTimeMillis()
+                _state.update { it.copy(isPlaying = false) }
+            }
         }
     }
 

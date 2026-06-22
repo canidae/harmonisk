@@ -152,6 +152,7 @@ class SoundFontSynthesizer(
             nativeUnload(h)
             nativeHandle = 0L
         }
+        channelsInitialized = false
         Log.i(TAG, "SoundFont synthesizer closed")
     }
 
