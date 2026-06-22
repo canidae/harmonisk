@@ -41,7 +41,8 @@ class MelodyPlayer(
                 val startTimeMs = System.currentTimeMillis()
 
                 val events = mutableListOf<TimedEvent>()
-                for ((channel, track) in melodyTracks.withIndex()) {
+                for (track in melodyTracks) {
+                    val channel = track.channel
                     for (note in track.notes) {
                         val startMs = (track.noteStartSeconds(note) / tempo * 1000).toLong()
                         val endMs = (track.noteStartSeconds(note) + track.noteDurationSeconds(note))
@@ -85,7 +86,8 @@ class MelodyPlayer(
 
         // Collect all notes that should be active at the current time, keyed by compound key
         val shouldBeActive = mutableSetOf<Int>()
-        for ((channel, track) in tracks.withIndex()) {
+        for (track in tracks) {
+            val channel = track.channel
             for (note in track.notes) {
                 val start = track.noteStartSeconds(note)
                 val end = start + track.noteDurationSeconds(note)

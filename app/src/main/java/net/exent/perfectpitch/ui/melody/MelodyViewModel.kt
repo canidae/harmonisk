@@ -56,8 +56,8 @@ class MelodyViewModel @Inject constructor(
     companion object {
         private val TAG = "MelodyViewModel"
         const val NOTE_RANGE_PADDING = 3
-        /** Grace time for wait-for-note mode — musically acceptable lateness. */
         const val GRACE_PERIOD_EXTRA_MS = 150L
+        const val DRUM_CHANNEL = SoundFontSynthesizer.DRUM_CHANNEL
     }
 
     private val _gameState = MutableStateFlow(MelodyGameState())
@@ -274,9 +274,20 @@ class MelodyViewModel @Inject constructor(
         val result = mutableListOf<VoiceInfo>()
         var globalIndex = 0
         for ((trackOrigin, track) in tracks.withIndex()) {
+            // Assign channel based on original track index, but skip the drum channel
+            val baseChannel = trackOrigin
+            val channel = if (baseChannel >= MelodyViewModel.DRUM_CHANNEL) baseChannel + 1 else baseChannel
             for (voiceTrack in track.splitIntoVoices()) {
                 if (voiceTrack.notes.isEmpty()) continue
-                result.add(VoiceInfo(globalIndex, trackOrigin, voiceTrack))
+                val channelTrack = MelodyTrack(
+                    name = voiceTrack.name,
+                    notes = voiceTrack.notes,
+                    tempoChanges = voiceTrack.tempoChanges,
+                    timeSignatures = voiceTrack.timeSignatures,
+                    ticksPerQuarterNote = voiceTrack.ticksPerQuarterNote,
+                    channel = channel
+                )
+                result.add(VoiceInfo(globalIndex, trackOrigin, channelTrack))
                 globalIndex++
             }
         }

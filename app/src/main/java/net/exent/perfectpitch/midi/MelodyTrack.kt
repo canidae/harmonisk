@@ -5,7 +5,9 @@ class MelodyTrack(
     val notes: List<NoteEvent>,
     val tempoChanges: List<TempoEvent>,
     val timeSignatures: List<TimeSignatureEvent>,
-    val ticksPerQuarterNote: Int
+    val ticksPerQuarterNote: Int,
+    val channel: Int = 0,
+    val isMetronome: Boolean = false
 ) {
     private val sortedNotes: List<NoteEvent> by lazy { notes.sortedBy { it.startTick } }
 
@@ -93,7 +95,9 @@ class MelodyTrack(
             notes = notes.map { it.copy(noteNumber = (it.noteNumber + semitones).coerceIn(0, 127)) },
             tempoChanges = tempoChanges,
             timeSignatures = timeSignatures,
-            ticksPerQuarterNote = ticksPerQuarterNote
+            ticksPerQuarterNote = ticksPerQuarterNote,
+            channel = channel,
+            isMetronome = isMetronome
         )
     }
 
@@ -222,7 +226,9 @@ class MelodyTrack(
                 notes = notes,
                 tempoChanges = tempoChanges,
                 timeSignatures = timeSignatures,
-                ticksPerQuarterNote = ticksPerQuarterNote
+                ticksPerQuarterNote = ticksPerQuarterNote,
+                channel = channel,
+                isMetronome = isMetronome
             )
         }
     }
