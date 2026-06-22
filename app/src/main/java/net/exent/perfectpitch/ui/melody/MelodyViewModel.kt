@@ -79,6 +79,14 @@ class MelodyViewModel @Inject constructor(
     private val _allMelodyCombinedScores = MutableStateFlow<Map<String, Float>>(emptyMap())
     val allMelodyCombinedScores: StateFlow<Map<String, Float>> = _allMelodyCombinedScores.asStateFlow()
 
+    val sortedMelodies: StateFlow<List<MelodyRepository.MelodyInfo>> =
+        combine(availableMelodies, _allMelodyCombinedScores) { melodies, scores ->
+            melodies.sortedWith(compareBy(
+                { it.id !in scores },
+                { it.name }
+            ))
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private val _allMelodyDifficulties = MutableStateFlow<Map<String, Float>>(emptyMap())
     val allMelodyDifficulties: StateFlow<Map<String, Float>> = _allMelodyDifficulties.asStateFlow()
 
