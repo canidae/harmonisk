@@ -290,7 +290,7 @@ fun MelodyPlayScreen(
                         .pointerInput(gameState.phase) {
                             detectTapGestures {
                                 val phase = gameState.phase
-                                if (phase == PlayPhase.PLAYING || phase == PlayPhase.COUNTDOWN || phase == PlayPhase.WAITING_FOR_NOTE) {
+                                if (phase == PlayPhase.PLAYING || phase == PlayPhase.WAITING_FOR_NOTE) {
                                     viewModel.pause()
                                 }
                             }

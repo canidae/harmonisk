@@ -5,7 +5,6 @@ import net.exent.perfectpitch.audio.AudioCaptureService
 import net.exent.perfectpitch.audio.AudioDeviceMonitor
 import net.exent.perfectpitch.audio.CrepePitchDetector
 import net.exent.perfectpitch.audio.MelodyPlayer
-import net.exent.perfectpitch.audio.MetronomePlayer
 import net.exent.perfectpitch.audio.PitchProcessor
 import net.exent.perfectpitch.audio.SoundFontSynthesizer
 import net.exent.perfectpitch.data.AudioDelayRepository
@@ -133,10 +132,4 @@ object AppModule {
     fun provideDifficultyRepository(
         @ApplicationContext context: Context
     ): DifficultyRepository = DifficultyRepository(context)
-
-    @Provides
-    @Singleton
-    fun provideMetronomePlayer(
-        synthesizer: SoundFontSynthesizer
-    ): MetronomePlayer = MetronomePlayer(synthesizer)
 }

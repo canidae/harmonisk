@@ -6,8 +6,6 @@ import net.exent.perfectpitch.music.MelodyScore
 import net.exent.perfectpitch.music.NoteScore
 import net.exent.perfectpitch.music.PitchResult
 
-const val COUNTDOWN_BARS = 2
-
 enum class AccompanimentMode { ALL, EXCEPT, SELECTED_ONLY, NONE }
 
 /** Active session tracking state. */
@@ -42,6 +40,7 @@ data class MelodyGameState(
     val countdownResumeTarget: Double = 0.0,
     // Metronome
     val metronomeEnabled: Boolean = false,
+    val metronomeTrack: MelodyTrack? = null,
     val currentLevel: Int = 1,
     val hideNoteBars: Boolean = false
 ) {
@@ -74,7 +73,6 @@ data class MelodyDeviceState(
 enum class PlayPhase {
     NOT_STARTED,
     READY,
-    COUNTDOWN,
     PLAYING,
     PAUSED,
     WAITING_FOR_NOTE,

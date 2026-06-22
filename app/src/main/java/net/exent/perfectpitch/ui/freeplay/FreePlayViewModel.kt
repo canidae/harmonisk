@@ -6,7 +6,6 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import net.exent.perfectpitch.audio.MetronomePlayer
 import net.exent.perfectpitch.audio.SoundFontSynthesizer
 import net.exent.perfectpitch.audio.NotePlayer
 import net.exent.perfectpitch.audio.PitchProcessor
@@ -47,7 +46,6 @@ class FreePlayViewModel @Inject constructor(
     private val midiInputReceiver: MidiInputReceiver,
     private val midiOutputSender: MidiOutputSender,
     private val soundFontSynthesizer: SoundFontSynthesizer,
-    private val metronomePlayer: MetronomePlayer,
     private val noteUtils: NoteUtils,
     private val audioDelayRepository: AudioDelayRepository
 ) : ViewModel() {
@@ -101,6 +99,7 @@ class FreePlayViewModel @Inject constructor(
     private var audioOutputDelayMs: Int = 0
     private var audioVisualDelayMs: Int = 0
     private var pendingStartDelayMs: Long = 0L
+    private var lastRecordMetronomeBeat: Long = 0L
 
     init {
         viewModelScope.launch {
@@ -121,10 +120,6 @@ class FreePlayViewModel @Inject constructor(
                         snapEnabled = settings.freeplaySnapEnabled,
                         metronomeEnabled = settings.freeplayMetronomeEnabled
                     )
-                }
-                val metEnabled = settings.freeplayMetronomeEnabled
-                if (metEnabled) {
-                    metronomePlayer.setEnabled(true)
                 }
             }
         }
@@ -216,9 +211,8 @@ class FreePlayViewModel @Inject constructor(
         // Don't jump songPositionMs back; instead freeze the canvas for the output delay
         // so metronome clicks arrive at the speaker exactly when bar/beat lines pass the now line.
         pendingStartDelayMs = audioOutputDelayMs.toLong()
+        lastRecordMetronomeBeat = _state.value.songPositionMs / (60000.0 / _state.value.bpm).toLong()
         lastAdvanceWallMs = System.currentTimeMillis()
-        val s = _state.value
-        if (s.metronomeEnabled) metronomePlayer.startSync(s.songPositionMs, s.bpm, s.beatsPerBar)
         startListeningInternal()
         _state.update { it.copy(isRecording = true) }
     }
@@ -227,7 +221,6 @@ class FreePlayViewModel @Inject constructor(
         stopListeningInternal()
         finalizeCurrentNote()
         abortHoning()
-        metronomePlayer.stopSync()
         pendingStartDelayMs = 0L
         _state.update { it.copy(isRecording = false) }
         outputDeviceBeforeRecord?.let { previous ->
@@ -261,11 +254,24 @@ class FreePlayViewModel @Inject constructor(
             }
         }
         val s = _state.value
+        // Fire metronome clicks during recording
         if (s.metronomeEnabled && s.isRecording) {
-            metronomePlayer.syncPosition(
-                s.songPositionMs + audioOutputDelayMs - pendingStartDelayMs,
-                s.bpm, s.beatsPerBar
-            )
+            val interval = (60000.0 / s.bpm).toLong()
+            if (interval > 0) {
+                val currentBeat = s.songPositionMs / interval
+                while (currentBeat > lastRecordMetronomeBeat) {
+                    lastRecordMetronomeBeat++
+                    val isAccent = s.beatsPerBar > 0 && (lastRecordMetronomeBeat % s.beatsPerBar) == 0L
+                    val note = if (isAccent) 86 else 85
+                    val vel = if (isAccent) 120 else 100
+                    soundFontSynthesizer.noteOn(9, note, vel)
+                    val durMs = if (isAccent) 60L else 40L
+                    viewModelScope.launch {
+                        delay(durMs)
+                        soundFontSynthesizer.noteOff(9, note)
+                    }
+                }
+            }
         }
         return _state.value.songPositionMs
     }
@@ -981,10 +987,6 @@ class FreePlayViewModel @Inject constructor(
 
         _state.update { it.copy(isPlaying = true) }
 
-        if (_state.value.metronomeEnabled) {
-            metronomePlayer.startSync(_state.value.songPositionMs, _state.value.bpm, _state.value.beatsPerBar)
-        }
-
         replayJob = viewModelScope.launch {
             val job = coroutineContext[kotlinx.coroutines.Job]!!
 
@@ -996,6 +998,9 @@ class FreePlayViewModel @Inject constructor(
 
             data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean, val voiceIndex: Int = 0, val trackOrigin: Int = 0)
 
+            var lastBuiltBpm = _state.value.bpm
+            var lastBuiltBeatsPerBar = _state.value.beatsPerBar
+
             fun buildEvents(startTime: Long): List<Event> {
                 val evts = mutableListOf<Event>()
                 for (note in allNotes) {
@@ -1004,6 +1009,25 @@ class FreePlayViewModel @Inject constructor(
                     val onTime = if (note.startTimeMs <= startTime) startTime else note.startTimeMs
                     evts.add(Event(onTime, note.midiNumber, true, note.voiceIndex, note.trackOrigin))
                     evts.add(Event(endMs, note.midiNumber, false, note.voiceIndex, note.trackOrigin))
+                }
+                // Metronome events
+                if (_state.value.metronomeEnabled) {
+                    val interval = (60000.0 / lastBuiltBpm).toLong()
+                    if (interval > 0) {
+                        val (loopStartMs, loopEndMs) = effectiveLoopBounds()
+                        val startMs = maxOf(startTime, loopStartMs)
+                        var beatTime = startMs - (startMs % interval) + interval
+                        val durMs = 40L
+                        while (beatTime < loopEndMs) {
+                            val beat = beatTime / interval
+                            val isAccent = lastBuiltBeatsPerBar > 0 && (beat % lastBuiltBeatsPerBar) == 0L
+                            val note = if (isAccent) 86 else 85
+                            val adur = if (isAccent) 60L else durMs
+                            evts.add(Event(beatTime, note, true, -1, 9))
+                            evts.add(Event(beatTime + adur, note, false, -1, 9))
+                            beatTime += interval
+                        }
+                    }
                 }
                 evts.sortBy { it.timeMs }
                 return evts
@@ -1018,10 +1042,15 @@ class FreePlayViewModel @Inject constructor(
             while (job.isActive) {
                 // Detect external seek
                 val statePosition = _state.value.songPositionMs
-                if (abs(statePosition - replayPositionMs) > 100) {
+                val currentBpm = _state.value.bpm
+                val currentBeatsPerBar = _state.value.beatsPerBar
+                val bpmChanged = currentBpm != lastBuiltBpm || currentBeatsPerBar != lastBuiltBeatsPerBar
+                if (abs(statePosition - replayPositionMs) > 100 || bpmChanged) {
                     player?.allNotesOff()
                     replayPositionMs = statePosition
                     pendingMs = 0L
+                    lastBuiltBpm = currentBpm
+                    lastBuiltBeatsPerBar = currentBeatsPerBar
                     events = buildEvents(replayPositionMs)
                     eventIndex = 0
                     lastWallMs = System.currentTimeMillis()
@@ -1043,12 +1072,6 @@ class FreePlayViewModel @Inject constructor(
                 }
 
                 _state.update { it.copy(songPositionMs = replayPositionMs) }
-                if (_state.value.metronomeEnabled) {
-                    metronomePlayer.syncPosition(
-                        replayPositionMs + audioOutputDelayMs - pendingMs,
-                        _state.value.bpm, _state.value.beatsPerBar
-                    )
-                }
 
                 // Fire due events
                 while (eventIndex < events.size && events[eventIndex].timeMs <= replayPositionMs) {
@@ -1081,7 +1104,6 @@ class FreePlayViewModel @Inject constructor(
     fun stopPlaying() {
         replayJob?.cancel()
         replayJob = null
-        metronomePlayer.stopSync()
         pendingStartDelayMs = 0L
         lastAdvanceWallMs = System.currentTimeMillis()
         midiOutputSender.allNotesOff()
@@ -1097,12 +1119,10 @@ class FreePlayViewModel @Inject constructor(
     fun toggleMetronome() {
         val newState = !_state.value.metronomeEnabled
         _state.update { it.copy(metronomeEnabled = newState) }
-        metronomePlayer.setEnabled(newState)
         viewModelScope.launch { settingsRepository.updateFreeplayMetronomeEnabled(newState) }
     }
 
     fun stopMetronome() {
-        metronomePlayer.setEnabled(false)
         _state.update { it.copy(metronomeEnabled = false) }
     }
 
@@ -1118,7 +1138,6 @@ class FreePlayViewModel @Inject constructor(
         super.onCleared()
         stopPlaying()
         stopListening()
-        metronomePlayer.close()
         pendingStartDelayMs = 0L
         previewJob?.cancel()
         if (soundFontSynthesizer.isReady) soundFontSynthesizer.allNotesOff()
