@@ -24,7 +24,10 @@ import net.exent.perfectpitch.midi.NoteEvent
 import net.exent.perfectpitch.midi.VoiceInfo
 import net.exent.perfectpitch.music.*
 import net.exent.perfectpitch.ui.MAX_FALL_SPEED
+import net.exent.perfectpitch.ui.MAX_MIDI
 import net.exent.perfectpitch.ui.MIN_FALL_SPEED
+import net.exent.perfectpitch.ui.MIN_MIDI
+import net.exent.perfectpitch.ui.RANGE_PADDING
 import net.exent.perfectpitch.ui.celebration.CelebrationLevel
 import kotlinx.coroutines.delay
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -54,7 +57,6 @@ class MelodyViewModel @Inject constructor(
 
     companion object {
         private val TAG = "MelodyViewModel"
-        const val NOTE_RANGE_PADDING = 3
         const val GRACE_PERIOD_EXTRA_MS = 150L
         const val DRUM_CHANNEL = SoundFontSynthesizer.DRUM_CHANNEL
     }
@@ -464,8 +466,8 @@ class MelodyViewModel @Inject constructor(
     private fun viewRangeFor(track: MelodyTrack): Pair<Float, Float> {
         val range = track.noteRange
         return Pair(
-            (range.first - NOTE_RANGE_PADDING).toFloat().coerceAtLeast(21f),
-            (range.last + NOTE_RANGE_PADDING).toFloat().coerceAtMost(108f)
+            (range.first - RANGE_PADDING).toFloat().coerceAtLeast(MIN_MIDI),
+            (range.last + RANGE_PADDING).toFloat().coerceAtMost(MAX_MIDI)
         )
     }
 

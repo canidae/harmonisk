@@ -9,6 +9,8 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import net.exent.perfectpitch.music.NoteUtils
+import net.exent.perfectpitch.ui.MAX_MIDI
+import net.exent.perfectpitch.ui.MIN_MIDI
 import net.exent.perfectpitch.ui.theme.DarkBg
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -44,8 +46,8 @@ fun calculatePianoLayout(
 ): Map<Int, KeyLayout> {
     val result = mutableMapOf<Int, KeyLayout>()
 
-    val minMidi = (floor(viewMinMidi).toInt() - 2).coerceAtLeast(21)
-    val maxMidi = (ceil(viewMaxMidi).toInt() + 2).coerceAtMost(108)
+    val minMidi = (floor(viewMinMidi).toInt() - 2).coerceAtLeast(MIN_MIDI.toInt())
+    val maxMidi = (ceil(viewMaxMidi).toInt() + 2).coerceAtMost(MAX_MIDI.toInt())
 
     val midiRange = viewMaxMidi - viewMinMidi
     val whiteKeysInView = midiRange * 7f / 12f

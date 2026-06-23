@@ -2,6 +2,8 @@ package net.exent.perfectpitch.midi
 
 import android.util.Log
 import net.exent.perfectpitch.music.NoteUtils
+import net.exent.perfectpitch.ui.MAX_BPM
+import net.exent.perfectpitch.ui.MIN_BPM
 import net.exent.perfectpitch.ui.freeplay.PlayedNote
 import java.io.InputStream
 import java.util.UUID
@@ -65,7 +67,7 @@ object MidiImporter {
         }
 
         return MultiTrackMidi(
-            bpm = bpm.coerceIn(20f, 300f),
+            bpm = bpm.coerceIn(MIN_BPM, MAX_BPM),
             beatsPerBar = beatsPerBar.coerceIn(1, 16),
             ticksPerQuarterNote = header.timeDivision.coerceAtLeast(1),
             voiceTracks = trackNotes

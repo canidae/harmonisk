@@ -20,8 +20,13 @@ import net.exent.perfectpitch.midi.MidiWriter
 import net.exent.perfectpitch.music.NoteUtils
 import net.exent.perfectpitch.music.PitchResult
 import net.exent.perfectpitch.R
+import net.exent.perfectpitch.ui.MAX_BPM
 import net.exent.perfectpitch.ui.MAX_FALL_SPEED
+import net.exent.perfectpitch.ui.MAX_MIDI
+import net.exent.perfectpitch.ui.MIN_BPM
 import net.exent.perfectpitch.ui.MIN_FALL_SPEED
+import net.exent.perfectpitch.ui.MIN_MIDI
+import net.exent.perfectpitch.ui.RANGE_PADDING
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -53,9 +58,6 @@ class FreePlayViewModel @Inject constructor(
     companion object {
         const val MIN_VISIBLE_KEYS = 5f
         const val MAX_VISIBLE_KEYS = 48f
-        const val RANGE_PADDING = 2
-        const val ABSOLUTE_MIN_MIDI = 21f  // A0
-        const val ABSOLUTE_MAX_MIDI = 108f // A8
         const val MIN_AUTO_FIT_RANGE = 12f
         private const val TAG = "FreePlayVM"
     }
@@ -336,7 +338,7 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun setBpm(bpm: Float) {
-        val clamped = bpm.coerceIn(20f, 300f)
+        val clamped = bpm.coerceIn(MIN_BPM, MAX_BPM)
         _state.update { it.copy(bpm = clamped) }
         viewModelScope.launch { settingsRepository.updateFreeplayBpm(clamped) }
     }
@@ -569,9 +571,9 @@ class FreePlayViewModel @Inject constructor(
                 val maxMidi = (notes.maxOfOrNull { it.midiNumber }?.toFloat() ?: 72f) + RANGE_PADDING
                 val range = maxMidi - minMidi
                 val viewMin = (if (range < MIN_AUTO_FIT_RANGE) minMidi - (MIN_AUTO_FIT_RANGE - range) / 2f else minMidi)
-                    .coerceAtLeast(ABSOLUTE_MIN_MIDI)
+                    .coerceAtLeast(MIN_MIDI)
                 val viewMax = (viewMin + range.coerceAtLeast(MIN_AUTO_FIT_RANGE))
-                    .coerceAtMost(ABSOLUTE_MAX_MIDI)
+                    .coerceAtMost(MAX_MIDI)
 
                 _state.update { current ->
                     FreePlayState(
@@ -626,13 +628,13 @@ class FreePlayViewModel @Inject constructor(
             val focusMidi = current.viewMinMidi + range * focusFraction
             var newMin = focusMidi - newRange * focusFraction
             var newMax = focusMidi + newRange * (1f - focusFraction)
-            if (newMin < ABSOLUTE_MIN_MIDI) {
-                newMin = ABSOLUTE_MIN_MIDI
-                newMax = (newMin + newRange).coerceAtMost(ABSOLUTE_MAX_MIDI)
+            if (newMin < MIN_MIDI) {
+                newMin = MIN_MIDI
+                newMax = (newMin + newRange).coerceAtMost(MAX_MIDI)
             }
-            if (newMax > ABSOLUTE_MAX_MIDI) {
-                newMax = ABSOLUTE_MAX_MIDI
-                newMin = (newMax - newRange).coerceAtLeast(ABSOLUTE_MIN_MIDI)
+            if (newMax > MAX_MIDI) {
+                newMax = MAX_MIDI
+                newMin = (newMax - newRange).coerceAtLeast(MIN_MIDI)
             }
             current.copy(viewMinMidi = newMin, viewMaxMidi = newMax)
         }
@@ -651,12 +653,12 @@ class FreePlayViewModel @Inject constructor(
             val range = current.viewMaxMidi - current.viewMinMidi
             var newMin = current.viewMinMidi - deltaMidi
             var newMax = current.viewMaxMidi - deltaMidi
-            if (newMin < ABSOLUTE_MIN_MIDI) {
-                newMin = ABSOLUTE_MIN_MIDI
+            if (newMin < MIN_MIDI) {
+                newMin = MIN_MIDI
                 newMax = newMin + range
             }
-            if (newMax > ABSOLUTE_MAX_MIDI) {
-                newMax = ABSOLUTE_MAX_MIDI
+            if (newMax > MAX_MIDI) {
+                newMax = MAX_MIDI
                 newMin = newMax - range
             }
             current.copy(viewMinMidi = newMin, viewMaxMidi = newMax)
@@ -1198,8 +1200,8 @@ evts.add(Event(endMs, note.midiNumber, false, note.trackOrigin))
 
     private fun expandRange(midi: Int) {
         _state.update { current ->
-            val newViewMin = min(current.viewMinMidi, midi.toFloat() - RANGE_PADDING).coerceAtLeast(ABSOLUTE_MIN_MIDI)
-            val newViewMax = max(current.viewMaxMidi, midi.toFloat() + RANGE_PADDING).coerceAtMost(ABSOLUTE_MAX_MIDI)
+            val newViewMin = min(current.viewMinMidi, midi.toFloat() - RANGE_PADDING).coerceAtLeast(MIN_MIDI)
+            val newViewMax = max(current.viewMaxMidi, midi.toFloat() + RANGE_PADDING).coerceAtMost(MAX_MIDI)
             current.copy(viewMinMidi = newViewMin, viewMaxMidi = newViewMax)
         }
     }

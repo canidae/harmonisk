@@ -17,6 +17,17 @@ internal val OVERLAY_BUTTON_SIZE = 40.dp
 internal const val MIN_FALL_SPEED = 30f
 internal const val MAX_FALL_SPEED = 600f
 
+// MIDI range bounds (A0 through A8)
+internal const val MIN_MIDI = 21f
+internal const val MAX_MIDI = 108f
+
+// BPM bounds
+internal const val MIN_BPM = 20f
+internal const val MAX_BPM = 300f
+
+// Extra MIDI range padding above/below note range for visual breathing room
+internal const val RANGE_PADDING = 2
+
 // Note divisions for the free-play beat grid (order matters: index is used by Slider)
 internal data class NoteDivisionOption(val division: Int, val labelResId: Int)
 internal val NOTE_DIVISION_OPTIONS = listOf(
