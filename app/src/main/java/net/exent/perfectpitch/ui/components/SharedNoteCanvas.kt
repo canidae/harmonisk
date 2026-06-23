@@ -380,7 +380,7 @@ private fun DrawScope.drawBarLines(
                     text = buildAnnotatedString { append(barNumber.toString()) },
                     style = if (isLoopMarker) loopBarLineStyle else barLabelStyle
                 )
-                val labelY = (y - label.size.height - 2f * density).coerceAtLeast(visibleTop.toFloat())
+                val labelY = (y - label.size.height - 2f * density).coerceAtLeast(visibleTop)
                 if (labelY + label.size.height <= visibleBottom) {
                     drawText(label, topLeft = Offset(3f * density, labelY))
                 }

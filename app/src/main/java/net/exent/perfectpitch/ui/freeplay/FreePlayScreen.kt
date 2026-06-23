@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,7 +36,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import net.exent.perfectpitch.R
 import net.exent.perfectpitch.ui.components.CanvasMode
 import net.exent.perfectpitch.ui.components.KeepScreenOn
@@ -216,7 +217,7 @@ fun FreePlayScreen(
             onClick = { showEditHelp = true },
             modifier = Modifier.size(PANEL_BTN_SIZE)
         ) {
-            Icon(Icons.Filled.HelpOutline, contentDescription = stringResource(R.string.freeplay_help), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
+            Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = stringResource(R.string.freeplay_help), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
         }
 
         // Metronome toggle

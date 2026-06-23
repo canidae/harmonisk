@@ -33,6 +33,7 @@ import kotlinx.coroutines.delay
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import net.exent.perfectpitch.BuildConfig
 import javax.inject.Inject
 import kotlin.math.abs
@@ -217,6 +218,7 @@ class MelodyViewModel @Inject constructor(
         else -> true             // off → force on
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun loadAllMelodyCombinedScores() {
         viewModelScope.launch {
             availableMelodies
@@ -242,6 +244,7 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun loadAllMelodyDifficulties() {
         viewModelScope.launch {
             availableMelodies

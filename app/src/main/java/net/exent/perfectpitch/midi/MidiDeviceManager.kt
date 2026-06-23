@@ -78,7 +78,9 @@ class MidiDeviceManager(context: Context) {
 
     init {
         midiManager?.let { manager ->
+            @Suppress("DEPRECATION")
             _devices.value = manager.devices?.toList() ?: emptyList()
+            @Suppress("DEPRECATION")
             manager.registerDeviceCallback(deviceCallback, Handler(Looper.getMainLooper()))
         }
     }

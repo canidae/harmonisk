@@ -12,7 +12,7 @@ import androidx.compose.ui.res.stringResource
 import net.exent.perfectpitch.R
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.perfectpitch.ui.components.PitchGauge
 import net.exent.perfectpitch.ui.components.RequireMicPermission

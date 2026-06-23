@@ -45,7 +45,7 @@ import kotlin.math.roundToInt
 
 @HiltViewModel
 class FreePlayViewModel @Inject constructor(
-    @ApplicationContext private val appContext: Context,
+    @param:ApplicationContext private val appContext: Context,
     private val pitchProcessor: PitchProcessor,
     private val settingsRepository: SettingsRepository,
     private val midiDeviceManager: MidiDeviceManager,
