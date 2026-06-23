@@ -9,8 +9,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -344,13 +346,19 @@ fun FreePlayScreen(
             while (true) {
                 val off = bpmDragAccumPx
                 if (abs(off) > 1f) {
-                    val maxDistPx = with(density) { 120.dp.toPx() }
+                    val maxDistPx = with(density) { 60.dp.toPx() }
                     val fraction = (off / maxDistPx).coerceIn(-1f, 1f)
-                    val deltaPerFrame = fraction * 10f * 16f / 1000f  // 10 BPM/sec at ~60fps
+                    val deltaPerFrame = fraction * 20f * 16f / 1000f  // 20 BPM/sec at ~60fps
                     viewModel.setBpm(viewModel.state.value.bpm + deltaPerFrame)
                 }
                 kotlinx.coroutines.delay(16L)
             }
+        }
+
+        // Pause playback/recording while the user drags the BPM label
+        LaunchedEffect(bpmDragging) {
+            if (bpmDragging) viewModel.pausePlaybackRecording()
+            else viewModel.resumePlaybackRecording()
         }
 
         // BPM label + value — draggable vertically
@@ -546,15 +554,42 @@ fun FreePlayScreen(
                 .weight(1f)
                 .fillMaxWidth()
                 .pointerInput(Unit) {
-                    detectTransformGestures { centroid, pan, zoom, _ ->
-                        val canvasWidth = size.width.toFloat()
-                        if (zoom != 1f) {
-                            viewModel.onHorizontalZoom(zoom, centroid.x / canvasWidth)
-                            viewModel.onVerticalZoom(zoom)
-                        }
-                        if (pan.x != 0f || pan.y != 0f) {
-                            viewModel.onHorizontalScroll(pan.x * (currentMidiRange / canvasWidth))
-                            viewModel.onVerticalScroll((-pan.y / currentPxPerMs).toLong())
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        var isInteracting = false
+                        var pastTouchSlop = false
+                        val touchSlop = viewConfiguration.touchSlop
+                        try {
+                            do {
+                                val event = awaitPointerEvent()
+                                val zoomChange = event.calculateZoom()
+                                val panChange = event.calculatePan()
+                                val centroid = event.calculateCentroid(useCurrent = true)
+
+                                if (!pastTouchSlop) {
+                                    pastTouchSlop = panChange.getDistance() > touchSlop || abs(zoomChange - 1f) > 0.01f
+                                }
+
+                                if (pastTouchSlop) {
+                                    if (!isInteracting) {
+                                        isInteracting = true
+                                        viewModel.pausePlaybackRecording()
+                                    }
+                                    val canvasWidth = size.width.toFloat()
+                                    if (zoomChange != 1f) {
+                                        viewModel.onHorizontalZoom(zoomChange, centroid.x / canvasWidth)
+                                        viewModel.onVerticalZoom(zoomChange)
+                                    }
+                                    if (panChange.x != 0f || panChange.y != 0f) {
+                                        viewModel.onHorizontalScroll(panChange.x * (currentMidiRange / canvasWidth))
+                                        viewModel.onVerticalScroll((-panChange.y / currentPxPerMs).toLong())
+                                    }
+                                }
+                            } while (event.changes.any { it.pressed })
+                        } finally {
+                            if (isInteracting) {
+                                viewModel.resumePlaybackRecording()
+                            }
                         }
                     }
                 }

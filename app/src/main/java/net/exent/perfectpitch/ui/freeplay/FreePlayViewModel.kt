@@ -101,6 +101,7 @@ class FreePlayViewModel @Inject constructor(
     private var pendingStartDelayMs: Long = 0L
     private var lastRecordMetronomeBeat: Long = 0L
     private var replayGeneration = 0
+    private var isPausedByGesture = false
 
     init {
         viewModelScope.launch {
@@ -231,6 +232,10 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun getEffectiveTime(realTimeMs: Long): Long {
+        if (isPausedByGesture) {
+            lastAdvanceWallMs = realTimeMs
+            return _state.value.songPositionMs
+        }
         if (lastAdvanceWallMs == 0L) lastAdvanceWallMs = realTimeMs
         val delta = (realTimeMs - lastAdvanceWallMs).coerceAtLeast(0L)
         lastAdvanceWallMs = realTimeMs
@@ -671,7 +676,22 @@ class FreePlayViewModel @Inject constructor(
         }
     }
 
+    fun pausePlaybackRecording() {
+        if (!_state.value.isPlaying && !_state.value.isRecording) return
+        if (isPausedByGesture) return
+        isPausedByGesture = true
+        midiOutputSender.allNotesOff()
+        if (soundFontSynthesizer.isReady) soundFontSynthesizer.allNotesOff()
+    }
+
+    fun resumePlaybackRecording() {
+        if (!isPausedByGesture) return
+        lastAdvanceWallMs = System.currentTimeMillis()
+        isPausedByGesture = false
+    }
+
     private fun processResult(result: PitchResult) {
+        if (isPausedByGesture) return
         if (_state.value.snapEnabled) {
             processResultSnap(result)
         } else {
@@ -898,6 +918,7 @@ class FreePlayViewModel @Inject constructor(
      * NoteOff finalizes it.
      */
     private fun processMidiEvent(event: MidiNoteEvent) {
+        if (isPausedByGesture) return
         val isRecording = _state.value.isRecording
         when (event) {
             is MidiNoteEvent.NoteOn -> {
@@ -1084,6 +1105,11 @@ class FreePlayViewModel @Inject constructor(
             var lastWallMs = System.currentTimeMillis()
 
             while (job.isActive) {
+                if (isPausedByGesture) {
+                    lastWallMs = System.currentTimeMillis()
+                    delay(16L)
+                    continue
+                }
                 // Detect external seek
                 val statePosition = _state.value.songPositionMs
                 val currentBpm = _state.value.bpm
