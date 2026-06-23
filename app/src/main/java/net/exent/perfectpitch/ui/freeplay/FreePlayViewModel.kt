@@ -35,6 +35,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import java.io.IOException
 import java.util.UUID
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -542,7 +543,7 @@ class FreePlayViewModel @Inject constructor(
                 // Note timestamps are already song-relative (0-based)
                 val bytes = MidiWriter().write(s.playedNotes, s.bpm, s.beatsPerBar)
                 context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 Log.e(TAG, "Export failed", e)
             }
         }
@@ -592,7 +593,9 @@ class FreePlayViewModel @Inject constructor(
                         outputDevice = current.outputDevice
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
+                Log.e(TAG, "Import failed", e)
+            } catch (e: SecurityException) {
                 Log.e(TAG, "Import failed", e)
             }
         }

@@ -3,6 +3,7 @@ package net.exent.perfectpitch.data
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import java.io.IOException
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
@@ -95,12 +96,12 @@ class MelodyRepository(
                 }
                 else -> null
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load melody '${info.name}' (id=${info.id})", e)
-            null
-        }
+         } catch (e: IOException) {
+             Log.e(TAG, "Failed to load melody '${info.name}' (id=${info.id})", e)
+             null
+         }
 
-        track?.let { cache[info.id] = it }
+         track?.let { cache[info.id] = it }
         return track
     }
 
@@ -153,7 +154,10 @@ class MelodyRepository(
             context.contentResolver.openInputStream(uri)?.use { stream ->
                 parser.parseMultiTrack(stream, name)
             } ?: emptyList()
-        } catch (e: Exception) {
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Failed to load multi-track MIDI from URI: $uri", e)
+            emptyList()
+        } catch (e: IOException) {
             Log.e(TAG, "Failed to load multi-track MIDI from URI: $uri", e)
             emptyList()
         }
@@ -197,7 +201,10 @@ class MelodyRepository(
                 }
             }
             Uri.fromFile(targetFile)
-        } catch (e: Exception) {
+        } catch (e: IOException) {
+            Log.e(TAG, "Failed to copy URI $uri to local file", e)
+            null
+        } catch (e: SecurityException) {
             Log.e(TAG, "Failed to copy URI $uri to local file", e)
             null
         }

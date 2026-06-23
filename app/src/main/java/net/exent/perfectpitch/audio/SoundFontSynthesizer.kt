@@ -5,6 +5,7 @@ import android.media.AudioAttributes
 import android.util.Log
 import net.exent.perfectpitch.BuildConfig
 import java.io.File
+import java.io.IOException
 
 class SoundFontSynthesizer(
     private val context: Context
@@ -102,7 +103,7 @@ class SoundFontSynthesizer(
             }
             Log.d(TAG, "SF2 extracted (${cacheFile.length()} bytes)")
             cacheFile
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             Log.e(TAG, "Failed to extract SF2 to cache", e)
             null
         }
