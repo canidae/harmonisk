@@ -283,57 +283,9 @@ fun FreePlayScreen(
             }
         }
 
-        // Help dialog
         if (showEditHelp) {
-            AlertDialog(
-                onDismissRequest = { showEditHelp = false },
-                confirmButton = { TextButton(onClick = { showEditHelp = false }) { Text(stringResource(R.string.freeplay_help_got_it)) } },
-                title = { Text(stringResource(R.string.freeplay_help_title), fontWeight = FontWeight.Bold) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.freeplay_help_note_editing), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        val noteItems = listOf(
-                            Triple(Icons.Filled.TouchApp,      null as Color?,     stringResource(R.string.freeplay_help_tap_note) to stringResource(R.string.freeplay_help_tap_note_desc)),
-                            Triple(Icons.Filled.OpenWith,      null,               stringResource(R.string.freeplay_help_drag_note) to stringResource(R.string.freeplay_help_drag_note_desc)),
-                            Triple(Icons.Filled.SwipeVertical, null,               stringResource(R.string.freeplay_help_drag_handle) to stringResource(R.string.freeplay_help_drag_handle_desc)),
-                            Triple(Icons.Filled.ContentCut,    AmberAccent,  stringResource(R.string.freeplay_help_split) to stringResource(R.string.freeplay_help_split_desc)),
-                            Triple(Icons.Filled.Delete,        DeleteRed,  stringResource(R.string.freeplay_help_delete) to stringResource(R.string.freeplay_help_delete_desc)),
-                            Triple(Icons.Filled.TouchApp,      null,               stringResource(R.string.freeplay_help_tap_empty) to stringResource(R.string.freeplay_help_tap_empty_desc))
-                        )
-                        noteItems.forEach { (icon, color, labelAndDesc) ->
-                            val (label, description) = labelAndDesc
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
-                                Icon(icon, null, modifier = Modifier.size(18.dp).padding(top = 1.dp),
-                                    tint = color ?: LocalContentColor.current)
-                                Column {
-                                    Text(label, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                                    Text(description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
-
-                        Text(stringResource(R.string.freeplay_help_looping), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
-                            Icon(Icons.Filled.Loop, null, modifier = Modifier.size(18.dp).padding(top = 1.dp))
-                            Column {
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Text(stringResource(R.string.freeplay_loop), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                    Text("1", fontSize = 13.sp, color = Color.White,
-                                        modifier = Modifier.background(DarkBg, MaterialTheme.shapes.extraSmall).padding(horizontal = 4.dp, vertical = 1.dp))
-                                    Text("–", fontSize = 12.sp)
-                                    Text("4", fontSize = 13.sp, color = AmberAccent,
-                                        modifier = Modifier.background(DarkBg, MaterialTheme.shapes.extraSmall).padding(horizontal = 4.dp, vertical = 1.dp))
-                                }
-                                Text(stringResource(R.string.freeplay_help_loop_info), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-                }
-            )
+            FreePlayHelpDialog(onDismiss = { showEditHelp = false })
         }
-
     }
 
     // ── Panel 2 content: BPM · Meter · Voice · Loop ──────────────────────
@@ -798,4 +750,55 @@ fun FreePlayScreen(
     }
     SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).systemBarsPadding())
     } // end Box
+}
+
+@Composable
+private fun FreePlayHelpDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.freeplay_help_got_it)) } },
+        title = { Text(stringResource(R.string.freeplay_help_title), fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.freeplay_help_note_editing), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val noteItems = listOf(
+                    Triple(Icons.Filled.TouchApp,      null as Color?,     stringResource(R.string.freeplay_help_tap_note) to stringResource(R.string.freeplay_help_tap_note_desc)),
+                    Triple(Icons.Filled.OpenWith,      null,               stringResource(R.string.freeplay_help_drag_note) to stringResource(R.string.freeplay_help_drag_note_desc)),
+                    Triple(Icons.Filled.SwipeVertical, null,               stringResource(R.string.freeplay_help_drag_handle) to stringResource(R.string.freeplay_help_drag_handle_desc)),
+                    Triple(Icons.Filled.ContentCut,    AmberAccent,  stringResource(R.string.freeplay_help_split) to stringResource(R.string.freeplay_help_split_desc)),
+                    Triple(Icons.Filled.Delete,        DeleteRed,  stringResource(R.string.freeplay_help_delete) to stringResource(R.string.freeplay_help_delete_desc)),
+                    Triple(Icons.Filled.TouchApp,      null,               stringResource(R.string.freeplay_help_tap_empty) to stringResource(R.string.freeplay_help_tap_empty_desc))
+                )
+                noteItems.forEach { (icon, color, labelAndDesc) ->
+                    val (label, description) = labelAndDesc
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+                        Icon(icon, null, modifier = Modifier.size(18.dp).padding(top = 1.dp),
+                            tint = color ?: LocalContentColor.current)
+                        Column {
+                            Text(label, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            Text(description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                Text(stringResource(R.string.freeplay_help_looping), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+                    Icon(Icons.Filled.Loop, null, modifier = Modifier.size(18.dp).padding(top = 1.dp))
+                    Column {
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.freeplay_loop), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text("1", fontSize = 13.sp, color = Color.White,
+                                modifier = Modifier.background(DarkBg, MaterialTheme.shapes.extraSmall).padding(horizontal = 4.dp, vertical = 1.dp))
+                            Text("–", fontSize = 12.sp)
+                            Text("4", fontSize = 13.sp, color = AmberAccent,
+                                modifier = Modifier.background(DarkBg, MaterialTheme.shapes.extraSmall).padding(horizontal = 4.dp, vertical = 1.dp))
+                        }
+                        Text(stringResource(R.string.freeplay_help_loop_info), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    )
 }
