@@ -106,6 +106,8 @@ class FreePlayViewModel @Inject constructor(
     private var replayGeneration = 0
     private var isPausedByGesture = false
 
+    private data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean, val trackOrigin: Int = 0)
+
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
@@ -621,6 +623,43 @@ class FreePlayViewModel @Inject constructor(
     private fun snapToGridIfEnabled(timeMs: Long, enabled: Boolean): Long =
         if (enabled) snapToGrid(timeMs) else timeMs.coerceAtLeast(0L)
 
+    private fun addMetronomeEvents(
+        evts: MutableList<Event>,
+        startTime: Long,
+        loopStartMs: Long,
+        loopEndMs: Long,
+        loopDuration: Long,
+        lookaheadLen: Long,
+        bpm: Float,
+        beatsPerBar: Int
+    ) {
+        val interval = (60000.0 / bpm).toLong()
+        if (interval <= 0) return
+        data class Click(val note: Int, val dur: Long)
+        val regular = Click(85, 40L)
+        val accent = Click(86, 60L)
+        fun click(beat: Long) = if (beatsPerBar > 0 && (beat % beatsPerBar) == 0L) accent else regular
+
+        var beatTime = startTime - (startTime % interval)
+        if (beatTime < startTime) beatTime += interval
+        while (beatTime < loopEndMs) {
+            val c = click(beatTime / interval)
+            evts.add(Event(beatTime, c.note, true, 9))
+            evts.add(Event(beatTime + c.dur, c.note, false, 9))
+            beatTime += interval
+        }
+        if (lookaheadLen > 0) {
+            var laBeat = loopStartMs - (loopStartMs % interval)
+            if (laBeat < loopStartMs) laBeat += interval
+            while (laBeat < loopStartMs + lookaheadLen) {
+                val c = click(laBeat / interval)
+                val shifted = laBeat + loopDuration
+                evts.add(Event(shifted, c.note, true, 9))
+                evts.add(Event(shifted + c.dur, c.note, false, 9))
+                laBeat += interval
+            }
+        }
+    }
 
     fun onHorizontalZoom(scaleFactor: Float, focusFraction: Float) {
         _state.update { current ->
@@ -911,78 +950,66 @@ class FreePlayViewModel @Inject constructor(
      */
     private fun processMidiEvent(event: MidiNoteEvent) {
         if (isPausedByGesture) return
-        val isRecording = _state.value.isRecording
         when (event) {
-            is MidiNoteEvent.NoteOn -> {
-                val midiNote = event.noteNumber
-                // Ignore duplicate note-on for an already-held note
-                if (activeMidiNotes.containsKey(midiNote)) return
+            is MidiNoteEvent.NoteOn -> handleMidiNoteOn(event.noteNumber)
+            is MidiNoteEvent.NoteOff -> handleMidiNoteOff(event.noteNumber)
+        }
+    }
 
-                val resolution = noteUtils.resolveMidiNote(midiNote)
-                expandRange(midiNote)
+    private fun handleMidiNoteOn(midiNote: Int) {
+        if (activeMidiNotes.containsKey(midiNote)) return
+        val isRecording = _state.value.isRecording
+        val resolution = noteUtils.resolveMidiNote(midiNote)
+        expandRange(midiNote)
+        val songPositionMs = _state.value.songPositionMs
 
-                if (isRecording && _state.value.songPositionMs >= 0) {
-                    val note = PlayedNote(
-                        noteName = resolution.noteName,
-                        octave = resolution.octave,
-                        midiNumber = midiNote,
-                        startTimeMs = _state.value.songPositionMs,
-                        id = UUID.randomUUID().toString(),
-                        voiceIndex = _state.value.activeVoiceIndex
-                    )
-                    activeMidiNotes[midiNote] = note
-                    _state.update { current ->
-                        current.copy(
-                            playedNotes = current.playedNotes + note,
-                            activeNote = note
-                        )
-                    }
-                } else {
-                    // Still track for activeNote display but don't write to score
-                    val note = PlayedNote(
-                        noteName = resolution.noteName,
-                        octave = resolution.octave,
-                        midiNumber = midiNote,
-                        startTimeMs = _state.value.songPositionMs,
-                        id = UUID.randomUUID().toString(),
-                        voiceIndex = _state.value.activeVoiceIndex
-                    )
-                    activeMidiNotes[midiNote] = note
-                    _state.update { it.copy(activeNote = note) }
-                }
+        val note = PlayedNote(
+            noteName = resolution.noteName,
+            octave = resolution.octave,
+            midiNumber = midiNote,
+            startTimeMs = songPositionMs,
+            id = UUID.randomUUID().toString(),
+            voiceIndex = _state.value.activeVoiceIndex
+        )
+        activeMidiNotes[midiNote] = note
+
+        if (isRecording && songPositionMs >= 0) {
+            _state.update { current ->
+                current.copy(playedNotes = current.playedNotes + note, activeNote = note)
             }
+        } else {
+            _state.update { it.copy(activeNote = note) }
+        }
+    }
 
-            is MidiNoteEvent.NoteOff -> {
-                val midiNote = event.noteNumber
-                val activeNote = activeMidiNotes.remove(midiNote) ?: return
-                val endMs = _state.value.songPositionMs
+    private fun handleMidiNoteOff(midiNote: Int) {
+        val activeNote = activeMidiNotes.remove(midiNote) ?: return
+        val endMs = _state.value.songPositionMs
+        val isRecording = _state.value.isRecording
 
-                if (!isRecording || activeNote.startTimeMs < 0) {
-                    _state.update { it.copy(activeNote = activeMidiNotes.values.lastOrNull()) }
-                    return
-                }
+        if (!isRecording || activeNote.startTimeMs < 0) {
+            _state.update { it.copy(activeNote = activeMidiNotes.values.lastOrNull()) }
+            return
+        }
 
-                // Noise filter: discard notes shorter than a 48th note
-                if (endMs - activeNote.startTimeMs < min48thNoteMs()) {
-                    _state.update { current ->
-                        current.copy(
-                            playedNotes = current.playedNotes.filter { it.id != activeNote.id },
-                            activeNote = activeMidiNotes.values.lastOrNull()
-                        )
-                    }
-                    return
-                }
-
-                val finalized = activeNote.copy(endTimeMs = endMs)
-                _state.update { current ->
-                    current.copy(
-                        playedNotes = current.playedNotes.map {
-                            if (it.id == activeNote.id) finalized else it
-                        },
-                        activeNote = activeMidiNotes.values.lastOrNull()
-                    )
-                }
+        if (endMs - activeNote.startTimeMs < min48thNoteMs()) {
+            _state.update { current ->
+                current.copy(
+                    playedNotes = current.playedNotes.filter { it.id != activeNote.id },
+                    activeNote = activeMidiNotes.values.lastOrNull()
+                )
             }
+            return
+        }
+
+        val finalized = activeNote.copy(endTimeMs = endMs)
+        _state.update { current ->
+            current.copy(
+                playedNotes = current.playedNotes.map {
+                    if (it.id == activeNote.id) finalized else it
+                },
+                activeNote = activeMidiNotes.values.lastOrNull()
+            )
         }
     }
 
@@ -1018,8 +1045,6 @@ class FreePlayViewModel @Inject constructor(
                 OutputDevice.NONE -> null
             }
 
-            data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean, val trackOrigin: Int = 0)
-
             var lastBuiltBpm = _state.value.bpm
             var lastBuiltBeatsPerBar = _state.value.beatsPerBar
 
@@ -1053,37 +1078,7 @@ evts.add(Event(shiftedEnd, note.midiNumber, false, note.trackOrigin))
                 }
                 // Metronome events
                 if (_state.value.metronomeEnabled) {
-                    val interval = (60000.0 / lastBuiltBpm).toLong()
-                    if (interval > 0) {
-                        val startMs = maxOf(startTime, loopStartMs)
-                        var beatTime = startMs - (startMs % interval)
-                        if (beatTime < startMs) beatTime += interval
-                        val durMs = 40L
-                        while (beatTime < loopEndMs) {
-                            val beat = beatTime / interval
-                            val isAccent = lastBuiltBeatsPerBar > 0 && (beat % lastBuiltBeatsPerBar) == 0L
-                            val note = if (isAccent) 86 else 85
-                            val adur = if (isAccent) 60L else durMs
-                            evts.add(Event(beatTime, note, true, 9))
-                            evts.add(Event(beatTime + adur, note, false, 9))
-                            beatTime += interval
-                        }
-                        // Metronome lookahead
-                        if (lookaheadLen > 0) {
-                            var laBeat = loopStartMs - (loopStartMs % interval)
-                            if (laBeat < loopStartMs) laBeat += interval
-                            while (laBeat < loopStartMs + lookaheadLen) {
-                                val shifted = laBeat + loopDuration
-                                val beat = laBeat / interval
-                                val isAccent = lastBuiltBeatsPerBar > 0 && (beat % lastBuiltBeatsPerBar) == 0L
-                                val note = if (isAccent) 86 else 85
-                                val adur = if (isAccent) 60L else durMs
-                                evts.add(Event(shifted, note, true, 9))
-                                evts.add(Event(shifted + adur, note, false, 9))
-                                laBeat += interval
-                            }
-                        }
-                    }
+                    addMetronomeEvents(evts, startTime, loopStartMs, loopEndMs, loopDuration, lookaheadLen, lastBuiltBpm, lastBuiltBeatsPerBar)
                 }
                 evts.sortBy { it.timeMs }
                 return evts
