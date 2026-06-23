@@ -101,8 +101,8 @@ fun FreePlayScreen(
     val barMs = state.beatsPerBar * (60000.0 / state.bpm)
     val defaultLoopEndBar = run {
         val maxEndMs = state.playedNotes.mapNotNull { it.endTimeMs }.maxOrNull() ?: 0L
-        ceil(maxEndMs.toDouble() / barMs).toInt() + 4
-    }.coerceAtLeast(4)
+        ceil(maxEndMs.toDouble() / barMs).toInt() + 3
+    }.coerceAtLeast(3)
     val effectiveLoopStartBar = state.loopStartBar ?: 1
     val effectiveLoopEndBar = state.loopEndBar ?: defaultLoopEndBar
     val loopStartMs = ((effectiveLoopStartBar - 1) * barMs).toLong()

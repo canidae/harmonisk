@@ -387,7 +387,7 @@ class FreePlayViewModel @Inject constructor(
             (s.loopEndBar - 1) * bMs
         } else {
             val lastNoteEnd = s.playedNotes.mapNotNull { it.endTimeMs }.maxOrNull() ?: 0L
-            val defaultEndBar = (ceil(lastNoteEnd.toDouble() / bMs).toInt() + 4).coerceAtLeast(4)
+            val defaultEndBar = (ceil(lastNoteEnd.toDouble() / bMs).toInt() + 3).coerceAtLeast(3)
             (defaultEndBar - 1) * bMs
         }
         return Pair(startMs, endMs)
