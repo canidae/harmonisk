@@ -510,7 +510,8 @@ fun FreePlayScreen(
                 .fillMaxWidth()
                 .pointerInput(Unit) {
                     awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false)
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val initialPos = down.position
                         var isInteracting = false
                         var pastTouchSlop = false
                         val touchSlop = viewConfiguration.touchSlop
@@ -520,9 +521,10 @@ fun FreePlayScreen(
                                 val zoomChange = event.calculateZoom()
                                 val panChange = event.calculatePan()
                                 val centroid = event.calculateCentroid(useCurrent = true)
+                                val displacement = (centroid - initialPos).getDistance()
 
                                 if (!pastTouchSlop) {
-                                    pastTouchSlop = panChange.getDistance() > touchSlop || abs(zoomChange - 1f) > 0.01f
+                                    pastTouchSlop = displacement > touchSlop || abs(zoomChange - 1f) > 0.01f
                                 }
 
                                 if (pastTouchSlop) {
@@ -544,31 +546,25 @@ fun FreePlayScreen(
                         } finally {
                             if (isInteracting) {
                                 viewModel.resumePlaybackRecording()
-                            }
-                        }
-                    }
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures { offset ->
-                        val tappedId = noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.first
-                        if (tappedId != null) {
-                            // Toggle selection on tap
-                            viewModel.selectNote(if (tappedId == currentSelectedNoteId) null else tappedId)
-                        } else {
-                            // Check if tap landed on a handle circle of the selected note
-                            // (handles are centered on corners, half outside the noteRect)
-                            val selRect = currentSelectedNoteId?.let { id ->
-                                noteRectsState.value.firstOrNull { (rid, _) -> rid == id }?.second
-                            }
-                            val onHandle = selRect != null && (
-                                run { val dx = offset.x - selRect.right;  val dy = offset.y - selRect.top;    dx*dx+dy*dy <= handleRadiusPx*handleRadiusPx } ||
-                                run { val dx = offset.x - selRect.left;   val dy = offset.y - selRect.bottom; dx*dx+dy*dy <= handleRadiusPx*handleRadiusPx }
-                            )
-                            if (!onHandle) {
-                                // Tap on truly empty space: deselect and pause
-                                viewModel.selectNote(null)
-                                if (currentIsRecording) viewModel.toggleRecording()
-                                else if (currentIsPlaying) viewModel.togglePlaying()
+                            } else {
+                                val offset = initialPos
+                                val tappedId = noteRectsState.value.firstOrNull { (_, r) -> r.contains(offset) }?.first
+                                if (tappedId != null) {
+                                    viewModel.selectNote(if (tappedId == currentSelectedNoteId) null else tappedId)
+                                } else {
+                                    val selRect = currentSelectedNoteId?.let { id ->
+                                        noteRectsState.value.firstOrNull { (rid, _) -> rid == id }?.second
+                                    }
+                                    val onHandle = selRect != null && (
+                                        run { val dx = offset.x - selRect.right;  val dy = offset.y - selRect.top;    dx*dx+dy*dy <= handleRadiusPx*handleRadiusPx } ||
+                                        run { val dx = offset.x - selRect.left;   val dy = offset.y - selRect.bottom; dx*dx+dy*dy <= handleRadiusPx*handleRadiusPx }
+                                    )
+                                    if (!onHandle) {
+                                        viewModel.selectNote(null)
+                                        if (currentIsRecording) viewModel.toggleRecording()
+                                        else if (currentIsPlaying) viewModel.togglePlaying()
+                                    }
+                                }
                             }
                         }
                     }
