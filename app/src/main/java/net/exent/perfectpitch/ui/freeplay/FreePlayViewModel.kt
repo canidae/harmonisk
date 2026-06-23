@@ -101,8 +101,6 @@ class FreePlayViewModel @Inject constructor(
 
     private var audioOutputDelayMs: Int = 0
     private var audioVisualDelayMs: Int = 0
-    private var pendingStartDelayMs: Long = 0L
-    private var lastRecordMetronomeBeat: Long = 0L
     private var replayGeneration = 0
     private var isPausedByGesture = false
 
@@ -201,7 +199,9 @@ class FreePlayViewModel @Inject constructor(
     }
 
     fun toggleRecording() {
-        if (_state.value.isRecording) stopRecording() else startRecording()
+        if (_state.value.isRecording) { stopRecording(); return }
+        if (_state.value.isPlaying) stopPlaying()
+        startRecording()
     }
 
     private fun startRecording() {
@@ -214,20 +214,18 @@ class FreePlayViewModel @Inject constructor(
         if (pos < loopStart || pos >= loopEnd) {
             _state.update { it.copy(songPositionMs = loopStart) }
         }
-        // Don't jump songPositionMs back; instead freeze the canvas for the output delay
-        // so metronome clicks arrive at the speaker exactly when bar/beat lines pass the now line.
-        pendingStartDelayMs = audioOutputDelayMs.toLong()
-        lastRecordMetronomeBeat = _state.value.songPositionMs / (60000.0 / _state.value.bpm).toLong()
         lastAdvanceWallMs = System.currentTimeMillis()
         startListeningInternal()
         _state.update { it.copy(isRecording = true) }
+        // Use the same event-driven engine as playback for time advancement + metronome
+        replayNotes()
     }
 
     private fun stopRecording() {
+        stopEngine()
         stopListeningInternal()
         finalizeCurrentNote()
         abortHoning()
-        pendingStartDelayMs = 0L
         _state.update { it.copy(isRecording = false) }
         outputDeviceBeforeRecord?.let { previous ->
             setOutputDevice(previous)
@@ -239,52 +237,6 @@ class FreePlayViewModel @Inject constructor(
         if (isPausedByGesture) {
             lastAdvanceWallMs = realTimeMs
             return _state.value.songPositionMs
-        }
-        if (lastAdvanceWallMs == 0L) lastAdvanceWallMs = realTimeMs
-        val delta = (realTimeMs - lastAdvanceWallMs).coerceAtLeast(0L)
-        lastAdvanceWallMs = realTimeMs
-        if (replayJob?.isActive != true && _state.value.isRecording) {
-            // Consume pending start delay before advancing the canvas
-            var remainingDelta = delta
-            if (pendingStartDelayMs > 0) {
-                val consumed = min(remainingDelta, pendingStartDelayMs)
-                pendingStartDelayMs -= consumed
-                remainingDelta -= consumed
-            }
-            if (remainingDelta > 0) {
-                val newPos = _state.value.songPositionMs + remainingDelta
-                val (loopStart, loopEnd) = effectiveLoopBounds()
-                if (newPos >= loopEnd) {
-                    finalizeCurrentNote()
-                    abortHoning()
-                    _state.update { it.copy(songPositionMs = loopStart, activeNote = null) }
-                } else {
-                    _state.update { it.copy(songPositionMs = newPos) }
-                }
-            }
-        }
-        val s = _state.value
-        // Fire metronome clicks during recording
-        if (s.metronomeEnabled && s.isRecording) {
-            val interval = (60000.0 / s.bpm).toLong()
-            if (interval > 0) {
-                // Use effective real time = canvas time + consumed delay, so clicks
-                // arrive at the speaker when the visual beat line passes the now line.
-                val effectiveRealTime = s.songPositionMs + (audioOutputDelayMs.toLong() - pendingStartDelayMs)
-                val currentBeat = effectiveRealTime / interval
-                while (currentBeat > lastRecordMetronomeBeat) {
-                    lastRecordMetronomeBeat++
-                    val isAccent = s.beatsPerBar > 0 && (lastRecordMetronomeBeat % s.beatsPerBar) == 0L
-                    val note = if (isAccent) 86 else 85
-                    val vel = if (isAccent) 120 else 100
-                    soundFontSynthesizer.noteOn(9, note, vel)
-                    val durMs = if (isAccent) 60L else 40L
-                    viewModelScope.launch {
-                        delay(durMs)
-                        soundFontSynthesizer.noteOff(9, note)
-                    }
-                }
-            }
         }
         return _state.value.songPositionMs
     }
@@ -426,7 +378,7 @@ class FreePlayViewModel @Inject constructor(
 
     fun selectNote(id: String?) {
         _state.update { it.copy(selectedNoteId = id) }
-        if (id != null) stopPlaying()
+        if (id != null && _state.value.isPlaying) stopPlaying()
     }
 
     fun deleteNote(id: String) {
@@ -626,10 +578,7 @@ class FreePlayViewModel @Inject constructor(
     private fun addMetronomeEvents(
         evts: MutableList<Event>,
         startTime: Long,
-        loopStartMs: Long,
         loopEndMs: Long,
-        loopDuration: Long,
-        lookaheadLen: Long,
         bpm: Float,
         beatsPerBar: Int
     ) {
@@ -647,17 +596,6 @@ class FreePlayViewModel @Inject constructor(
             evts.add(Event(beatTime, c.note, true, 9))
             evts.add(Event(beatTime + c.dur, c.note, false, 9))
             beatTime += interval
-        }
-        if (lookaheadLen > 0) {
-            var laBeat = loopStartMs - (loopStartMs % interval)
-            if (laBeat < loopStartMs) laBeat += interval
-            while (laBeat < loopStartMs + lookaheadLen) {
-                val c = click(laBeat / interval)
-                val shifted = laBeat + loopDuration
-                evts.add(Event(shifted, c.note, true, 9))
-                evts.add(Event(shifted + c.dur, c.note, false, 9))
-                laBeat += interval
-            }
         }
     }
 
@@ -1023,6 +961,8 @@ class FreePlayViewModel @Inject constructor(
             try { soundFontSynthesizer.open() } catch (_: Exception) {}
         }
 
+        val isRecordMode = _state.value.isRecording
+
         val allNotes = _state.value.playedNotes
             .filter { it.endTimeMs != null }
             .sortedBy { it.startTimeMs }
@@ -1034,7 +974,7 @@ class FreePlayViewModel @Inject constructor(
             _state.update { it.copy(songPositionMs = initialStart) }
         }
 
-        _state.update { it.copy(isPlaying = true) }
+        _state.update { it.copy(isPlaying = !isRecordMode) }
 
         replayJob = viewModelScope.launch {
             val job = coroutineContext[kotlinx.coroutines.Job] ?: return@launch
@@ -1076,9 +1016,9 @@ evts.add(Event(onTime, note.midiNumber, true, note.trackOrigin))
 evts.add(Event(shiftedEnd, note.midiNumber, false, note.trackOrigin))
                     }
                 }
-                // Metronome events
+                // Metronome events (no lookahead — they repeat naturally each loop)
                 if (_state.value.metronomeEnabled) {
-                    addMetronomeEvents(evts, startTime, loopStartMs, loopEndMs, loopDuration, lookaheadLen, lastBuiltBpm, lastBuiltBeatsPerBar)
+                    addMetronomeEvents(evts, startTime, loopEndMs, lastBuiltBpm, lastBuiltBeatsPerBar)
                 }
                 evts.sortBy { it.timeMs }
                 return evts
@@ -1131,16 +1071,28 @@ evts.add(Event(shiftedEnd, note.midiNumber, false, note.trackOrigin))
 
                 // Fire due events — fire audioOutputDelayMs early so audio reaches the
                 // speaker at the same time the visual "now" line passes the note.
+                // Metronome (trackOrigin == 9) always routes through soundFontSynthesizer
+                // so it's audible during recording even with output device set to NONE.
                 val fireAhead = audioOutputDelayMs.toLong() - pendingMs
                 while (eventIndex < events.size && events[eventIndex].timeMs <= replayPositionMs + fireAhead) {
                     val ev = events[eventIndex++]
-                    if (ev.isOn) player?.noteOn(ev.trackOrigin, ev.midiNote, 80)
-                    else player?.noteOff(ev.trackOrigin, ev.midiNote)
+                    if (ev.trackOrigin == 9) {
+                        if (ev.isOn) soundFontSynthesizer.noteOn(9, ev.midiNote, 80)
+                        else if (soundFontSynthesizer.isReady) soundFontSynthesizer.noteOff(9, ev.midiNote)
+                    } else {
+                        if (ev.isOn) player?.noteOn(ev.trackOrigin, ev.midiNote, 80)
+                        else player?.noteOff(ev.trackOrigin, ev.midiNote)
+                    }
                 }
 
                 // Loop-at-end: re-read bounds each frame so user changes take effect immediately
                 val (loopStartMs, loopEndMs) = effectiveLoopBounds()
                 if (replayPositionMs >= loopEndMs) {
+                    if (isRecordMode) {
+                        finalizeCurrentNote()
+                        abortHoning()
+                        _state.update { it.copy(activeNote = null) }
+                    }
                     // Don't call allNotesOff — the shifted lookahead events already fired
                     // before the loop and their audio is in the output pipeline.
                     replayPositionMs = loopStartMs
@@ -1149,10 +1101,12 @@ evts.add(Event(shiftedEnd, note.midiNumber, false, note.trackOrigin))
                     events = buildEvents(replayPositionMs)
                     eventIndex = 0
                     lastWallMs = System.currentTimeMillis()
-                    // Skip events at the loop start that already fired as shifted
+                    // Skip note events at the loop start that already fired as shifted
                     // lookahead events in the previous loop iteration.
+                    // Metronome events are NOT skipped — they repeat naturally each loop.
                     val lookaheadLen = audioOutputDelayMs.toLong().coerceAtMost(loopEndMs - loopStartMs)
-                    while (eventIndex < events.size && events[eventIndex].timeMs < loopStartMs + lookaheadLen) {
+                    while (eventIndex < events.size && events[eventIndex].timeMs < loopStartMs + lookaheadLen
+                           && events[eventIndex].trackOrigin != 9) {
                         eventIndex++
                     }
                 }
@@ -1162,25 +1116,33 @@ evts.add(Event(shiftedEnd, note.midiNumber, false, note.trackOrigin))
 
             if (replayGeneration == gen) {
                 player?.allNotesOff()
+                if (soundFontSynthesizer.isReady) soundFontSynthesizer.allNotesOff()
                 lastAdvanceWallMs = System.currentTimeMillis()
-                _state.update { it.copy(isPlaying = false) }
+                _state.update {
+                    if (isRecordMode) it.copy(isRecording = false)
+                    else it.copy(isPlaying = false)
+                }
             }
         }
     }
 
-    fun stopPlaying() {
+    private fun stopEngine() {
         replayJob?.cancel()
         replayJob = null
-        pendingStartDelayMs = 0L
         lastAdvanceWallMs = System.currentTimeMillis()
         midiOutputSender.allNotesOff()
         if (soundFontSynthesizer.isReady) soundFontSynthesizer.allNotesOff()
+    }
+
+    fun stopPlaying() {
+        stopEngine()
         _state.update { it.copy(isPlaying = false) }
     }
 
     fun togglePlaying() {
-        if (_state.value.isPlaying) stopPlaying()
-        else replayNotes()
+        if (_state.value.isPlaying) { stopPlaying(); return }
+        if (_state.value.isRecording) stopRecording()
+        replayNotes()
     }
 
     fun toggleMetronome() {
@@ -1203,9 +1165,8 @@ evts.add(Event(shiftedEnd, note.midiNumber, false, note.trackOrigin))
 
     override fun onCleared() {
         super.onCleared()
-        stopPlaying()
+        stopEngine()
         stopListening()
-        pendingStartDelayMs = 0L
         previewJob?.cancel()
         soundFontSynthesizer.close()
     }
