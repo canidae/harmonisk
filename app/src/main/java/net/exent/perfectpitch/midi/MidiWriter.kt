@@ -49,7 +49,8 @@ class MidiWriter {
             val events = mutableListOf<MidiEvt>()
             for (note in voiceNotes) {
                 val startTick = msToTick(note.startTimeMs)
-                val endTick = msToTick(note.endTimeMs!!)
+                val endMs = note.endTimeMs ?: continue
+                val endTick = msToTick(endMs)
                 val noteNum = note.midiNumber.coerceIn(0, 127)
                 events.add(MidiEvt(startTick, true, noteNum, 80))
                 events.add(MidiEvt(endTick, false, noteNum, 0))

@@ -1011,7 +1011,7 @@ class FreePlayViewModel @Inject constructor(
         _state.update { it.copy(isPlaying = true) }
 
         replayJob = viewModelScope.launch {
-            val job = coroutineContext[kotlinx.coroutines.Job]!!
+            val job = coroutineContext[kotlinx.coroutines.Job] ?: return@launch
 
             val player: NotePlayer? = when (_state.value.outputDevice) {
                 OutputDevice.MIDI -> if (midiOutputSender.isReady) midiOutputSender else soundFontSynthesizer
@@ -1029,7 +1029,7 @@ class FreePlayViewModel @Inject constructor(
                 val (loopStartMs, loopEndMs) = effectiveLoopBounds()
                 val loopDuration = loopEndMs - loopStartMs
                 for (note in allNotes) {
-                    val endMs = note.endTimeMs!!
+                    val endMs = note.endTimeMs ?: continue
                     if (endMs <= startTime) continue
                     val onTime = if (note.startTimeMs <= startTime) startTime else note.startTimeMs
 evts.add(Event(onTime, note.midiNumber, true, note.trackOrigin))
@@ -1043,12 +1043,13 @@ evts.add(Event(endMs, note.midiNumber, false, note.trackOrigin))
                     for (note in allNotes) {
                         if (note.startTimeMs >= loopStartMs + lookaheadLen) continue
                         val shiftedStart = note.startTimeMs + loopDuration
-                        val shiftedEnd = note.endTimeMs!! + loopDuration
+                        val endMs = note.endTimeMs ?: continue
+                        val shiftedEnd = endMs + loopDuration
                         if (shiftedEnd <= startTime) continue
                         if (shiftedStart >= loopEndMs + lookaheadLen) continue
                         val onTime = if (shiftedStart <= startTime) startTime else shiftedStart
-                        evts.add(Event(onTime, note.midiNumber, true, note.trackOrigin))
-                        evts.add(Event(shiftedEnd, note.midiNumber, false, note.trackOrigin))
+evts.add(Event(onTime, note.midiNumber, true, note.trackOrigin))
+evts.add(Event(shiftedEnd, note.midiNumber, false, note.trackOrigin))
                     }
                 }
                 // Metronome events

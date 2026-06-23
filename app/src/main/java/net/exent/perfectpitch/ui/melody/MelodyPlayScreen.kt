@@ -399,9 +399,10 @@ fun MelodyPlayScreen(
         }
     }
 
-    if (showResultsModal && gameState.melodyScore != null) {
+    val score = gameState.melodyScore
+    if (showResultsModal && score != null) {
         ScoreResultModal(
-            melodyScore = gameState.melodyScore!!,
+            melodyScore = score,
             onDismiss = { showResultsModal = false },
             scoreHistory = scoreHistory,
             currentLevel = gameState.currentLevel,

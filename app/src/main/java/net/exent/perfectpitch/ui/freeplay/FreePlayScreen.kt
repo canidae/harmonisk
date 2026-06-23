@@ -255,15 +255,17 @@ fun FreePlayScreen(
                 HorizontalDivider()
                 var showPianoVisMenu by remember { mutableStateOf(false) }
                 Box {
+                    val pianoLabelRes = PIANO_VISIBILITY_LABELS[state.pianoVisibility] ?: R.string.freeplay_piano
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.freeplay_piano, stringResource(PIANO_VISIBILITY_LABELS[state.pianoVisibility]!!))) },
+                        text = { Text(stringResource(R.string.freeplay_piano, stringResource(pianoLabelRes))) },
                         trailingIcon = { Icon(Icons.Filled.ArrowDropDown, null, Modifier.size(16.dp)) },
                         onClick = { showPianoVisMenu = true }
                     )
                     DropdownMenu(expanded = showPianoVisMenu, onDismissRequest = { showPianoVisMenu = false }) {
                         PianoVisibility.entries.forEach { vis ->
+                            val labelRes = PIANO_VISIBILITY_LABELS[vis] ?: R.string.freeplay_piano
                             DropdownMenuItem(
-                                text = { Text(stringResource(PIANO_VISIBILITY_LABELS[vis]!!), fontWeight = if (vis == state.pianoVisibility) FontWeight.Bold else FontWeight.Normal) },
+                                text = { Text(stringResource(labelRes), fontWeight = if (vis == state.pianoVisibility) FontWeight.Bold else FontWeight.Normal) },
                                 onClick = { viewModel.setPianoVisibility(vis); showPianoVisMenu = false; showConfigMenu = false }
                             )
                         }
@@ -735,8 +737,9 @@ fun FreePlayScreen(
                         .offset { IntOffset((selectedRect.right + paddingPx).toInt(), (noteMidY - colHeight / 2f).toInt()) },
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
+                    val noteId = state.selectedNoteId ?: return@Column
                     IconButton(
-                        onClick = { viewModel.splitNote(state.selectedNoteId!!) },
+                        onClick = { viewModel.splitNote(noteId) },
                         modifier = Modifier.size(btnSize)
                             .background(DarkBg.copy(alpha = 0.87f), CircleShape)
                             .border(1.dp, AmberAccent.copy(alpha = 0.7f), CircleShape)
@@ -745,7 +748,7 @@ fun FreePlayScreen(
                             tint = AmberAccent, modifier = Modifier.size(18.dp))
                     }
                     IconButton(
-                        onClick = { viewModel.deleteNote(state.selectedNoteId!!) },
+                        onClick = { viewModel.deleteNote(noteId) },
                         modifier = Modifier.size(btnSize)
                             .background(DarkBg.copy(alpha = 0.87f), CircleShape)
                             .border(1.dp, DeleteRed.copy(alpha = 0.7f), CircleShape)

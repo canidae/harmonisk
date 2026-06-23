@@ -205,7 +205,8 @@ class MelodyRepository(
 
     private fun deleteLocalFile(uri: Uri) {
         if (uri.scheme == "file") {
-            val file = java.io.File(uri.path!!)
+            val path = uri.path ?: return
+            val file = java.io.File(path)
             if (file.exists()) file.delete()
         }
     }

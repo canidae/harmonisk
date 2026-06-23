@@ -360,14 +360,15 @@ class MelodyViewModel @Inject constructor(
                 )
             }
             _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
-            loadMelodySettingsAndHistory(currentMelodyId!!)
+            val id = currentMelodyId ?: return false
+            loadMelodySettingsAndHistory(id)
 
             // Persist the imported melody and compute difficulty
             viewModelScope.launch {
                 val localUri = melodyRepository.copyUriToLocal(uri, name)
                 val persistUri = localUri ?: uri
                 val info = MelodyRepository.MelodyInfo(
-                    id = currentMelodyId!!,
+                    id = currentMelodyId ?: return@launch,
                     name = name,
                     isBundled = false,
                     uri = persistUri

@@ -183,11 +183,12 @@ class MelodyTrack(
                     val note = active[v]
                     if (currentNote[v] !== note) {
                         // Finalize previous note on this voice
-                        if (currentNote[v] != null && currentStart[v] != null) {
-                            val prev = currentNote[v]!!
-                            val dur = intervalStart - currentStart[v]!!
+                        val prev = currentNote[v]
+                        val start = currentStart[v]
+                        if (prev != null && start != null) {
+                            val dur = intervalStart - start
                             if (dur > 0) {
-                                voiceNotes[v].add(NoteEvent(prev.noteNumber, prev.velocity, currentStart[v]!!, dur))
+                                voiceNotes[v].add(NoteEvent(prev.noteNumber, prev.velocity, start, dur))
                             }
                         }
                         currentNote[v] = note
@@ -195,11 +196,12 @@ class MelodyTrack(
                     }
                 } else {
                     // Voice goes silent
-                    if (currentNote[v] != null && currentStart[v] != null) {
-                        val prev = currentNote[v]!!
-                        val dur = intervalStart - currentStart[v]!!
+                    val prev = currentNote[v]
+                    val start = currentStart[v]
+                    if (prev != null && start != null) {
+                        val dur = intervalStart - start
                         if (dur > 0) {
-                            voiceNotes[v].add(NoteEvent(prev.noteNumber, prev.velocity, currentStart[v]!!, dur))
+                            voiceNotes[v].add(NoteEvent(prev.noteNumber, prev.velocity, start, dur))
                         }
                         currentNote[v] = null
                         currentStart[v] = null
@@ -211,11 +213,12 @@ class MelodyTrack(
         // Finalize any remaining active notes
         val lastTime = eventTimes.last()
         for (v in 0 until maxActive) {
-            if (currentNote[v] != null && currentStart[v] != null) {
-                val prev = currentNote[v]!!
-                val dur = lastTime - currentStart[v]!!
+            val prev = currentNote[v]
+            val start = currentStart[v]
+            if (prev != null && start != null) {
+                val dur = lastTime - start
                 if (dur > 0) {
-                    voiceNotes[v].add(NoteEvent(prev.noteNumber, prev.velocity, currentStart[v]!!, dur))
+                    voiceNotes[v].add(NoteEvent(prev.noteNumber, prev.velocity, start, dur))
                 }
             }
         }
