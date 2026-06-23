@@ -617,7 +617,8 @@ class MelodyViewModel @Inject constructor(
                 val isAccent = beat == 0
                 val note = if (isAccent) 86 else 85
                 val vel = if (isAccent) 120 else 100
-                notes.add(NoteEvent(note, vel, beatTick, 1))
+                val clickDuration = (ppq / 10).coerceAtLeast(1).toLong()
+                notes.add(NoteEvent(note, vel, beatTick, clickDuration))
             }
             tick += ticksPerBar
         }
@@ -818,8 +819,10 @@ class MelodyViewModel @Inject constructor(
             // For mid-song countdown resumes, pitch scoring starts at the resume target time;
             // for initial start, it starts at time 0.
             val pitchStartThreshold = _gameState.value.countdownResumeTarget.let { if (it > 0.0) it else 0.0 }
-            var pitchDetectionStarted = _gameState.value.phase == PlayPhase.PLAYING ||
-                    _gameState.value.phase == PlayPhase.WAITING_FOR_NOTE
+            var pitchDetectionStarted = false
+            val metronomeNotes = _gameState.value.metronomeTrack?.notes?.sortedBy { it.startTick } ?: emptyList()
+            var metronomeNoteIndex = 0
+            var lastFiredMetronomeTime = Double.NEGATIVE_INFINITY
 
             while (isActive) {
                 // Grace period: continue advancing time for a while after entering wait mode
@@ -857,6 +860,29 @@ class MelodyViewModel @Inject constructor(
 
                 // Feed melody audio earlier than t=0 to compensate for output latency.
                 val gs = _gameState.value
+
+                // Direct-fire metronome during initial lead-in (before updateGameTime threshold)
+                if (currentTime < -(audioOutputDelayMs / 1000.0) &&
+                    gs.metronomeEnabled && gs.metronomeTrack != null && soundFontSynthesizer.isReady &&
+                    (!gs.waitMode || !pitchDetectionStarted)) {
+                    val mt = gs.metronomeTrack
+                    val effectiveTime = currentTime + audioOutputDelayMs / 1000.0
+                    while (metronomeNoteIndex < metronomeNotes.size) {
+                        val note = metronomeNotes[metronomeNoteIndex]
+                        val noteStart = mt.noteStartSeconds(note)
+                        if (noteStart > effectiveTime) break
+                        if (noteStart > lastFiredMetronomeTime) {
+                            soundFontSynthesizer.noteOn(9, note.noteNumber, note.velocity.coerceIn(1, 127))
+                            lastFiredMetronomeTime = noteStart
+                            val durMs = if (note.noteNumber == 86) 60L else 40L
+                            launch {
+                                delay(durMs)
+                                soundFontSynthesizer.noteOff(9, note.noteNumber)
+                            }
+                        }
+                        metronomeNoteIndex++
+                    }
+                }
                 val playTracks = buildList {
                     addAll(when (gs.accompanimentMode) {
                         AccompanimentMode.ALL -> gs.melodyTracks
