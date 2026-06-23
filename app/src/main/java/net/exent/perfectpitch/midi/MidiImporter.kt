@@ -101,13 +101,11 @@ object MidiImporter {
                     val endMs = tickToMs(note.endTick)
                     if (endMs <= startMs) continue
 
-                    val noteIdx = ((note.noteNumber % 12) + 12) % 12
-                    val octave = (note.noteNumber / 12) - 1
-                    val noteName = NoteUtils.NOTE_NAMES[noteIdx]
+                    val resolution = NoteUtils.resolveMidiNote(note.noteNumber)
 
                     playedNotes.add(PlayedNote(
-                        noteName = noteName,
-                        octave = octave,
+                        noteName = resolution.noteName,
+                        octave = resolution.octave,
                         midiNumber = note.noteNumber,
                         startTimeMs = startMs,
                         endTimeMs = endMs,

@@ -477,15 +477,13 @@ class FreePlayViewModel @Inject constructor(
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
             val clampedMidi = newMidi.coerceIn(21, 108)
-            val noteIdx = ((clampedMidi % 12) + 12) % 12
-            val newOctave = (clampedMidi / 12) - 1
-            val newNoteName = NoteUtils.NOTE_NAMES[noteIdx]
+            val resolution = noteUtils.resolveMidiNote(clampedMidi)
             val duration = note.endTimeMs?.minus(note.startTimeMs)
             val newStart = snapToGridIfEnabled(rawStartMs, current.snapEnabled).coerceAtLeast(0L)
             val newEnd = duration?.let { newStart + it }
             val newNote = note.copy(
-                noteName = newNoteName,
-                octave = newOctave,
+                noteName = resolution.noteName,
+                octave = resolution.octave,
                 midiNumber = clampedMidi,
                 startTimeMs = newStart,
                 endTimeMs = newEnd
@@ -920,15 +918,13 @@ class FreePlayViewModel @Inject constructor(
                 // Ignore duplicate note-on for an already-held note
                 if (activeMidiNotes.containsKey(midiNote)) return
 
-                val noteIndex = ((midiNote % 12) + 12) % 12
-                val octave = (midiNote / 12) - 1
-                val noteName = NoteUtils.NOTE_NAMES[noteIndex]
+                val resolution = noteUtils.resolveMidiNote(midiNote)
                 expandRange(midiNote)
 
                 if (isRecording && _state.value.songPositionMs >= 0) {
                     val note = PlayedNote(
-                        noteName = noteName,
-                        octave = octave,
+                        noteName = resolution.noteName,
+                        octave = resolution.octave,
                         midiNumber = midiNote,
                         startTimeMs = _state.value.songPositionMs,
                         id = UUID.randomUUID().toString(),
@@ -944,8 +940,8 @@ class FreePlayViewModel @Inject constructor(
                 } else {
                     // Still track for activeNote display but don't write to score
                     val note = PlayedNote(
-                        noteName = noteName,
-                        octave = octave,
+                        noteName = resolution.noteName,
+                        octave = resolution.octave,
                         midiNumber = midiNote,
                         startTimeMs = _state.value.songPositionMs,
                         id = UUID.randomUUID().toString(),

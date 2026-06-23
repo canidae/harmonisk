@@ -19,6 +19,18 @@ class NoteUtils {
 
         fun midiToFrequency(midiNumber: Int, refA4: Float = DEFAULT_A4_FREQ): Float =
             (refA4.toDouble() * 2.0.pow((midiNumber - A4_MIDI_NUMBER).toDouble() / 12.0)).toFloat()
+
+        fun midiToNoteIndexAndOctave(midi: Int): Pair<Int, Int> {
+            val noteIndex = ((midi % SEMITONES_PER_OCTAVE) + SEMITONES_PER_OCTAVE) % SEMITONES_PER_OCTAVE
+            val octave = (midi / SEMITONES_PER_OCTAVE) - 1
+            return noteIndex to octave
+        }
+
+        data class MidiNoteResolution(val noteIndex: Int, val octave: Int, val noteName: String)
+        fun resolveMidiNote(midi: Int): MidiNoteResolution {
+            val (noteIndex, octave) = midiToNoteIndexAndOctave(midi)
+            return MidiNoteResolution(noteIndex, octave, NOTE_NAMES[noteIndex])
+        }
     }
 
     fun frequencyToNote(frequency: Float, refA4: Float = DEFAULT_A4_FREQ): NoteInfo {
@@ -50,9 +62,8 @@ class NoteUtils {
         return "${NOTE_NAMES[noteIndex]}$octave"
     }
 
-    private fun midiToNoteIndexAndOctave(midi: Int): Pair<Int, Int> {
-        val noteIndex = ((midi % SEMITONES_PER_OCTAVE) + SEMITONES_PER_OCTAVE) % SEMITONES_PER_OCTAVE
-        val octave = (midi / SEMITONES_PER_OCTAVE) - 1
-        return noteIndex to octave
-    }
+    private fun midiToNoteIndexAndOctave(midi: Int): Pair<Int, Int> =
+        NoteUtils.midiToNoteIndexAndOctave(midi)
+
+    fun resolveMidiNote(midi: Int): MidiNoteResolution = NoteUtils.resolveMidiNote(midi)
 }

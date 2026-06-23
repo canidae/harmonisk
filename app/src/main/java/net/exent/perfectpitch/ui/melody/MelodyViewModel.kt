@@ -904,12 +904,11 @@ class MelodyViewModel @Inject constructor(
     }
 
     private fun pitchResultFromMidi(midiNote: Int): PitchResult {
-        val noteIndex = ((midiNote % 12) + 12) % 12
-        val octave = (midiNote / 12) - 1
+        val resolution = noteUtils.resolveMidiNote(midiNote)
         return PitchResult(
             frequency = NoteUtils.midiToFrequency(midiNote),
-            noteName = NoteUtils.NOTE_NAMES[noteIndex],
-            octave = octave,
+            noteName = resolution.noteName,
+            octave = resolution.octave,
             centsOff = 0f,
             midiNoteNumber = midiNote,
             isSilent = false
