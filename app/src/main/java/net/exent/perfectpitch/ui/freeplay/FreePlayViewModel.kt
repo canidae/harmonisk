@@ -1210,6 +1210,6 @@ evts.add(Event(endMs, note.midiNumber, false, note.trackOrigin))
         stopListening()
         pendingStartDelayMs = 0L
         previewJob?.cancel()
-        if (soundFontSynthesizer.isReady) soundFontSynthesizer.allNotesOff()
+        soundFontSynthesizer.close()
     }
 }

@@ -57,6 +57,7 @@ class SoundFontSynthesizer(
     var debugActiveVoices: Int = 0
         private set
 
+    @Volatile
     private var channelsInitialized = false
 
     private val renderThread = AudioRenderThread(
