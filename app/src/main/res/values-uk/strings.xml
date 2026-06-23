@@ -10,8 +10,6 @@
     <string name="save">Зберегти</string>
     <string name="cancel">Скасувати</string>
     <string name="edit">Редагувати</string>
-    <string name="stop">Стоп</string>
-    <string name="auto">Авто</string>
 
     <!-- Home screen -->
     <string name="home_title">Perfect Pitch</string>
@@ -125,7 +123,6 @@
     <string name="melody_failed_load_melody">Не вдалося завантажити мелодію</string>
     <string name="melody_difficulty">Складність: </string>
     <string name="melody_no_playthroughs">Ще немає проходжень</string>
-    <string name="melody_no_melodies">Немає доступних мелодій.\nІмпортуйте MIDI-файл, щоб почати.</string>
     <string name="no_melodies_available">Немає доступних мелодій.\nІмпортуйте MIDI-файл, щоб почати.</string>
 
     <!-- Melody Play -->
@@ -146,7 +143,6 @@
     <string name="melody_play_transpose_0">Транспозиція: 0</string>
     <string name="melody_play_transpose_plus">Транспозиція: +%1$d</string>
     <string name="melody_play_transpose">Транспозиція: %1$d</string>
-    <string name="melody_play_melody_audio">Грати аудіо мелодії</string>
     <string name="melody_play_audio_delay">Аудіозатримка: %1$d мс</string>
     <string name="melody_play_visual_delay">Візуальна затримка: %1$d мс</string>
     <string name="melody_play_uncalibrated">%1$s не відкалібровано</string>

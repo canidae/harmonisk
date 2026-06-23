@@ -74,7 +74,6 @@ class TunerViewModel @Inject constructor(
 
     fun startListening() {
         if (listeningJob?.isActive == true) return
-        _state.update { it.copy(isListening = true) }
         listeningJob = viewModelScope.launch {
             pitchProcessor.pitchFlow().collect { result ->
                 processResult(result)
@@ -164,7 +163,6 @@ class TunerViewModel @Inject constructor(
         listeningJob = null
         holdJob?.cancel()
         holdJob = null
-        _state.update { it.copy(isListening = false) }
     }
 
     override fun onCleared() {

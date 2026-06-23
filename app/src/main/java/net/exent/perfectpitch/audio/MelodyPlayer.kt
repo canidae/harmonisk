@@ -114,11 +114,6 @@ class MelodyPlayer(
         activeSynthNotes.addAll(shouldBeActive)
     }
 
-    /** Overload for backward compatibility — wraps a single track in a list. */
-    fun updateGameTime(gameTimeSeconds: Double, track: MelodyTrack) {
-        updateGameTime(gameTimeSeconds, listOf(track))
-    }
-
     fun setAudioOutputDelay(delayMs: Long) {
         audioOutputDelayMs = delayMs.coerceIn(0, 500)
     }

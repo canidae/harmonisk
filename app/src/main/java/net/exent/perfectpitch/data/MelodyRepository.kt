@@ -145,22 +145,6 @@ class MelodyRepository(
     }
 
     /**
-     * Load a melody from a user-selected file URI.
-     */
-    fun loadFromUri(uri: Uri, name: String): MelodyTrack? {
-        return try {
-            context.contentResolver.openInputStream(uri)?.use { stream ->
-                val track = parser.parse(stream, name)
-                cache[uriMelodyId(uri)] = track
-                track
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load melody from URI: $uri", e)
-            null
-        }
-    }
-
-    /**
      * Load a multi-track MIDI file from a URI. Returns one [MelodyTrack] per original MIDI track.
      * Useful for MIDI files with separate instrument tracks.
      */

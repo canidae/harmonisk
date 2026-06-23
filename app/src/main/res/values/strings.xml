@@ -10,8 +10,6 @@
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="edit">Edit</string>
-    <string name="stop">Stop</string>
-    <string name="auto">Auto</string>
 
     <!-- Home screen -->
     <string name="home_title">Perfect Pitch</string>
@@ -126,7 +124,6 @@
     <string name="melody_difficulty">Difficulty: </string>
     <string name="melody_no_playthroughs">No playthroughs yet</string>
     <string name="no_melodies_available">No bundled melodies available.\nImport a MIDI file to get started.</string>
-    <string name="melody_no_melodies">No bundled melodies available.\nImport a MIDI file to get started.</string>
     <string name="melody_reset_score">Reset score</string>
     <string name="melody_import_success">MIDI imported</string>
     <string name="melody_remove_song">Remove song</string>
@@ -149,7 +146,6 @@
     <string name="melody_play_transpose_0">Transpose: 0</string>
     <string name="melody_play_transpose_plus">Transpose: +%1$d</string>
     <string name="melody_play_transpose">Transpose: %1$d</string>
-    <string name="melody_play_melody_audio">Play melody audio</string>
     <string name="melody_play_audio_delay">Audio delay: %1$dms</string>
     <string name="melody_play_visual_delay">Visual delay: %1$dms</string>
     <string name="melody_play_uncalibrated">%1$s is not calibrated</string>

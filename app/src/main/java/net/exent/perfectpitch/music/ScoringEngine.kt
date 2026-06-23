@@ -152,8 +152,6 @@ enum class PitchAccuracy(val score: Float) {
 
 enum class ScoreTier { LEGENDARY, EXCELLENT, GREAT, GOOD, OK, NEEDS_WORK }
 
-private enum class BreakdownWeakness { PITCH, DURATION, MISSED_NOTES }
-
 data class MelodyScore(
     val overallScore: Float,
     val totalNotes: Int,
@@ -171,41 +169,11 @@ data class MelodyScore(
 }
 
 data class ScoreBreakdown(
-    val missRatePercent: Float,
     val avgPitchScore: Float,
-    val avgDurationScore: Float,
-    val primaryWeakness: String,
-    val tipMessage: String
+    val avgDurationScore: Float
 )
 
-fun MelodyScore.toBreakdown(): ScoreBreakdown {
-    val missRate = if (totalNotes > 0)
-        ((totalNotes - notesHit).toFloat() / totalNotes * 100f) else 0f
-    val pitchScore = avgPitchScore
-    val durationScore = avgDurationScore
-
-    val weakest = when {
-        pitchScore < durationScore && pitchScore < 80f -> BreakdownWeakness.PITCH
-        durationScore < pitchScore && durationScore < 80f -> BreakdownWeakness.DURATION
-        missRate > 20f -> BreakdownWeakness.MISSED_NOTES
-        else -> null
-    }
-
-    val tip = when (weakest) {
-        BreakdownWeakness.PITCH -> "Focus on hitting the exact notes. Try the wait mode to practice each note before moving on."
-        BreakdownWeakness.DURATION -> "Hold each note for its full length. Try matching the rhythm more carefully."
-        BreakdownWeakness.MISSED_NOTES -> "Some notes were skipped. Slow down the tempo and focus on playing every note."
-        else -> when {
-            pitchScore >= 90f && durationScore >= 90f -> "Great precision! Keep refining for a perfect score."
-            else -> "Keep practicing consistently — you're building muscle memory!"
-        }
-    }
-
-    return ScoreBreakdown(
-        missRatePercent = missRate,
-        avgPitchScore = pitchScore,
-        avgDurationScore = durationScore,
-        primaryWeakness = weakest?.name ?: "none",
-        tipMessage = tip
-    )
-}
+fun MelodyScore.toBreakdown(): ScoreBreakdown = ScoreBreakdown(
+    avgPitchScore = avgPitchScore,
+    avgDurationScore = avgDurationScore
+)

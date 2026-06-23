@@ -23,7 +23,6 @@ data class FreePlayState(
     val loopEndBar: Int? = null,
     val selectedNoteId: String? = null,
     // MIDI state
-    val midiAvailable: Boolean = false,
     val midiInputEnabled: Boolean = false,
     val outputDevice: OutputDevice = OutputDevice.SYNTH,
     val midiInputDeviceName: String? = null,
@@ -43,7 +42,6 @@ data class PlayedNote(
     val midiNumber: Int,
     val startTimeMs: Long,
     val endTimeMs: Long? = null,
-    val averageCentsOff: Float = 0f,
     val centsHistory: List<Float> = emptyList(),
     val id: String,
     val voiceIndex: Int = 0,

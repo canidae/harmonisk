@@ -9,8 +9,6 @@ data class PitchResult(
     val octave: Int,
     val centsOff: Float,
     val midiNoteNumber: Int,
-    val confidence: Float,
-    val rmsDb: Float,
     val isSilent: Boolean
 ) {
     val isValid: Boolean get() = !isSilent
@@ -22,8 +20,6 @@ data class PitchResult(
             octave = 0,
             centsOff = 0f,
             midiNoteNumber = 0,
-            confidence = 0f,
-            rmsDb = -100f,
             isSilent = true
         )
     }

@@ -109,7 +109,6 @@ object MidiImporter {
                         midiNumber = note.noteNumber,
                         startTimeMs = startMs,
                         endTimeMs = endMs,
-                        averageCentsOff = 0f,
                         id = UUID.randomUUID().toString(),
                         voiceIndex = globalVoiceIdx,
                         trackOrigin = trackOrigin

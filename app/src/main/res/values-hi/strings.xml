@@ -10,8 +10,6 @@
     <string name="save">सहेजें</string>
     <string name="cancel">रद्द करें</string>
     <string name="edit">संपादित करें</string>
-    <string name="stop">रोकें</string>
-    <string name="auto">ऑटो</string>
 
     <!-- Home screen -->
     <string name="home_title">परफ़ेक्ट पिच</string>
@@ -125,7 +123,6 @@
     <string name="melody_failed_load_melody">धुन लोड करने में विफल</string>
     <string name="melody_difficulty">कठिनाई: </string>
     <string name="melody_no_playthroughs">अभी तक कोई प्लेथ्रू नहीं</string>
-    <string name="melody_no_melodies">कोई बंडल धुन उपलब्ध नहीं।\nMIDI फ़ाइल आयात करके शुरू करें।</string>
     <string name="no_melodies_available">कोई बंडल धुन उपलब्ध नहीं।\nMIDI फ़ाइल आयात करके शुरू करें।</string>
 
     <!-- Melody Play -->
@@ -146,7 +143,6 @@
     <string name="melody_play_transpose_0">ट्रांसपोज़: 0</string>
     <string name="melody_play_transpose_plus">ट्रांसपोज़: +%1$d</string>
     <string name="melody_play_transpose">ट्रांसपोज़: %1$d</string>
-    <string name="melody_play_melody_audio">धुन ऑडियो बजाएं</string>
     <string name="melody_play_audio_delay">ऑडियो विलंब: %1$d ms</string>
     <string name="melody_play_visual_delay">दृश्य विलंब: %1$d ms</string>
     <string name="melody_play_uncalibrated">%1$s कैलिब्रेटेड नहीं है</string>

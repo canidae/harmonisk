@@ -65,13 +65,9 @@ class SettingsViewModel @Inject constructor(
 
     private var calibrationJob: Job? = null
 
-    private val _languageChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val languageChanged: SharedFlow<Unit> = _languageChanged.asSharedFlow()
-
     fun updateLanguageCode(code: String, activity: Activity) {
         viewModelScope.launch {
             settingsRepository.updateLanguageCode(code)
-            _languageChanged.tryEmit(Unit)
             activity.recreate()
         }
     }

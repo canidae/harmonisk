@@ -142,7 +142,6 @@ class FreePlayViewModel @Inject constructor(
                         else -> OutputDevice.SYNTH
                     }
                     it.copy(
-                        midiAvailable = available,
                         midiInputEnabled = inputEnabled,
                         outputDevice = newOutputDevice
                     )
@@ -586,7 +585,6 @@ class FreePlayViewModel @Inject constructor(
                         minNoteDivision = current.minNoteDivision,
                         viewMinMidi = viewMin,
                         viewMaxMidi = viewMax,
-                        midiAvailable = current.midiAvailable,
                         midiInputEnabled = current.midiInputEnabled,
                         midiOutputDeviceName = current.midiOutputDeviceName,
                         outputDevice = current.outputDevice
@@ -716,7 +714,6 @@ class FreePlayViewModel @Inject constructor(
                         octave = result.octave,
                         midiNumber = midi,
                         startTimeMs = currentNoteStartMs,
-                        averageCentsOff = result.centsOff,
                         centsHistory = listOf(result.centsOff),
                         id = UUID.randomUUID().toString(),
                         voiceIndex = _state.value.activeVoiceIndex
@@ -725,11 +722,9 @@ class FreePlayViewModel @Inject constructor(
                 }
             } else {
                 centsSamples.add(result.centsOff)
-                val avgCents = centsSamples.average().toFloat()
                 _state.update { current ->
                     current.copy(
                         activeNote = current.activeNote?.copy(
-                            averageCentsOff = avgCents,
                             centsHistory = current.activeNote.centsHistory + result.centsOff
                         )
                     )
@@ -764,11 +759,9 @@ class FreePlayViewModel @Inject constructor(
                     honingFreqs.add(result.frequency)
                     centsSamples.add(result.centsOff)
                     // Update tentative display
-                    val avgCents = centsSamples.average().toFloat()
                     _state.update { current ->
                         current.copy(
                             activeNote = current.activeNote?.copy(
-                                averageCentsOff = avgCents,
                                 centsHistory = current.activeNote.centsHistory + result.centsOff
                             )
                         )
@@ -785,11 +778,9 @@ class FreePlayViewModel @Inject constructor(
                 } else {
                     // Same pitch, note already committed — just extend it
                     centsSamples.add(result.centsOff)
-                    val avgCents = centsSamples.average().toFloat()
                     _state.update { current ->
                         current.copy(
                             activeNote = current.activeNote?.copy(
-                                averageCentsOff = avgCents,
                                 centsHistory = current.activeNote.centsHistory + result.centsOff
                             )
                         )
@@ -827,18 +818,17 @@ class FreePlayViewModel @Inject constructor(
         expandRange(midi)
         if (_state.value.isRecording) {
             val note = PlayedNote(
-                noteName = result.noteName,
-                octave = result.octave,
-                midiNumber = midi,
-                startTimeMs = currentNoteStartMs,
-                averageCentsOff = result.centsOff,
-                centsHistory = listOf(result.centsOff),
-                id = UUID.randomUUID().toString(),
-                voiceIndex = _state.value.activeVoiceIndex
-            )
-            _state.update { it.copy(activeNote = note) }
-        }
-    }
+                        noteName = result.noteName,
+                        octave = result.octave,
+                        midiNumber = midi,
+                        startTimeMs = currentNoteStartMs,
+                        centsHistory = listOf(result.centsOff),
+                        id = UUID.randomUUID().toString(),
+                        voiceIndex = _state.value.activeVoiceIndex
+                    )
+                    _state.update { it.copy(activeNote = note) }
+                }
+            }
 
     private fun commitHoning() {
         honingActive = false
@@ -855,7 +845,6 @@ class FreePlayViewModel @Inject constructor(
                 octave = noteInfo.octave,
                 midiNumber = confirmedMidi,
                 startTimeMs = currentNoteStartMs,
-                averageCentsOff = centsSamples.average().toFloat(),
                 centsHistory = centsSamples.toList(),
                 id = UUID.randomUUID().toString(),
                 voiceIndex = _state.value.activeVoiceIndex
@@ -882,7 +871,7 @@ class FreePlayViewModel @Inject constructor(
                 val rawSnapped = snapToGrid(now)
                 if (rawSnapped <= activeNote.startTimeMs) activeNote.startTimeMs + interval else rawSnapped
             } else now
-            val finalNote = activeNote.copy(endTimeMs = snappedEnd, averageCentsOff = centsSamples.average().toFloat())
+            val finalNote = activeNote.copy(endTimeMs = snappedEnd)
 
             // Noise filter: discard notes shorter than a 48th note
             if (snappedEnd - activeNote.startTimeMs < min48thNoteMs()) {
@@ -1028,7 +1017,7 @@ class FreePlayViewModel @Inject constructor(
                 OutputDevice.NONE -> null
             }
 
-            data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean, val voiceIndex: Int = 0, val trackOrigin: Int = 0)
+            data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean, val trackOrigin: Int = 0)
 
             var lastBuiltBpm = _state.value.bpm
             var lastBuiltBeatsPerBar = _state.value.beatsPerBar
@@ -1041,8 +1030,8 @@ class FreePlayViewModel @Inject constructor(
                     val endMs = note.endTimeMs!!
                     if (endMs <= startTime) continue
                     val onTime = if (note.startTimeMs <= startTime) startTime else note.startTimeMs
-                    evts.add(Event(onTime, note.midiNumber, true, note.voiceIndex, note.trackOrigin))
-                    evts.add(Event(endMs, note.midiNumber, false, note.voiceIndex, note.trackOrigin))
+evts.add(Event(onTime, note.midiNumber, true, note.trackOrigin))
+evts.add(Event(endMs, note.midiNumber, false, note.trackOrigin))
                 }
                 // Lookahead: shift events at the start of the next loop by loopDuration
                 // so they appear at positions [loopEndMs, loopEndMs + audioOutputDelayMs)
@@ -1056,8 +1045,8 @@ class FreePlayViewModel @Inject constructor(
                         if (shiftedEnd <= startTime) continue
                         if (shiftedStart >= loopEndMs + lookaheadLen) continue
                         val onTime = if (shiftedStart <= startTime) startTime else shiftedStart
-                        evts.add(Event(onTime, note.midiNumber, true, note.voiceIndex, note.trackOrigin))
-                        evts.add(Event(shiftedEnd, note.midiNumber, false, note.voiceIndex, note.trackOrigin))
+                        evts.add(Event(onTime, note.midiNumber, true, note.trackOrigin))
+                        evts.add(Event(shiftedEnd, note.midiNumber, false, note.trackOrigin))
                     }
                 }
                 // Metronome events
@@ -1073,8 +1062,8 @@ class FreePlayViewModel @Inject constructor(
                             val isAccent = lastBuiltBeatsPerBar > 0 && (beat % lastBuiltBeatsPerBar) == 0L
                             val note = if (isAccent) 86 else 85
                             val adur = if (isAccent) 60L else durMs
-                            evts.add(Event(beatTime, note, true, -1, 9))
-                            evts.add(Event(beatTime + adur, note, false, -1, 9))
+                            evts.add(Event(beatTime, note, true, 9))
+                            evts.add(Event(beatTime + adur, note, false, 9))
                             beatTime += interval
                         }
                         // Metronome lookahead
@@ -1087,8 +1076,8 @@ class FreePlayViewModel @Inject constructor(
                                 val isAccent = lastBuiltBeatsPerBar > 0 && (beat % lastBuiltBeatsPerBar) == 0L
                                 val note = if (isAccent) 86 else 85
                                 val adur = if (isAccent) 60L else durMs
-                                evts.add(Event(shifted, note, true, -1, 9))
-                                evts.add(Event(shifted + adur, note, false, -1, 9))
+                                evts.add(Event(shifted, note, true, 9))
+                                evts.add(Event(shifted + adur, note, false, 9))
                                 laBeat += interval
                             }
                         }

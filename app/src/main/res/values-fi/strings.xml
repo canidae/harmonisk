@@ -10,8 +10,6 @@
     <string name="save">Tallenna</string>
     <string name="cancel">Peruuta</string>
     <string name="edit">Muokkaa</string>
-    <string name="stop">Pysäytä</string>
-    <string name="auto">Auto</string>
 
     <!-- Home screen -->
     <string name="home_title">Perfect Pitch</string>
@@ -125,7 +123,6 @@
     <string name="melody_failed_load_melody">Melodian lataus epäonnistui</string>
     <string name="melody_difficulty">Vaikeustaso: </string>
     <string name="melody_no_playthroughs">Ei vielä läpisoittoja</string>
-    <string name="melody_no_melodies">Ei saatavilla olevia melodioita.\nTuo MIDI-tiedosto aloittaaksesi.</string>
     <string name="no_melodies_available">Ei saatavilla olevia melodioita.\nTuo MIDI-tiedosto aloittaaksesi.</string>
 
     <!-- Melody Play -->
@@ -146,7 +143,6 @@
     <string name="melody_play_transpose_0">Transponointi: 0</string>
     <string name="melody_play_transpose_plus">Transponointi: +%1$d</string>
     <string name="melody_play_transpose">Transponointi: %1$d</string>
-    <string name="melody_play_melody_audio">Toista melodian ääni</string>
     <string name="melody_play_audio_delay">Ääniviive: %1$d ms</string>
     <string name="melody_play_visual_delay">Visuaalinen viive: %1$d ms</string>
     <string name="melody_play_uncalibrated">%1$s ei ole kalibroitu</string>

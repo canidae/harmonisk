@@ -10,8 +10,6 @@
     <string name="save">保存</string>
     <string name="cancel">取消</string>
     <string name="edit">编辑</string>
-    <string name="stop">停止</string>
-    <string name="auto">自动</string>
 
     <!-- Home screen -->
     <string name="home_title">完美音准</string>
@@ -125,7 +123,6 @@
     <string name="melody_failed_load_melody">无法加载旋律</string>
     <string name="melody_difficulty">难度：</string>
     <string name="melody_no_playthroughs">尚无演奏记录</string>
-    <string name="melody_no_melodies">没有可用的内置旋律。\n导入 MIDI 文件以开始。</string>
     <string name="no_melodies_available">没有可用的内置旋律。\n导入 MIDI 文件以开始。</string>
 
     <!-- Melody Play -->
@@ -146,7 +143,6 @@
     <string name="melody_play_transpose_0">移调：0</string>
     <string name="melody_play_transpose_plus">移调：+%1$d</string>
     <string name="melody_play_transpose">移调：%1$d</string>
-    <string name="melody_play_melody_audio">播放旋律音频</string>
     <string name="melody_play_audio_delay">音频延迟：%1$d 毫秒</string>
     <string name="melody_play_visual_delay">视觉延迟：%1$d 毫秒</string>
     <string name="melody_play_uncalibrated">%1$s 未校准</string>

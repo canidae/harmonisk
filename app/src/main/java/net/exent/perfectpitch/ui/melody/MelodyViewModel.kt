@@ -257,14 +257,14 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
-    private fun levelToSettings(level: Int): Triple<Boolean, Boolean, Boolean> {
+    private fun levelToSettings(level: Int): Pair<Boolean, Boolean> {
         return when (level) {
-            1 -> Triple(true, false, false)
-            2 -> Triple(true, false, false)
-            3 -> Triple(true, false, false)
-            4 -> Triple(false, false, false)
-            5 -> Triple(false, false, true)
-            else -> Triple(true, false, false)
+            1 -> Pair(true, false)
+            2 -> Pair(true, false)
+            3 -> Pair(true, false)
+            4 -> Pair(false, false)
+            5 -> Pair(false, true)
+            else -> Pair(true, false)
         }
     }
 
@@ -382,7 +382,7 @@ class MelodyViewModel @Inject constructor(
         viewModelScope.launch {
             melodySettingsRepository.getSettings(melodyId).first().let { saved ->
                 val level = saved.level.coerceIn(1, 5)
-                val (wm, awn, hnb) = levelToSettings(level)
+                val (wm, hnb) = levelToSettings(level)
                 val accompanimentMode = try {
                     AccompanimentMode.valueOf(saved.accompanimentMode)
                 } catch (_: IllegalArgumentException) {
@@ -391,7 +391,6 @@ class MelodyViewModel @Inject constructor(
                 _gameState.update {
                     it.copy(
                         waitMode = wm,
-                        allowWrongNotes = awn,
                         currentLevel = level,
                         hideNoteBars = hnb,
                         tempoMultiplier = saved.tempoMultiplier,
@@ -420,12 +419,11 @@ class MelodyViewModel @Inject constructor(
 
     fun setLevel(level: Int) {
         val clamped = level.coerceIn(1, 5)
-        val (wm, awn, hnb) = levelToSettings(clamped)
+        val (wm, hnb) = levelToSettings(clamped)
         _gameState.update {
             it.copy(
                 currentLevel = clamped,
                 waitMode = wm,
-                allowWrongNotes = awn,
                 hideNoteBars = hnb
             )
         }
@@ -478,7 +476,6 @@ class MelodyViewModel @Inject constructor(
         viewModelScope.launch {
             melodySettingsRepository.saveSettings(id, MelodySettingsRepository.MelodySettings(
                 waitMode = g.waitMode,
-                allowWrongNotes = g.allowWrongNotes,
                 tempoMultiplier = g.tempoMultiplier,
                 transposeSemitones = g.transposeSemitones,
                 fallSpeedPxPerSec = v.fallSpeedPxPerSec,
@@ -560,10 +557,6 @@ class MelodyViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.updateMelodyMetronomeEnabled(newState) }
     }
 
-    fun stopMetronome() {
-        _gameState.update { it.copy(metronomeEnabled = false) }
-    }
-
     private fun currentMelodyBpm(): Float {
         val state = _gameState.value
         val track = state.melodyTrack
@@ -573,13 +566,6 @@ class MelodyViewModel @Inject constructor(
             return (track.bpmAt(tick) * state.tempoMultiplier).toFloat()
         }
         return 120f * state.tempoMultiplier
-    }
-
-    private fun currentBeatsPerBar(): Int {
-        val track = _gameState.value.melodyTrack ?: return 4
-        val time = _gameState.value.currentTimeSeconds.coerceAtLeast(0.0)
-        val tick = track.secondsToTick(time)
-        return track.timeSignatureAt(tick).numerator
     }
 
     /** Seconds of the 2-bar lead-in at the song's initial tempo/time signature. */
@@ -689,7 +675,7 @@ class MelodyViewModel @Inject constructor(
         melodyPlayer.resetGameSync()
         noteTracking.wasWaitingForNote = noteTracking.isWaitingForNote
         noteTracking.isWaitingForNote = false
-        _gameState.update { it.copy(phase = PlayPhase.PAUSED, isListening = false) }
+        _gameState.update { it.copy(phase = PlayPhase.PAUSED) }
     }
 
     fun resume() {
@@ -751,7 +737,6 @@ class MelodyViewModel @Inject constructor(
             it.copy(
                 phase = PlayPhase.NOT_STARTED,
                 currentTimeSeconds = 0.0,
-                isListening = false,
                 noteResults = emptyMap(),
                 noteCentsHistory = emptyMap(),
                 noteCentsPositions = emptyMap(),
@@ -924,8 +909,6 @@ class MelodyViewModel @Inject constructor(
             octave = octave,
             centsOff = 0f,
             midiNoteNumber = midiNote,
-            confidence = 1.0f,
-            rmsDb = -20f,
             isSilent = false
         )
     }
@@ -933,7 +916,6 @@ class MelodyViewModel @Inject constructor(
     private fun startPitchDetection() {
         if (pitchJob?.isActive == true) return
         pitchJob = viewModelScope.launch {
-            _gameState.update { it.copy(isListening = true) }
             if (_deviceState.value.midiInputEnabled) {
                 // MIDI input: convert note events to PitchResult
                 val heldNotes = mutableSetOf<Int>()
@@ -1206,8 +1188,7 @@ class MelodyViewModel @Inject constructor(
         _gameState.update {
             it.copy(
                 phase = PlayPhase.FINISHED,
-                melodyScore = adjustedMelodyScore,
-                isListening = false
+                melodyScore = adjustedMelodyScore
             )
         }
         _viewState.update { it.copy(songTimeOffsetSeconds = firstNoteStart - currentTimeSeconds) }

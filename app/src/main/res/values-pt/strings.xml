@@ -10,8 +10,6 @@
     <string name="save">Salvar</string>
     <string name="cancel">Cancelar</string>
     <string name="edit">Editar</string>
-    <string name="stop">Parar</string>
-    <string name="auto">Auto</string>
 
     <!-- Home screen -->
     <string name="home_title">Perfect Pitch</string>
@@ -125,7 +123,6 @@
     <string name="melody_failed_load_melody">Falha ao carregar melodia</string>
     <string name="melody_difficulty">Dificuldade: </string>
     <string name="melody_no_playthroughs">Nenhuma execução ainda</string>
-    <string name="melody_no_melodies">Nenhuma melodia disponível.\nImporte um ficheiro MIDI para começar.</string>
     <string name="no_melodies_available">Nenhuma melodia disponível.\nImporte um ficheiro MIDI para começar.</string>
 
     <!-- Melody Play -->
@@ -146,7 +143,6 @@
     <string name="melody_play_transpose_0">Transposição: 0</string>
     <string name="melody_play_transpose_plus">Transposição: +%1$d</string>
     <string name="melody_play_transpose">Transposição: %1$d</string>
-    <string name="melody_play_melody_audio">Tocar áudio da melodia</string>
     <string name="melody_play_audio_delay">Atraso de áudio: %1$d ms</string>
     <string name="melody_play_visual_delay">Atraso visual: %1$d ms</string>
     <string name="melody_play_uncalibrated">%1$s não está calibrado</string>

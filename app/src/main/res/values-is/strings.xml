@@ -10,8 +10,6 @@
     <string name="save">Vista</string>
     <string name="cancel">Hætta við</string>
     <string name="edit">Breyta</string>
-    <string name="stop">Stöðva</string>
-    <string name="auto">Sjálfvirkt</string>
 
     <!-- Home screen -->
     <string name="home_title">Perfect Pitch</string>
@@ -125,7 +123,6 @@
     <string name="melody_failed_load_melody">Ekki tókst að hlaða lag</string>
     <string name="melody_difficulty">Erfiðleikastig: </string>
     <string name="melody_no_playthroughs">Engar spilanir ennþá</string>
-    <string name="melody_no_melodies">Engin lög í boði.\nFlyttu inn MIDI skrá til að byrja.</string>
     <string name="no_melodies_available">Engin lög í boði.\nFlyttu inn MIDI skrá til að byrja.</string>
 
     <!-- Melody Play -->
@@ -146,7 +143,6 @@
     <string name="melody_play_transpose_0">Tónflutningur: 0</string>
     <string name="melody_play_transpose_plus">Tónflutningur: +%1$d</string>
     <string name="melody_play_transpose">Tónflutningur: %1$d</string>
-    <string name="melody_play_melody_audio">Spila laghljóð</string>
     <string name="melody_play_audio_delay">Hljóðtöf: %1$d ms</string>
     <string name="melody_play_visual_delay">Sjónræn töf: %1$d ms</string>
     <string name="melody_play_uncalibrated">%1$s er ekki kvarðað</string>

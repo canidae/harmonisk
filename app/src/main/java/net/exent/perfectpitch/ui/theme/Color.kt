@@ -8,7 +8,6 @@ val Green40 = Color(0xFF388E3C)
 
 // Warning / slightly off
 val Yellow80 = Color(0xFFFFF59D)
-val Yellow40 = Color(0xFFF9A825)
 
 // Caution / marginally off
 val Orange80 = Color(0xFFFFCC80)
@@ -25,9 +24,6 @@ val Purple40 = Color(0xFF7C4DFF)
 // Secondary
 val Teal80 = Color(0xFF80CBC4)
 val Teal40 = Color(0xFF00897B)
-
-// Level colors
-val Blue40 = Color(0xFF2196F3)
 
 // Shared UI accent colors
 val MidiPurple = Color(0xFF7E57C2)

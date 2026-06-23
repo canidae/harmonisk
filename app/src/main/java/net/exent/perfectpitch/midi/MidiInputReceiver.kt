@@ -73,13 +73,12 @@ class MidiInputReceiver(
     private fun parseMidiMessage(msg: ByteArray, offset: Int): MidiNoteEvent? {
         val status = msg[offset].toInt() and 0xFF
         val type = status and 0xF0
-        val channel = status and 0x0F
         val note = msg[offset + 1].toInt() and 0xFF
         val velocity = msg[offset + 2].toInt() and 0xFF
 
         return when {
-            type == 0x90 && velocity > 0 -> MidiNoteEvent.NoteOn(channel, note, velocity)
-            type == 0x80 || (type == 0x90 && velocity == 0) -> MidiNoteEvent.NoteOff(channel, note)
+            type == 0x90 && velocity > 0 -> MidiNoteEvent.NoteOn(note)
+            type == 0x80 || (type == 0x90 && velocity == 0) -> MidiNoteEvent.NoteOff(note)
             else -> null
         }
     }

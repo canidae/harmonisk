@@ -103,8 +103,6 @@ class PitchProcessor(
             octave = noteInfo.octave,
             centsOff = noteInfo.centsOff,
             midiNoteNumber = noteInfo.midiNumber,
-            confidence = result.confidence,
-            rmsDb = rmsDb,
             isSilent = false
         )
     }

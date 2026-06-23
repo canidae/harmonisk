@@ -10,8 +10,6 @@
     <string name="save">Spara</string>
     <string name="cancel">Avbryt</string>
     <string name="edit">Redigera</string>
-    <string name="stop">Stopp</string>
-    <string name="auto">Auto</string>
 
     <!-- Home screen -->
     <string name="home_title">Perfect Pitch</string>
@@ -125,7 +123,6 @@
     <string name="melody_failed_load_melody">Kunde inte ladda melodi</string>
     <string name="melody_difficulty">Svårighetsgrad: </string>
     <string name="melody_no_playthroughs">Inga genomspelningar än</string>
-    <string name="melody_no_melodies">Inga tillgängliga melodier.\nImportera en MIDI-fil för att komma igång.</string>
     <string name="no_melodies_available">Inga tillgängliga melodier.\nImportera en MIDI-fil för att komma igång.</string>
 
     <!-- Melody Play -->
@@ -146,7 +143,6 @@
     <string name="melody_play_transpose_0">Transponering: 0</string>
     <string name="melody_play_transpose_plus">Transponering: +%1$d</string>
     <string name="melody_play_transpose">Transponering: %1$d</string>
-    <string name="melody_play_melody_audio">Spela melodiljud</string>
     <string name="melody_play_audio_delay">Ljudfördröjning: %1$d ms</string>
     <string name="melody_play_visual_delay">Visuell fördröjning: %1$d ms</string>
     <string name="melody_play_uncalibrated">%1$s är inte kalibrerad</string>
