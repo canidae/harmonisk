@@ -26,17 +26,13 @@ class AudioDelayRepository(
             AudioOutputDeviceType.BLUETOOTH -> 150
         }
 
-        fun defaultVisualDelay(type: AudioInputDeviceType): Int = when (type) {
-            AudioInputDeviceType.BUILTIN -> 0
-            AudioInputDeviceType.WIRED -> 0
-            AudioInputDeviceType.BLUETOOTH -> 0
-        }
+        fun defaultVisualDelay(type: AudioInputDeviceType): Int = 100
     }
 
     @Serializable
     data class DelayProfile(
         val audioDelayMs: Int = 0,
-        val visualDelayMs: Int = 0
+        val visualDelayMs: Int = 100
     )
 
     private val store = JsonPreferenceStore<String, DelayProfile>(
@@ -64,7 +60,7 @@ class AudioDelayRepository(
         store.update(deviceKey) { existing ->
             DelayProfile(
                 audioDelayMs = audioDelayMs.coerceIn(0, 1000),
-                visualDelayMs = existing?.visualDelayMs ?: 0
+                visualDelayMs = existing?.visualDelayMs ?: 100
             )
         }
 
