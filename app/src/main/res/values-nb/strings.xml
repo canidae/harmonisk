@@ -140,7 +140,6 @@
     <string name="melody_play_again">Spill igjen</string>
     <string name="melody_play_go_back">Gå tilbake</string>
     <string name="melody_play_level">Nivå: %1$d</string>
-    <string name="melody_play_tempo">Tempo: %1$.0f%%</string>
     <string name="melody_play_transpose_0">Transponer: 0</string>
     <string name="melody_play_transpose_plus">Transponer: +%1$d</string>
     <string name="melody_play_transpose">Transponer: %1$d</string>
@@ -164,6 +163,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Tonehøydenøyaktighet</string>
     <string name="score_duration_accuracy">Varighetsnøyaktighet</string>
+    <string name="score_time_accuracy">Time accuracy</string>
     <string name="score_progress">Fremgang</string>
 
     <!-- Note divisions -->

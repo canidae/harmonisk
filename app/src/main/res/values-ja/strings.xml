@@ -140,7 +140,6 @@
     <string name="melody_play_again">もう一度プレイ</string>
     <string name="melody_play_go_back">戻る</string>
     <string name="melody_play_level">レベル：%1$d</string>
-    <string name="melody_play_tempo">テンポ：%1$.0f%%</string>
     <string name="melody_play_transpose_0">移調：0</string>
     <string name="melody_play_transpose_plus">移調：+%1$d</string>
     <string name="melody_play_transpose">移調：%1$d</string>
@@ -164,6 +163,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">ピッチ精度</string>
     <string name="score_duration_accuracy">長さ精度</string>
+    <string name="score_time_accuracy">Time accuracy</string>
     <string name="score_progress">進捗</string>
 
     <!-- Note divisions -->

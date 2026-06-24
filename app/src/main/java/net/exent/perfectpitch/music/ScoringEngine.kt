@@ -43,6 +43,28 @@ class ScoringEngine {
             return total
         }
 
+        /**
+         * Computes a time score (0–1) based on how long the user took relative
+         * to the song's real duration.  Thresholds vary by level so that time
+         * matters more at higher difficulties.
+         *
+         * @param ratio  totalWallTimeSeconds / songDurationSeconds  (≥ 0)
+         * @param level  game level (1–5)
+         * @return       0f–1f time-score multiplier
+         */
+        fun scoreTime(ratio: Double, level: Int): Float {
+            if (level >= 4) return 1f
+            val (fullRatio, zeroRatio) = when (level) {
+                1 -> 3.0 to 5.0
+                2 -> 2.0 to 4.0
+                3 -> 1.1 to 3.0
+                else -> return 1f
+            }
+            if (ratio <= fullRatio) return 1f
+            if (ratio >= zeroRatio) return 0f
+            return ((zeroRatio - ratio) / (zeroRatio - fullRatio)).toFloat()
+        }
+
         fun scoreTier(score: Float): ScoreTier = when {
             score >= 95f -> ScoreTier.LEGENDARY
             score >= 80f -> ScoreTier.EXCELLENT
@@ -161,19 +183,22 @@ data class MelodyScore(
     val longestStreak: Int,
     val avgPitchScore: Float,
     val avgDurationScore: Float,
+    val timeScore: Float = 1.0f,
     val encouragingMessage: String = ""
 ) {
     companion object {
-        val EMPTY = MelodyScore(0f, 0, 0, 0, 0, 0, 0f, 0f, "Keep practicing!")
+        val EMPTY = MelodyScore(0f, 0, 0, 0, 0, 0, 0f, 0f, encouragingMessage = "Keep practicing!")
     }
 }
 
 data class ScoreBreakdown(
     val avgPitchScore: Float,
-    val avgDurationScore: Float
+    val avgDurationScore: Float,
+    val timeScore: Float
 )
 
 fun MelodyScore.toBreakdown(): ScoreBreakdown = ScoreBreakdown(
     avgPitchScore = avgPitchScore,
-    avgDurationScore = avgDurationScore
+    avgDurationScore = avgDurationScore,
+    timeScore = timeScore
 )

@@ -140,7 +140,6 @@
     <string name="melody_play_again">Грати знову</string>
     <string name="melody_play_go_back">Повернутися</string>
     <string name="melody_play_level">Рівень: %1$d</string>
-    <string name="melody_play_tempo">Темп: %1$.0f%%</string>
     <string name="melody_play_transpose_0">Транспозиція: 0</string>
     <string name="melody_play_transpose_plus">Транспозиція: +%1$d</string>
     <string name="melody_play_transpose">Транспозиція: %1$d</string>
@@ -164,6 +163,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Точність висоти</string>
     <string name="score_duration_accuracy">Точність тривалості</string>
+    <string name="score_time_accuracy">Time accuracy</string>
     <string name="score_progress">Прогрес</string>
 
     <!-- Note divisions -->

@@ -104,6 +104,12 @@ class MelodyViewModel @Inject constructor(
     private var playbackStartTime = 0L
     private var pauseOffset = 0.0
 
+    // Wall-clock tracking for time-based scoring (excludes explicit pauses)
+    private var sessionStartWallMs = 0L
+    private var sessionTotalPausedMs = 0L
+    private var sessionPauseStartMs = 0L
+    private var leadInSeconds = 0.0
+
     // Per-note tracking state (encapsulated for a single reset() call)
     private val noteTracking = NoteTrackingState()
     private var currentNoteDetectedCorrectly = false
@@ -399,7 +405,6 @@ class MelodyViewModel @Inject constructor(
                         waitMode = wm,
                         currentLevel = level,
                         hideNoteBars = hnb,
-                        tempoMultiplier = saved.tempoMultiplier,
                         activeVoiceIndex = saved.activeVoiceIndex,
                         accompanimentMode = accompanimentMode
                     )
@@ -441,11 +446,6 @@ class MelodyViewModel @Inject constructor(
         if (current < 5) setLevel(current + 1)
     }
 
-    fun setTempoMultiplier(multiplier: Float) {
-        _gameState.update { it.copy(tempoMultiplier = multiplier.coerceIn(0.5f, 1.5f)) }
-        saveMelodySettings()
-    }
-
     fun setTranspose(semitones: Int) {
         val clamped = semitones.coerceIn(-24, 24)
         if (originalVoiceInfos.isEmpty()) return
@@ -482,7 +482,6 @@ class MelodyViewModel @Inject constructor(
         viewModelScope.launch {
             melodySettingsRepository.saveSettings(id, MelodySettingsRepository.MelodySettings(
                 waitMode = g.waitMode,
-                tempoMultiplier = g.tempoMultiplier,
                 transposeSemitones = g.transposeSemitones,
                 fallSpeedPxPerSec = v.fallSpeedPxPerSec,
                 level = g.currentLevel,
@@ -512,7 +511,7 @@ class MelodyViewModel @Inject constructor(
     fun previewMelody() {
         val tracks = _gameState.value.melodyTracks
         if (tracks.isEmpty() || !soundFontSynthesizer.isReady) return
-        melodyPlayer.playWithTiming(tracks, viewModelScope, _gameState.value.tempoMultiplier)
+        melodyPlayer.playWithTiming(tracks, viewModelScope)
     }
 
     /** Preview a specific melody from its info (uses all voice tracks). */
@@ -521,8 +520,7 @@ class MelodyViewModel @Inject constructor(
     fun previewMelody(info: MelodyRepository.MelodyInfo) {
         val track = melodyRepository.loadMelody(info) ?: return
         if (!soundFontSynthesizer.isReady) return
-        val tempo = _gameState.value.tempoMultiplier
-        melodyPlayer.playWithTiming(track, viewModelScope, tempo)
+        melodyPlayer.playWithTiming(track, viewModelScope)
     }
 
     /** Stop any ongoing melody preview. */
@@ -569,9 +567,9 @@ class MelodyViewModel @Inject constructor(
         if (track != null) {
             val time = state.currentTimeSeconds.coerceAtLeast(0.0)
             val tick = track.secondsToTick(time)
-            return (track.bpmAt(tick) * state.tempoMultiplier).toFloat()
+            return track.bpmAt(tick).toFloat()
         }
-        return 120f * state.tempoMultiplier
+        return 120f
     }
 
     /** Seconds of the 2-bar lead-in at the song's initial tempo/time signature. */
@@ -660,6 +658,10 @@ class MelodyViewModel @Inject constructor(
         noteTracking.reset()
         _canAdvanceLevel.value = false
         currentNoteDetectedCorrectly = false
+        leadInSeconds = leadIn
+        sessionStartWallMs = SystemClock.elapsedRealtime()
+        sessionTotalPausedMs = 0L
+        sessionPauseStartMs = 0L
 
         // Stop any preview playback and reset game sync
         melodyPlayer.stop()
@@ -681,10 +683,15 @@ class MelodyViewModel @Inject constructor(
         melodyPlayer.resetGameSync()
         noteTracking.wasWaitingForNote = noteTracking.isWaitingForNote
         noteTracking.isWaitingForNote = false
+        sessionPauseStartMs = SystemClock.elapsedRealtime()
         _gameState.update { it.copy(phase = PlayPhase.PAUSED) }
     }
 
     fun resume() {
+        if (sessionPauseStartMs > 0L) {
+            sessionTotalPausedMs += SystemClock.elapsedRealtime() - sessionPauseStartMs
+            sessionPauseStartMs = 0L
+        }
         val currentGameState = _gameState.value
         val currentViewState = _viewState.value
 
@@ -739,6 +746,7 @@ class MelodyViewModel @Inject constructor(
         pauseOffset = 0.0
         noteTracking.isWaitingForNote = false
         noteTracking.wasWaitingForNote = false
+        sessionPauseStartMs = 0L
         _gameState.update {
             it.copy(
                 phase = PlayPhase.NOT_STARTED,
@@ -806,7 +814,6 @@ class MelodyViewModel @Inject constructor(
         playbackStartTime = SystemClock.elapsedRealtime()
         playbackJob = viewModelScope.launch {
             val track = _gameState.value.melodyTrack ?: return@launch
-            val tempo = _gameState.value.tempoMultiplier
             // For mid-song countdown resumes, pitch scoring starts at the resume target time;
             // for initial start, it starts at time 0.
             val pitchStartThreshold = _gameState.value.countdownResumeTarget.let { if (it > 0.0) it else 0.0 }
@@ -824,7 +831,7 @@ class MelodyViewModel @Inject constructor(
                     // Still in grace period — keep time moving (fall through)
                 }
 
-                val elapsed = (SystemClock.elapsedRealtime() - playbackStartTime) / 1000.0 * tempo
+                val elapsed = (SystemClock.elapsedRealtime() - playbackStartTime) / 1000.0
                 val currentTime = pauseOffset + elapsed
 
                 // Start pitch detection when time reaches the threshold
@@ -1150,14 +1157,20 @@ class MelodyViewModel @Inject constructor(
         val noteScores = _gameState.value.noteScores
         val melodyScore = scoringEngine.calculateMelodyScore(noteScores)
 
-        // Apply playback speed modifier
-        val tempoPercent = (_gameState.value.tempoMultiplier * 100).toInt()
-        val speedModifier = (100 - abs(100 - tempoPercent)) / 100f
-        val adjustedScore = melodyScore.overallScore * speedModifier
-        val adjustedMelodyScore = melodyScore.copy(overallScore = adjustedScore)
+        // Apply time-based scoring modifier
+        val currentLevel = _gameState.value.currentLevel
+        val now = SystemClock.elapsedRealtime()
+        val totalWallMs = now - sessionStartWallMs - sessionTotalPausedMs
+        val leadInMs = (leadInSeconds * 1000).toLong()
+        val effectivePlayMs = (totalWallMs - leadInMs).coerceAtLeast(0L)
+        val totalPlaySec = effectivePlayMs / 1000.0
+        val songDurationSec = track.durationSeconds
+        val timeRatio = if (songDurationSec > 0.0) totalPlaySec / songDurationSec else 0.0
+        val timeScore = ScoringEngine.scoreTime(timeRatio, currentLevel)
+        val adjustedScore = melodyScore.overallScore * timeScore
+        val adjustedMelodyScore = melodyScore.copy(overallScore = adjustedScore, timeScore = timeScore)
 
         // Check advancement eligibility
-        val currentLevel = _gameState.value.currentLevel
         _canAdvanceLevel.value = currentLevel < 5 && adjustedScore >= 90f
 
         // Scroll to beginning without changing zoom level

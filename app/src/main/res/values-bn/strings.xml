@@ -140,7 +140,6 @@
     <string name="melody_play_again">আবার খেলুন</string>
     <string name="melody_play_go_back">পেছনে যান</string>
     <string name="melody_play_level">স্তর: %1$d</string>
-    <string name="melody_play_tempo">টেম্পো: %1$.0f%%</string>
     <string name="melody_play_transpose_0">ট্রান্সপোজ: 0</string>
     <string name="melody_play_transpose_plus">ট্রান্সপোজ: +%1$d</string>
     <string name="melody_play_transpose">ট্রান্সপোজ: %1$d</string>
@@ -164,6 +163,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">পিচ নির্ভুলতা</string>
     <string name="score_duration_accuracy">সময় নির্ভুলতা</string>
+    <string name="score_time_accuracy">Time accuracy</string>
     <string name="score_progress">অগ্রগতি</string>
 
     <!-- Note divisions -->

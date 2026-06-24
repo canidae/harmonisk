@@ -143,7 +143,6 @@
     <string name="melody_play_again">Play Again</string>
     <string name="melody_play_go_back">Go Back</string>
     <string name="melody_play_level">Level: %1$d</string>
-    <string name="melody_play_tempo">Tempo: %1$.0f%%</string>
     <string name="melody_play_transpose_0">Transpose: 0</string>
     <string name="melody_play_transpose_plus">Transpose: +%1$d</string>
     <string name="melody_play_transpose">Transpose: %1$d</string>
@@ -167,6 +166,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Pitch accuracy</string>
     <string name="score_duration_accuracy">Duration accuracy</string>
+    <string name="score_time_accuracy">Time accuracy</string>
     <string name="score_progress">Progress</string>
 
     <!-- Note divisions -->

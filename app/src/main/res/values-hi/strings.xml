@@ -140,7 +140,6 @@
     <string name="melody_play_again">फिर से बजाएं</string>
     <string name="melody_play_go_back">वापस जाएं</string>
     <string name="melody_play_level">स्तर: %1$d</string>
-    <string name="melody_play_tempo">टेम्पो: %1$.0f%%</string>
     <string name="melody_play_transpose_0">ट्रांसपोज़: 0</string>
     <string name="melody_play_transpose_plus">ट्रांसपोज़: +%1$d</string>
     <string name="melody_play_transpose">ट्रांसपोज़: %1$d</string>
@@ -164,6 +163,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">पिच सटीकता</string>
     <string name="score_duration_accuracy">अवधि सटीकता</string>
+    <string name="score_time_accuracy">Time accuracy</string>
     <string name="score_progress">प्रगति</string>
 
     <!-- Note divisions -->

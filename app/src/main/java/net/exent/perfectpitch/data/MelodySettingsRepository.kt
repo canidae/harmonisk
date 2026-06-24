@@ -18,7 +18,6 @@ class MelodySettingsRepository(
     @Serializable
     data class MelodySettings(
         val waitMode: Boolean = true,
-        val tempoMultiplier: Float = 1.0f,
         val transposeSemitones: Int = 0,
         val fallSpeedPxPerSec: Float = 150f,
         val level: Int = 1,

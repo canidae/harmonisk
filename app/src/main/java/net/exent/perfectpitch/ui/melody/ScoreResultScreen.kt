@@ -102,7 +102,7 @@ fun ScoreResultModal(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        ScoreSummaryPanel(score = melodyScore)
+                        ScoreSummaryPanel(score = melodyScore, currentLevel = currentLevel)
 
                         if (scoreHistory.size >= 1) {
                             Spacer(modifier = Modifier.height(12.dp))

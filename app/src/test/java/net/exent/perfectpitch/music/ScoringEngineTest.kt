@@ -285,6 +285,75 @@ class ScoringEngineTest {
         assertEquals(0, melodyScore.notesHit)
     }
 
+    // Time scoring tests
+
+    @Test
+    fun `time score for level 1 returns 1 for ratio at full threshold`() {
+        assertEquals(1f, ScoringEngine.scoreTime(3.0, 1), 0.01f)
+    }
+
+    @Test
+    fun `time score for level 1 returns 0 for ratio at zero threshold`() {
+        assertEquals(0f, ScoringEngine.scoreTime(5.0, 1), 0.01f)
+    }
+
+    @Test
+    fun `time score for level 1 is linear between thresholds`() {
+        assertEquals(0.5f, ScoringEngine.scoreTime(4.0, 1), 0.01f)
+    }
+
+    @Test
+    fun `time score for level 1 returns 1 for ratio below full threshold`() {
+        assertEquals(1f, ScoringEngine.scoreTime(2.0, 1), 0.01f)
+    }
+
+    @Test
+    fun `time score for level 1 returns 0 for ratio above zero threshold`() {
+        assertEquals(0f, ScoringEngine.scoreTime(6.0, 1), 0.01f)
+    }
+
+    @Test
+    fun `time score for level 2 returns 1 for ratio at full threshold`() {
+        assertEquals(1f, ScoringEngine.scoreTime(2.0, 2), 0.01f)
+    }
+
+    @Test
+    fun `time score for level 2 returns 0 for ratio at zero threshold`() {
+        assertEquals(0f, ScoringEngine.scoreTime(4.0, 2), 0.01f)
+    }
+
+    @Test
+    fun `time score for level 2 is linear between thresholds`() {
+        assertEquals(0.5f, ScoringEngine.scoreTime(3.0, 2), 0.01f)
+    }
+
+    @Test
+    fun `time score for level 3 returns 1 for ratio at full threshold`() {
+        assertEquals(1f, ScoringEngine.scoreTime(1.1, 3), 0.01f)
+    }
+
+    @Test
+    fun `time score for level 3 returns 0 for ratio at zero threshold`() {
+        assertEquals(0f, ScoringEngine.scoreTime(3.0, 3), 0.01f)
+    }
+
+    @Test
+    fun `time score for level 3 is linear at midpoint`() {
+        assertEquals(0.5f, ScoringEngine.scoreTime(2.05, 3), 0.01f)
+    }
+
+    @Test
+    fun `time score for level 4 is always 1`() {
+        assertEquals(1f, ScoringEngine.scoreTime(10.0, 4), 0.01f)
+        assertEquals(1f, ScoringEngine.scoreTime(0.5, 4), 0.01f)
+    }
+
+    @Test
+    fun `time score for level 5 is always 1`() {
+        assertEquals(1f, ScoringEngine.scoreTime(10.0, 5), 0.01f)
+        assertEquals(1f, ScoringEngine.scoreTime(0.5, 5), 0.01f)
+    }
+
     @Test
     fun `overall score uses only pitch and duration weights`() {
         val result = engine.scoreNote(NotePerformance(

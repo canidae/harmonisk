@@ -262,8 +262,6 @@ fun MelodyPlayScreen(
                         onOpen = { showConfigMenu = true },
                         currentLevel = gameState.currentLevel,
                         onLevelChange = { viewModel.setLevel(it) },
-                        tempoMultiplier = gameState.tempoMultiplier,
-                        onTempoChange = { viewModel.setTempoMultiplier(it) },
                         transposeSemitones = gameState.transposeSemitones,
                         onTransposeChange = { viewModel.setTranspose(it) },
                         audioDelay = audioDelay,
@@ -428,8 +426,6 @@ private fun MelodySettingsMenu(
     onOpen: () -> Unit,
     currentLevel: Int,
     onLevelChange: (Int) -> Unit,
-    tempoMultiplier: Float,
-    onTempoChange: (Float) -> Unit,
     transposeSemitones: Int,
     onTransposeChange: (Int) -> Unit,
     audioDelay: Int,
@@ -458,15 +454,6 @@ private fun MelodySettingsMenu(
                 onValueChange = { onLevelChange(it.roundToInt().coerceIn(1, 5)) },
                 valueRange = 1f..5f,
                 steps = 3,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-            HorizontalDivider()
-            DropdownMenuItem(text = { Text(stringResource(R.string.melody_play_tempo, tempoMultiplier * 100)) }, onClick = {})
-            Slider(
-                value = tempoMultiplier,
-                onValueChange = onTempoChange,
-                valueRange = 0.5f..1.5f,
-                steps = 9,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
             HorizontalDivider()

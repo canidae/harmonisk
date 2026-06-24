@@ -17,13 +17,19 @@ import net.exent.perfectpitch.ui.utils.scoreColor
 @Composable
 fun ScoreSummaryPanel(
     score: MelodyScore,
+    currentLevel: Int,
     modifier: Modifier = Modifier
 ) {
     val breakdown = score.toBreakdown()
 
     Column(modifier = modifier.padding(top = 8.dp)) {
-        BreakdownRow(stringResource(R.string.score_pitch_accuracy), breakdown.avgPitchScore)
+        if (currentLevel > 1) {
+            BreakdownRow(stringResource(R.string.score_pitch_accuracy), breakdown.avgPitchScore)
+        }
         BreakdownRow(stringResource(R.string.score_duration_accuracy), breakdown.avgDurationScore)
+        if (currentLevel <= 3) {
+            BreakdownRow(stringResource(R.string.score_time_accuracy), breakdown.timeScore * 100f)
+        }
     }
 }
 

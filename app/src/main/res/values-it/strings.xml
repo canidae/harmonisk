@@ -140,7 +140,6 @@
     <string name="melody_play_again">Rigioca</string>
     <string name="melody_play_go_back">Torna indietro</string>
     <string name="melody_play_level">Livello: %1$d</string>
-    <string name="melody_play_tempo">Tempo: %1$.0f%%</string>
     <string name="melody_play_transpose_0">Trasposizione: 0</string>
     <string name="melody_play_transpose_plus">Trasposizione: +%1$d</string>
     <string name="melody_play_transpose">Trasposizione: %1$d</string>
@@ -164,6 +163,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Precisione altezza</string>
     <string name="score_duration_accuracy">Precisione durata</string>
+    <string name="score_time_accuracy">Time accuracy</string>
     <string name="score_progress">Progresso</string>
 
     <!-- Note divisions -->

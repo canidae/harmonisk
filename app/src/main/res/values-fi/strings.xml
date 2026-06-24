@@ -140,7 +140,6 @@
     <string name="melody_play_again">Soita uudelleen</string>
     <string name="melody_play_go_back">Palaa</string>
     <string name="melody_play_level">Taso: %1$d</string>
-    <string name="melody_play_tempo">Tempo: %1$.0f%%</string>
     <string name="melody_play_transpose_0">Transponointi: 0</string>
     <string name="melody_play_transpose_plus">Transponointi: +%1$d</string>
     <string name="melody_play_transpose">Transponointi: %1$d</string>
@@ -164,6 +163,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Sävelkorkeuden tarkkuus</string>
     <string name="score_duration_accuracy">Keston tarkkuus</string>
+    <string name="score_time_accuracy">Time accuracy</string>
     <string name="score_progress">Edistyminen</string>
 
     <!-- Note divisions -->

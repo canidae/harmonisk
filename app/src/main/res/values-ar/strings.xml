@@ -140,7 +140,6 @@
     <string name="melody_play_again">العزف مجدداً</string>
     <string name="melody_play_go_back">العودة</string>
     <string name="melody_play_level">المستوى: %1$d</string>
-    <string name="melody_play_tempo">الإيقاع: %1$.0f%%</string>
     <string name="melody_play_transpose_0">تحويل: 0</string>
     <string name="melody_play_transpose_plus">تحويل: +%1$d</string>
     <string name="melody_play_transpose">تحويل: %1$d</string>
@@ -164,6 +163,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">دقة الحدة</string>
     <string name="score_duration_accuracy">دقة المدة</string>
+    <string name="score_time_accuracy">Time accuracy</string>
     <string name="score_progress">التقدم</string>
 
     <!-- Note divisions -->
