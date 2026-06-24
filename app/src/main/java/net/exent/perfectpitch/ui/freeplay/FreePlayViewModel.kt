@@ -974,10 +974,6 @@ class FreePlayViewModel @Inject constructor(
 
         val isRecordMode = _state.value.isRecording
 
-        val allNotes = _state.value.playedNotes
-            .filter { it.endTimeMs != null }
-            .sortedBy { it.startTimeMs }
-
         // Snap to loop start if current position is outside the loop area
         val (initialStart, initialEnd) = effectiveLoopBounds()
         val currentPos = _state.value.songPositionMs
@@ -998,11 +994,16 @@ class FreePlayViewModel @Inject constructor(
 
             var lastBuiltBpm = _state.value.bpm
             var lastBuiltBeatsPerBar = _state.value.beatsPerBar
+            var lastBuiltLoopEndMs = 0L
 
             fun buildEvents(startTime: Long): List<Event> {
                 val evts = mutableListOf<Event>()
                 val (loopStartMs, loopEndMs) = effectiveLoopBounds()
-                for (note in allNotes) {
+                lastBuiltLoopEndMs = loopEndMs
+                val currentNotes = _state.value.playedNotes
+                    .filter { it.endTimeMs != null }
+                    .sortedBy { it.startTimeMs }
+                for (note in currentNotes) {
                     val endMs = note.endTimeMs ?: continue
                     if (endMs <= startTime) continue
                     val onTime = if (note.startTimeMs <= startTime) startTime else note.startTimeMs
@@ -1043,6 +1044,10 @@ evts.add(Event(endMs, note.midiNumber, false, note.trackOrigin))
                 if (bpmChanged) {
                     lastBuiltBpm = currentBpm
                     lastBuiltBeatsPerBar = currentBeatsPerBar
+                    events = buildEvents(audioPositionMs)
+                    eventIndex = 0
+                }
+                if (loopEndMs != lastBuiltLoopEndMs) {
                     events = buildEvents(audioPositionMs)
                     eventIndex = 0
                 }
