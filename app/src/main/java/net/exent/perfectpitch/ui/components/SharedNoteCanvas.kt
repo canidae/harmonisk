@@ -683,8 +683,7 @@ private fun DrawScope.drawPitchIndicator(
     val detectedMidi = mode.detectedMidiNote ?: return
     val key = layout[detectedMidi] ?: return
 
-    val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
-    val indicatorColor = getIndicatorColor(detectedMidi, mode.detectedCentsOff, mode.melodyTrack, viewTimeSeconds)
+    val indicatorColor = getIndicatorColor(detectedMidi, mode.detectedCentsOff, mode.melodyTrack, mode.currentNoteIndex)
 
     val indicatorX = key.x + BAR_GAP_PX
     val indicatorW = key.width - BAR_GAP_PX * 2f
@@ -841,10 +840,10 @@ private fun getIndicatorColor(
     detectedMidi: Int,
     centsOff: Float?,
     melodyTrack: MelodyTrack,
-    viewTimeSeconds: Double
+    currentNoteIndex: Int
 ): Color {
-    val expectedNote = melodyTrack.getNoteAtTime(viewTimeSeconds)
-        ?: return Color.White.copy(alpha = 0.5f)
+    if (currentNoteIndex !in melodyTrack.notes.indices) return Color.White.copy(alpha = 0.5f)
+    val expectedNote = melodyTrack.notes[currentNoteIndex]
 
     return if (detectedMidi == expectedNote.noteNumber) {
         val absCents = abs(centsOff ?: 50f)
