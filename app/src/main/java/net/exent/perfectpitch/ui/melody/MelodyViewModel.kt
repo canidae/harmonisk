@@ -843,8 +843,7 @@ class MelodyViewModel @Inject constructor(
 
                 // Only track notes once pitch detection is active
                 if (pitchDetectionStarted) {
-                    val visualOffsetSecs = maxOf(0, totalAudioDelayMs - visualDelayMs) / 1000.0
-                    updateCurrentNote(currentTime - visualOffsetSecs)
+                    updateCurrentNote(currentTime - totalAudioDelayMs / 1000.0)
                 }
 
                 // Audio plays at natural song time — visual offset handles sync.
@@ -1044,8 +1043,7 @@ class MelodyViewModel @Inject constructor(
             if (abs(noteUtils.frequencyToCents(current.pitchResult.frequency, expectedFreq)) > 50f) {
                 return@update current
             }
-            val visualOffsetSecs = maxOf(0, totalAudioDelayMs - visualDelayMs) / 1000.0
-            val pos = ((current.currentTimeSeconds - visualOffsetSecs - noteStartSeconds) / noteDurationSeconds).toFloat().coerceIn(0f, 1f)
+            val pos = ((current.currentTimeSeconds - totalAudioDelayMs / 1000.0 - noteStartSeconds) / noteDurationSeconds).toFloat().coerceIn(0f, 1f)
             val existingHistory = current.noteCentsHistory[noteIndex] ?: emptyList()
             val existingPositions = current.noteCentsPositions[noteIndex] ?: emptyList()
             val updatedFirstDetection = if (!current.noteFirstDetectionStart.containsKey(noteIndex)) {
