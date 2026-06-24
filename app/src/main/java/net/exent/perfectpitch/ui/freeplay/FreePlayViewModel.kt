@@ -1008,6 +1008,7 @@ evts.add(Event(endMs, note.midiNumber, false, note.trackOrigin))
             val visualStartOffsetMs = maxOf(0L, totalAudioDelayMs.toLong() - visualDelayMs.toLong())
             var audioPositionMs = _state.value.songPositionMs
             var allowVisualBeforeLoopStart = true
+            var seekAnchorMs = Long.MIN_VALUE
             var events = buildEvents(audioPositionMs)
             var eventIndex = 0
             var lastWallMs = System.currentTimeMillis()
@@ -1024,7 +1025,7 @@ evts.add(Event(endMs, note.midiNumber, false, note.trackOrigin))
 
                 // Seek detection — only before first loop completes
                 val stateVisualPosition = _state.value.songPositionMs
-                val normalVisual = rawVisualMs.coerceIn(loopStartMs, loopEndMs)
+                val expectedVisual = rawVisualMs.coerceIn(maxOf(seekAnchorMs, loopStartMs), loopEndMs)
                 val currentBpm = _state.value.bpm
                 val currentBeatsPerBar = _state.value.beatsPerBar
                 val bpmChanged = currentBpm != lastBuiltBpm || currentBeatsPerBar != lastBuiltBeatsPerBar
@@ -1034,9 +1035,10 @@ evts.add(Event(endMs, note.midiNumber, false, note.trackOrigin))
                     events = buildEvents(audioPositionMs)
                     eventIndex = 0
                 }
-                if (allowVisualBeforeLoopStart && abs(stateVisualPosition - normalVisual) > 100) {
+                if (allowVisualBeforeLoopStart && abs(stateVisualPosition - expectedVisual) > 100) {
                     player?.allNotesOff()
-                    audioPositionMs = stateVisualPosition + visualStartOffsetMs
+                    audioPositionMs = stateVisualPosition
+                    seekAnchorMs = stateVisualPosition
                     allowVisualBeforeLoopStart = true
                     lastBuiltBpm = currentBpm
                     lastBuiltBeatsPerBar = currentBeatsPerBar
@@ -1065,11 +1067,12 @@ evts.add(Event(endMs, note.midiNumber, false, note.trackOrigin))
 
                 // Compute visual position
                 val rawVisualMsPostDelta = audioPositionMs - visualStartOffsetMs
+                val visualLowerBound = maxOf(seekAnchorMs, loopStartMs)
                 val visualPositionMs =
                     if (!allowVisualBeforeLoopStart && rawVisualMsPostDelta < loopStartMs) {
-                        (loopEndMs + rawVisualMsPostDelta).coerceIn(loopStartMs, loopEndMs)
+                        (loopEndMs + rawVisualMsPostDelta - loopStartMs).coerceIn(loopStartMs, loopEndMs)
                     } else {
-                        rawVisualMsPostDelta.coerceIn(loopStartMs, loopEndMs)
+                        rawVisualMsPostDelta.coerceIn(visualLowerBound, loopEndMs)
                     }
                 _state.update { it.copy(songPositionMs = visualPositionMs) }
 
@@ -1083,6 +1086,7 @@ evts.add(Event(endMs, note.midiNumber, false, note.trackOrigin))
                     player?.allNotesOff()
                     audioPositionMs = loopStartMs
                     allowVisualBeforeLoopStart = false
+                    seekAnchorMs = Long.MIN_VALUE
                     events = buildEvents(audioPositionMs)
                     eventIndex = 0
                     lastWallMs = System.currentTimeMillis()
