@@ -52,7 +52,7 @@
     <string name="settings_calibrating">معايرة… %1$d/5 نغمات مكتشفة</string>
     <string name="settings_visual_delay">تأخير بصري: %1$d مللي</string>
     <string name="settings_visual_delay_min">0 مللي</string>
-    <string name="settings_visual_delay_max">50 مللي</string>
+    <string name="settings_visual_delay_max">200 مللي</string>
     <string name="settings_reset_dialog_title">إعادة تعيين إلى الإعدادات الافتراضية؟</string>
     <string name="settings_reset_dialog_body">سيتم إعادة تعيين جميع الإعدادات إلى قيمها الافتراضية، بما في ذلك:\n\n\u2022 الضبط القياسي (A = 440 هرتز)\n\u2022 حد الصمت\n\u2022 سرعة العزف الحر، الإيقاع، الميزان، التقاط النغمات</string>
     <string name="settings_reset">إعادة تعيين</string>

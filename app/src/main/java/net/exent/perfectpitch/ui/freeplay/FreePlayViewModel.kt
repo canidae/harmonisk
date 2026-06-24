@@ -99,8 +99,8 @@ class FreePlayViewModel @Inject constructor(
     // MIDI input tracking (polyphonic: key = MIDI note number, value = active PlayedNote)
     private val activeMidiNotes = mutableMapOf<Int, PlayedNote>()
 
-    private var audioOutputDelayMs: Int = 0
-    private var audioVisualDelayMs: Int = 0
+    private var totalAudioDelayMs: Int = 0
+    private var visualDelayMs: Int = 0
     private var replayGeneration = 0
     private var isPausedByGesture = false
 
@@ -171,12 +171,12 @@ class FreePlayViewModel @Inject constructor(
         }
         viewModelScope.launch {
             audioDelayRepository.activeAudioDelay.collect { delayMs ->
-                audioOutputDelayMs = delayMs
+                totalAudioDelayMs = delayMs
             }
         }
         viewModelScope.launch {
             audioDelayRepository.activeVisualDelay.collect { delayMs ->
-                audioVisualDelayMs = delayMs
+                visualDelayMs = delayMs
             }
         }
     }
@@ -991,7 +991,6 @@ class FreePlayViewModel @Inject constructor(
             fun buildEvents(startTime: Long): List<Event> {
                 val evts = mutableListOf<Event>()
                 val (loopStartMs, loopEndMs) = effectiveLoopBounds()
-                val loopDuration = loopEndMs - loopStartMs
                 for (note in allNotes) {
                     val endMs = note.endTimeMs ?: continue
                     if (endMs <= startTime) continue
@@ -999,24 +998,6 @@ class FreePlayViewModel @Inject constructor(
 evts.add(Event(onTime, note.midiNumber, true, note.trackOrigin))
 evts.add(Event(endMs, note.midiNumber, false, note.trackOrigin))
                 }
-                // Lookahead: shift events at the start of the next loop by loopDuration
-                // so they appear at positions [loopEndMs, loopEndMs + audioOutputDelayMs)
-                // and fire via fireAhead before the loop triggers — no gap at the boundary.
-                val lookaheadLen = audioOutputDelayMs.toLong().coerceAtMost(loopDuration)
-                if (lookaheadLen > 0) {
-                    for (note in allNotes) {
-                        if (note.startTimeMs >= loopStartMs + lookaheadLen) continue
-                        val shiftedStart = note.startTimeMs + loopDuration
-                        val endMs = note.endTimeMs ?: continue
-                        val shiftedEnd = endMs + loopDuration
-                        if (shiftedEnd <= startTime) continue
-                        if (shiftedStart >= loopEndMs + lookaheadLen) continue
-                        val onTime = if (shiftedStart <= startTime) startTime else shiftedStart
-evts.add(Event(onTime, note.midiNumber, true, note.trackOrigin))
-evts.add(Event(shiftedEnd, note.midiNumber, false, note.trackOrigin))
-                    }
-                }
-                // Metronome events (no lookahead — they repeat naturally each loop)
                 if (_state.value.metronomeEnabled) {
                     addMetronomeEvents(evts, startTime, loopEndMs, lastBuiltBpm, lastBuiltBeatsPerBar)
                 }
@@ -1024,9 +1005,10 @@ evts.add(Event(shiftedEnd, note.midiNumber, false, note.trackOrigin))
                 return evts
             }
 
-            var replayPositionMs = _state.value.songPositionMs
-            var pendingMs = audioOutputDelayMs.toLong()
-            var events = buildEvents(replayPositionMs)
+            val visualStartOffsetMs = maxOf(0L, totalAudioDelayMs.toLong() - visualDelayMs.toLong())
+            var audioPositionMs = _state.value.songPositionMs
+            var allowVisualBeforeLoopStart = true
+            var events = buildEvents(audioPositionMs)
             var eventIndex = 0
             var lastWallMs = System.currentTimeMillis()
 
@@ -1036,18 +1018,29 @@ evts.add(Event(shiftedEnd, note.midiNumber, false, note.trackOrigin))
                     delay(16L)
                     continue
                 }
-                // Detect external seek
-                val statePosition = _state.value.songPositionMs
+
+                val (loopStartMs, loopEndMs) = effectiveLoopBounds()
+                val rawVisualMs = audioPositionMs - visualStartOffsetMs
+
+                // Seek detection — only before first loop completes
+                val stateVisualPosition = _state.value.songPositionMs
+                val normalVisual = rawVisualMs.coerceIn(loopStartMs, loopEndMs)
                 val currentBpm = _state.value.bpm
                 val currentBeatsPerBar = _state.value.beatsPerBar
                 val bpmChanged = currentBpm != lastBuiltBpm || currentBeatsPerBar != lastBuiltBeatsPerBar
-                if (abs(statePosition - replayPositionMs) > 100 || bpmChanged) {
-                    player?.allNotesOff()
-                    replayPositionMs = statePosition
-                    pendingMs = 0L
+                if (bpmChanged) {
                     lastBuiltBpm = currentBpm
                     lastBuiltBeatsPerBar = currentBeatsPerBar
-                    events = buildEvents(replayPositionMs)
+                    events = buildEvents(audioPositionMs)
+                    eventIndex = 0
+                }
+                if (allowVisualBeforeLoopStart && abs(stateVisualPosition - normalVisual) > 100) {
+                    player?.allNotesOff()
+                    audioPositionMs = stateVisualPosition + visualStartOffsetMs
+                    allowVisualBeforeLoopStart = true
+                    lastBuiltBpm = currentBpm
+                    lastBuiltBeatsPerBar = currentBeatsPerBar
+                    events = buildEvents(audioPositionMs)
                     eventIndex = 0
                     lastWallMs = System.currentTimeMillis()
                 }
@@ -1056,25 +1049,10 @@ evts.add(Event(shiftedEnd, note.midiNumber, false, note.trackOrigin))
                 val delta = (wallNow - lastWallMs).coerceAtLeast(0L)
                 lastWallMs = wallNow
 
-                // Consume pending start delay before advancing the play canvas
-                if (pendingMs > 0) {
-                    val consumed = min(delta, pendingMs)
-                    pendingMs -= consumed
-                    if (delta > consumed) {
-                        replayPositionMs += (delta - consumed)
-                    }
-                } else {
-                    replayPositionMs += delta
-                }
+                audioPositionMs += delta
 
-                _state.update { it.copy(songPositionMs = replayPositionMs) }
-
-                // Fire due events — fire audioOutputDelayMs early so audio reaches the
-                // speaker at the same time the visual "now" line passes the note.
-                // Metronome (trackOrigin == 9) always routes through soundFontSynthesizer
-                // so it's audible during recording even with output device set to NONE.
-                val fireAhead = audioOutputDelayMs.toLong() - pendingMs
-                while (eventIndex < events.size && events[eventIndex].timeMs <= replayPositionMs + fireAhead) {
+                // Fire due events at natural song time
+                while (eventIndex < events.size && events[eventIndex].timeMs <= audioPositionMs) {
                     val ev = events[eventIndex++]
                     if (ev.trackOrigin == 9) {
                         if (ev.isOn) soundFontSynthesizer.noteOn(9, ev.midiNote, 80)
@@ -1085,30 +1063,29 @@ evts.add(Event(shiftedEnd, note.midiNumber, false, note.trackOrigin))
                     }
                 }
 
-                // Loop-at-end: re-read bounds each frame so user changes take effect immediately
-                val (loopStartMs, loopEndMs) = effectiveLoopBounds()
-                if (replayPositionMs >= loopEndMs) {
+                // Compute visual position
+                val rawVisualMsPostDelta = audioPositionMs - visualStartOffsetMs
+                val visualPositionMs =
+                    if (!allowVisualBeforeLoopStart && rawVisualMsPostDelta < loopStartMs) {
+                        (loopEndMs + rawVisualMsPostDelta).coerceIn(loopStartMs, loopEndMs)
+                    } else {
+                        rawVisualMsPostDelta.coerceIn(loopStartMs, loopEndMs)
+                    }
+                _state.update { it.copy(songPositionMs = visualPositionMs) }
+
+                // Loop when audio wraps around
+                if (audioPositionMs >= loopEndMs) {
                     if (isRecordMode) {
                         finalizeCurrentNote()
                         abortHoning()
                         _state.update { it.copy(activeNote = null) }
                     }
-                    // Don't call allNotesOff — the shifted lookahead events already fired
-                    // before the loop and their audio is in the output pipeline.
-                    replayPositionMs = loopStartMs
-                    pendingMs = 0L
-                    _state.update { it.copy(songPositionMs = replayPositionMs) }
-                    events = buildEvents(replayPositionMs)
+                    player?.allNotesOff()
+                    audioPositionMs = loopStartMs
+                    allowVisualBeforeLoopStart = false
+                    events = buildEvents(audioPositionMs)
                     eventIndex = 0
                     lastWallMs = System.currentTimeMillis()
-                    // Skip note events at the loop start that already fired as shifted
-                    // lookahead events in the previous loop iteration.
-                    // Metronome events are NOT skipped — they repeat naturally each loop.
-                    val lookaheadLen = audioOutputDelayMs.toLong().coerceAtMost(loopEndMs - loopStartMs)
-                    while (eventIndex < events.size && events[eventIndex].timeMs < loopStartMs + lookaheadLen
-                           && events[eventIndex].trackOrigin != 9) {
-                        eventIndex++
-                    }
                 }
 
                 delay(16L)

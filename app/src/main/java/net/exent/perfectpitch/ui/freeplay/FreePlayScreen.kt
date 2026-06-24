@@ -81,9 +81,7 @@ fun FreePlayScreen(
         }
     }
 
-    val effectiveTime = viewModel.getEffectiveTime(frameTime)
-    val visualDelay by viewModel.activeVisualDelay.collectAsState()
-    val canvasSongPositionMs = effectiveTime - visualDelay
+    val canvasSongPositionMs = viewModel.getEffectiveTime(frameTime)
     val midiRange = state.viewMaxMidi - state.viewMinMidi
     val pxPerMs = state.fallSpeedPxPerSec * density.density / 1000f
 
@@ -532,14 +530,16 @@ fun FreePlayScreen(
                                         isInteracting = true
                                         viewModel.pausePlaybackRecording()
                                     }
-                                    val canvasWidth = size.width.toFloat()
-                                    if (zoomChange != 1f) {
-                                        viewModel.onHorizontalZoom(zoomChange, centroid.x / canvasWidth)
-                                        viewModel.onVerticalZoom(zoomChange)
-                                    }
-                                    if (panChange.x != 0f || panChange.y != 0f) {
-                                        viewModel.onHorizontalScroll(panChange.x * (currentMidiRange / canvasWidth))
-                                        viewModel.onVerticalScroll((-panChange.y / currentPxPerMs).toLong())
+                                    if (event.changes.none { it.isConsumed }) {
+                                        val canvasWidth = size.width.toFloat()
+                                        if (zoomChange != 1f) {
+                                            viewModel.onHorizontalZoom(zoomChange, centroid.x / canvasWidth)
+                                            viewModel.onVerticalZoom(zoomChange)
+                                        }
+                                        if (panChange.x != 0f || panChange.y != 0f) {
+                                            viewModel.onHorizontalScroll(panChange.x * (currentMidiRange / canvasWidth))
+                                            viewModel.onVerticalScroll((-panChange.y / currentPxPerMs).toLong())
+                                        }
                                     }
                                 }
                             } while (event.changes.any { it.pressed })

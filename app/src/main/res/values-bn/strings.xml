@@ -52,7 +52,7 @@
     <string name="settings_calibrating">ক্যালিব্রেট করছে… %1$d/5 স্বর সনাক্ত</string>
     <string name="settings_visual_delay">ভিজ্যুয়াল বিলম্ব: %1$d ms</string>
     <string name="settings_visual_delay_min">0 ms</string>
-    <string name="settings_visual_delay_max">50 ms</string>
+    <string name="settings_visual_delay_max">200 ms</string>
     <string name="settings_reset_dialog_title">ডিফল্টে রিসেট করবেন?</string>
     <string name="settings_reset_dialog_body">সমস্ত সেটিংস তাদের ডিফল্ট মানগুলিতে ফিরে যাবে, যার মধ্যে রয়েছে:\n\n\u2022 কনসার্ট পিচ (A = 440 Hz)\n\u2022 নীরবতা সীমা\n\u2022 মুক্ত বাজনার গতি, টেম্পো, সময়ের স্বরলিপি, নোট স্ন্যাপ</string>
     <string name="settings_reset">রিসেট</string>

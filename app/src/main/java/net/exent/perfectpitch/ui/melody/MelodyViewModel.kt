@@ -115,10 +115,10 @@ class MelodyViewModel @Inject constructor(
 
     // Melody audio output delay
     private var synthOpenJob: Job? = null
-    // Audio delay for firing melody audio early enough to compensate for speaker latency
-    private var audioOutputDelayMs: Int = 0
-    // Visual delay for panning the canvas so bars/notes appear earlier than audio
-    private var audioVisualDelayMs: Int = 0
+    // Total round-trip audio delay (output + input), from calibration
+    private var totalAudioDelayMs: Int = 0
+    // Visual delay fine-tuning for input latency compensation
+    private var visualDelayMs: Int = 0
 
     init {
         viewModelScope.launch {
@@ -135,14 +135,14 @@ class MelodyViewModel @Inject constructor(
         // Observe per-device audio delay and update the melody player
         viewModelScope.launch {
             audioDelayRepository.activeAudioDelay.collect { delayMs ->
-                audioOutputDelayMs = delayMs
-                melodyPlayer.setAudioOutputDelay(delayMs.toLong())
+                totalAudioDelayMs = delayMs
+                melodyPlayer.setTotalAudioDelay(delayMs.toLong())
             }
         }
         // Observe per-device visual delay for canvas rendering offset
         viewModelScope.launch {
             audioDelayRepository.activeVisualDelay.collect { delayMs ->
-                audioVisualDelayMs = delayMs
+                visualDelayMs = delayMs
             }
         }
         // Observe MIDI availability
@@ -630,7 +630,7 @@ class MelodyViewModel @Inject constructor(
     /** Enter READY phase — melody visible but not playing. Bars pre-positioned at lead-in offset. */
     fun enterReadyPhase() {
         if (_gameState.value.phase == PlayPhase.NOT_STARTED) {
-            val leadIn = twoBarLeadInSeconds() + audioOutputDelayMs / 1000.0
+            val leadIn = twoBarLeadInSeconds()
             _gameState.update { it.copy(phase = PlayPhase.READY, currentTimeSeconds = -leadIn) }
         }
     }
@@ -639,7 +639,7 @@ class MelodyViewModel @Inject constructor(
         val track = _gameState.value.melodyTrack ?: return
         if (_gameState.value.phase == PlayPhase.PLAYING || _gameState.value.phase == PlayPhase.WAITING_FOR_NOTE) return
 
-        val leadIn = twoBarLeadInSeconds() + audioOutputDelayMs / 1000.0
+        val leadIn = twoBarLeadInSeconds()
 
         _gameState.update {
             it.copy(
@@ -811,9 +811,6 @@ class MelodyViewModel @Inject constructor(
             // for initial start, it starts at time 0.
             val pitchStartThreshold = _gameState.value.countdownResumeTarget.let { if (it > 0.0) it else 0.0 }
             var pitchDetectionStarted = false
-            val metronomeNotes = _gameState.value.metronomeTrack?.notes?.sortedBy { it.startTick } ?: emptyList()
-            var metronomeNoteIndex = 0
-            var lastFiredMetronomeTime = Double.NEGATIVE_INFINITY
 
             while (isActive) {
                 // Grace period: continue advancing time for a while after entering wait mode
@@ -849,31 +846,9 @@ class MelodyViewModel @Inject constructor(
                     updateCurrentNote(currentTime)
                 }
 
-                // Feed melody audio earlier than t=0 to compensate for output latency.
+                // Audio plays at natural song time — visual offset handles sync.
                 val gs = _gameState.value
 
-                // Direct-fire metronome during initial lead-in (before updateGameTime threshold)
-                if (currentTime < -(audioOutputDelayMs / 1000.0) &&
-                    gs.metronomeEnabled && gs.metronomeTrack != null && soundFontSynthesizer.isReady &&
-                    (!gs.waitMode || !pitchDetectionStarted)) {
-                    val mt = gs.metronomeTrack
-                    val effectiveTime = currentTime + audioOutputDelayMs / 1000.0
-                    while (metronomeNoteIndex < metronomeNotes.size) {
-                        val note = metronomeNotes[metronomeNoteIndex]
-                        val noteStart = mt.noteStartSeconds(note)
-                        if (noteStart > effectiveTime) break
-                        if (noteStart > lastFiredMetronomeTime) {
-                            soundFontSynthesizer.noteOn(9, note.noteNumber, note.velocity.coerceIn(1, 127))
-                            lastFiredMetronomeTime = noteStart
-                            val durMs = if (note.noteNumber == 86) 60L else 40L
-                            launch {
-                                delay(durMs)
-                                soundFontSynthesizer.noteOff(9, note.noteNumber)
-                            }
-                        }
-                        metronomeNoteIndex++
-                    }
-                }
                 val playTracks = buildList {
                     addAll(when (gs.accompanimentMode) {
                         AccompanimentMode.ALL -> gs.melodyTracks
@@ -896,8 +871,7 @@ class MelodyViewModel @Inject constructor(
                         add(mt)
                     }
                 }
-                if (playTracks.isNotEmpty() && soundFontSynthesizer.isReady &&
-                    currentTime >= -(audioOutputDelayMs / 1000.0)) {
+                if (playTracks.isNotEmpty() && soundFontSynthesizer.isReady) {
                     melodyPlayer.updateGameTime(currentTime, playTracks)
                 }
 

@@ -247,8 +247,8 @@ fun SettingsScreen(
                 Slider(
                     value = visualDelay.toFloat(),
                     onValueChange = { viewModel.setVisualDelay(it.toInt()) },
-                    valueRange = 0f..50f,
-                    steps = 50,
+                    valueRange = 0f..200f,
+                    steps = 19,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(

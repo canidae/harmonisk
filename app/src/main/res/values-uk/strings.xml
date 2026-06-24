@@ -52,7 +52,7 @@
     <string name="settings_calibrating">Калібрування… %1$d/5 тонів виявлено</string>
     <string name="settings_visual_delay">Візуальна затримка: %1$d мс</string>
     <string name="settings_visual_delay_min">0 мс</string>
-    <string name="settings_visual_delay_max">50 мс</string>
+    <string name="settings_visual_delay_max">200 мс</string>
     <string name="settings_reset_dialog_title">Скинути до стандартних?</string>
     <string name="settings_reset_dialog_body">Усі налаштування буде скинуто до значень за замовчуванням, зокрема:\n\n\u2022 Камертон (A = 440 Гц)\n\u2022 Поріг тиші\n\u2022 Швидкість, темп, тактовий розмір, прив\'язка нот у Вільній грі</string>
     <string name="settings_reset">Скинути</string>

@@ -16,7 +16,7 @@ class MelodyPlayer(
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
     private val activeSynthNotes = mutableSetOf<Int>()
-    private var audioOutputDelayMs: Long = 0L
+    private var totalAudioDelayMs: Long = 0L
 
     /**
      * Switch the backend at runtime. Silences the current player before switching.
@@ -76,13 +76,13 @@ class MelodyPlayer(
 
     /**
      * Drives note-on/off from an external game clock.
-     * Fires notes ahead by [audioOutputDelayMs] to compensate for speaker latency.
+     * Notes play at their natural song position — visual offset handles sync.
      * Handles multiple tracks polyphonically — each track is treated as a separate voice/channel.
      */
     fun updateGameTime(gameTimeSeconds: Double, tracks: List<MelodyTrack>) {
         if (!notePlayer.isReady) return
 
-        val effectiveTime = gameTimeSeconds + audioOutputDelayMs / 1000.0
+        val effectiveTime = gameTimeSeconds
 
         // Collect all notes that should be active at the current time, keyed by compound key
         val shouldBeActive = mutableSetOf<Int>()
@@ -114,8 +114,8 @@ class MelodyPlayer(
         activeSynthNotes.addAll(shouldBeActive)
     }
 
-    fun setAudioOutputDelay(delayMs: Long) {
-        audioOutputDelayMs = delayMs.coerceIn(0, 500)
+    fun setTotalAudioDelay(delayMs: Long) {
+        totalAudioDelayMs = delayMs.coerceIn(0, 500)
     }
 
     fun stop() {

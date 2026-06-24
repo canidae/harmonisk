@@ -52,7 +52,7 @@
     <string name="settings_calibrating">Kalibrieren\u2026 %1$d/5 Töne erkannt</string>
     <string name="settings_visual_delay">Visuelle Verzögerung: %1$dms</string>
     <string name="settings_visual_delay_min">0ms</string>
-    <string name="settings_visual_delay_max">50ms</string>
+    <string name="settings_visual_delay_max">200ms</string>
     <string name="settings_reset_dialog_title">Auf Standard zurücksetzen?</string>
     <string name="settings_reset_dialog_body">Alle Einstellungen werden auf ihre Standardwerte zurückgesetzt, einschließlich:\n\n\u2022 Kammerton (A = 440 Hz)\n\u2022 Ruheschwelle\n\u2022 Freies Spiel Geschwindigkeit, Tempo, Taktart, Noten-Snap</string>
     <string name="settings_reset">Zurücksetzen</string>

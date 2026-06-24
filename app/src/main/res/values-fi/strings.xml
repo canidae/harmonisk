@@ -52,7 +52,7 @@
     <string name="settings_calibrating">Kalibroidaan… %1$d/5 ääntä havaittu</string>
     <string name="settings_visual_delay">Visuaalinen viive: %1$d ms</string>
     <string name="settings_visual_delay_min">0 ms</string>
-    <string name="settings_visual_delay_max">50 ms</string>
+    <string name="settings_visual_delay_max">200 ms</string>
     <string name="settings_reset_dialog_title">Palauta oletusarvot?</string>
     <string name="settings_reset_dialog_body">Kaikki asetukset palautetaan oletusarvoihinsa, mukaan lukien:\n\n\u2022 Konserttisävelkorkeus (A = 440 Hz)\n\u2022 Hiljaisuuden kynnys\n\u2022 Vapaan soiton nopeus, tempo, tahtilaji, nuottien kohdistus</string>
     <string name="settings_reset">Nollaa</string>

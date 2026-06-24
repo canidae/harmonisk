@@ -52,7 +52,7 @@
     <string name="settings_calibrating">Calibrating\u2026 %1$d/5 tones detected</string>
     <string name="settings_visual_delay">Visual delay: %1$dms</string>
     <string name="settings_visual_delay_min">0ms</string>
-    <string name="settings_visual_delay_max">50ms</string>
+    <string name="settings_visual_delay_max">200ms</string>
     <string name="settings_reset_dialog_title">Reset to defaults?</string>
     <string name="settings_reset_dialog_body">All settings will be returned to their default values, including:\n\n\u2022 Concert pitch (A = 440 Hz)\n\u2022 Silence threshold\n\u2022 Free Play speed, tempo, time signature, note snapping</string>
     <string name="settings_reset">Reset</string>

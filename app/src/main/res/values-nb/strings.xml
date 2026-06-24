@@ -52,7 +52,7 @@
     <string name="settings_calibrating">Kalibrerer\u2026 %1$d/5 toner oppdaget</string>
     <string name="settings_visual_delay">Visuell forsinkelse: %1$dms</string>
     <string name="settings_visual_delay_min">0ms</string>
-    <string name="settings_visual_delay_max">50ms</string>
+    <string name="settings_visual_delay_max">200ms</string>
     <string name="settings_reset_dialog_title">Tilbakestill til standard?</string>
     <string name="settings_reset_dialog_body">Alle innstillinger vil bli tilbakestilt til standardverdier, inkludert:\n\n\u2022 Kammertone (A = 440 Hz)\n\u2022 Stilleterskel\n\u2022 Fri Spill-hastighet, tempo, taktart, noteinnsnapping</string>
     <string name="settings_reset">Tilbakestill</string>

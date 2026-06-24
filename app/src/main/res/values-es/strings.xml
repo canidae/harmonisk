@@ -52,7 +52,7 @@
     <string name="settings_calibrating">Calibrando… %1$d/5 tonos detectados</string>
     <string name="settings_visual_delay">Retardo visual: %1$d ms</string>
     <string name="settings_visual_delay_min">0 ms</string>
-    <string name="settings_visual_delay_max">50 ms</string>
+    <string name="settings_visual_delay_max">200 ms</string>
     <string name="settings_reset_dialog_title">¿Restablecer valores predeterminados?</string>
     <string name="settings_reset_dialog_body">Todos los ajustes se restablecerán a sus valores predeterminados, incluyendo:\n\n\u2022 Diapasón (A = 440 Hz)\n\u2022 Umbral de silencio\n\u2022 Velocidad, tempo, compás, ajuste de notas en Juego libre</string>
     <string name="settings_reset">Restablecer</string>

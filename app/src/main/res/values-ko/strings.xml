@@ -52,7 +52,7 @@
     <string name="settings_calibrating">보정 중… %1$d/5 음 감지됨</string>
     <string name="settings_visual_delay">시각 지연: %1$dms</string>
     <string name="settings_visual_delay_min">0ms</string>
-    <string name="settings_visual_delay_max">50ms</string>
+    <string name="settings_visual_delay_max">200ms</string>
     <string name="settings_reset_dialog_title">기본값으로 재설정?</string>
     <string name="settings_reset_dialog_body">모든 설정이 기본값으로 재설정됩니다. 포함 사항:\n\n\u2022 표준 음정 (A = 440 Hz)\n\u2022 무음 임계값\n\u2022 자유 연주 속도, 템포, 박자, 음표 스냅</string>
     <string name="settings_reset">재설정</string>

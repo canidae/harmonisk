@@ -52,7 +52,7 @@
     <string name="settings_calibrating">校准中… %1$d/5 个音调已检测</string>
     <string name="settings_visual_delay">视觉延迟：%1$d 毫秒</string>
     <string name="settings_visual_delay_min">0 毫秒</string>
-    <string name="settings_visual_delay_max">50 毫秒</string>
+    <string name="settings_visual_delay_max">200 毫秒</string>
     <string name="settings_reset_dialog_title">重置为默认值？</string>
     <string name="settings_reset_dialog_body">所有设置将恢复为默认值，包括：\n\n\u2022 标准音高（A = 440 赫兹）\n\u2022 静音阈值\n\u2022 自由演奏的速度、节拍、拍号、音符吸附</string>
     <string name="settings_reset">重置</string>

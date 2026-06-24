@@ -52,7 +52,7 @@
     <string name="settings_calibrating">कैलिब्रेट कर रहा है… %1$d/5 स्वर पकड़े गए</string>
     <string name="settings_visual_delay">दृश्य विलंब: %1$d ms</string>
     <string name="settings_visual_delay_min">0 ms</string>
-    <string name="settings_visual_delay_max">50 ms</string>
+    <string name="settings_visual_delay_max">200 ms</string>
     <string name="settings_reset_dialog_title">डिफ़ॉल्ट पर रीसेट करें?</string>
     <string name="settings_reset_dialog_body">सभी सेटिंग्स उनके डिफ़ॉल्ट मानों पर रीसेट हो जाएंगी, जिनमें शामिल हैं:\n\n\u2022 मानक स्वर (A = 440 Hz)\n\u2022 मौन सीमा\n\u2022 मुक्त अभ्यास की गति, टेम्पो, ताल, नोट स्नैप</string>
     <string name="settings_reset">रीसेट</string>

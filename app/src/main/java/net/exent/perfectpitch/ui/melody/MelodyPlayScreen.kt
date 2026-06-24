@@ -308,7 +308,7 @@ fun MelodyPlayScreen(
                                 noteCentsPositions = gameState.noteCentsPositions,
                                 notePlayProgress = gameState.notePlayProgress,
                                 noteFirstDetectionStart = gameState.noteFirstDetectionStart,
-                                currentTimeSeconds = gameState.currentTimeSeconds - visualDelay / 1000.0,
+                                currentTimeSeconds = gameState.currentTimeSeconds - maxOf(0, audioDelay - visualDelay) / 1000.0,
                                 songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
                                 fallSpeedPxPerSec = viewState.fallSpeedPxPerSec,
                                 detectedMidiNote = if (gameState.pitchResult.isValid) gameState.pitchResult.midiNoteNumber else null,
