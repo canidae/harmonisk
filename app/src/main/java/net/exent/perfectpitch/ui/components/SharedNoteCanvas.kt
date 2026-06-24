@@ -651,11 +651,8 @@ private fun DrawScope.drawMelodyNotes(
         val barW = key.width - BAR_GAP_PX * 2f
         if (barW < 2f) return@forEachIndexed
 
-        val noteColor = if (mode.noteResults[index] == NoteResultState.ACTIVE) {
-            Color.White
-        } else {
-            NOTE_COLOR_UPCOMING
-        }
+        val visuallyActive = viewTimeSeconds >= noteStartTime && viewTimeSeconds < noteEndTime
+        val noteColor = if (visuallyActive) Color.White else NOTE_COLOR_UPCOMING
 
         drawNoteBar(
             barX = barX,
