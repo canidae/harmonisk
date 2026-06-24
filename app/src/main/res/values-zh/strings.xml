@@ -107,6 +107,7 @@
     <string name="freeplay_piano_lower">仅下键盘</string>
     <string name="freeplay_piano_none">无钢琴键盘</string>
     <string name="freeplay_end_bar_mismatch">结束小节必须与开始小节不同</string>
+    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
 
     <!-- Tuner -->
     <string name="tuner_title">调音</string>

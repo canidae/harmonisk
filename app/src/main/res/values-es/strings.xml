@@ -107,6 +107,7 @@
     <string name="freeplay_piano_lower">Solo teclado inferior</string>
     <string name="freeplay_piano_none">Sin teclados</string>
     <string name="freeplay_end_bar_mismatch">El compás final debe ser diferente del compás inicial</string>
+    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Afinar instrumento</string>

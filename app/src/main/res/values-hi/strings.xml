@@ -107,6 +107,7 @@
     <string name="freeplay_piano_lower">केवल निचला कीबोर्ड</string>
     <string name="freeplay_piano_none">कोई पियानो कीबोर्ड नहीं</string>
     <string name="freeplay_end_bar_mismatch">समाप्ति बार प्रारंभ बार से भिन्न होना चाहिए</string>
+    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
 
     <!-- Tuner -->
     <string name="tuner_title">वाद्ययंत्र ट्यून करें</string>

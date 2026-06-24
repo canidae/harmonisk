@@ -107,6 +107,7 @@
     <string name="freeplay_piano_lower">하단 키보드만</string>
     <string name="freeplay_piano_none">피아노 키보드 없음</string>
     <string name="freeplay_end_bar_mismatch">끝 마디는 시작 마디와 달라야 합니다</string>
+    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
 
     <!-- Tuner -->
     <string name="tuner_title">악기 튜닝</string>

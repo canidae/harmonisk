@@ -107,6 +107,7 @@
     <string name="freeplay_piano_lower">Kun nedre keyboard</string>
     <string name="freeplay_piano_none">Ingen keyboard</string>
     <string name="freeplay_end_bar_mismatch">Sluttakt må være forskjellig fra startakt</string>
+    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Still Instrument</string>

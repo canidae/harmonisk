@@ -107,6 +107,7 @@
     <string name="freeplay_piano_lower">Aðeins neðra hljómborð</string>
     <string name="freeplay_piano_none">Engin hljómborð</string>
     <string name="freeplay_end_bar_mismatch">Lokataktur verður að vera frábrugðinn upphafstakt</string>
+    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Stilla hljóðfæri</string>

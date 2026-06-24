@@ -354,7 +354,18 @@ class FreePlayViewModel @Inject constructor(
         val s = _state.value
         val nowBar = (s.songPositionMs / barMs).roundToInt() + 1
         val locked = s.loopStartBar
-        _state.update { it.copy(loopStartBar = if (locked != null && locked == nowBar) null else nowBar) }
+        // Unlock if tapping the already-locked bar
+        if (locked != null && locked == nowBar) { _state.update { it.copy(loopStartBar = null) }; return }
+        // If end is not explicitly set, check that start doesn't exceed default end
+        if (s.loopEndBar == null) {
+            val lastNoteEnd = s.playedNotes.mapNotNull { it.endTimeMs }.maxOrNull() ?: 0L
+            val defaultEndBar = (ceil(lastNoteEnd.toDouble() / barMs).toInt() + 3).coerceAtLeast(3)
+            if (nowBar > defaultEndBar) {
+                _snackbarMessage.tryEmit(appContext.getString(R.string.freeplay_start_bar_exceeds_end))
+                return
+            }
+        }
+        _state.update { it.copy(loopStartBar = nowBar) }
     }
 
     fun setLoopEnd() {

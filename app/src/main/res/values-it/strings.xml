@@ -107,6 +107,7 @@
     <string name="freeplay_piano_lower">Solo tastiera inferiore</string>
     <string name="freeplay_piano_none">Nessuna tastiera</string>
     <string name="freeplay_end_bar_mismatch">La battuta finale deve essere diversa da quella iniziale</string>
+    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Accorda strumento</string>

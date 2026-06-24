@@ -107,6 +107,7 @@
     <string name="freeplay_piano_lower">Vain alakoskettamisto</string>
     <string name="freeplay_piano_none">Ei koskettamistoja</string>
     <string name="freeplay_end_bar_mismatch">Lopputahdin on oltava eri kuin aloitustahti</string>
+    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Virita instrumentti</string>

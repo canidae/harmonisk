@@ -107,6 +107,7 @@
     <string name="freeplay_piano_lower">下キーボードのみ</string>
     <string name="freeplay_piano_none">ピアノ表示なし</string>
     <string name="freeplay_end_bar_mismatch">終了小節は開始小節と異なる必要があります</string>
+    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
 
     <!-- Tuner -->
     <string name="tuner_title">楽器をチューニング</string>

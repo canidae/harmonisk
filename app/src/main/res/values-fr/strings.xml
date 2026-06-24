@@ -107,6 +107,7 @@
     <string name="freeplay_piano_lower">Clavier inférieur uniquement</string>
     <string name="freeplay_piano_none">Aucun clavier</string>
     <string name="freeplay_end_bar_mismatch">La mesure de fin doit être différente de la mesure de début</string>
+    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Accorder un instrument</string>

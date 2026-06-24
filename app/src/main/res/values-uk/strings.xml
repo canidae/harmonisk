@@ -107,6 +107,7 @@
     <string name="freeplay_piano_lower">Лише нижня клавіатура</string>
     <string name="freeplay_piano_none">Без клавіатур</string>
     <string name="freeplay_end_bar_mismatch">Кінцевий такт має відрізнятися від початкового</string>
+    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Налаштувати інструмент</string>

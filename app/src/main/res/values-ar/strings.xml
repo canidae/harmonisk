@@ -107,6 +107,7 @@
     <string name="freeplay_piano_lower">لوحة المفاتيح السفلية فقط</string>
     <string name="freeplay_piano_none">لا توجد لوحات بيانو</string>
     <string name="freeplay_end_bar_mismatch">يجب أن يختلف مقطع النهاية عن مقطع البداية</string>
+    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
 
     <!-- Tuner -->
     <string name="tuner_title">ضبط آلة موسيقية</string>

@@ -107,6 +107,7 @@
     <string name="freeplay_piano_lower">শুধু নিচের কীবোর্ড</string>
     <string name="freeplay_piano_none">কোনো পিয়ানো কীবোর্ড নেই</string>
     <string name="freeplay_end_bar_mismatch">শেষ বার শুরু বার থেকে ভিন্ন হতে হবে</string>
+    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
 
     <!-- Tuner -->
     <string name="tuner_title">যন্ত্র টিউন করুন</string>
