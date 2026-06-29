@@ -11,7 +11,7 @@ class PitchProcessor(
     private val noteUtils: NoteUtils
 ) {
     companion object {
-        const val SILENCE_THRESHOLD_DB = -50f
+        const val SILENCE_THRESHOLD_DB = -30f
 
         /**
          * Analysis window size in 44100 Hz samples.
