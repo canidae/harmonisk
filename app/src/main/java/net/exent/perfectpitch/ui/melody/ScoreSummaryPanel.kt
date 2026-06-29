@@ -30,6 +30,9 @@ fun ScoreSummaryPanel(
         if (currentLevel <= 3) {
             BreakdownRow(stringResource(R.string.score_time_accuracy), breakdown.timeScore * 100f)
         }
+        if (currentLevel >= 3) {
+            BreakdownRow(stringResource(R.string.score_note_accuracy), score.wrongNoteScore)
+        }
     }
 }
 

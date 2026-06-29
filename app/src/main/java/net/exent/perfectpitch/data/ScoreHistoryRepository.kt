@@ -32,7 +32,9 @@ class ScoreHistoryRepository(
         val longestStreak: Int,
         val avgPitchScore: Float,
         val avgDurationScore: Float,
-        val level: Int = 1
+        val level: Int = 1,
+        val wrongNoteCount: Int = 0,
+        val wrongNoteScore: Float = 100f
     )
 
     fun getScores(melodyId: String): Flow<List<ScoreEntry>> {

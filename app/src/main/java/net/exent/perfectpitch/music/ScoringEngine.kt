@@ -78,17 +78,17 @@ class ScoringEngine {
     fun scoreNote(result: NotePerformance): NoteScore {
         val pitchAccuracy = getPitchAccuracy(result.centsOff)
         val durationScore = scoreDuration(result.actualDurationMs, result.expectedDurationMs)
-
         val overallScore = (
             pitchAccuracy.score * PITCH_WEIGHT +
             durationScore * DURATION_WEIGHT
         )
+        val combinedAccuracy = getCombinedAccuracy(overallScore)
 
         return NoteScore(
             pitchScore = pitchAccuracy.score,
             durationScore = durationScore,
             overallScore = overallScore,
-            pitchAccuracy = pitchAccuracy
+            pitchAccuracy = combinedAccuracy
         )
     }
 
@@ -101,6 +101,14 @@ class ScoringEngine {
             absCents <= OK_CENTS -> PitchAccuracy.OK
             else -> PitchAccuracy.MISS
         }
+    }
+
+    private fun getCombinedAccuracy(overallScore: Float): PitchAccuracy = when {
+        overallScore >= 95f -> PitchAccuracy.PERFECT
+        overallScore >= 80f -> PitchAccuracy.GREAT
+        overallScore >= 65f -> PitchAccuracy.GOOD
+        overallScore >= 50f -> PitchAccuracy.OK
+        else -> PitchAccuracy.MISS
     }
 
     fun scoreDuration(actualMs: Long, expectedMs: Long): Float {
@@ -184,6 +192,8 @@ data class MelodyScore(
     val avgPitchScore: Float,
     val avgDurationScore: Float,
     val timeScore: Float = 1.0f,
+    val wrongNoteScore: Float = 100f,
+    val wrongNoteCount: Int = 0,
     val encouragingMessage: String = ""
 ) {
     companion object {

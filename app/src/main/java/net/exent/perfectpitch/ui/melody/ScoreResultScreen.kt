@@ -194,7 +194,7 @@ private fun enthusiasmLevel(score: Float): EnthusiasmLevel = when (ScoringEngine
 private fun StatCard(label: String, value: String) {
     Card {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(text = value, style = MaterialTheme.typography.titleLarge)

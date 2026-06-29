@@ -167,6 +167,7 @@
     <string name="score_pitch_accuracy">Pitch accuracy</string>
     <string name="score_duration_accuracy">Duration accuracy</string>
     <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_accuracy">Note accuracy</string>
     <string name="score_progress">Progress</string>
 
     <!-- Note divisions -->
