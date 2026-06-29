@@ -167,6 +167,7 @@ class MelodyTrack(
         val voiceNotes = Array(maxActive) { mutableListOf<NoteEvent>() }
         val currentNote = arrayOfNulls<NoteEvent>(maxActive)
         val currentStart = arrayOfNulls<Long>(maxActive)
+        val noteVoice = mutableMapOf<NoteEvent, Int>()
 
         for (i in 0 until eventTimes.size - 1) {
             val intervalStart = eventTimes[i]
@@ -174,15 +175,28 @@ class MelodyTrack(
             if (intervalStart == intervalEnd) continue
             val mid = (intervalStart + intervalEnd) / 2
 
-            val active = sorted
-                .filter { it.startTick <= mid && mid < it.endTick }
-                .sortedByDescending { it.noteNumber }
+            val active = sorted.filter { it.startTick <= mid && mid < it.endTick }
 
+            // Identify continuing notes (same NoteEvent on same voice) and new notes
+            val assignedVoices = mutableSetOf<Int>()
+            val unassignedNotes = mutableListOf<NoteEvent>()
+
+            for (note in active.sortedByDescending { it.noteNumber }) {
+                val existingVoice = noteVoice[note]
+                if (existingVoice != null && currentNote[existingVoice] === note) {
+                    assignedVoices.add(existingVoice)
+                } else {
+                    unassignedNotes.add(note)
+                }
+            }
+
+            val unassignedIter = unassignedNotes.iterator()
             for (v in 0 until maxActive) {
-                if (v < active.size) {
-                    val note = active[v]
+                if (v in assignedVoices) {
+                    // Note continues on this voice
+                } else if (unassignedIter.hasNext()) {
+                    val note = unassignedIter.next()
                     if (currentNote[v] !== note) {
-                        // Finalize previous note on this voice
                         val prev = currentNote[v]
                         val start = currentStart[v]
                         if (prev != null && start != null) {
@@ -193,9 +207,9 @@ class MelodyTrack(
                         }
                         currentNote[v] = note
                         currentStart[v] = intervalStart
+                        noteVoice[note] = v
                     }
                 } else {
-                    // Voice goes silent
                     val prev = currentNote[v]
                     val start = currentStart[v]
                     if (prev != null && start != null) {
