@@ -129,7 +129,7 @@ fun SettingsScreen(
                 Slider(
                     value = settings.silenceThresholdDb,
                     onValueChange = { viewModel.updateSilenceThreshold(it) },
-                    valueRange = -10f..-50f,
+                    valueRange = -50f..-10f,
                     steps = 39
                 )
             }
