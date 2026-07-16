@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <mutex>
+#include <vector>
 #include <android/log.h>
 
 #define TSF_IMPLEMENTATION
@@ -10,10 +11,67 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
+enum SynthCommandType {
+    CMD_NOTE_ON,
+    CMD_NOTE_OFF,
+    CMD_ALL_NOTES_OFF,
+    CMD_SET_CHANNEL_PRESET,
+    CMD_SET_CHANNEL_DRUM,
+};
+
+struct SynthCommand {
+    int type;
+    int channel;
+    int key;
+    float velocity;
+    int bank;
+    int preset;
+};
+
 struct SynthHandle {
     tsf* synth;
-    std::mutex mutex;
+    std::mutex tsf_mutex;
+    std::mutex queue_mutex;
+    std::vector<SynthCommand> command_queue;
 };
+
+static void execute_note_ons(SynthHandle* h, const std::vector<SynthCommand>& cmds) {
+    for (auto& cmd : cmds) {
+        if (cmd.type == CMD_NOTE_ON) {
+            if (!tsf_channel_note_on(h->synth, cmd.channel, cmd.key, cmd.velocity)) {
+                LOGE("CMD_NOTE_ON failed: channel=%d key=%d vel=%.2f", cmd.channel, cmd.key, cmd.velocity);
+            }
+        } else if (cmd.type == CMD_SET_CHANNEL_PRESET) {
+            tsf_channel_set_bank_preset(h->synth, cmd.channel, cmd.bank, cmd.preset);
+        } else if (cmd.type == CMD_SET_CHANNEL_DRUM) {
+            tsf_channel_set_presetnumber(h->synth, cmd.channel, 0, 1);
+        }
+    }
+}
+
+static void execute_note_offs(SynthHandle* h, const std::vector<SynthCommand>& cmds) {
+    for (auto& cmd : cmds) {
+        if (cmd.type == CMD_NOTE_OFF) {
+            tsf_channel_note_off(h->synth, cmd.channel, cmd.key);
+        } else if (cmd.type == CMD_ALL_NOTES_OFF) {
+            tsf_note_off_all(h->synth);
+            if (h->synth->channels) {
+                for (int ch = 0; ch < h->synth->channels->channelNum; ++ch) {
+                    tsf_channel_sounds_off_all(h->synth, ch);
+                    tsf_channel_note_off_all(h->synth, ch);
+                }
+            }
+        }
+    }
+}
+
+// Drain the command queue into a local vector (queue_mutex locked briefly)
+static std::vector<SynthCommand> drain_queue(SynthHandle* h) {
+    std::vector<SynthCommand> cmds;
+    std::lock_guard<std::mutex> lock(h->queue_mutex);
+    cmds.swap(h->command_queue);
+    return cmds;
+}
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeLoad(
@@ -55,12 +113,18 @@ Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeLoad(
 
 extern "C" JNIEXPORT void JNICALL
 Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeUnload(
-    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle)
+    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_)
 {
-    auto* h = reinterpret_cast<SynthHandle*>(handle);
+    auto* h = reinterpret_cast<SynthHandle*>(handle_);
     if (!h) return;
+
+    // Process any remaining queued commands before closing
     {
-        std::lock_guard<std::mutex> lock(h->mutex);
+        std::lock_guard<std::mutex> qlock(h->queue_mutex);
+        std::lock_guard<std::mutex> tlock(h->tsf_mutex);
+        execute_note_offs(h, h->command_queue);
+        execute_note_ons(h, h->command_queue);
+        h->command_queue.clear();
         tsf_close(h->synth);
     }
     delete h;
@@ -69,9 +133,9 @@ Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeUnload(
 
 extern "C" JNIEXPORT jint JNICALL
 Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeGetPresetIndex(
-    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle, jint bank, jint preset)
+    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_, jint bank, jint preset)
 {
-    auto* h = reinterpret_cast<SynthHandle*>(handle);
+    auto* h = reinterpret_cast<SynthHandle*>(handle_);
     if (!h) return -1;
     int idx = tsf_get_presetindex(h->synth, bank, preset);
     LOGD("nativeGetPresetIndex(bank=%d preset=%d) -> %d", bank, preset, idx);
@@ -80,126 +144,92 @@ Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeGetPresetIndex(
 
 extern "C" JNIEXPORT jint JNICALL
 Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeActiveVoiceCount(
-    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle)
+    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_)
 {
-    auto* h = reinterpret_cast<SynthHandle*>(handle);
+    auto* h = reinterpret_cast<SynthHandle*>(handle_);
     if (!h) return -1;
+    // NOTE: not thread-safe — for debugging only; synth state may change
+    // concurrently on the render thread
     return tsf_active_voice_count(h->synth);
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
-Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeNoteOnPreset(
-    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle, jint presetIndex, jint key, jfloat velocity)
-{
-    auto* h = reinterpret_cast<SynthHandle*>(handle);
-    if (!h) return JNI_FALSE;
-    if (presetIndex < 0) {
-        LOGE("nativeNoteOnPreset: invalid presetIndex=%d", presetIndex);
-        return JNI_FALSE;
-    }
-    std::lock_guard<std::mutex> lock(h->mutex);
-    int result = tsf_note_on(h->synth, presetIndex, key, velocity);
-    if (!result) {
-        LOGE("nativeNoteOnPreset failed: preset=%d key=%d vel=%.2f", presetIndex, key, velocity);
-    }
-    return result ? JNI_TRUE : JNI_FALSE;
-}
-
 extern "C" JNIEXPORT void JNICALL
-Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeNoteOffPreset(
-    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle, jint presetIndex, jint key)
-{
-    auto* h = reinterpret_cast<SynthHandle*>(handle);
-    if (!h) return;
-    if (presetIndex < 0) {
-        LOGE("nativeNoteOffPreset: invalid presetIndex=%d", presetIndex);
-        return;
-    }
-    std::lock_guard<std::mutex> lock(h->mutex);
-    tsf_note_off(h->synth, presetIndex, key);
-}
-
-extern "C" JNIEXPORT jboolean JNICALL
 Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeChannelNoteOn(
-    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle, jint channel, jint key, jfloat velocity)
+    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_, jint channel, jint key, jfloat velocity)
 {
-    auto* h = reinterpret_cast<SynthHandle*>(handle);
-    if (!h) return JNI_FALSE;
-    std::lock_guard<std::mutex> lock(h->mutex);
-    int result = tsf_channel_note_on(h->synth, channel, key, velocity);
-    LOGD("nativeChannelNoteOn(ch=%d key=%d vel=%.2f) -> %d  voices=%d",
-        channel, key, velocity, result, tsf_active_voice_count(h->synth));
-    if (!result) {
-        LOGE("nativeChannelNoteOn failed: channel=%d key=%d vel=%.2f", channel, key, velocity);
-    }
-    return result ? JNI_TRUE : JNI_FALSE;
+    auto* h = reinterpret_cast<SynthHandle*>(handle_);
+    if (!h) return;
+    std::lock_guard<std::mutex> lock(h->queue_mutex);
+    h->command_queue.push_back({CMD_NOTE_ON, channel, key, velocity, 0, 0});
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeChannelNoteOff(
-    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle, jint channel, jint key)
+    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_, jint channel, jint key)
 {
-    auto* h = reinterpret_cast<SynthHandle*>(handle);
+    auto* h = reinterpret_cast<SynthHandle*>(handle_);
     if (!h) return;
-    std::lock_guard<std::mutex> lock(h->mutex);
-    tsf_channel_note_off(h->synth, channel, key);
-}
-
-extern "C" JNIEXPORT jboolean JNICALL
-Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeSetChannelPreset(
-    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle, jint channel, jint bank, jint preset)
-{
-    auto* h = reinterpret_cast<SynthHandle*>(handle);
-    if (!h) return JNI_FALSE;
-    std::lock_guard<std::mutex> lock(h->mutex);
-    int result = tsf_channel_set_bank_preset(h->synth, channel, bank, preset);
-    if (!result) {
-        LOGE("nativeSetChannelPreset failed: ch=%d bank=%d preset=%d", channel, bank, preset);
-    }
-    return result ? JNI_TRUE : JNI_FALSE;
-}
-
-extern "C" JNIEXPORT jboolean JNICALL
-Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeSetChannelDrum(
-    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle, jint channel)
-{
-    auto* h = reinterpret_cast<SynthHandle*>(handle);
-    if (!h) return JNI_FALSE;
-    std::lock_guard<std::mutex> lock(h->mutex);
-    int result = tsf_channel_set_presetnumber(h->synth, channel, 0, 1);
-    if (!result) {
-        LOGE("nativeSetChannelDrum failed: channel=%d", channel);
-    }
-    return result ? JNI_TRUE : JNI_FALSE;
+    std::lock_guard<std::mutex> lock(h->queue_mutex);
+    h->command_queue.push_back({CMD_NOTE_OFF, channel, key, 0.0f, 0, 0});
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeAllNotesOff(
-    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle)
+    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_)
 {
-    auto* h = reinterpret_cast<SynthHandle*>(handle);
+    auto* h = reinterpret_cast<SynthHandle*>(handle_);
     if (!h) return;
-    std::lock_guard<std::mutex> lock(h->mutex);
-    tsf_note_off_all(h->synth);
-    if (h->synth->channels) {
-        for (int ch = 0; ch < h->synth->channels->channelNum; ++ch) {
-            tsf_channel_sounds_off_all(h->synth, ch);
-            tsf_channel_note_off_all(h->synth, ch);
-        }
-    }
+    std::lock_guard<std::mutex> lock(h->queue_mutex);
+    h->command_queue.push_back({CMD_ALL_NOTES_OFF, 0, 0, 0.0f, 0, 0});
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeSetChannelPreset(
+    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_, jint channel, jint bank, jint preset)
+{
+    auto* h = reinterpret_cast<SynthHandle*>(handle_);
+    if (!h) return JNI_FALSE;
+    std::lock_guard<std::mutex> lock(h->queue_mutex);
+    h->command_queue.push_back({CMD_SET_CHANNEL_PRESET, channel, 0, 0.0f, bank, preset});
+    return JNI_TRUE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeSetChannelDrum(
+    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_, jint channel)
+{
+    auto* h = reinterpret_cast<SynthHandle*>(handle_);
+    if (!h) return JNI_FALSE;
+    std::lock_guard<std::mutex> lock(h->queue_mutex);
+    h->command_queue.push_back({CMD_SET_CHANNEL_DRUM, channel, 0, 0.0f, 0, 0});
+    return JNI_TRUE;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeRender(
-    JNIEnv* env, jclass /*clazz*/, jlong handle, jshortArray buffer, jint samples)
+    JNIEnv* env, jclass /*clazz*/, jlong handle_, jshortArray buffer, jint samples)
 {
-    auto* h = reinterpret_cast<SynthHandle*>(handle);
+    auto* h = reinterpret_cast<SynthHandle*>(handle_);
     if (!h) return;
+
     jshort* buf = env->GetShortArrayElements(buffer, nullptr);
     if (!buf) return;
+
+    // Drain queue under queue_mutex first (lock ordering: queue before tsf,
+    // consistent with nativeUnload). A command queued between drain and
+    // the tsf lock will be picked up on the next render cycle (~11.6ms).
+    auto cmds = drain_queue(h);
+
     {
-        std::lock_guard<std::mutex> lock(h->mutex);
+        std::lock_guard<std::mutex> lock(h->tsf_mutex);
+        // Stop old notes before rendering — they fade during this cycle.
+        execute_note_offs(h, cmds);
         tsf_render_short(h->synth, buf, samples, 0);
+        // Start new notes after rendering — they first produce audio in
+        // the next cycle, creating a ~11.6ms gap between release and
+        // attack so repeated same-pitch notes sound as separate events.
+        execute_note_ons(h, cmds);
     }
+
     env->ReleaseShortArrayElements(buffer, buf, 0);
 }

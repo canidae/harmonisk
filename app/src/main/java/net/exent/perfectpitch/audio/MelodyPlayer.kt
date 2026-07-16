@@ -1,6 +1,7 @@
 package net.exent.perfectpitch.audio
 
 import net.exent.perfectpitch.midi.MelodyTrack
+import net.exent.perfectpitch.midi.NoteEvent
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +16,7 @@ class MelodyPlayer(
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
-    private val activeSynthNotes = mutableSetOf<Int>()
+    private val activeSynthNotes = mutableMapOf<Int, NoteEvent>()
     private var totalAudioDelayMs: Long = 0L
 
     /**
@@ -78,14 +79,17 @@ class MelodyPlayer(
      * Drives note-on/off from an external game clock.
      * Notes play at their natural song position — visual offset handles sync.
      * Handles multiple tracks polyphonically — each track is treated as a separate voice/channel.
+     * Tracks per-NoteEvent identity so that repeated same-pitch notes are properly
+     * released before re-attack even when both fall within a single frame.
      */
     fun updateGameTime(gameTimeSeconds: Double, tracks: List<MelodyTrack>) {
         if (!notePlayer.isReady) return
 
         val effectiveTime = gameTimeSeconds
 
-        // Collect all notes that should be active at the current time, keyed by compound key
-        val shouldBeActive = mutableSetOf<Int>()
+        // Collect all notes that should be active at the current time,
+        // keyed by compound key, tracking the originating NoteEvent.
+        val nextActive = mutableMapOf<Int, NoteEvent>()
         for (track in tracks) {
             val channel = track.channel
             for (note in track.notes) {
@@ -93,25 +97,32 @@ class MelodyPlayer(
                 val end = start + track.noteDurationSeconds(note)
                 if (effectiveTime >= start && effectiveTime < end) {
                     val key = noteKey(channel, note.noteNumber)
-                    if (key !in shouldBeActive) {
-                        shouldBeActive.add(key)
-                        if (key !in activeSynthNotes) {
-                            notePlayer.noteOn(channel, note.noteNumber, note.velocity.coerceIn(1, 127))
-                        }
+                    if (key !in nextActive) {
+                        nextActive[key] = note
                     }
                 }
             }
         }
 
-        // Turn off any previously-active notes that are no longer active
-        val toRemove = activeSynthNotes - shouldBeActive
-        for (key in toRemove) {
-            val channel = key shr 7
-            val noteNumber = key and 0x7F
-            notePlayer.noteOff(channel, noteNumber)
+        // Turn off any previously-active notes that are no longer active,
+        // or whose NoteEvent has changed (same key, different event — repeated note).
+        for ((key, currentNote) in activeSynthNotes) {
+            val nextNote = nextActive[key]
+            if (nextNote == null || nextNote !== currentNote) {
+                notePlayer.noteOff(key shr 7, key and 0x7F)
+            }
         }
-        activeSynthNotes.removeAll(toRemove)
-        activeSynthNotes.addAll(shouldBeActive)
+
+        // Turn on new notes, or re-attack notes whose NoteEvent changed.
+        for ((key, note) in nextActive) {
+            val currentNote = activeSynthNotes[key]
+            if (currentNote == null || currentNote !== note) {
+                notePlayer.noteOn(key shr 7, note.noteNumber, note.velocity.coerceIn(1, 127))
+            }
+        }
+
+        activeSynthNotes.clear()
+        activeSynthNotes.putAll(nextActive)
     }
 
     fun setTotalAudioDelay(delayMs: Long) {

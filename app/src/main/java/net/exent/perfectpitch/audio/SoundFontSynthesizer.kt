@@ -38,7 +38,7 @@ class SoundFontSynthesizer(
         @JvmStatic
         private external fun nativeChannelNoteOn(
             handle: Long, channel: Int, key: Int, velocity: Float
-        ): Boolean
+        )
         @JvmStatic
         private external fun nativeChannelNoteOff(
             handle: Long, channel: Int, key: Int
@@ -130,7 +130,6 @@ class SoundFontSynthesizer(
         if (vel <= 0f) return
         ensureChannels(h)
         nativeChannelNoteOn(h, channel, note, vel)
-        debugActiveVoices = nativeActiveVoiceCount(h)
     }
 
     override fun noteOff(channel: Int, note: Int) {
@@ -143,7 +142,6 @@ class SoundFontSynthesizer(
         val h = nativeHandle
         if (h == 0L) return
         nativeAllNotesOff(h)
-        debugActiveVoices = 0
     }
 
     fun close() {
