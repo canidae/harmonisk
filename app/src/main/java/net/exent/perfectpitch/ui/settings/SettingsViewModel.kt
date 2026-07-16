@@ -120,10 +120,14 @@ class SettingsViewModel @Inject constructor(
             val detectionChannel = Channel<Pair<Long, Float>>(Channel.UNLIMITED)
 
             val pitchJob = launch {
-                pitchProcessor.pitchFlow().collect { result ->
-                    if (result.isValid && result.frequency > 0f) {
-                        detectionChannel.trySend(System.currentTimeMillis() to result.frequency)
+                try {
+                    pitchProcessor.pitchFlow().collect { result ->
+                        if (result.isValid && result.frequency > 0f) {
+                            detectionChannel.trySend(System.currentTimeMillis() to result.frequency)
+                        }
                     }
+                } catch (_: SecurityException) {
+                    _calibrationNoDetection.value = true
                 }
             }
 

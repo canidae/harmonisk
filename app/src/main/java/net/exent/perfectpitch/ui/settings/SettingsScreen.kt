@@ -16,7 +16,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import android.content.pm.PackageManager
 import net.exent.perfectpitch.R
 import net.exent.perfectpitch.data.LocaleManager
 
@@ -33,6 +37,11 @@ fun SettingsScreen(
     var showEditAudioDialog by remember { mutableStateOf(false) }
     var editAudioText by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) viewModel.autoCalibrateAudioDelay()
+    }
 
     Scaffold(
         topBar = {
@@ -216,7 +225,13 @@ fun SettingsScreen(
                         enabled = !isCalibrating
                     ) { Text(stringResource(R.string.edit)) }
                     Button(
-                        onClick = { viewModel.autoCalibrateAudioDelay() }
+                        onClick = {
+                            if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                viewModel.autoCalibrateAudioDelay()
+                            } else {
+                                permissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                            }
+                        }
                     ) { Text(if (isCalibrating) stringResource(R.string.settings_calibrating_stop) else stringResource(R.string.settings_auto_calibrate)) }
                 }
 
