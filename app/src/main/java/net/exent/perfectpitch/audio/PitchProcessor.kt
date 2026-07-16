@@ -2,6 +2,7 @@ package net.exent.perfectpitch.audio
 
 import net.exent.perfectpitch.music.NoteUtils
 import net.exent.perfectpitch.music.PitchResult
+import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 
@@ -25,7 +26,7 @@ class PitchProcessor(
          * On onset the sliding window is cleared so the very first CREPE inference
          * reflects only the new note's signal — reduces transition ambiguity.
          */
-        private const val ONSET_DB_THRESHOLD = 8f
+        private const val ONSET_DB_THRESHOLD = 3f
 
         /**
          * After this many milliseconds of consecutive silence, the prior-note frequency
@@ -64,7 +65,7 @@ class PitchProcessor(
                 val prevDb = AudioUtils.linearToDb(prevChunkRms)
                 val currDb = AudioUtils.linearToDb(chunkRms)
                 val isOnset = currDb > (silenceThresholdDb + 6f) &&
-                        (currDb - prevDb) > ONSET_DB_THRESHOLD
+                        abs(currDb - prevDb) > ONSET_DB_THRESHOLD
                 prevChunkRms = chunkRms
 
                 if (isOnset) {
