@@ -103,6 +103,8 @@ dependencies {
 
     // Sheet music rendering
     implementation("net.alphatab:alphaTab:1.6.1")
+    // Force 16 KB aligned alphaSkia, otherwise libalphaskiajni.so has p_align 4096
+    implementation("net.alphatab:alphaSkia-android:3.5.147")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
