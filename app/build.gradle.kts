@@ -101,6 +101,9 @@ dependencies {
     // Celebration — Konfetti particle physics
     implementation("nl.dionsegijn:konfetti-compose:2.0.5")
 
+    // Sheet music rendering
+    implementation("net.alphatab:alphaTab:1.6.1")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("io.mockk:mockk:1.14.11")

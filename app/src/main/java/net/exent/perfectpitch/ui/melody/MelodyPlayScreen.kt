@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.perfectpitch.R
+import net.exent.perfectpitch.midi.MidiToAlphaTex
 import net.exent.perfectpitch.ui.components.CanvasMode
 import net.exent.perfectpitch.ui.components.VOICE_COLORS
 import net.exent.perfectpitch.ui.components.KeepScreenOn
@@ -271,32 +272,48 @@ fun MelodyPlayScreen(
                     )
                 }
 
-                // ── Canvas area ──────────────────────────────────────────
-                Box(
+                // ── Sheet music strip / play canvas ──
+                Column(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .pointerInput(Unit) {
-                            detectTransformGestures { _, pan, zoom, _ ->
-                                if (zoom != 1f) viewModel.onVerticalZoom(zoom)
-                                if (pan.y != 0f) {
-                                    val secondsPerPx = 1.0 / (viewState.fallSpeedPxPerSec * density.density)
-                                    viewModel.onVerticalScroll(pan.y * secondsPerPx)
-                                }
-                            }
-                        }
-                        .pointerInput(gameState.phase) {
-                            detectTapGestures {
-                                val phase = gameState.phase
-                                if (phase == PlayPhase.PLAYING || phase == PlayPhase.WAITING_FOR_NOTE) {
-                                    viewModel.pause()
-                                }
-                            }
-                        }
                 ) {
                     val track = gameState.melodyTrack
 
                     if (track != null) {
+                        val alphaTex = remember(track) { MidiToAlphaTex.generate(track) }
+                        SheetMusicView(
+                            alphaTex = alphaTex,
+                            currentTimeSeconds = gameState.currentTimeSeconds - maxOf(0, audioDelay - visualDelay) / 1000.0,
+                            isPlaying = gameState.phase == PlayPhase.PLAYING,
+                            modifier = Modifier.fillMaxWidth().height(205.dp)
+                        )
+                    }
+
+                    // ── Play canvas ──────────────────────────────────────
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .pointerInput(Unit) {
+                                detectTransformGestures { _, pan, zoom, _ ->
+                                    if (zoom != 1f) viewModel.onVerticalZoom(zoom)
+                                    if (pan.y != 0f) {
+                                        val secondsPerPx = 1.0 / (viewState.fallSpeedPxPerSec * density.density)
+                                        viewModel.onVerticalScroll(pan.y * secondsPerPx)
+                                    }
+                                }
+                            }
+                            .pointerInput(gameState.phase) {
+                                detectTapGestures {
+                                    val phase = gameState.phase
+                                    if (phase == PlayPhase.PLAYING || phase == PlayPhase.WAITING_FOR_NOTE) {
+                                        viewModel.pause()
+                                    }
+                                }
+                            }
+                    ) {
+                        if (track != null) {
                         SharedNoteCanvas(
                             mode = CanvasMode.Melody(
                                 melodyTrack = track,
@@ -389,6 +406,7 @@ fun MelodyPlayScreen(
                                 Button(onClick = onBack) { Text(stringResource(R.string.melody_play_go_back)) }
                             }
                         }
+                    }
                     }
                 }
             }
