@@ -36,7 +36,7 @@
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_concert_pitch">Concert Pitch</string>
-    <string name="settings_concert_pitch_value">A4 = %1$.1f Hz</string>
+    <string name="settings_concert_pitch_value">%1$.0f Hz</string>
     <string name="settings_concert_pitch_min">420 Hz</string>
     <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">Microphone Sensitivity</string>
