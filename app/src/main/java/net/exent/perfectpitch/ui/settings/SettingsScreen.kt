@@ -129,18 +129,35 @@ fun SettingsScreen(
                 }
             }
 
-            // Microphone sensitivity
+            // Microphone sensitivity (inverted: leftmost is least sensitive, rightmost most sensitive)
             SettingSection(title = stringResource(R.string.settings_mic_sensitivity)) {
-                Text(
-                    text = stringResource(R.string.settings_silence_threshold, settings.silenceThresholdDb),
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                // Slider position maps inversely to the stored threshold: -10 dB at the left,
+                // -50 dB at the right, so moving right detects fainter sounds.
+                val sliderValue = (-60f - settings.silenceThresholdDb).coerceIn(-50f, -10f)
                 Slider(
-                    value = settings.silenceThresholdDb,
-                    onValueChange = { viewModel.updateSilenceThreshold(it) },
+                    value = sliderValue,
+                    onValueChange = { viewModel.updateSilenceThreshold(-60f - it) },
                     valueRange = -50f..-10f,
-                    steps = 39
+                    steps = 39,
+                    modifier = Modifier.fillMaxWidth()
                 )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(R.string.settings_silence_threshold_min),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.align(Alignment.CenterStart)
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_silence_threshold_max),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_silence_threshold, settings.silenceThresholdDb),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
             }
 
             // Language

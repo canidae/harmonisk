@@ -40,7 +40,9 @@
     <string name="settings_concert_pitch_min">420 Hz</string>
     <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">Microphone Sensitivity</string>
-    <string name="settings_silence_threshold">Silence threshold: %1$.0f dB</string>
+    <string name="settings_silence_threshold">%1$.0f dB</string>
+    <string name="settings_silence_threshold_min">Less sensitive</string>
+    <string name="settings_silence_threshold_max">More sensitive</string>
     <string name="settings_audio_visual_delay">Audio/Visual Delay</string>
     <string name="settings_in_out">In/Out: %1$s / %2$s</string>
     <string name="settings_audio_delay">Audio delay: %1$dms</string>
