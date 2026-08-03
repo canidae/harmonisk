@@ -967,6 +967,9 @@ class MelodyViewModel @Inject constructor(
             // Finalize previous note if it wasn't scored
             finalizePreviousNote()
 
+            // Remember the previous note index before it is overwritten below
+            val prevNoteIdx = _gameState.value.currentNoteIndex
+
             // New note entered
             val results = _gameState.value.noteResults.toMutableMap()
             results[noteIndex] = NoteResultState.ACTIVE
@@ -975,7 +978,6 @@ class MelodyViewModel @Inject constructor(
             noteTracking.resetForNewNote()
 
             // Detect if the user held through a same-pitch transition
-            val prevNoteIdx = _gameState.value.currentNoteIndex
             if (prevNoteIdx >= 0 && prevNoteIdx < track.notes.size) {
                 val prevNote = track.notes[prevNoteIdx]
                 val newNote = track.notes[noteIndex]
