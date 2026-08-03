@@ -25,8 +25,13 @@ class PitchProcessor(
          * Energy rise (in dB) within one chunk that triggers an onset reset.
          * On onset the sliding window is cleared so the very first CREPE inference
          * reflects only the new note's signal — reduces transition ambiguity.
+         * The onset condition must persist for ONSET_DEBOUNCE_CHUNKS consecutive
+         * chunks to filter single-chunk amplitude modulation blips. 5 dB with a
+         * debounce of 2 beats both 3 dB (constant false resets, window starvation)
+         * and 8 dB (misses gradual onsets) on real instrument recordings.
          */
-        private const val ONSET_DB_THRESHOLD = 3f
+        private const val ONSET_DB_THRESHOLD = 5f
+        private const val ONSET_DEBOUNCE_CHUNKS = 2
 
         /**
          * After this many milliseconds of consecutive silence, the prior-note frequency
@@ -57,6 +62,7 @@ class PitchProcessor(
         val slidingWindow = FloatArray(ANALYSIS_WINDOW_SIZE)
         var windowFilled = 0
         var prevChunkRms = 0f
+        var onsetStreak = 0
 
         return audioCaptureService.audioFlow()
             .map { chunk ->
@@ -64,11 +70,14 @@ class PitchProcessor(
                 val chunkRms = AudioUtils.rms(chunk)
                 val prevDb = AudioUtils.linearToDb(prevChunkRms)
                 val currDb = AudioUtils.linearToDb(chunkRms)
-                val isOnset = currDb > (silenceThresholdDb + 6f) &&
+                val qualifies = currDb > (silenceThresholdDb + 6f) &&
                         abs(currDb - prevDb) > ONSET_DB_THRESHOLD
                 prevChunkRms = chunkRms
+                onsetStreak = if (qualifies) onsetStreak + 1 else 0
+                val isOnset = onsetStreak >= ONSET_DEBOUNCE_CHUNKS
 
                 if (isOnset) {
+                    onsetStreak = 0
                     slidingWindow.fill(0f)
                     System.arraycopy(chunk, 0, slidingWindow, 0, chunkSize)
                     windowFilled = chunkSize
