@@ -41,7 +41,6 @@
     <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">マイク感度</string>
     <string name="settings_silence_threshold">無音しきい値：%1$.0f dB</string>
-    <string name="settings_audio_visual_delay">音声/視覚遅延</string>
     <string name="settings_in_out">入力/出力：%1$s / %2$s</string>
     <string name="settings_audio_delay">音声遅延：%1$d ms</string>
     <string name="settings_edit_audio_delay">音声遅延を編集</string>

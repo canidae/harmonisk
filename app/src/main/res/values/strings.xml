@@ -43,7 +43,8 @@
     <string name="settings_silence_threshold">%1$.0f dB</string>
     <string name="settings_silence_threshold_min">Less sensitive</string>
     <string name="settings_silence_threshold_max">More sensitive</string>
-    <string name="settings_audio_visual_delay">Audio/Visual Delay</string>
+    <string name="settings_audio_delay_title">Audio Delay</string>
+    <string name="settings_visual_delay_title">Visual Delay</string>
     <string name="settings_in_out">In/Out: %1$s / %2$s</string>
     <string name="settings_audio_delay">Audio delay: %1$dms</string>
     <string name="settings_edit_audio_delay">Edit Audio Delay</string>
@@ -52,7 +53,7 @@
     <string name="settings_calibrating_stop">Stop</string>
     <string name="settings_no_detection">Microphone can\'t detect any tones</string>
     <string name="settings_calibrating">Calibrating\u2026 %1$d/5 tones detected</string>
-    <string name="settings_visual_delay">Visual delay: %1$dms</string>
+    <string name="settings_visual_delay">%1$dms</string>
     <string name="settings_visual_delay_min">0ms</string>
     <string name="settings_visual_delay_max">200ms</string>
     <string name="settings_reset_dialog_title">Reset to defaults?</string>

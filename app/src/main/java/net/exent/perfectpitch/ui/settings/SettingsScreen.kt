@@ -215,12 +215,11 @@ fun SettingsScreen(
                 }
             }
 
-            // Audio/Visual delay
-            SettingSection(title = stringResource(R.string.settings_audio_visual_delay)) {
+            // Audio delay
+            SettingSection(title = stringResource(R.string.settings_audio_delay_title)) {
                 val device by viewModel.currentDevice.collectAsState()
                 val inputDevice by viewModel.currentInputDevice.collectAsState()
                 val audioDelay by viewModel.activeAudioDelay.collectAsState()
-                val visualDelay by viewModel.activeVisualDelay.collectAsState()
 
                 val inName = inputDevice?.name ?: context.getString(R.string.microphone)
                 val outName = device?.name ?: context.getString(R.string.speaker)
@@ -276,13 +275,11 @@ fun SettingsScreen(
                         )
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = stringResource(R.string.settings_visual_delay, visualDelay),
-                    style = MaterialTheme.typography.bodyLarge
-                )
+            // Visual delay
+            SettingSection(title = stringResource(R.string.settings_visual_delay_title)) {
+                val visualDelay by viewModel.activeVisualDelay.collectAsState()
                 Slider(
                     value = visualDelay.toFloat(),
                     onValueChange = { viewModel.setVisualDelay(it.toInt()) },
@@ -290,12 +287,22 @@ fun SettingsScreen(
                     steps = 19,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(stringResource(R.string.settings_visual_delay_min), style = MaterialTheme.typography.labelSmall)
-                    Text(stringResource(R.string.settings_visual_delay_max), style = MaterialTheme.typography.labelSmall)
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        stringResource(R.string.settings_visual_delay_min),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.align(Alignment.CenterStart)
+                    )
+                    Text(
+                        stringResource(R.string.settings_visual_delay_max),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_visual_delay, visualDelay),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
                 }
             }
 

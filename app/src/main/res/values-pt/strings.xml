@@ -41,7 +41,6 @@
     <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">Sensibilidade do microfone</string>
     <string name="settings_silence_threshold">Limiar de silêncio: %1$.0f dB</string>
-    <string name="settings_audio_visual_delay">Atraso áudio/visual</string>
     <string name="settings_in_out">Entrada/Saída: %1$s / %2$s</string>
     <string name="settings_audio_delay">Atraso de áudio: %1$d ms</string>
     <string name="settings_edit_audio_delay">Editar atraso de áudio</string>
