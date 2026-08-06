@@ -119,6 +119,9 @@ class MelodyViewModel @Inject constructor(
     private var originalVoiceInfos: List<VoiceInfo> = emptyList()
     private var currentMelodyId: String? = null
 
+    private val _currentInstrument = MutableStateFlow("PIANO")
+    private val currentInstrumentFlow: StateFlow<String> = _currentInstrument.asStateFlow()
+
     // Melody audio output delay
     private var synthOpenJob: Job? = null
     // Total round-trip audio delay (output + input), from calibration
@@ -136,6 +139,22 @@ class MelodyViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.settings.first().let { settings ->
                 _gameState.update { it.copy(metronomeEnabled = settings.melodyMetronomeEnabled) }
+            }
+        }
+        // Observe instrument setting and apply to synthesizer
+        viewModelScope.launch {
+            settingsRepository.settings.collect { settings ->
+                val newInstrument = settings.instrumentName
+                val prevInstrument = _currentInstrument.value
+                _currentInstrument.value = newInstrument
+                val instrument = Instrument.fromName(newInstrument)
+                if (newInstrument != prevInstrument && soundFontSynthesizer.isReady) {
+                    soundFontSynthesizer.setInstrument(instrument.midiBank, instrument.midiProgram)
+                }
+                val melodyId = currentMelodyId
+                if (melodyId != null) {
+                    loadMelodySettingsAndHistory(melodyId, newInstrument)
+                }
             }
         }
         // Observe per-device audio delay and update the melody player
@@ -227,26 +246,26 @@ class MelodyViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun loadAllMelodyCombinedScores() {
         viewModelScope.launch {
-            availableMelodies
-                .flatMapLatest { melodies ->
-                    if (melodies.isEmpty()) {
-                        flowOf(emptyMap())
-                    } else {
-                        val flows = melodies.map { info ->
-                            scoreHistoryRepository.getScores(info.id).map { scores ->
-                                info.id to ScoringEngine.computeCombinedScore(
-                                    scores.map { it.level to it.overallScore }
-                                )
-                            }
-                        }
-                        combine(flows) { pairs ->
-                            pairs.filter { it.second > 0f }.associate { it.first to it.second }
+            combine(availableMelodies, currentInstrumentFlow) { melodies, instrument ->
+                melodies to instrument
+            }.flatMapLatest { (melodies, instrument) ->
+                if (melodies.isEmpty()) {
+                    flowOf(emptyMap())
+                } else {
+                    val flows = melodies.map { info ->
+                        scoreHistoryRepository.getScores(info.id, instrument).map { scores ->
+                            info.id to ScoringEngine.computeCombinedScore(
+                                scores.map { it.level to it.overallScore }
+                            )
                         }
                     }
+                    combine(flows) { pairs ->
+                        pairs.filter { it.second > 0f }.associate { it.first to it.second }
+                    }
                 }
-                .collect { result ->
-                    _allMelodyCombinedScores.value = result
-                }
+            }.collect { result ->
+                _allMelodyCombinedScores.value = result
+            }
         }
     }
 
@@ -390,9 +409,9 @@ class MelodyViewModel @Inject constructor(
         return false
     }
 
-    private fun loadMelodySettingsAndHistory(melodyId: String) {
+    private fun loadMelodySettingsAndHistory(melodyId: String, instrument: String = _currentInstrument.value) {
         viewModelScope.launch {
-            melodySettingsRepository.getSettings(melodyId).first().let { saved ->
+            melodySettingsRepository.getSettings(melodyId, instrument).first().let { saved ->
                 val level = saved.level.coerceIn(1, 5)
                 val (wm, hnb) = levelToSettings(level)
                 val accompanimentMode = try {
@@ -422,7 +441,7 @@ class MelodyViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            scoreHistoryRepository.getScores(melodyId).collect { scores ->
+            scoreHistoryRepository.getScores(melodyId, instrument).collect { scores ->
                 _currentScoreHistory.value = scores
             }
         }
@@ -477,10 +496,11 @@ class MelodyViewModel @Inject constructor(
 
     private fun saveMelodySettings() {
         val id = currentMelodyId ?: return
+        val instrument = _currentInstrument.value
         val g = _gameState.value
         val v = _viewState.value
         viewModelScope.launch {
-            melodySettingsRepository.saveSettings(id, MelodySettingsRepository.MelodySettings(
+            melodySettingsRepository.saveSettings(id, instrument, MelodySettingsRepository.MelodySettings(
                 waitMode = g.waitMode,
                 transposeSemitones = g.transposeSemitones,
                 fallSpeedPxPerSec = v.fallSpeedPxPerSec,
@@ -501,6 +521,8 @@ class MelodyViewModel @Inject constructor(
         synthOpenJob = viewModelScope.launch {
             try {
                 soundFontSynthesizer.open()
+                val instrument = Instrument.fromName(_currentInstrument.value)
+                soundFontSynthesizer.setInstrument(instrument.midiBank, instrument.midiProgram)
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) Log.w(TAG, "Synth init failed", e)
             }
@@ -762,14 +784,14 @@ class MelodyViewModel @Inject constructor(
 
     fun resetScore(melodyId: String) {
         viewModelScope.launch {
-            scoreHistoryRepository.resetScores(melodyId)
+            scoreHistoryRepository.resetScores(melodyId, currentInstrumentFlow.value)
         }
     }
 
     fun removeImportedMelody(melodyId: String) {
         viewModelScope.launch {
             melodyRepository.removeImportedMelody(melodyId)
-            scoreHistoryRepository.resetScores(melodyId)
+            scoreHistoryRepository.resetAllScores(melodyId)
         }
     }
 
@@ -1277,6 +1299,7 @@ class MelodyViewModel @Inject constructor(
                     avgPitchScore = adjustedMelodyScore.avgPitchScore,
                     avgDurationScore = adjustedMelodyScore.avgDurationScore,
                     level = currentLevel,
+                    instrument = currentInstrumentFlow.value,
                     wrongNoteCount = adjustedMelodyScore.wrongNoteCount,
                     wrongNoteScore = adjustedMelodyScore.wrongNoteScore
                 ))

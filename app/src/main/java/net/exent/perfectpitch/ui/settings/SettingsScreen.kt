@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +24,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import android.content.pm.PackageManager
 import net.exent.perfectpitch.R
 import net.exent.perfectpitch.data.LocaleManager
+import net.exent.perfectpitch.music.Instrument
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -206,6 +208,66 @@ fun SettingsScreen(
                                         expanded = false
                                         if (lang.code != selected.code) {
                                             viewModel.updateLanguageCode(lang.code, context as android.app.Activity)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Instrument
+            SettingSection(title = stringResource(R.string.settings_instrument)) {
+                var expanded by remember { mutableStateOf(false) }
+                val instruments = remember { Instrument.entries }
+                val selected = Instrument.fromName(settings.instrumentName)
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.MusicNote,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedButton(
+                            onClick = { expanded = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text = stringResource(
+                                when (selected) {
+                                    Instrument.PIANO -> R.string.instrument_piano
+                                    Instrument.VIOLIN -> R.string.instrument_violin
+                                    Instrument.CELLO -> R.string.instrument_cello
+                                }
+                            ))
+                        }
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            modifier = Modifier.fillMaxWidth(0.8f)
+                        ) {
+                            instruments.forEach { instrument ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = stringResource(
+                                                when (instrument) {
+                                                    Instrument.PIANO -> R.string.instrument_piano
+                                                    Instrument.VIOLIN -> R.string.instrument_violin
+                                                    Instrument.CELLO -> R.string.instrument_cello
+                                                }
+                                            ),
+                                            fontWeight = if (instrument == selected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    },
+                                    onClick = {
+                                        expanded = false
+                                        if (instrument != selected) {
+                                            viewModel.updateInstrument(instrument.name)
                                         }
                                     }
                                 )

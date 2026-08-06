@@ -6,4 +6,5 @@ interface NotePlayer {
     fun noteOn(channel: Int, note: Int, velocity: Int)
     fun noteOff(channel: Int, note: Int)
     fun allNotesOff()
+    fun setInstrument(bank: Int, program: Int) {}
 }

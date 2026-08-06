@@ -33,12 +33,15 @@ class ScoreHistoryRepository(
         val avgPitchScore: Float,
         val avgDurationScore: Float,
         val level: Int = 1,
+        val instrument: String = "PIANO",
         val wrongNoteCount: Int = 0,
         val wrongNoteScore: Float = 100f
     )
 
-    fun getScores(melodyId: String): Flow<List<ScoreEntry>> {
-        return store.flow.map { it[melodyId] ?: emptyList() }
+    fun getScores(melodyId: String, instrument: String): Flow<List<ScoreEntry>> {
+        return store.flow.map {
+            (it[melodyId] ?: emptyList()).filter { entry -> entry.instrument == instrument }
+        }
     }
 
     suspend fun saveScore(melodyId: String, entry: ScoreEntry) {
@@ -49,7 +52,13 @@ class ScoreHistoryRepository(
         }
     }
 
-    suspend fun resetScores(melodyId: String) {
+    suspend fun resetScores(melodyId: String, instrument: String) {
+        store.update(melodyId) { existing ->
+            existing?.filter { it.instrument != instrument } ?: emptyList()
+        }
+    }
+
+    suspend fun resetAllScores(melodyId: String) {
         store.remove(melodyId)
     }
 }

@@ -24,6 +24,7 @@ class SettingsRepository(
         private val FREEPLAY_METRONOME_ENABLED = booleanPreferencesKey("freeplay_metronome_enabled")
         private val MELODY_METRONOME_ENABLED = booleanPreferencesKey("melody_metronome_enabled")
         private val LANGUAGE_CODE = stringPreferencesKey("language_code")
+        private val INSTRUMENT_NAME = stringPreferencesKey("instrument_name")
 
         private const val PREFS_NAME = "locale_prefs"
         private const val KEY_LANGUAGE = "language_code"
@@ -46,7 +47,8 @@ class SettingsRepository(
             freeplaySnapEnabled = prefs[FREEPLAY_SNAP_ENABLED] ?: true,
             freeplayMetronomeEnabled = prefs[FREEPLAY_METRONOME_ENABLED] ?: false,
             melodyMetronomeEnabled = prefs[MELODY_METRONOME_ENABLED] ?: false,
-            languageCode = prefs[LANGUAGE_CODE] ?: "system"
+            languageCode = prefs[LANGUAGE_CODE] ?: "system",
+            instrumentName = prefs[INSTRUMENT_NAME] ?: "PIANO"
         )
     }
 
@@ -86,6 +88,10 @@ class SettingsRepository(
         context.dataStore.edit { it[MELODY_METRONOME_ENABLED] = enabled }
     }
 
+    suspend fun updateInstrument(name: String) {
+        context.dataStore.edit { it[INSTRUMENT_NAME] = name }
+    }
+
     suspend fun updateLanguageCode(code: String) {
         context.dataStore.edit { it[LANGUAGE_CODE] = code }
         sharedPrefs.edit().putString(KEY_LANGUAGE, code).apply()
@@ -107,5 +113,6 @@ data class AppSettings(
     val freeplaySnapEnabled: Boolean = true,
     val freeplayMetronomeEnabled: Boolean = false,
     val melodyMetronomeEnabled: Boolean = false,
-    val languageCode: String = "system"
+    val languageCode: String = "system",
+    val instrumentName: String = "PIANO"
 )

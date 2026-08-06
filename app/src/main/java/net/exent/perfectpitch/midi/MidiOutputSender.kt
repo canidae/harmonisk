@@ -78,6 +78,16 @@ class MidiOutputSender(
         try { port.send(buf, 0, 3) } catch (_: Exception) {}
     }
 
+    override fun setInstrument(bank: Int, program: Int) = withPort { port ->
+        for (ch in 0..15) {
+            if (ch == 9) continue
+            val buf = ByteArray(2)
+            buf[0] = (0xC0 or ch).toByte()
+            buf[1] = program.toByte()
+            try { port.send(buf, 0, 2) } catch (_: Exception) {}
+        }
+    }
+
     override fun allNotesOff() = withPort { port ->
         val buf = ByteArray(3)
         for (ch in 0..15) {

@@ -61,6 +61,9 @@ class SoundFontSynthesizer(
     @Volatile
     private var channelsInitialized = false
 
+    private var currentBank: Int = 0
+    private var currentProgram: Int = 0
+
     private val renderThread = AudioRenderThread(
         threadName = "SoundFontRenderThread",
         contentType = AudioAttributes.CONTENT_TYPE_MUSIC,
@@ -112,14 +115,25 @@ class SoundFontSynthesizer(
     private fun ensureChannels(handle: Long) {
         if (channelsInitialized) return
         channelsInitialized = true
-        Log.d(TAG, "Initializing 16 MIDI channels (ch 9=drum, rest=piano)")
+        Log.d(TAG, "Initializing 16 MIDI channels (ch 9=drum, rest=current instrument)")
         for (ch in 0 until 16) {
             val ok = if (ch == DRUM_CHANNEL) {
                 nativeSetChannelDrum(handle, ch)
             } else {
-                nativeSetChannelPreset(handle, ch, 0, 0)
+                nativeSetChannelPreset(handle, ch, currentBank, currentProgram)
             }
             if (!ok) Log.w(TAG, "Channel $ch init failed")
+        }
+    }
+
+    override fun setInstrument(bank: Int, program: Int) {
+        currentBank = bank
+        currentProgram = program
+        val h = nativeHandle
+        if (h == 0L) return
+        for (ch in 0 until 16) {
+            if (ch == DRUM_CHANNEL) continue
+            nativeSetChannelPreset(h, ch, bank, program)
         }
     }
 

@@ -16,6 +16,7 @@ import net.exent.perfectpitch.audio.SoundFontSynthesizer
 import net.exent.perfectpitch.data.AppSettings
 import net.exent.perfectpitch.data.AudioDelayRepository
 import net.exent.perfectpitch.data.SettingsRepository
+import net.exent.perfectpitch.music.Instrument
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.math.abs
@@ -78,6 +79,14 @@ class SettingsViewModel @Inject constructor(
 
     fun updateSilenceThreshold(db: Float) {
         viewModelScope.launch { settingsRepository.updateSilenceThreshold(db) }
+    }
+
+    fun updateInstrument(name: String) {
+        viewModelScope.launch {
+            val instrument = Instrument.fromName(name)
+            soundFontSynthesizer.setInstrument(instrument.midiBank, instrument.midiProgram)
+            settingsRepository.updateInstrument(name)
+        }
     }
 
     fun setAudioDelay(ms: Int) {

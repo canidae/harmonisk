@@ -30,11 +30,13 @@ class MelodySettingsRepository(
         keyName = "melody_settings_json"
     )
 
-    fun getSettings(melodyId: String): Flow<MelodySettings> {
-        return store.flow.map { it[melodyId] ?: MelodySettings() }
+    fun getSettings(melodyId: String, instrument: String): Flow<MelodySettings> {
+        val key = "${melodyId}:${instrument}"
+        return store.flow.map { it[key] ?: MelodySettings() }
     }
 
-    suspend fun saveSettings(melodyId: String, settings: MelodySettings) {
-        store.set(melodyId, settings)
+    suspend fun saveSettings(melodyId: String, instrument: String, settings: MelodySettings) {
+        val key = "${melodyId}:${instrument}"
+        store.set(key, settings)
     }
 }

@@ -61,6 +61,10 @@
     <string name="settings_reset">Reset</string>
     <string name="settings_reset_to_defaults">Reset to defaults</string>
     <string name="settings_language">Language</string>
+    <string name="settings_instrument">Instrument</string>
+    <string name="instrument_piano">Piano</string>
+    <string name="instrument_violin">Violin</string>
+    <string name="instrument_cello">Cello</string>
 
     <!-- Free Play -->
     <string name="freeplay_mic">Mic</string>
