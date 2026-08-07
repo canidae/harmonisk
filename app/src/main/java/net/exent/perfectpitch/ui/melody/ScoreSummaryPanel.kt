@@ -26,12 +26,12 @@ fun ScoreSummaryPanel(
         if (currentLevel > 1) {
             BreakdownRow(stringResource(R.string.score_pitch_accuracy), breakdown.avgPitchScore)
         }
-        BreakdownRow(stringResource(R.string.score_duration_accuracy), breakdown.avgDurationScore)
+        BreakdownRow(stringResource(R.string.score_note_duration), breakdown.avgDurationScore)
         if (currentLevel <= 3) {
-            BreakdownRow(stringResource(R.string.score_time_accuracy), breakdown.timeScore * 100f)
+            BreakdownRow(stringResource(R.string.score_song_duration), breakdown.timeScore * 100f)
         }
         if (currentLevel >= 3) {
-            BreakdownRow(stringResource(R.string.score_note_accuracy), score.wrongNoteScore)
+            BreakdownRow(stringResource(R.string.score_correct_notes), score.wrongNoteScore)
         }
     }
 }

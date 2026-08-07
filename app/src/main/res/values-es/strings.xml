@@ -157,12 +157,12 @@
     <string name="level_2_change">En el nivel 2 la precisión del tono contará para tu puntuación</string>
     <string name="level_3_change">En el nivel 3 las notas incorrectas penalizarán tu puntuación</string>
     <string name="level_4_change">En el nivel 4 el juego no esperará a que toques la nota</string>
-    <string name="level_5_change">En el nivel 5 las barras de notas descendentes no se mostrarán</string>
+    <string name="level_5_change">En el nivel 5 las barras de notas no se mostrarán</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Precisión del tono</string>
-    <string name="score_duration_accuracy">Precisión de la duración</string>
-    <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_duration">Precisión de la duración</string>
+    <string name="score_song_duration">Song duration</string>
     <string name="score_progress">Progreso</string>
 
     <!-- Note divisions -->

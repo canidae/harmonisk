@@ -157,12 +157,12 @@
     <string name="level_2_change">레벨 2에서 음정 정확도가 점수에 반영됩니다</string>
     <string name="level_3_change">레벨 3에서 틀린 음표는 점수에 패널티를 줍니다</string>
     <string name="level_4_change">레벨 4에서 게임이 음표 연주를 기다리지 않습니다</string>
-    <string name="level_5_change">레벨 5에서 떨어지는 음표 막대가 표시되지 않습니다</string>
+    <string name="level_5_change">레벨 5에서 음표 막대가 표시되지 않습니다</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">음정 정확도</string>
-    <string name="score_duration_accuracy">길이 정확도</string>
-    <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_duration">길이 정확도</string>
+    <string name="score_song_duration">Song duration</string>
     <string name="score_progress">진행률</string>
 
     <!-- Note divisions -->

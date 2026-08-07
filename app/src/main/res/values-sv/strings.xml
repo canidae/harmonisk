@@ -157,12 +157,12 @@
     <string name="level_2_change">På nivå 2 kommer tonhöjdsnoggrannhet att räknas mot din poäng</string>
     <string name="level_3_change">På nivå 3 kommer felaktiga noter att straffa din poäng</string>
     <string name="level_4_change">På nivå 4 väntar spelet inte på att du spelar noten</string>
-    <string name="level_5_change">På nivå 5 visas inte de fallande notstaplarna</string>
+    <string name="level_5_change">På nivå 5 visas inte notstaplarna</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Tonhöjdsnoggrannhet</string>
-    <string name="score_duration_accuracy">Varaktighetsnoggrannhet</string>
-    <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_duration">Varaktighetsnoggrannhet</string>
+    <string name="score_song_duration">Song duration</string>
     <string name="score_progress">Framsteg</string>
 
     <!-- Note divisions -->

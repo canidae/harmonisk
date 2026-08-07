@@ -157,12 +157,12 @@
     <string name="level_2_change">স্তর 2-এ পিচ নির্ভুলতা আপনার স্কোরে গণনা করবে</string>
     <string name="level_3_change">স্তর 3-এ ভুল নোট আপনার স্কোর কমিয়ে দেবে</string>
     <string name="level_4_change">স্তর 4-এ গেমটি আপনার নোট বাজানোর অপেক্ষা করবে না</string>
-    <string name="level_5_change">স্তর 5-এ পতনশীল নোট বারগুলি দেখানো হবে না</string>
+    <string name="level_5_change">স্তর 5-এ নোট বারগুলি দেখানো হবে না</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">পিচ নির্ভুলতা</string>
-    <string name="score_duration_accuracy">সময় নির্ভুলতা</string>
-    <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_duration">সময় নির্ভুলতা</string>
+    <string name="score_song_duration">Song duration</string>
     <string name="score_progress">অগ্রগতি</string>
 
     <!-- Note divisions -->

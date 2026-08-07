@@ -157,12 +157,12 @@
     <string name="level_2_change">Auf Stufe 2 zählt die Tonhöhengenauigkeit zur Punktzahl</string>
     <string name="level_3_change">Auf Stufe 3 bestrafen falsche Noten die Punktzahl</string>
     <string name="level_4_change">Auf Stufe 4 wartet das Spiel nicht auf Ihre Note</string>
-    <string name="level_5_change">Auf Stufe 5 werden die fallenden Notenbalken nicht angezeigt</string>
+    <string name="level_5_change">Auf Stufe 5 werden die Notenbalken nicht angezeigt</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Tonhöhengenauigkeit</string>
-    <string name="score_duration_accuracy">Dauergenauigkeit</string>
-    <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_duration">Dauergenauigkeit</string>
+    <string name="score_song_duration">Song duration</string>
     <string name="score_progress">Fortschritt</string>
 
     <!-- Note divisions -->

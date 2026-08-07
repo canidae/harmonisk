@@ -157,12 +157,12 @@
     <string name="level_2_change">På nivå 2 vil tonehøyde-nøyaktighet telle mot poengsummen</string>
     <string name="level_3_change">På nivå 3 vil feil noter straffe poengsummen</string>
     <string name="level_4_change">På nivå 4 vil spillet ikke vente på at du spiller noten</string>
-    <string name="level_5_change">På nivå 5 vil de fallende note-stolpene ikke vises</string>
+    <string name="level_5_change">På nivå 5 vil note-stolpene ikke vises</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Tonehøydenøyaktighet</string>
-    <string name="score_duration_accuracy">Varighetsnøyaktighet</string>
-    <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_duration">Varighetsnøyaktighet</string>
+    <string name="score_song_duration">Song duration</string>
     <string name="score_progress">Fremgang</string>
 
     <!-- Note divisions -->

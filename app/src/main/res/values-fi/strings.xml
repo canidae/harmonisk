@@ -157,12 +157,12 @@
     <string name="level_2_change">Tasolla 2 sävelkorkeuden tarkkuus vaikuttaa pisteisiisi</string>
     <string name="level_3_change">Tasolla 3 vääristä nuoteista vähennetään pisteitä</string>
     <string name="level_4_change">Tasolla 4 peli ei odota nuottisi soittamista</string>
-    <string name="level_5_change">Tasolla 5 putoavia nuottipalkkeja ei näytetä</string>
+    <string name="level_5_change">Tasolla 5 nuottipalkkeja ei näytetä</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Sävelkorkeuden tarkkuus</string>
-    <string name="score_duration_accuracy">Keston tarkkuus</string>
-    <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_duration">Keston tarkkuus</string>
+    <string name="score_song_duration">Song duration</string>
     <string name="score_progress">Edistyminen</string>
 
     <!-- Note divisions -->

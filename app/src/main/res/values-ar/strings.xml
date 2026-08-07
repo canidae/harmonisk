@@ -157,12 +157,12 @@
     <string name="level_2_change">في المستوى 2، دقة الحدة ستُحتسب في نتيجتك</string>
     <string name="level_3_change">في المستوى 3، النغمات الخاطئة ستخصم من نتيجتك</string>
     <string name="level_4_change">في المستوى 4، اللعبة لن تنتظر منك عزف النغمة</string>
-    <string name="level_5_change">في المستوى 5، أشرطة النغمات المتساقطة لن تُعرض</string>
+    <string name="level_5_change">في المستوى 5، أشرطة النغمات لن تُعرض</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">دقة الحدة</string>
-    <string name="score_duration_accuracy">دقة المدة</string>
-    <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_duration">دقة المدة</string>
+    <string name="score_song_duration">Song duration</string>
     <string name="score_progress">التقدم</string>
 
     <!-- Note divisions -->

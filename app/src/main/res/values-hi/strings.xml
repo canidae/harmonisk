@@ -157,12 +157,12 @@
     <string name="level_2_change">स्तर 2 पर पिच सटीकता आपके स्कोर में गिना जाएगा</string>
     <string name="level_3_change">स्तर 3 पर गलत नोट्स आपके स्कोर को दंडित करेंगे</string>
     <string name="level_4_change">स्तर 4 पर गेम आपके नोट बजाने की प्रतीक्षा नहीं करेगा</string>
-    <string name="level_5_change">स्तर 5 पर गिरने वाले नोट बार नहीं दिखाए जाएंगे</string>
+    <string name="level_5_change">स्तर 5 पर नोट बार नहीं दिखाए जाएंगे</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">पिच सटीकता</string>
-    <string name="score_duration_accuracy">अवधि सटीकता</string>
-    <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_duration">अवधि सटीकता</string>
+    <string name="score_song_duration">Song duration</string>
     <string name="score_progress">प्रगति</string>
 
     <!-- Note divisions -->

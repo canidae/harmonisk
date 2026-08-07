@@ -168,13 +168,13 @@
     <string name="level_2_change">On level 2 pitch accuracy will count toward your score</string>
     <string name="level_3_change">On level 3 playing wrong notes will penalize your score</string>
     <string name="level_4_change">On level 4 the game will not wait for you to play the note</string>
-    <string name="level_5_change">On level 5 the falling note bars will not be shown</string>
+    <string name="level_5_change">On level 5 note bars will not be shown</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Pitch accuracy</string>
-    <string name="score_duration_accuracy">Duration accuracy</string>
-    <string name="score_time_accuracy">Time accuracy</string>
-    <string name="score_note_accuracy">Note accuracy</string>
+    <string name="score_note_duration">Note duration</string>
+    <string name="score_song_duration">Song duration</string>
+    <string name="score_correct_notes">Correct notes</string>
     <string name="score_progress">Progress</string>
 
     <!-- Note divisions -->

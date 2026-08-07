@@ -157,12 +157,12 @@
     <string name="level_2_change">レベル2では、ピッチの正確さがスコアに影響します</string>
     <string name="level_3_change">レベル3では、間違った音符を演奏するとスコアが減点されます</string>
     <string name="level_4_change">レベル4では、ゲームはあなたが音符を演奏するのを待ちません</string>
-    <string name="level_5_change">レベル5では、落下する音符バーは表示されません</string>
+    <string name="level_5_change">レベル5では、音符バーは表示されません</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">ピッチ精度</string>
-    <string name="score_duration_accuracy">長さ精度</string>
-    <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_duration">長さ精度</string>
+    <string name="score_song_duration">Song duration</string>
     <string name="score_progress">進捗</string>
 
     <!-- Note divisions -->

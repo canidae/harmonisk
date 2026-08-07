@@ -157,12 +157,12 @@
     <string name="level_2_change">Á stigi 2 mun tónhæðarnákvæmni telja með í skori þínu</string>
     <string name="level_3_change">Á stigi 3 munu rangar nótur draga frá skori þínu</string>
     <string name="level_4_change">Á stigi 4 mun leikurinn ekki bíða eftir að þú spilir nótuna</string>
-    <string name="level_5_change">Á stigi 5 verða fallandi nótustikur ekki sýndar</string>
+    <string name="level_5_change">Á stigi 5 verða nótustikur ekki sýndar</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Tónhæðarnákvæmni</string>
-    <string name="score_duration_accuracy">Lengdarnákvæmni</string>
-    <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_duration">Lengdarnákvæmni</string>
+    <string name="score_song_duration">Song duration</string>
     <string name="score_progress">Framfarir</string>
 
     <!-- Note divisions -->

@@ -157,12 +157,12 @@
     <string name="level_2_change">На рівні 2 точність висоти звуку впливатиме на ваш рахунок</string>
     <string name="level_3_change">На рівні 3 неправильні ноти штрафуватимуть ваш рахунок</string>
     <string name="level_4_change">На рівні 4 гра не чекатиме, поки ви зіграєте ноту</string>
-    <string name="level_5_change">На рівні 5 падаючі смуги нот не відображатимуться</string>
+    <string name="level_5_change">На рівні 5 смуги нот не відображатимуться</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Точність висоти</string>
-    <string name="score_duration_accuracy">Точність тривалості</string>
-    <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_duration">Точність тривалості</string>
+    <string name="score_song_duration">Song duration</string>
     <string name="score_progress">Прогрес</string>
 
     <!-- Note divisions -->

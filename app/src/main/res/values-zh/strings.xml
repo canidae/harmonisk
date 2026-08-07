@@ -157,12 +157,12 @@
     <string name="level_2_change">在等级 2，音高准确度将计入得分</string>
     <string name="level_3_change">在等级 3，演奏错误音符将扣分</string>
     <string name="level_4_change">在等级 4，游戏不会等待您演奏音符</string>
-    <string name="level_5_change">在等级 5，下落音符条将不会显示</string>
+    <string name="level_5_change">在等级 5，音符条将不会显示</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">音高准确度</string>
-    <string name="score_duration_accuracy">时长准确度</string>
-    <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_duration">时长准确度</string>
+    <string name="score_song_duration">Song duration</string>
     <string name="score_progress">进度</string>
 
     <!-- Note divisions -->

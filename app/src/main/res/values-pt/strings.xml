@@ -157,12 +157,12 @@
     <string name="level_2_change">No nível 2, a precisão da altura contará para a sua pontuação</string>
     <string name="level_3_change">No nível 3, notas erradas penalizarão a sua pontuação</string>
     <string name="level_4_change">No nível 4, o jogo não esperará que toque a nota</string>
-    <string name="level_5_change">No nível 5, as barras de notas descendentes não serão mostradas</string>
+    <string name="level_5_change">No nível 5, as barras de notas não serão mostradas</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Precisão da altura</string>
-    <string name="score_duration_accuracy">Precisão da duração</string>
-    <string name="score_time_accuracy">Time accuracy</string>
+    <string name="score_note_duration">Precisão da duração</string>
+    <string name="score_song_duration">Song duration</string>
     <string name="score_progress">Progresso</string>
 
     <!-- Note divisions -->
