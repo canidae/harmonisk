@@ -62,6 +62,11 @@
     <string name="settings_reset_to_defaults">Reset to defaults</string>
     <string name="settings_language">Language</string>
     <string name="settings_instrument">Instrument</string>
+    <string name="settings_help">Help</string>
+    <string name="settings_help_got_it">Got it</string>
+    <string name="settings_concert_pitch_help">The reference pitch your instrument is tuned to. Perfect Pitch uses this as the target when detecting notes. Standard tuning is A4 = 440 Hz.</string>
+    <string name="settings_audio_delay_help">The time it takes for the sound of your instrument to reach the app through the microphone. Match this to your setup so notes are detected exactly when you play them. Use Auto to calibrate automatically.</string>
+    <string name="settings_visual_delay_help">The delay between playing a note and it being registered on screen. Adjust it so the visual feedback lines up with what you hear.</string>
     <string name="instrument_piano">Piano</string>
     <string name="instrument_violin">Violin</string>
     <string name="instrument_cello">Cello</string>

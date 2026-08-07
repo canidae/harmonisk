@@ -6,6 +6,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MusicNote
@@ -110,65 +111,6 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Concert pitch slider
-            SettingSection(title = stringResource(R.string.settings_concert_pitch)) {
-                Slider(
-                    value = settings.concertPitch,
-                    onValueChange = { viewModel.updateConcertPitch(it) },
-                    valueRange = 420f..460f,
-                    steps = 39,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        stringResource(R.string.settings_concert_pitch_min),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.align(Alignment.CenterStart)
-                    )
-                    Text(
-                        stringResource(R.string.settings_concert_pitch_max),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.align(Alignment.CenterEnd)
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_concert_pitch_value, settings.concertPitch),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-            }
-
-            // Microphone sensitivity (inverted: leftmost is least sensitive, rightmost most sensitive)
-            SettingSection(title = stringResource(R.string.settings_mic_sensitivity)) {
-                // Slider position maps inversely to the stored threshold: -10 dB at the left,
-                // -50 dB at the right, so moving right detects fainter sounds.
-                val sliderValue = (-60f - settings.silenceThresholdDb).coerceIn(-50f, -10f)
-                Slider(
-                    value = sliderValue,
-                    onValueChange = { viewModel.updateSilenceThreshold(-60f - it) },
-                    valueRange = -50f..-10f,
-                    steps = 39,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = stringResource(R.string.settings_silence_threshold_min),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.align(Alignment.CenterStart)
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_silence_threshold_max),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.align(Alignment.CenterEnd)
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_silence_threshold, settings.silenceThresholdDb),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-            }
-
             // Language
             SettingSection(title = stringResource(R.string.settings_language)) {
                 var expanded by remember { mutableStateOf(false) }
@@ -277,8 +219,73 @@ fun SettingsScreen(
                 }
             }
 
+            // Microphone sensitivity (inverted: leftmost is least sensitive, rightmost most sensitive)
+            SettingSection(title = stringResource(R.string.settings_mic_sensitivity)) {
+                // Slider position maps inversely to the stored threshold: -10 dB at the left,
+                // -50 dB at the right, so moving right detects fainter sounds.
+                val sliderValue = (-60f - settings.silenceThresholdDb).coerceIn(-50f, -10f)
+                Slider(
+                    value = sliderValue,
+                    onValueChange = { viewModel.updateSilenceThreshold(-60f - it) },
+                    valueRange = -50f..-10f,
+                    steps = 39,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(R.string.settings_silence_threshold_min),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.align(Alignment.CenterStart)
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_silence_threshold_max),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_silence_threshold, settings.silenceThresholdDb),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            }
+
+            // Concert pitch slider
+            SettingSection(
+                title = stringResource(R.string.settings_concert_pitch),
+                helpText = stringResource(R.string.settings_concert_pitch_help)
+            ) {
+                Slider(
+                    value = settings.concertPitch,
+                    onValueChange = { viewModel.updateConcertPitch(it) },
+                    valueRange = 420f..460f,
+                    steps = 39,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        stringResource(R.string.settings_concert_pitch_min),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.align(Alignment.CenterStart)
+                    )
+                    Text(
+                        stringResource(R.string.settings_concert_pitch_max),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_concert_pitch_value, settings.concertPitch),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            }
+
             // Audio delay
-            SettingSection(title = stringResource(R.string.settings_audio_delay_title)) {
+            SettingSection(
+                title = stringResource(R.string.settings_audio_delay_title),
+                helpText = stringResource(R.string.settings_audio_delay_help)
+            ) {
                 val device by viewModel.currentDevice.collectAsState()
                 val inputDevice by viewModel.currentInputDevice.collectAsState()
                 val audioDelay by viewModel.activeAudioDelay.collectAsState()
@@ -340,7 +347,10 @@ fun SettingsScreen(
             }
 
             // Visual delay
-            SettingSection(title = stringResource(R.string.settings_visual_delay_title)) {
+            SettingSection(
+                title = stringResource(R.string.settings_visual_delay_title),
+                helpText = stringResource(R.string.settings_visual_delay_help)
+            ) {
                 val visualDelay by viewModel.activeVisualDelay.collectAsState()
                 Slider(
                     value = visualDelay.toFloat(),
@@ -384,14 +394,44 @@ fun SettingsScreen(
 @Composable
 private fun SettingSection(
     title: String,
+    helpText: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f)
+            )
+            if (helpText != null) {
+                HelpButton(helpText)
+            }
+        }
         content()
+    }
+}
+
+@Composable
+private fun HelpButton(helpText: String) {
+    var showHelp by remember { mutableStateOf(false) }
+
+    IconButton(onClick = { showHelp = true }) {
+        Icon(Icons.Outlined.HelpOutline, contentDescription = stringResource(R.string.settings_help))
+    }
+
+    if (showHelp) {
+        AlertDialog(
+            onDismissRequest = { showHelp = false },
+            text = { Text(helpText) },
+            confirmButton = {
+                TextButton(onClick = { showHelp = false }) { Text(stringResource(R.string.settings_help_got_it)) }
+            }
+        )
     }
 }
