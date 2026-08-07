@@ -282,10 +282,12 @@ fun MelodyPlayScreen(
                         .fillMaxWidth()
                 ) {
                     val track = gameState.melodyTrack
+                    // In READY the view is static, so show bars exactly at the now line.
+                    val adjustedNow = if (gameState.phase == PlayPhase.READY) gameState.currentTimeSeconds
+                                      else gameState.currentTimeSeconds - maxOf(0, audioDelay - visualDelay) / 1000.0
 
                     if (track != null) {
                         val alphaTex = remember(track) { MidiToAlphaTex.generate(track) }
-                        val adjustedNow = gameState.currentTimeSeconds - maxOf(0, audioDelay - visualDelay) / 1000.0
                         val viewTimeSeconds = adjustedNow + viewState.songTimeOffsetSeconds
                         // Anchor the cursor to the leftmost note, but never behind the
                         // left edge (keeps the blue line from leaving the view).
@@ -342,7 +344,7 @@ fun MelodyPlayScreen(
                                 noteCentsPositions = gameState.noteCentsPositions,
                                 notePlayProgress = gameState.notePlayProgress,
                                 noteFirstDetectionStart = gameState.noteFirstDetectionStart,
-                                currentTimeSeconds = gameState.currentTimeSeconds - maxOf(0, audioDelay - visualDelay) / 1000.0,
+                                currentTimeSeconds = adjustedNow,
                                 songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
                                 fallSpeedPxPerSec = viewState.fallSpeedPxPerSec,
                                 detectedMidiNote = if (gameState.pitchResult.isValid) gameState.pitchResult.midiNoteNumber else null,

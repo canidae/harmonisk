@@ -621,6 +621,11 @@ class MelodyViewModel @Inject constructor(
         return 120f
     }
 
+    /** "Now" time used by the canvas, minus the visual delay (except in READY, where the view is static). */
+    private fun adjustedNowSeconds(phase: PlayPhase, currentTimeSeconds: Double): Double =
+        if (phase == PlayPhase.READY) currentTimeSeconds
+        else currentTimeSeconds - maxOf(0, totalAudioDelayMs - visualDelayMs) / 1000.0
+
     /** Seconds of the 2-bar lead-in at the song's initial tempo/time signature. */
     private fun twoBarLeadInSeconds(): Double {
         val track = _gameState.value.melodyTrack ?: return 2.0 * 4 * (60.0 / 120.0)
@@ -674,11 +679,10 @@ class MelodyViewModel @Inject constructor(
         )
     }
 
-    /** Enter READY phase — melody visible but not playing. Bars pre-positioned at lead-in offset. */
+    /** Enter READY phase — melody visible but not playing. Bars shown from the start, at the now line. */
     fun enterReadyPhase() {
         if (_gameState.value.phase == PlayPhase.NOT_STARTED) {
-            val leadIn = twoBarLeadInSeconds()
-            _gameState.update { it.copy(phase = PlayPhase.READY, currentTimeSeconds = -leadIn) }
+            _gameState.update { it.copy(phase = PlayPhase.READY, currentTimeSeconds = 0.0) }
         }
     }
 
@@ -836,7 +840,7 @@ class MelodyViewModel @Inject constructor(
     fun onVerticalScroll(deltaSeconds: Double) {
         val phase = _gameState.value.phase
         if (phase == PlayPhase.PLAYING || phase == PlayPhase.WAITING_FOR_NOTE) return
-        val adjustedNow = _gameState.value.currentTimeSeconds - maxOf(0, totalAudioDelayMs - visualDelayMs) / 1000.0
+        val adjustedNow = adjustedNowSeconds(phase, _gameState.value.currentTimeSeconds)
         val currentOffset = _viewState.value.songTimeOffsetSeconds
         seekToViewTime(adjustedNow + currentOffset + deltaSeconds)
     }
@@ -849,7 +853,7 @@ class MelodyViewModel @Inject constructor(
         val track = gameSnapshot.melodyTrack ?: return
         val currentTimeSeconds = gameSnapshot.currentTimeSeconds
         // Match the view time base used by the canvas (currentTime minus the visual delay)
-        val adjustedNow = currentTimeSeconds - maxOf(0, totalAudioDelayMs - visualDelayMs) / 1000.0
+        val adjustedNow = adjustedNowSeconds(phase, currentTimeSeconds)
         val timeSig = track.timeSignatureAt(0L)
         val firstTempoUs = track.tempoChanges.firstOrNull()?.microsecondsPerBeat ?: 500_000L
         val barDurationSeconds = timeSig.numerator * firstTempoUs / 1_000_000.0
