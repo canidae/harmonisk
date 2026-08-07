@@ -35,6 +35,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.perfectpitch.R
 import net.exent.perfectpitch.midi.MidiToAlphaTex
+import net.exent.perfectpitch.music.Instrument
 import net.exent.perfectpitch.ui.components.CanvasMode
 import net.exent.perfectpitch.ui.components.VOICE_COLORS
 import net.exent.perfectpitch.ui.components.KeepScreenOn
@@ -65,6 +66,8 @@ fun MelodyPlayScreen(
     val scoreHistory by viewModel.currentScoreHistory.collectAsStateWithLifecycle()
     val canAdvance by viewModel.canAdvanceLevel.collectAsStateWithLifecycle()
     val celebrationLevel by viewModel.celebrationLevel.collectAsStateWithLifecycle()
+    val currentInstrument by viewModel.currentInstrument.collectAsStateWithLifecycle()
+    val violinMode = currentInstrument == Instrument.VIOLIN
     val density = LocalDensity.current
     val context = LocalContext.current
     var showResultsModal by remember { mutableStateOf(false) }
@@ -282,10 +285,23 @@ fun MelodyPlayScreen(
 
                     if (track != null) {
                         val alphaTex = remember(track) { MidiToAlphaTex.generate(track) }
+                        val adjustedNow = gameState.currentTimeSeconds - maxOf(0, audioDelay - visualDelay) / 1000.0
+                        val viewTimeSeconds = adjustedNow + viewState.songTimeOffsetSeconds
+                        // Anchor the cursor to the leftmost note, but never behind the
+                        // left edge (keeps the blue line from leaving the view).
+                        val seekTime = if (viewState.songTimeOffsetSeconds != 0.0) {
+                            maxOf(viewTimeSeconds, nearestNoteStartSeconds(track, viewTimeSeconds))
+                        } else {
+                            adjustedNow
+                        }
                         SheetMusicView(
                             alphaTex = alphaTex,
-                            currentTimeSeconds = gameState.currentTimeSeconds - maxOf(0, audioDelay - visualDelay) / 1000.0,
+                            currentTimeSeconds = adjustedNow,
                             isPlaying = gameState.phase == PlayPhase.PLAYING,
+                            seekTimeSeconds = seekTime,
+                            scrollTimeSeconds = viewTimeSeconds,
+                            durationSeconds = track.durationSeconds,
+                            onScrolledToTime = { viewModel.seekToViewTime(it) },
                             modifier = Modifier.fillMaxWidth().height(205.dp)
                         )
                     }
@@ -295,12 +311,15 @@ fun MelodyPlayScreen(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .pointerInput(Unit) {
+                            .pointerInput(violinMode) {
                                 detectTransformGestures { _, pan, zoom, _ ->
                                     if (zoom != 1f) viewModel.onVerticalZoom(zoom)
-                                    if (pan.y != 0f) {
+                                    val panValue = if (violinMode) pan.x else pan.y
+                                    if (panValue != 0f) {
                                         val secondsPerPx = 1.0 / (viewState.fallSpeedPxPerSec * density.density)
-                                        viewModel.onVerticalScroll(pan.y * secondsPerPx)
+                                        // Violin scrolls right-to-left: dragging left scrubs forward in time
+                                        val sign = if (violinMode) -1f else 1f
+                                        viewModel.onVerticalScroll(sign * panValue * secondsPerPx)
                                     }
                                 }
                             }
@@ -328,7 +347,9 @@ fun MelodyPlayScreen(
                                 fallSpeedPxPerSec = viewState.fallSpeedPxPerSec,
                                 detectedMidiNote = if (gameState.pitchResult.isValid) gameState.pitchResult.midiNoteNumber else null,
                                 detectedCentsOff = if (gameState.pitchResult.isValid) gameState.pitchResult.centsOff else null,
-                                hideNoteBars = gameState.hideNoteBars
+                                hideNoteBars = gameState.hideNoteBars,
+                                violinMode = violinMode,
+                                violinPositions = viewState.violinPositions
                             ),
                             pianoAtBottom = true,
                             viewMinMidi = viewState.viewMinMidi,
@@ -345,7 +366,7 @@ fun MelodyPlayScreen(
                                 },
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
-                                    .padding(bottom = PIANO_HEIGHT_DP.dp + 24.dp)
+                                    .padding(bottom = if (violinMode) 24.dp else PIANO_HEIGHT_DP.dp + 24.dp)
                                     .size(72.dp)
                                     .background(PlayGreen.copy(alpha = 0.25f), CircleShape)
                                     .border(2.dp, PlayGreen.copy(alpha = 0.7f), CircleShape)
@@ -364,7 +385,7 @@ fun MelodyPlayScreen(
                         Column(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
-                                .padding(bottom = PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
+                                .padding(bottom = if (violinMode) 8.dp else PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {

@@ -5,6 +5,7 @@ import net.exent.perfectpitch.midi.VoiceInfo
 import net.exent.perfectpitch.music.MelodyScore
 import net.exent.perfectpitch.music.NoteScore
 import net.exent.perfectpitch.music.PitchResult
+import net.exent.perfectpitch.music.ViolinPosition
 
 enum class AccompanimentMode { ALL, EXCEPT, SELECTED_ONLY, NONE }
 
@@ -54,10 +55,12 @@ data class MelodyGameState(
 
 /** Rendering and scroll parameters. */
 data class MelodyViewState(
-    val fallSpeedPxPerSec: Float = 150f,
+    val fallSpeedPxPerSec: Float = 75f,
     val songTimeOffsetSeconds: Double = 0.0,
     val viewMinMidi: Float = 60f,
-    val viewMaxMidi: Float = 72f
+    val viewMaxMidi: Float = 72f,
+    /** Recommended violin fingerings per active melody note (null = not playable in first position). */
+    val violinPositions: List<ViolinPosition?> = emptyList()
 )
 
 /** MIDI device availability state. */

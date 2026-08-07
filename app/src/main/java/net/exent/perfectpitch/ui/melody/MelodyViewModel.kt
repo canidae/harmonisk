@@ -53,7 +53,8 @@ class MelodyViewModel @Inject constructor(
     private val midiDeviceManager: MidiDeviceManager,
     private val midiInputReceiver: MidiInputReceiver,
     private val midiOutputSender: MidiOutputSender,
-    private val scoreHistoryRepository: ScoreHistoryRepository
+    private val scoreHistoryRepository: ScoreHistoryRepository,
+    private val violinAlgorithm: ViolinAlgorithm
 ) : ViewModel() {
 
     companion object {
@@ -122,6 +123,10 @@ class MelodyViewModel @Inject constructor(
     private val _currentInstrument = MutableStateFlow("PIANO")
     private val currentInstrumentFlow: StateFlow<String> = _currentInstrument.asStateFlow()
 
+    val currentInstrument: StateFlow<Instrument> = currentInstrumentFlow
+        .map { Instrument.fromName(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Instrument.PIANO)
+
     // Melody audio output delay
     private var synthOpenJob: Job? = null
     // Total round-trip audio delay (output + input), from calibration
@@ -151,6 +156,7 @@ class MelodyViewModel @Inject constructor(
                 if (newInstrument != prevInstrument && soundFontSynthesizer.isReady) {
                     soundFontSynthesizer.setInstrument(instrument.midiBank, instrument.midiProgram)
                 }
+                updateViolinPositions()
                 val melodyId = currentMelodyId
                 if (melodyId != null) {
                     loadMelodySettingsAndHistory(melodyId, newInstrument)
@@ -357,6 +363,7 @@ class MelodyViewModel @Inject constructor(
                 )
             }
             _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
+            updateViolinPositions()
             loadMelodySettingsAndHistory(info.id)
             return true
         }
@@ -389,6 +396,7 @@ class MelodyViewModel @Inject constructor(
             }
             _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
             val id = currentMelodyId ?: return false
+            updateViolinPositions()
             loadMelodySettingsAndHistory(id)
 
             // Persist the imported melody and compute difficulty
@@ -428,7 +436,7 @@ class MelodyViewModel @Inject constructor(
                         accompanimentMode = accompanimentMode
                     )
                 }
-                _viewState.update { it.copy(fallSpeedPxPerSec = saved.fallSpeedPxPerSec) }
+                _viewState.update { it.copy(fallSpeedPxPerSec = migrateFallSpeed(saved.fallSpeedPxPerSec)) }
                 // Restore voice selection after state is built
                 val vi = _gameState.value.voiceInfos
                 if (vi.isNotEmpty()) {
@@ -483,6 +491,7 @@ class MelodyViewModel @Inject constructor(
             )
         }
         _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
+        updateViolinPositions()
         saveMelodySettings()
     }
 
@@ -492,6 +501,23 @@ class MelodyViewModel @Inject constructor(
             (range.first - RANGE_PADDING).toFloat().coerceAtLeast(MIN_MIDI),
             (range.last + RANGE_PADDING).toFloat().coerceAtMost(MAX_MIDI)
         )
+    }
+
+    /** Recompute recommended violin fingerings for the active melody (cleared for non-violin instruments). */
+    private fun updateViolinPositions() {
+        val track = _gameState.value.melodyTrack
+        val isViolin = Instrument.fromName(_currentInstrument.value) == Instrument.VIOLIN
+        val positions = if (isViolin && track != null) {
+            violinAlgorithm.recommendPositions(track.notes.map { it.noteNumber })
+        } else {
+            emptyList()
+        }
+        _viewState.update { it.copy(violinPositions = positions) }
+    }
+
+    private fun migrateFallSpeed(saved: Float): Float {
+        // Old default was 150 px/s; halve previously-saved defaults to match the new slower speed
+        return if (saved == 150f) 75f else saved
     }
 
     private fun saveMelodySettings() {
@@ -566,6 +592,7 @@ class MelodyViewModel @Inject constructor(
             )
         }
         _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
+        updateViolinPositions()
         saveMelodySettings()
     }
 
@@ -809,18 +836,27 @@ class MelodyViewModel @Inject constructor(
     fun onVerticalScroll(deltaSeconds: Double) {
         val phase = _gameState.value.phase
         if (phase == PlayPhase.PLAYING || phase == PlayPhase.WAITING_FOR_NOTE) return
+        val adjustedNow = _gameState.value.currentTimeSeconds - maxOf(0, totalAudioDelayMs - visualDelayMs) / 1000.0
+        val currentOffset = _viewState.value.songTimeOffsetSeconds
+        seekToViewTime(adjustedNow + currentOffset + deltaSeconds)
+    }
+
+    /** Pan both views so the given time sits at the now line / sheet left edge. */
+    fun seekToViewTime(viewTimeSeconds: Double) {
+        val phase = _gameState.value.phase
+        if (phase == PlayPhase.PLAYING || phase == PlayPhase.WAITING_FOR_NOTE) return
         val gameSnapshot = _gameState.value
         val track = gameSnapshot.melodyTrack ?: return
         val currentTimeSeconds = gameSnapshot.currentTimeSeconds
+        // Match the view time base used by the canvas (currentTime minus the visual delay)
+        val adjustedNow = currentTimeSeconds - maxOf(0, totalAudioDelayMs - visualDelayMs) / 1000.0
         val timeSig = track.timeSignatureAt(0L)
         val firstTempoUs = track.tempoChanges.firstOrNull()?.microsecondsPerBeat ?: 500_000L
         val barDurationSeconds = timeSig.numerator * firstTempoUs / 1_000_000.0
         val minOffset = -2.0 * barDurationSeconds - currentTimeSeconds
-        _viewState.update { current ->
-            val newOffset = (current.songTimeOffsetSeconds + deltaSeconds)
-                .coerceIn(minOffset, track.durationSeconds - currentTimeSeconds + 2.0)
-            current.copy(songTimeOffsetSeconds = newOffset)
-        }
+        val newOffset = (viewTimeSeconds - adjustedNow)
+            .coerceIn(minOffset, track.durationSeconds - currentTimeSeconds + 2.0)
+        _viewState.update { it.copy(songTimeOffsetSeconds = newOffset) }
     }
 
     fun scrollToBeginning() {

@@ -18,6 +18,7 @@ import net.exent.perfectpitch.midi.MidiInputReceiver
 import net.exent.perfectpitch.midi.MidiOutputSender
 import net.exent.perfectpitch.music.NoteUtils
 import net.exent.perfectpitch.music.ScoringEngine
+import net.exent.perfectpitch.music.ViolinAlgorithm
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -75,6 +76,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideScoringEngine(): ScoringEngine = ScoringEngine()
+
+    @Provides
+    @Singleton
+    fun provideViolinAlgorithm(): ViolinAlgorithm = ViolinAlgorithm()
 
     @Provides
     @Singleton

@@ -30,6 +30,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import net.exent.perfectpitch.midi.MelodyTrack
+import net.exent.perfectpitch.music.ViolinAlgorithm
+import net.exent.perfectpitch.music.ViolinPosition
+import net.exent.perfectpitch.music.ViolinString
 import net.exent.perfectpitch.ui.freeplay.PianoVisibility
 import net.exent.perfectpitch.ui.freeplay.PlayedNote
 import net.exent.perfectpitch.ui.melody.NoteResultState
@@ -53,6 +56,28 @@ private val OVERLAY_MISS = Color(0xFFF44336)
 private const val BAR_GAP_PX = 2f
 private const val INDICATOR_HEIGHT_PX = 8f
 private const val CORNER_RADIUS_DP = 4f
+
+// Violin fingering board
+private const val VIOLIN_LANE_COUNT = 4
+private val VIOLIN_STRING_LABELS = listOf("G", "D", "A", "E")
+// Reference portrait canvas width (dp) the horizontal time scale is normalized to
+private const val VIOLIN_REFERENCE_WIDTH_DP = 411f
+private val FINGER_COLORS = mapOf(
+    0 to Color(0xFF2196F3), // open string (blue)
+    1 to Color(0xFF4CAF50), // index
+    2 to Color(0xFFFFEB3B), // middle
+    3 to Color(0xFFFF9800), // ring
+    4 to Color(0xFFF44336)  // pinky
+)
+private val OUT_OF_RANGE_GREY = Color(0xFF9E9E9E)
+
+// Vertical shift per semitone of deviation from a finger's default placement
+private const val VIOLIN_FINGER_OFFSET_FRACTION = 0.07f
+
+/** Horizontal time scale for the violin board, normalized to the canvas width so
+ *  the visible time window stays consistent across portrait and landscape. */
+private fun violinPixelsPerSecond(fallSpeedPxPerSec: Float, canvasWidth: Float): Float =
+    fallSpeedPxPerSec * canvasWidth / VIOLIN_REFERENCE_WIDTH_DP
 
 val VOICE_COLORS = listOf(
     Color(0xFF4FC3F7), // Teal/light blue
@@ -95,7 +120,9 @@ sealed interface CanvasMode {
         val fallSpeedPxPerSec: Float,
         val detectedMidiNote: Int?,
         val detectedCentsOff: Float?,
-        val hideNoteBars: Boolean = false
+        val hideNoteBars: Boolean = false,
+        val violinMode: Boolean = false,
+        val violinPositions: List<ViolinPosition?> = emptyList()
     ) : CanvasMode
 }
 
@@ -180,6 +207,7 @@ fun SharedNoteCanvas(
         val pianoVisibility = if (mode is CanvasMode.FreePlay) mode.pianoVisibility else PianoVisibility.BOTH
         val showTopPiano = pianoVisibility == PianoVisibility.BOTH || pianoVisibility == PianoVisibility.UPPER_ONLY
         val showBottomPiano = pianoVisibility == PianoVisibility.BOTH || pianoVisibility == PianoVisibility.LOWER_ONLY
+        val violinMode = mode is CanvasMode.Melody && mode.violinMode
 
         // Piano edge and far edge Y coordinates
         val pianoEdgeY: Float   // the "now" line or melody piano edge
@@ -225,19 +253,21 @@ fun SharedNoteCanvas(
         }
 
         // Draw black-key column backgrounds (clipped to playable area)
-        for (midi in minMidi..maxMidi) {
-            val key = layout[midi] ?: continue
-            if (key.isBlack && playableBottom > noteAreaTop) {
-                drawRect(
-                    color = BLACK_COLUMN_BG,
-                    topLeft = Offset(key.x, noteAreaTop),
-                    size = Size(key.width, playableBottom - noteAreaTop)
-                )
+        if (!violinMode) {
+            for (midi in minMidi..maxMidi) {
+                val key = layout[midi] ?: continue
+                if (key.isBlack && playableBottom > noteAreaTop) {
+                    drawRect(
+                        color = BLACK_COLUMN_BG,
+                        topLeft = Offset(key.x, noteAreaTop),
+                        size = Size(key.width, playableBottom - noteAreaTop)
+                    )
+                }
             }
         }
 
         // Draw subtle grid lines at white key boundaries (clipped to playable area)
-        if (playableBottom > noteAreaTop) {
+        if (!violinMode && playableBottom > noteAreaTop) {
             for (midi in minMidi..maxMidi) {
                 val key = layout[midi] ?: continue
                 if (!key.isBlack) {
@@ -285,18 +315,25 @@ fun SharedNoteCanvas(
                 }
             }
             is CanvasMode.Melody -> {
-                drawBarLines(mode, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density, textMeasurer, playableBottom)
-                drawMelodyNotes(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
-                drawPitchIndicator(mode, layout, pianoEdgeY, pianoAtBottom, density)
-                // Single piano for Melody mode
-                drawPianoKeyboard(
-                    textMeasurer = textMeasurer,
-                    layout = layout,
-                    pianoHeight = pianoHeight,
-                    minMidi = minMidi,
-                    maxMidi = maxMidi,
-                    pianoAtBottom = pianoAtBottom
-                )
+                if (violinMode) {
+                    drawViolinBoard(mode, density, textMeasurer)
+                    drawViolinBarLines(mode, density, textMeasurer)
+                    drawViolinMelodyNotes(mode, density, textMeasurer)
+                    drawViolinPitchIndicator(mode, density)
+                } else {
+                    drawBarLines(mode, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density, textMeasurer, playableBottom)
+                    drawMelodyNotes(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
+                    drawPitchIndicator(mode, layout, pianoEdgeY, pianoAtBottom, density)
+                    // Single piano for Melody mode
+                    drawPianoKeyboard(
+                        textMeasurer = textMeasurer,
+                        layout = layout,
+                        pianoHeight = pianoHeight,
+                        minMidi = minMidi,
+                        maxMidi = maxMidi,
+                        pianoAtBottom = pianoAtBottom
+                    )
+                }
             }
         }
     }
@@ -652,7 +689,7 @@ private fun DrawScope.drawMelodyNotes(
         if (barW < 2f) return@forEachIndexed
 
         val visuallyActive = viewTimeSeconds >= noteStartTime && viewTimeSeconds < noteEndTime
-        val noteColor = if (visuallyActive) Color.White else NOTE_COLOR_UPCOMING
+        val noteColor = NOTE_COLOR_UPCOMING
 
         drawNoteBar(
             barX = barX,
@@ -663,6 +700,7 @@ private fun DrawScope.drawMelodyNotes(
             visibleBottom = visibleBottom,
             color = noteColor,
             borderAlpha = 0.15f,
+            activeGlow = visuallyActive,
             centsHistory = mode.noteCentsHistory[index] ?: emptyList(),
             centsPositions = mode.noteCentsPositions[index] ?: emptyList(),
             playProgress = mode.notePlayProgress[index] ?: 0f,
@@ -704,6 +742,380 @@ private fun DrawScope.drawPitchIndicator(
 
 // endregion
 
+// region Violin board rendering
+
+@OptIn(ExperimentalTextApi::class)
+private fun DrawScope.drawViolinBoard(
+    mode: CanvasMode.Melody,
+    density: Float,
+    textMeasurer: TextMeasurer
+) {
+    val width = size.width
+    val height = size.height
+    val bandHeight = height / VIOLIN_LANE_COUNT
+
+    // Alternating subtle band backgrounds (band 0 = G at the bottom, up to E on top)
+    for (i in 0 until VIOLIN_LANE_COUNT) {
+        if (i % 2 == 0) {
+            val top = height - (i + 1) * bandHeight
+            drawRect(color = Color(0x0DFFFFFF), topLeft = Offset(0f, top), size = Size(width, bandHeight))
+        }
+    }
+
+    // Horizontal string lines (one per band) and band boundaries
+    for (i in 0 until VIOLIN_LANE_COUNT) {
+        val centerY = height - (i + 0.5f) * bandHeight
+        drawLine(
+            color = Color(0x2EFFFFFF),
+            start = Offset(0f, centerY),
+            end = Offset(width, centerY),
+            strokeWidth = 1.5f * density
+        )
+    }
+    for (i in 1 until VIOLIN_LANE_COUNT) {
+        val y = height - i * bandHeight
+        drawLine(
+            color = Color(0x1AFFFFFF),
+            start = Offset(0f, y),
+            end = Offset(width, y),
+            strokeWidth = 1f * density
+        )
+    }
+
+    // String labels on the left edge of each band, on a dark pill for readability
+    val labelStyle = TextStyle(
+        color = Color.White.copy(alpha = 0.7f),
+        fontSize = (14f * density / 2.75f).sp,
+        fontWeight = FontWeight.Bold
+    )
+    for (i in 0 until VIOLIN_LANE_COUNT) {
+        val centerY = height - (i + 0.5f) * bandHeight
+        val textLayout = textMeasurer.measure(
+            text = buildAnnotatedString { append(VIOLIN_STRING_LABELS[i]) },
+            style = labelStyle
+        )
+        val pad = 4f * density
+        val boxW = textLayout.size.width + pad * 2f
+        val boxH = textLayout.size.height + pad * 1.6f
+        val boxTop = centerY - boxH / 2f
+        drawRoundRect(
+            color = CANVAS_BG.copy(alpha = 0.8f),
+            topLeft = Offset(2f * density, boxTop),
+            size = Size(boxW, boxH),
+            cornerRadius = CornerRadius(3f * density, 3f * density)
+        )
+        drawText(
+            textLayout,
+            topLeft = Offset(2f * density + pad, boxTop + (boxH - textLayout.size.height) / 2f)
+        )
+    }
+}
+
+@OptIn(ExperimentalTextApi::class)
+private fun DrawScope.drawViolinBarLines(
+    mode: CanvasMode.Melody,
+    density: Float,
+    textMeasurer: TextMeasurer
+) {
+    val track = mode.melodyTrack
+    val pixelsPerSecond = violinPixelsPerSecond(mode.fallSpeedPxPerSec, size.width)
+    if (pixelsPerSecond <= 0f) return
+
+    val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
+    val visibleRangeSeconds = size.width / pixelsPerSecond
+
+    val firstTempoUs = track.tempoChanges.firstOrNull()?.microsecondsPerBeat ?: 500_000L
+    val songDurationSeconds = track.durationSeconds
+
+    val earliestViewSeconds = viewTimeSeconds - 0.1
+    val latestViewSeconds = viewTimeSeconds + visibleRangeSeconds * 1.1
+
+    var currentSeconds = 0.0
+    var currentTick = 0L
+    var tempoIndex = 0
+    var beatCount = 0L
+    var barNumber = 1L
+
+    data class BeatPoint(val seconds: Double, val isBarLine: Boolean, val barNumber: Long = 0L)
+    val beats = mutableListOf<BeatPoint>()
+
+    while (currentSeconds < latestViewSeconds + 1.0 && currentSeconds <= songDurationSeconds + 1.0) {
+        val tempoUs = if (tempoIndex < track.tempoChanges.size) {
+            track.tempoChanges[tempoIndex].microsecondsPerBeat
+        } else firstTempoUs
+        val beatDurationSeconds = tempoUs / 1_000_000.0
+
+        val timeSig = track.timeSignatureAt(currentTick)
+        val beatsPerBarHere = timeSig.numerator
+        val isBar = beatsPerBarHere > 0 && (beatCount % beatsPerBarHere == 0L)
+
+        if (currentSeconds >= earliestViewSeconds) {
+            beats.add(BeatPoint(currentSeconds, isBar, if (isBar) barNumber else 0L))
+        }
+        if (isBar) barNumber++
+
+        val nextBeatSeconds = currentSeconds + beatDurationSeconds
+        val nextBeatTick = currentTick + track.ticksPerQuarterNote.toLong()
+
+        if (tempoIndex + 1 < track.tempoChanges.size) {
+            val nextTempoTick = track.tempoChanges[tempoIndex + 1].tick
+            if (nextBeatTick >= nextTempoTick) tempoIndex++
+        }
+
+        currentSeconds = nextBeatSeconds
+        currentTick = nextBeatTick
+        beatCount++
+
+        if (beatCount > 10_000L) break
+    }
+
+    val barLabelStyle = TextStyle(
+        color = Color.White.copy(alpha = 0.35f),
+        fontSize = (9f * density / 2.75f).sp,
+        fontWeight = FontWeight.Medium
+    )
+
+    for (beat in beats) {
+        val relativeSeconds = beat.seconds - viewTimeSeconds
+        val x = (relativeSeconds * pixelsPerSecond).toFloat()
+        if (x < -2f || x > size.width + 2f) continue
+        drawLine(
+            color = Color.White.copy(alpha = if (beat.isBarLine) 0.18f else 0.07f),
+            start = Offset(x, 0f),
+            end = Offset(x, size.height),
+            strokeWidth = if (beat.isBarLine) 1.5f * density else 1f * density
+        )
+        if (beat.isBarLine && beat.barNumber > 0L) {
+            val label = textMeasurer.measure(
+                text = buildAnnotatedString { append(beat.barNumber.toString()) },
+                style = barLabelStyle
+            )
+            drawText(label, topLeft = Offset(x + 3f * density, 3f * density))
+        }
+    }
+}
+
+@OptIn(ExperimentalTextApi::class)
+private fun DrawScope.drawViolinMelodyNotes(
+    mode: CanvasMode.Melody,
+    density: Float,
+    textMeasurer: TextMeasurer
+) {
+    if (mode.hideNoteBars) return
+
+    val width = size.width
+    val height = size.height
+    val pixelsPerSecond = violinPixelsPerSecond(mode.fallSpeedPxPerSec, width)
+    val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
+    val bandHeight = height / VIOLIN_LANE_COUNT
+    val positions = mode.violinPositions
+    val minGapPx = 4f * density
+
+    mode.melodyTrack.notes.forEachIndexed { index, note ->
+        val noteStartTime = mode.melodyTrack.noteStartSeconds(note)
+        val noteDuration = mode.melodyTrack.noteDurationSeconds(note)
+        val noteEndTime = noteStartTime + noteDuration
+
+        val relativeStart = noteStartTime - viewTimeSeconds
+        val relativeEnd = noteEndTime - viewTimeSeconds
+
+        var rawLeftX = (relativeStart * pixelsPerSecond).toFloat()
+        var rawRightX = (relativeEnd * pixelsPerSecond).toFloat()
+
+        if (index > 0 && mode.melodyTrack.notes[index - 1].noteNumber == note.noteNumber) {
+            rawLeftX += minGapPx / 2f
+        }
+        if (index < mode.melodyTrack.notes.size - 1 && mode.melodyTrack.notes[index + 1].noteNumber == note.noteNumber) {
+            rawRightX -= minGapPx / 2f
+        }
+
+        if (rawRightX < 0f || rawLeftX > width) return@forEachIndexed
+
+        val pos = positions.getOrNull(index)
+        val string = pos?.string ?: ViolinAlgorithm.nearestString(note.noteNumber)
+        val bandIndex = string.ordinal
+        val bandTop = height - (bandIndex + 1) * bandHeight
+
+        var barW = rawRightX - rawLeftX
+        if (barW < 2f) return@forEachIndexed
+
+        val barH = (bandHeight * 0.13f).coerceAtLeast(14f * density)
+        // Ensure a minimum visible width that adapts to the canvas
+        val minBarW = maxOf(barH, width * 0.035f)
+        var barLeft = rawLeftX
+        if (barW < minBarW) {
+            val pad = (minBarW - barW) / 2f
+            barLeft -= pad
+            barW = minBarW
+        }
+
+        // String line; non-default finger placements shift slightly (high = up, low = down)
+        val stringLineY = bandTop + bandHeight / 2f
+        val deviation = if (pos == null) 0f else
+            (ViolinAlgorithm.fingerOffsetDeviation(note.noteNumber, string, pos.finger) ?: 0f).toFloat()
+        val centerY = stringLineY - deviation * bandHeight * VIOLIN_FINGER_OFFSET_FRACTION
+
+        val barTop = centerY - barH / 2f
+        val barBottom = centerY + barH / 2f
+
+        val r = CORNER_RADIUS_DP * density
+        val visuallyActive = viewTimeSeconds >= noteStartTime && viewTimeSeconds < noteEndTime
+        val color = if (pos == null) OUT_OF_RANGE_GREY else FINGER_COLORS[pos.finger] ?: OUT_OF_RANGE_GREY
+
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(barLeft, barTop),
+            size = Size(barW, barH),
+            cornerRadius = CornerRadius(r, r)
+        )
+
+        if (visuallyActive) {
+            drawRoundRect(
+                color = Color.White.copy(alpha = 0.30f),
+                topLeft = Offset(barLeft - 2f * density, barTop - 2f * density),
+                size = Size(barW + 4f * density, barH + 4f * density),
+                cornerRadius = CornerRadius(r, r),
+                style = Stroke(width = 4f * density, cap = StrokeCap.Round)
+            )
+            drawRoundRect(
+                color = Color.White.copy(alpha = 0.95f),
+                topLeft = Offset(barLeft, barTop),
+                size = Size(barW, barH),
+                cornerRadius = CornerRadius(r, r),
+                style = Stroke(width = 1.5f * density, cap = StrokeCap.Round)
+            )
+        } else {
+            drawRoundRect(
+                color = Color.White.copy(alpha = 0.25f),
+                topLeft = Offset(barLeft, barTop),
+                size = Size(barW, barH),
+                cornerRadius = CornerRadius(r, r),
+                style = Stroke(width = 1f * density)
+            )
+        }
+
+        // Wiggly pitch line along the horizontal bar
+        val centsHistory = mode.noteCentsHistory[index] ?: emptyList()
+        val centsPositions = mode.noteCentsPositions[index] ?: emptyList()
+        val playProgress = mode.notePlayProgress[index] ?: 0f
+        val detectionStart = mode.noteFirstDetectionStart[index] ?: 0f
+        if (centsHistory.isNotEmpty() && centsPositions.size == centsHistory.size && playProgress > 0f) {
+            drawHorizontalPitchLine(
+                barLeft = barLeft,
+                barW = barW,
+                barTop = barTop,
+                barBottom = barBottom,
+                barH = barH,
+                centsHistory = centsHistory,
+                centsPositions = centsPositions,
+                playProgress = playProgress,
+                detectionStart = detectionStart,
+                density = density
+            )
+        }
+
+        // Finger number label (no number for open strings)
+        val finger = pos?.finger
+        if (finger != null && finger in 1..4) {
+            val textStyle = TextStyle(
+                color = Color.Black.copy(alpha = 0.85f),
+                fontSize = (barH * 0.6f / density).sp,
+                fontWeight = FontWeight.Bold
+            )
+            val textLayout = textMeasurer.measure(
+                text = buildAnnotatedString { append(finger.toString()) },
+                style = textStyle
+            )
+            drawText(
+                textLayout,
+                topLeft = Offset(
+                    barLeft + (barW - textLayout.size.width) / 2f,
+                    centerY - textLayout.size.height / 2f
+                )
+            )
+        }
+    }
+}
+
+private fun DrawScope.drawViolinPitchIndicator(
+    mode: CanvasMode.Melody,
+    density: Float
+) {
+    val detectedMidi = mode.detectedMidiNote ?: return
+    val track = mode.melodyTrack
+    val expectedIndex = mode.currentNoteIndex
+    if (expectedIndex !in track.notes.indices) return
+    val expectedNote = track.notes[expectedIndex]
+
+    val pos = mode.violinPositions.getOrNull(expectedIndex)
+    val string = pos?.string ?: ViolinAlgorithm.nearestString(expectedNote.noteNumber)
+    val bandIndex = string.ordinal
+    val bandHeight = size.height / VIOLIN_LANE_COUNT
+    val bandTop = size.height - (bandIndex + 1) * bandHeight
+
+    val stringLineY = bandTop + bandHeight / 2f
+    val deviation = if (pos == null) 0f else
+        (ViolinAlgorithm.fingerOffsetDeviation(expectedNote.noteNumber, string, pos.finger) ?: 0f).toFloat()
+    val centerY = stringLineY - deviation * bandHeight * VIOLIN_FINGER_OFFSET_FRACTION
+
+    val indicatorColor = getIndicatorColor(detectedMidi, mode.detectedCentsOff, track, expectedIndex)
+
+    val indicatorW = 6f * density
+    val indicatorH = (bandHeight * 0.1f).coerceAtLeast(10f * density)
+    drawRoundRect(
+        color = indicatorColor,
+        topLeft = Offset(0f, centerY - indicatorH / 2f),
+        size = Size(indicatorW, indicatorH),
+        cornerRadius = CornerRadius(2f * density, 2f * density)
+    )
+}
+
+private fun DrawScope.drawHorizontalPitchLine(
+    barLeft: Float,
+    barW: Float,
+    barTop: Float,
+    barBottom: Float,
+    barH: Float,
+    centsHistory: List<Float>,
+    centsPositions: List<Float>,
+    playProgress: Float,
+    detectionStart: Float,
+    density: Float
+) {
+    val numSamples = centsHistory.size
+    if (numSamples < 1 || numSamples != centsPositions.size) return
+
+    val start = detectionStart.coerceIn(0f, 1f)
+    val end = playProgress.coerceIn(start + 0.001f, 1f)
+    val lineWidth = barW * (end - start)
+    if (lineWidth < 1f) return
+
+    val centerY = (barTop + barBottom) / 2f
+    val maxDeviationPx = barH / 2f - 2f
+    val gapThreshold = 0.05f
+
+    val path = Path()
+    for (i in centsHistory.indices) {
+        val t = centsPositions[i].coerceIn(0f, 1f)
+        val normalized = (centsHistory[i] / 50f).coerceIn(-1f, 1f)
+        val x = barLeft + t * barW
+        val y = centerY - normalized * maxDeviationPx
+        if (i == 0) {
+            path.moveTo(x, y)
+        } else if (t - centsPositions[i - 1] > gapThreshold) {
+            path.moveTo(x, y)
+        } else {
+            path.lineTo(x, y)
+        }
+    }
+
+    clipRect(left = barLeft, top = barTop, right = barLeft + barW, bottom = barBottom) {
+        drawGlowPath(path, density)
+    }
+}
+
+// endregion
+
 // region Shared note bar rendering
 
 private fun DrawScope.drawNoteBar(
@@ -720,7 +1132,8 @@ private fun DrawScope.drawNoteBar(
     playProgress: Float = 1f,
     detectionStart: Float = 0f,
     density: Float,
-    wigglyPianoAtBottom: Boolean = false
+    wigglyPianoAtBottom: Boolean = false,
+    activeGlow: Boolean = false
 ) {
     if (barW < 2f) return
 
@@ -752,6 +1165,11 @@ private fun DrawScope.drawNoteBar(
 
     drawPath(path, color)
     drawPath(path, Color.White.copy(alpha = borderAlpha), style = Stroke(width = 1f))
+
+    if (activeGlow) {
+        drawPath(path, Color.White.copy(alpha = 0.30f), style = Stroke(width = 4f * density, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(path, Color.White.copy(alpha = 0.95f), style = Stroke(width = 1.5f * density, cap = StrokeCap.Round, join = StrokeJoin.Round))
+    }
 
     if (centsHistory.isNotEmpty() && barHeight > 6f && barW > 8f) {
         drawWigglyPitchLine(
