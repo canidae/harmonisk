@@ -301,6 +301,7 @@ fun MelodyPlayScreen(
                             isPlaying = gameState.phase == PlayPhase.PLAYING,
                             seekTimeSeconds = seekTime,
                             scrollTimeSeconds = viewTimeSeconds,
+                            songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
                             durationSeconds = track.durationSeconds,
                             onScrolledToTime = { viewModel.seekToViewTime(it) },
                             modifier = Modifier.fillMaxWidth().height(205.dp)

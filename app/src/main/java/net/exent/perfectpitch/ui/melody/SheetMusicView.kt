@@ -49,16 +49,18 @@ private val BEAT_CURSOR_COLOR = android.graphics.Color.argb(255, 64, 64, 255)
  * game's own clock via alphaTab's external media sync — alphaTab never
  * produces audio itself (that stays with the app's own MelodyPlayer).
  *
- * The sheet scrolls to keep alphaTab's beat cursor at a fixed inset from the
- * left edge, following the cursor's actual rendered position so it can never
- * outrun the score (notes and rests aren't laid out linearly in time). The
- * cursor itself is positioned from the shared time line:
- * - [seekTimeSeconds] moves the cursor via the external media output (the game
- *   clock during playback, anchored to the leftmost note while panning).
- * - [scrollTimeSeconds] is a beat-position fallback while the cursor view is
- *   unavailable and when scrubbing the sheet.
- * - Dragging the sheet pans it directly and reports the time under the finger
- *   via [onScrolledToTime] so the note-bar view can seek in turn.
+ * During playback the sheet pages so alphaTab's beat cursor stays in view: the
+ * cursor moves freely across the score (alphaTab animates it with its own
+ * timing, including a leading overshoot), and the sheet advances when the cursor
+ * reaches the right edge. Near the end of the music the sheet stops paging and
+ * lets the cursor finish moving right. This avoids chasing the cursor every
+ * frame, which made it flicker.
+ *
+ * While the user pans the shared time line ([songTimeOffsetSeconds] != 0) the
+ * sheet scrolls smoothly from [scrollTimeSeconds] so it tracks the note-bar view,
+ * and [seekTimeSeconds] anchors the cursor to the leftmost note. Dragging the
+ * sheet pans it directly and reports the time under the finger via
+ * [onScrolledToTime] so the note-bar view can seek in turn.
  */
 @Composable
 fun SheetMusicView(
@@ -67,6 +69,7 @@ fun SheetMusicView(
     isPlaying: Boolean,
     seekTimeSeconds: Double,
     scrollTimeSeconds: Double,
+    songTimeOffsetSeconds: Double,
     durationSeconds: Double,
     onScrolledToTime: (Double) -> Unit = {},
     modifier: Modifier = Modifier
@@ -83,6 +86,7 @@ fun SheetMusicView(
     val durationSec by rememberUpdatedState(durationSeconds)
     val seekTime by rememberUpdatedState(seekTimeSeconds)
     val scrollTime by rememberUpdatedState(scrollTimeSeconds)
+    val songOffset by rememberUpdatedState(songTimeOffsetSeconds)
     val onScrolledTo by rememberUpdatedState(onScrolledToTime)
     val density = LocalDensity.current.density
     val cursorInsetPx = CURSOR_INSET_DP * density
@@ -238,27 +242,39 @@ fun SheetMusicView(
             }
     }
 
-    // Scroll the sheet so alphaTab's beat cursor sits at the inset. alphaTab moves
-    // the cursor via the external media sync (updatePosition) using its own layout
-    // timing, so following the actual cursor position is the only way to guarantee
-    // the marker never outruns the score — a time-based mapping can drift whenever
-    // note durations and rests don't line up with the game clock. Fall back to a
-    // beat-position mapping while the cursor view is unavailable. Skipped while the
-    // sheet itself is being dragged so the score tracks the finger 1:1.
-    LaunchedEffect(midiReady, scrollTime, beatPositions, beatCursorView, isSheetDragging) {
+    // Keep the playback cursor in view. alphaTab animates the cursor with its own
+    // timing (a per-note glide plus a leading overshoot), so continuously pinning
+    // the cursor to the inset by scrolling every frame makes it flicker — the scroll
+    // chases the overshoot with a one-frame lag. Instead, let the cursor move freely
+    // and page the sheet only when it approaches the right edge (or passes the left
+    // edge). Near the end of the music there is no room left to page back to the
+    // left, so the sheet stops and lets the cursor finish moving right.
+    // While the user is panning the shared time line (songTimeOffsetSeconds != 0) the
+    // sheet scrolls smoothly from [scrollTimeSeconds] so it tracks the note-bar view.
+    // Skipped while the sheet is being dragged.
+    LaunchedEffect(midiReady, scrollTime, beatPositions, isSheetDragging) {
         if (!midiReady) return@LaunchedEffect
         if (isSheetDragging) return@LaunchedEffect
         val scroll = scrollView ?: return@LaunchedEffect
         val params = beatCursorView?.layoutParams as? android.widget.RelativeLayout.LayoutParams
-        val targetX = if (params != null) {
-            params.leftMargin - cursorInsetPx.toInt()
+        if (abs(songOffset) < 0.001 && params != null) {
+            val viewportWidth = scroll.width
+            if (viewportWidth <= 0) return@LaunchedEffect
+            val onScreenX = params.leftMargin - scroll.scrollX
+            val leadX = cursorInsetPx.toInt()
+            val pageRightX = viewportWidth - (CURSOR_INSET_DP * 4f * density).toInt()
+            // Near the end of the music there is no room left to page back to the left;
+            // stop scrolling and let the cursor finish moving to the right instead.
+            val lastMusicX = (beatPositions.lastOrNull { !it.isRest }?.xCss ?: 0.0) * density
+            val pageable = params.leftMargin + viewportWidth / 2f < lastMusicX
+            if ((onScreenX > pageRightX || onScreenX < 0) && pageable) {
+                scroll.scrollTo((params.leftMargin - leadX).coerceAtLeast(0), scroll.scrollY)
+            }
         } else if (beatPositions.isNotEmpty()) {
             val timeMs = scrollTime.coerceIn(0.0, durationSec) * 1000.0
-            (xForTime(timeMs, beatPositions) * density).toInt() - cursorInsetPx.toInt()
-        } else {
-            return@LaunchedEffect
+            val targetX = (xForTime(timeMs, beatPositions) * density).toInt() - cursorInsetPx.toInt()
+            scroll.scrollTo(targetX.coerceAtLeast(0), scroll.scrollY)
         }
-        scroll.scrollTo(targetX.coerceAtLeast(0), scroll.scrollY)
     }
 }
 
@@ -285,8 +301,8 @@ private fun findBeatCursor(root: View): View? {
     return null
 }
 
-/** A rendered beat: its playback start (ms) and horizontal position (CSS px). */
-private class BeatPosition(val timeMs: Double, val xCss: Double)
+/** A rendered beat: its playback start (ms), horizontal position (CSS px) and rest state. */
+private class BeatPosition(val timeMs: Double, val xCss: Double, val isRest: Boolean)
 
 /**
  * Collects every rendered beat's playback time and horizontal position from
@@ -305,7 +321,7 @@ private fun buildBeatPositions(api: AlphaTabApiBase<AlphaTabView>): List<BeatPos
                 for (voice in bar.voices) {
                     for (beat in voice.beats) {
                         val bounds = lookup.findBeat(beat) ?: continue
-                        positions.add(BeatPosition(tickCache.getBeatStart(beat), bounds.onNotesX))
+                        positions.add(BeatPosition(tickCache.getBeatStart(beat), bounds.onNotesX, beat.isRest))
                     }
                 }
             }
