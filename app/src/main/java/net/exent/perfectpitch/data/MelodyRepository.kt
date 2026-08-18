@@ -33,6 +33,9 @@ class MelodyRepository(
     private val cache = object : LinkedHashMap<String, MelodyTrack>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: Map.Entry<String, MelodyTrack>) = size > MAX_CACHE_ENTRIES
     }
+    private val multiTrackCache = object : LinkedHashMap<String, List<MelodyTrack>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: Map.Entry<String, List<MelodyTrack>>) = size > MAX_CACHE_ENTRIES
+    }
 
     private val importedMelodyStore = JsonPreferenceStore<String, ImportedMelody>(
         dataStore = context.importedStore,
@@ -103,6 +106,37 @@ class MelodyRepository(
 
          track?.let { cache[info.id] = it }
         return track
+    }
+
+    /**
+     * Load a melody preserving one [MelodyTrack] per original MIDI track (voice).
+     * Unlike [loadMelody], tracks are not merged, so multi-voice files keep their
+     * per-track identity.
+     */
+    fun loadMultiTrack(info: MelodyInfo): List<MelodyTrack> {
+        multiTrackCache[info.id]?.let { return it }
+
+        val tracks = try {
+            when {
+                info.rawResId != null -> {
+                    context.resources.openRawResource(info.rawResId).use { stream ->
+                        parser.parseMultiTrack(stream, info.name)
+                    }
+                }
+                info.uri != null -> {
+                    context.contentResolver.openInputStream(info.uri)?.use { stream ->
+                        parser.parseMultiTrack(stream, info.name)
+                    } ?: emptyList()
+                }
+                else -> emptyList()
+            }
+         } catch (e: IOException) {
+             Log.e(TAG, "Failed to load multi-track melody '${info.name}' (id=${info.id})", e)
+             emptyList()
+         }
+
+         if (tracks.isNotEmpty()) multiTrackCache[info.id] = tracks
+        return tracks
     }
 
     /** Stable melody ID derived from a user-supplied URI (uses full URI string, no hash collisions). */

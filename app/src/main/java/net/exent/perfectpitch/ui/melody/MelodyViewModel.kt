@@ -116,7 +116,6 @@ class MelodyViewModel @Inject constructor(
     // Indices of all notes active at the current time (chords = multiple)
     private var currentChordIndices: List<Int> = emptyList()
 
-    private var originalMelodyTrack: MelodyTrack? = null
     private var originalMelodyTracks: List<MelodyTrack> = emptyList()
     private var currentMelodyId: String? = null
 
@@ -329,10 +328,9 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun loadMelody(info: MelodyRepository.MelodyInfo): Boolean {
-        val track = melodyRepository.loadMelody(info)
-        if (track != null) {
-            originalMelodyTrack = track
-            val melodyTracks = assignChannels(listOf(track).filter { it.notes.isNotEmpty() })
+        val tracks = melodyRepository.loadMultiTrack(info)
+        if (tracks.isNotEmpty()) {
+            val melodyTracks = assignChannels(tracks.filter { it.notes.isNotEmpty() })
             originalMelodyTracks = melodyTracks
             currentMelodyId = info.id
             currentChordIndices = emptyList()
@@ -363,7 +361,6 @@ class MelodyViewModel @Inject constructor(
         val tracks = melodyRepository.loadMultiTrackFromUri(uri, name)
         if (tracks.isNotEmpty()) {
             val melodyTracks = assignChannels(tracks.filter { it.notes.isNotEmpty() })
-            originalMelodyTrack = melodyTracks.first()
             originalMelodyTracks = melodyTracks
             currentMelodyId = melodyRepository.uriMelodyId(uri)
             currentChordIndices = emptyList()
@@ -546,13 +543,11 @@ class MelodyViewModel @Inject constructor(
         melodyPlayer.playWithTiming(tracks, viewModelScope)
     }
 
-    /** Preview a specific melody from its info (uses all voice tracks). */
-
-    /** Preview a specific melody info (loads and plays). */
+    /** Preview a specific melody info (plays all voice tracks). */
     fun previewMelody(info: MelodyRepository.MelodyInfo) {
-        val track = melodyRepository.loadMelody(info) ?: return
-        if (!soundFontSynthesizer.isReady) return
-        melodyPlayer.playWithTiming(track, viewModelScope)
+        val tracks = melodyRepository.loadMultiTrack(info)
+        if (tracks.isEmpty() || !soundFontSynthesizer.isReady) return
+        melodyPlayer.playWithTiming(tracks, viewModelScope)
     }
 
     /** Stop any ongoing melody preview. */
