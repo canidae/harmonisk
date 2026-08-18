@@ -59,7 +59,7 @@ private const val CORNER_RADIUS_DP = 4f
 
 // Violin fingering board
 private const val VIOLIN_LANE_COUNT = 4
-private val VIOLIN_STRING_LABELS = listOf("G", "D", "A", "E")
+private val VIOLIN_STRING_LABELS = listOf("E", "A", "D", "G")
 // Reference portrait canvas width (dp) the horizontal time scale is normalized to
 private const val VIOLIN_REFERENCE_WIDTH_DP = 411f
 private val FINGER_COLORS = mapOf(
@@ -754,7 +754,7 @@ private fun DrawScope.drawViolinBoard(
     val height = size.height
     val bandHeight = height / VIOLIN_LANE_COUNT
 
-    // Alternating subtle band backgrounds (band 0 = G at the bottom, up to E on top)
+    // Alternating subtle band backgrounds (band 0 = E at the bottom, up to G on top)
     for (i in 0 until VIOLIN_LANE_COUNT) {
         if (i % 2 == 0) {
             val top = height - (i + 1) * bandHeight
@@ -933,7 +933,7 @@ private fun DrawScope.drawViolinMelodyNotes(
 
         val pos = positions.getOrNull(index)
         val string = pos?.string ?: ViolinAlgorithm.nearestString(note.noteNumber)
-        val bandIndex = string.ordinal
+        val bandIndex = VIOLIN_LANE_COUNT - 1 - string.ordinal
         val bandTop = height - (bandIndex + 1) * bandHeight
 
         var barW = rawRightX - rawLeftX
@@ -1049,7 +1049,7 @@ private fun DrawScope.drawViolinPitchIndicator(
 
     val pos = mode.violinPositions.getOrNull(expectedIndex)
     val string = pos?.string ?: ViolinAlgorithm.nearestString(expectedNote.noteNumber)
-    val bandIndex = string.ordinal
+    val bandIndex = VIOLIN_LANE_COUNT - 1 - string.ordinal
     val bandHeight = size.height / VIOLIN_LANE_COUNT
     val bandTop = size.height - (bandIndex + 1) * bandHeight
 
