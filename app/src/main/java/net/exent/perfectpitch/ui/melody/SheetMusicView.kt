@@ -2,6 +2,7 @@
 
 package net.exent.perfectpitch.ui.melody
 
+import android.graphics.drawable.ColorDrawable
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
@@ -40,18 +41,24 @@ private const val TAG = "SheetMusicView"
 /** Leading space kept between the sheet's left edge and the cursor position. */
 private const val CURSOR_INSET_DP = 18f
 
+/** Fill color of alphaTab's beat cursor (the vertical line), used to locate its view. */
+private val BEAT_CURSOR_COLOR = android.graphics.Color.argb(255, 64, 64, 255)
+
 /**
  * Sheet music staff rendered by alphaTab. The playback cursor is driven by the
  * game's own clock via alphaTab's external media sync — alphaTab never
  * produces audio itself (that stays with the app's own MelodyPlayer).
  *
- * The view is kept in sync with the note-bar view through a single shared time line:
- * - [scrollTimeSeconds] is placed at the sheet's left edge, so panning the note-bar
- *   view scrolls the sheet and keeps the cursor in view.
- * - [seekTimeSeconds] is the cursor target (anchored to the leftmost note when the
- *   user has panned), moved via the external media output.
- * - Dragging the sheet pans it directly and reports the time at its left edge via
- *   [onScrolledToTime] so the note-bar view can seek in turn.
+ * The sheet scrolls to keep alphaTab's beat cursor at a fixed inset from the
+ * left edge, following the cursor's actual rendered position so it can never
+ * outrun the score (notes and rests aren't laid out linearly in time). The
+ * cursor itself is positioned from the shared time line:
+ * - [seekTimeSeconds] moves the cursor via the external media output (the game
+ *   clock during playback, anchored to the leftmost note while panning).
+ * - [scrollTimeSeconds] is a beat-position fallback while the cursor view is
+ *   unavailable and when scrubbing the sheet.
+ * - Dragging the sheet pans it directly and reports the time under the finger
+ *   via [onScrolledToTime] so the note-bar view can seek in turn.
  */
 @Composable
 fun SheetMusicView(
@@ -68,6 +75,7 @@ fun SheetMusicView(
     var midiReady by remember { mutableStateOf(false) }
     var loadedTex by remember { mutableStateOf<String?>(null) }
     var beatPositions by remember { mutableStateOf(emptyList<BeatPosition>()) }
+    var beatCursorView by remember { mutableStateOf<View?>(null) }
     var scrollView by remember { mutableStateOf<HorizontalScrollView?>(null) }
     var isSheetDragging by remember { mutableStateOf(false) }
     val currentTime by rememberUpdatedState(currentTimeSeconds)
@@ -126,7 +134,7 @@ fun SheetMusicView(
             val view = AlphaTabView(context, null)
             view.setBackgroundColor(android.graphics.Color.WHITE)
             view.barCursorFillColor = android.graphics.Color.TRANSPARENT
-            view.beatCursorFillColor = android.graphics.Color.argb(255, 64, 64, 255)
+            view.beatCursorFillColor = BEAT_CURSOR_COLOR
             val api = view.api
             api.settings.apply {
                 player.enablePlayer = true
@@ -140,6 +148,10 @@ fun SheetMusicView(
                 display.staveProfile = StaveProfile.Score
             }
             api.updateSettings()
+
+            // Locate alphaTab's beat cursor view (created during setup) so the sheet
+            // can scroll to the cursor's actual position instead of predicting it.
+            beatCursorView = findBeatCursor(view)
 
             // The game is the master clock; alphaTab -> media callbacks are ignored
             (api.player?.output as? IExternalMediaSynthOutput)?.handler = object : IExternalMediaHandler {
@@ -165,6 +177,7 @@ fun SheetMusicView(
             api.postRenderFinished.on {
                 firstRenderDone = true
                 beatPositions = buildBeatPositions(api)
+                if (beatCursorView == null) beatCursorView = findBeatCursor(view)
             }
             api.scoreLoaded.on {
                 if (!firstRenderDone && view.measuredWidth > 0) api.render()
@@ -225,18 +238,26 @@ fun SheetMusicView(
             }
     }
 
-    // Scroll the sheet so the beat at scrollTime sits at the cursor inset, using
-    // alphaTab's actual layout positions (notes and rests don't map linearly to
-    // time). This follows the note-bar view during panning and keeps the cursor
-    // in view during playback. Skipped while the sheet itself is being dragged
-    // so the score tracks the finger 1:1.
-    LaunchedEffect(midiReady, scrollTime, beatPositions, isSheetDragging) {
+    // Scroll the sheet so alphaTab's beat cursor sits at the inset. alphaTab moves
+    // the cursor via the external media sync (updatePosition) using its own layout
+    // timing, so following the actual cursor position is the only way to guarantee
+    // the marker never outruns the score — a time-based mapping can drift whenever
+    // note durations and rests don't line up with the game clock. Fall back to a
+    // beat-position mapping while the cursor view is unavailable. Skipped while the
+    // sheet itself is being dragged so the score tracks the finger 1:1.
+    LaunchedEffect(midiReady, scrollTime, beatPositions, beatCursorView, isSheetDragging) {
         if (!midiReady) return@LaunchedEffect
         if (isSheetDragging) return@LaunchedEffect
         val scroll = scrollView ?: return@LaunchedEffect
-        if (beatPositions.isEmpty()) return@LaunchedEffect
-        val timeMs = scrollTime.coerceIn(0.0, durationSec) * 1000.0
-        val targetX = (xForTime(timeMs, beatPositions) * density).toInt() - cursorInsetPx.toInt()
+        val params = beatCursorView?.layoutParams as? android.widget.RelativeLayout.LayoutParams
+        val targetX = if (params != null) {
+            params.leftMargin - cursorInsetPx.toInt()
+        } else if (beatPositions.isNotEmpty()) {
+            val timeMs = scrollTime.coerceIn(0.0, durationSec) * 1000.0
+            (xForTime(timeMs, beatPositions) * density).toInt() - cursorInsetPx.toInt()
+        } else {
+            return@LaunchedEffect
+        }
         scroll.scrollTo(targetX.coerceAtLeast(0), scroll.scrollY)
     }
 }
@@ -247,6 +268,18 @@ private fun findHorizontalScrollView(root: View): HorizontalScrollView? {
     if (root is ViewGroup) {
         for (i in 0 until root.childCount) {
             findHorizontalScrollView(root.getChildAt(i))?.let { return it }
+        }
+    }
+    return null
+}
+
+/** Depth-first search for alphaTab's beat cursor view, identified by its fill color. */
+private fun findBeatCursor(root: View): View? {
+    val background = root.background
+    if (background is ColorDrawable && background.color == BEAT_CURSOR_COLOR) return root
+    if (root is ViewGroup) {
+        for (i in 0 until root.childCount) {
+            findBeatCursor(root.getChildAt(i))?.let { return it }
         }
     }
     return null
