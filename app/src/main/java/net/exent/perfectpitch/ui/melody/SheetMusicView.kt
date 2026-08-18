@@ -272,7 +272,7 @@ private fun buildBeatPositions(api: AlphaTabApiBase<AlphaTabView>): List<BeatPos
                 for (voice in bar.voices) {
                     for (beat in voice.beats) {
                         val bounds = lookup.findBeat(beat) ?: continue
-                        positions.add(BeatPosition(tickCache.getBeatStart(beat), bounds.realBounds.x))
+                        positions.add(BeatPosition(tickCache.getBeatStart(beat), bounds.onNotesX))
                     }
                 }
             }
