@@ -21,7 +21,6 @@ import net.exent.perfectpitch.midi.MidiInputReceiver
 import net.exent.perfectpitch.midi.MidiNoteEvent
 import net.exent.perfectpitch.midi.MidiOutputSender
 import net.exent.perfectpitch.midi.NoteEvent
-import net.exent.perfectpitch.midi.VoiceInfo
 import net.exent.perfectpitch.music.*
 import net.exent.perfectpitch.ui.MAX_FALL_SPEED
 import net.exent.perfectpitch.ui.MAX_MIDI
@@ -114,10 +113,11 @@ class MelodyViewModel @Inject constructor(
     // Per-note tracking state (encapsulated for a single reset() call)
     private val noteTracking = NoteTrackingState()
     private var currentNoteDetectedCorrectly = false
+    // Indices of all notes active at the current time (chords = multiple)
+    private var currentChordIndices: List<Int> = emptyList()
 
     private var originalMelodyTrack: MelodyTrack? = null
     private var originalMelodyTracks: List<MelodyTrack> = emptyList()
-    private var originalVoiceInfos: List<VoiceInfo> = emptyList()
     private var currentMelodyId: String? = null
 
     private val _currentInstrument = MutableStateFlow("PIANO")
@@ -304,34 +304,24 @@ class MelodyViewModel @Inject constructor(
     }
 
     /**
-     * Split a list of MIDI tracks into individual voice lines.
-     * Each track with simultaneous notes is decomposed into multiple
-     * monophonic voice tracks.  Voices from the same original track
-     * share [VoiceInfo.trackOrigin] (same sound/colour).
+     * Assign each MIDI track a synthesizer channel based on its voice index,
+     * skipping the drum channel. Each track corresponds to one voice/staff.
      */
-    private fun buildVoiceInfos(tracks: List<MelodyTrack>): List<VoiceInfo> {
-        val result = mutableListOf<VoiceInfo>()
-        var globalIndex = 0
-        for ((trackOrigin, track) in tracks.withIndex()) {
-            // Assign channel based on original track index, but skip the drum channel
-            val baseChannel = trackOrigin
-            val channel = if (baseChannel >= MelodyViewModel.DRUM_CHANNEL) baseChannel + 1 else baseChannel
-            for (voiceTrack in track.splitIntoVoices()) {
-                if (voiceTrack.notes.isEmpty()) continue
-                val channelTrack = MelodyTrack(
-                    name = voiceTrack.name,
-                    notes = voiceTrack.notes,
-                    tempoChanges = voiceTrack.tempoChanges,
-                    timeSignatures = voiceTrack.timeSignatures,
-                    ticksPerQuarterNote = voiceTrack.ticksPerQuarterNote,
+    private fun assignChannels(tracks: List<MelodyTrack>): List<MelodyTrack> =
+        tracks.mapIndexed { index, track ->
+            if (track.notes.isEmpty()) track
+            else {
+                val channel = if (index >= MelodyViewModel.DRUM_CHANNEL) (index + 1).coerceAtMost(15) else index
+                MelodyTrack(
+                    name = track.name,
+                    notes = track.notes,
+                    tempoChanges = track.tempoChanges,
+                    timeSignatures = track.timeSignatures,
+                    ticksPerQuarterNote = track.ticksPerQuarterNote,
                     channel = channel
                 )
-                result.add(VoiceInfo(globalIndex, trackOrigin, channelTrack))
-                globalIndex++
             }
         }
-        return result
-    }
 
     private fun current48thNoteMs(): Long {
         val bpm = currentMelodyBpm()
@@ -342,18 +332,17 @@ class MelodyViewModel @Inject constructor(
         val track = melodyRepository.loadMelody(info)
         if (track != null) {
             originalMelodyTrack = track
-            originalMelodyTracks = listOf(track)
-            val voiceInfos = buildVoiceInfos(listOf(track))
-            originalVoiceInfos = voiceInfos
+            val melodyTracks = assignChannels(listOf(track).filter { it.notes.isNotEmpty() })
+            originalMelodyTracks = melodyTracks
             currentMelodyId = info.id
-            val primary = voiceInfos.first().melodyTrack
+            currentChordIndices = emptyList()
+            val primary = melodyTracks.first()
             val metronomeTrack = generateMetronomeTrack(primary)
             val (viewMin, viewMax) = viewRangeFor(primary)
             _gameState.update {
                 it.copy(
                     melodyTrack = primary,
-                    melodyTracks = voiceInfos.map { it.melodyTrack },
-                    voiceInfos = voiceInfos,
+                    melodyTracks = melodyTracks,
                     metronomeTrack = metronomeTrack,
                     activeVoiceIndex = 0,
                     accompanimentMode = _gameState.value.accompanimentMode,
@@ -373,19 +362,18 @@ class MelodyViewModel @Inject constructor(
         val name = melodyRepository.resolveDisplayName(uri)
         val tracks = melodyRepository.loadMultiTrackFromUri(uri, name)
         if (tracks.isNotEmpty()) {
-            val voiceInfos = buildVoiceInfos(tracks)
-            originalMelodyTrack = tracks.first()
-            originalMelodyTracks = tracks
-            originalVoiceInfos = voiceInfos
+            val melodyTracks = assignChannels(tracks.filter { it.notes.isNotEmpty() })
+            originalMelodyTrack = melodyTracks.first()
+            originalMelodyTracks = melodyTracks
             currentMelodyId = melodyRepository.uriMelodyId(uri)
-            val primary = voiceInfos.first().melodyTrack
-            val metronomeTrack = generateMetronomeTrack(tracks.first())
+            currentChordIndices = emptyList()
+            val primary = melodyTracks.first()
+            val metronomeTrack = generateMetronomeTrack(primary)
             val (viewMin, viewMax) = viewRangeFor(primary)
             _gameState.update {
                 it.copy(
                     melodyTrack = primary,
-                    melodyTracks = voiceInfos.map { vi -> vi.melodyTrack },
-                    voiceInfos = voiceInfos,
+                    melodyTracks = melodyTracks,
                     metronomeTrack = metronomeTrack,
                     activeVoiceIndex = 0,
                     accompanimentMode = _gameState.value.accompanimentMode,
@@ -437,9 +425,9 @@ class MelodyViewModel @Inject constructor(
                 }
                 _viewState.update { it.copy(fallSpeedPxPerSec = migrateFallSpeed(saved.fallSpeedPxPerSec)) }
                 // Restore voice selection after state is built
-                val vi = _gameState.value.voiceInfos
-                if (vi.isNotEmpty()) {
-                    val idx = saved.activeVoiceIndex.coerceIn(0, vi.lastIndex)
+                val tracks = _gameState.value.melodyTracks
+                if (tracks.isNotEmpty()) {
+                    val idx = saved.activeVoiceIndex.coerceIn(0, tracks.lastIndex)
                     setActiveVoice(idx)
                 }
                 if (saved.transposeSemitones != 0) {
@@ -474,18 +462,15 @@ class MelodyViewModel @Inject constructor(
 
     fun setTranspose(semitones: Int) {
         val clamped = semitones.coerceIn(-24, 24)
-        if (originalVoiceInfos.isEmpty()) return
-        val voiceInfos = originalVoiceInfos.map { vi ->
-            vi.copy(melodyTrack = vi.melodyTrack.transpose(clamped))
-        }
-        val activeIdx = _gameState.value.activeVoiceIndex.coerceAtMost(voiceInfos.lastIndex)
-        val primary = voiceInfos[activeIdx].melodyTrack
+        if (originalMelodyTracks.isEmpty()) return
+        val melodyTracks = originalMelodyTracks.map { it.transpose(clamped) }
+        val activeIdx = _gameState.value.activeVoiceIndex.coerceAtMost(melodyTracks.lastIndex)
+        val primary = melodyTracks[activeIdx]
         val (viewMin, viewMax) = viewRangeFor(primary)
         _gameState.update {
             it.copy(
                 melodyTrack = primary,
-                melodyTracks = voiceInfos.map { vi -> vi.melodyTrack },
-                voiceInfos = voiceInfos,
+                melodyTracks = melodyTracks,
                 transposeSemitones = clamped
             )
         }
@@ -580,9 +565,9 @@ class MelodyViewModel @Inject constructor(
 
     /** Toggle in-game melody audio playback. */
     fun setActiveVoice(index: Int) {
-        val infos = _gameState.value.voiceInfos
-        if (index < 0 || index >= infos.size) return
-        val selectedTrack = infos[index].melodyTrack
+        val tracks = _gameState.value.melodyTracks
+        if (index < 0 || index >= tracks.size) return
+        val selectedTrack = tracks[index]
         val (viewMin, viewMax) = viewRangeFor(selectedTrack)
         _gameState.update {
             it.copy(
@@ -708,6 +693,7 @@ class MelodyViewModel @Inject constructor(
         _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
 
         noteTracking.reset()
+        currentChordIndices = emptyList()
         _canAdvanceLevel.value = false
         currentNoteDetectedCorrectly = false
         leadInSeconds = leadIn
@@ -921,14 +907,10 @@ class MelodyViewModel @Inject constructor(
                     addAll(when (gs.accompanimentMode) {
                         AccompanimentMode.ALL -> gs.melodyTracks
                         AccompanimentMode.EXCEPT -> {
-                            val vi = gs.voiceInfos
-                            vi.filterIndexed { i, _ -> i != gs.activeVoiceIndex }.map { it.melodyTrack }
+                            gs.melodyTracks.filterIndexed { i, _ -> i != gs.activeVoiceIndex }
                         }
                         AccompanimentMode.SELECTED_ONLY -> {
-                            val vi = gs.voiceInfos
-                            if (gs.activeVoiceIndex in vi.indices)
-                                listOf(vi[gs.activeVoiceIndex].melodyTrack)
-                            else emptyList()
+                            gs.melodyTracks.getOrNull(gs.activeVoiceIndex)?.let { listOf(it) } ?: emptyList()
                         }
                         AccompanimentMode.NONE -> emptyList()
                     })
@@ -974,9 +956,8 @@ class MelodyViewModel @Inject constructor(
                             heldNotes.add(event.noteNumber)
                             val result = pitchResultFromMidi(event.noteNumber)
                             _gameState.update { it.copy(pitchResult = result) }
-                            val midiNoteIdx = _gameState.value.currentNoteIndex
-                            if (midiNoteIdx >= 0) {
-                                updateNoteProgress(midiNoteIdx, result.centsOff)
+                            for (idx in currentChordIndices) {
+                                updateNoteProgress(idx, result.centsOff)
                             }
                             evaluateNote(result)
                         }
@@ -1002,9 +983,8 @@ class MelodyViewModel @Inject constructor(
                             noteTracking.pendingRearticulation = false
                             noteTracking.hasSeenSilenceSinceLastValid = false
                         }
-                        val micNoteIdx = _gameState.value.currentNoteIndex
-                        if (micNoteIdx >= 0) {
-                            updateNoteProgress(micNoteIdx, result.centsOff)
+                        for (idx in currentChordIndices) {
+                            updateNoteProgress(idx, result.centsOff)
                         }
                         evaluateNote(result)
                     } else {
@@ -1019,31 +999,33 @@ class MelodyViewModel @Inject constructor(
         val track = _gameState.value.melodyTrack ?: return
         val adjustedTime = currentTime
 
-        // Find the note that should be active at the latency-adjusted time
-        val noteIndex = track.notes.indexOfFirst { note ->
-            val start = track.noteStartSeconds(note)
-            val duration = track.noteDurationSeconds(note)
-            adjustedTime >= start && adjustedTime < start + duration
-        }
+        // Find all notes that should be active at the latency-adjusted time
+        val activeIndices = track.activeNoteIndicesAt(adjustedTime)
 
-        if (noteIndex != _gameState.value.currentNoteIndex && noteIndex >= 0) {
+        if (activeIndices != currentChordIndices) {
             // Finalize previous note if it wasn't scored
             finalizePreviousNote()
 
             // Remember the previous note index before it is overwritten below
             val prevNoteIdx = _gameState.value.currentNoteIndex
 
-            // New note entered
+            // New note/chord entered
             val results = _gameState.value.noteResults.toMutableMap()
-            results[noteIndex] = NoteResultState.ACTIVE
-            _gameState.update { it.copy(currentNoteIndex = noteIndex, noteResults = results) }
+            for (idx in activeIndices) results[idx] = NoteResultState.ACTIVE
+            _gameState.update {
+                it.copy(
+                    currentNoteIndex = activeIndices.firstOrNull() ?: -1,
+                    noteResults = results
+                )
+            }
+            currentChordIndices = activeIndices
             currentNoteDetectedCorrectly = false
             noteTracking.resetForNewNote()
 
-            // Detect if the user held through a same-pitch transition
-            if (prevNoteIdx >= 0 && prevNoteIdx < track.notes.size) {
+            // Detect if the user held through a same-pitch transition (on the primary note)
+            if (prevNoteIdx >= 0 && activeIndices.isNotEmpty() && prevNoteIdx < track.notes.size) {
                 val prevNote = track.notes[prevNoteIdx]
-                val newNote = track.notes[noteIndex]
+                val newNote = track.notes[activeIndices.first()]
                 if (prevNote.noteNumber == newNote.noteNumber) {
                     val currentResult = _gameState.value.pitchResult
                     val newNoteFreq = NoteUtils.midiToFrequency(newNote.noteNumber)
@@ -1056,26 +1038,25 @@ class MelodyViewModel @Inject constructor(
             }
 
             // In wait mode, start grace period before freezing
-            if (_gameState.value.waitMode) {
+            if (activeIndices.isNotEmpty() && _gameState.value.waitMode) {
                 noteTracking.isWaitingForNote = true
                 noteTracking.waitGraceStartTime = SystemClock.elapsedRealtime()
                 noteTracking.waitGraceDurationMs = GRACE_PERIOD_EXTRA_MS
                 _gameState.update { it.copy(phase = PlayPhase.WAITING_FOR_NOTE) }
             }
-        } else if (noteIndex < 0 && _gameState.value.currentNoteIndex >= 0) {
-            // We've passed the current note without a new one
-            finalizePreviousNote()
-            _gameState.update { it.copy(currentNoteIndex = -1) }
         }
     }
 
     private fun evaluateNote(result: PitchResult) {
         val track = _gameState.value.melodyTrack ?: return
-        val noteIndex = _gameState.value.currentNoteIndex
-        if (noteIndex < 0 || noteIndex >= track.notes.size) return
-        val expectedNote = track.notes[noteIndex]
-        val expectedFreq = NoteUtils.midiToFrequency(expectedNote.noteNumber)
-        val centsOff = noteUtils.frequencyToCents(result.frequency, expectedFreq)
+        if (currentChordIndices.isEmpty()) return
+        val expectedNotes = currentChordIndices.mapNotNull { track.notes.getOrNull(it) }
+        if (expectedNotes.isEmpty()) return
+        val primaryIdx = currentChordIndices.first()
+        val expectedNote = track.notes[primaryIdx]
+        val centsOff = expectedNotes.minOf { note ->
+            abs(noteUtils.frequencyToCents(result.frequency, NoteUtils.midiToFrequency(note.noteNumber)))
+        }
 
         if (result.isValid) {
             noteTracking.detectedPitchFrameCount++
@@ -1110,7 +1091,7 @@ class MelodyViewModel @Inject constructor(
                 val isSameHeldWrong = result.midiNoteNumber == noteTracking.lastWrongMidiNote
                         && !noteTracking.wasPauseSinceLastWrong
                 if (!isSameHeldWrong) {
-                    scoreCurrentNote(expectedNote, noteIndex)
+                    scoreCurrentNote(expectedNote, primaryIdx)
                     noteTracking.isWaitingForNote = false
                     noteTracking.lastWrongMidiNote = result.midiNoteNumber
                     noteTracking.wasPauseSinceLastWrong = false
@@ -1134,17 +1115,18 @@ class MelodyViewModel @Inject constructor(
     }
 
     private fun finalizePreviousNote() {
-        val noteIndex = _gameState.value.currentNoteIndex
-        if (noteIndex < 0) return
+        if (currentChordIndices.isEmpty()) return
         val track = _gameState.value.melodyTrack ?: return
-        if (noteIndex >= track.notes.size) return
+        for (noteIndex in currentChordIndices) {
+            if (noteIndex !in track.notes.indices) continue
 
-        // Skip if already scored
-        val existingResult = _gameState.value.noteResults[noteIndex]
-        if (existingResult != null && existingResult != NoteResultState.ACTIVE) return
+            // Skip if already scored
+            val existingResult = _gameState.value.noteResults[noteIndex]
+            if (existingResult != null && existingResult != NoteResultState.ACTIVE) continue
 
-        val expectedNote = track.notes[noteIndex]
-        scoreCurrentNote(expectedNote, noteIndex)
+            val expectedNote = track.notes[noteIndex]
+            scoreCurrentNote(expectedNote, noteIndex)
+        }
     }
 
     private fun updateNoteProgress(noteIndex: Int, centsOff: Float) {

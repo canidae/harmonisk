@@ -216,10 +216,9 @@ fun MelodyPlayScreen(
                     }
 
                     // Voice selector (top-panel chip, like Free Play)
-                    if (gameState.voiceInfos.size > 1) {
+                    if (gameState.melodyTracks.size > 1) {
                         var showVoiceMenu by remember { mutableStateOf(false) }
-                        val currentVi = gameState.voiceInfos.getOrNull(gameState.activeVoiceIndex)
-                        val voiceColor = if (currentVi != null) VOICE_COLORS[currentVi.trackOrigin % VOICE_COLORS.size] else Color.Gray
+                        val voiceColor = VOICE_COLORS[gameState.activeVoiceIndex % VOICE_COLORS.size]
                         Box {
                             Box(
                                 contentAlignment = Alignment.Center,
@@ -236,8 +235,8 @@ fun MelodyPlayScreen(
                                 onDismissRequest = { showVoiceMenu = false },
                                 offset = DpOffset((-80).dp, 0.dp)
                             ) {
-                                for (vi in gameState.voiceInfos) {
-                                    val vColor = VOICE_COLORS[vi.trackOrigin % VOICE_COLORS.size]
+                                for (i in gameState.melodyTracks.indices) {
+                                    val vColor = VOICE_COLORS[i % VOICE_COLORS.size]
                                     DropdownMenuItem(
                                         text = {
                                             Row(
@@ -246,13 +245,13 @@ fun MelodyPlayScreen(
                                             ) {
                                                 Box(Modifier.size(10.dp).background(vColor, CircleShape))
                                                 Text(
-                                                    "V${vi.globalIndex + 1}",
-                                                    fontWeight = if (vi.globalIndex == gameState.activeVoiceIndex) FontWeight.Bold
+                                                    "V${i + 1}",
+                                                    fontWeight = if (i == gameState.activeVoiceIndex) FontWeight.Bold
                                                                  else FontWeight.Normal
                                                 )
                                             }
                                         },
-                                        onClick = { viewModel.setActiveVoice(vi.globalIndex); showVoiceMenu = false }
+                                        onClick = { viewModel.setActiveVoice(i); showVoiceMenu = false }
                                     )
                                 }
                             }

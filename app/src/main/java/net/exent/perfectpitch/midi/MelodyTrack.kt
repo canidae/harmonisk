@@ -88,6 +88,17 @@ class MelodyTrack(
 
     fun noteStartSeconds(note: NoteEvent): Double = tickToSeconds(note.startTick)
 
+    /** Indices (into [notes]) of all notes active at the given time, i.e. those whose window contains it. */
+    fun activeNoteIndicesAt(seconds: Double): List<Int> {
+        val result = mutableListOf<Int>()
+        for ((i, note) in notes.withIndex()) {
+            val start = tickToSeconds(note.startTick)
+            if (seconds < start) continue
+            if (seconds < tickToSeconds(note.endTick)) result.add(i)
+        }
+        return result
+    }
+
     fun transpose(semitones: Int): MelodyTrack {
         if (semitones == 0) return this
         return MelodyTrack(
@@ -131,122 +142,4 @@ class MelodyTrack(
         return seg.startTick + (elapsedInSegment * ticksPerQuarterNote * 1_000_000.0 / seg.usPerBeat).toLong()
     }
 
-    /**
-     * Decompose a polyphonic track into separate monophonic voice tracks.
-     *
-     * At every point in time, voice V is the (V+1)-th highest pitch among
-     * all simultaneously active original notes.  Each original note may be
-     * split across multiple voices as other notes enter and exit.
-     *
-     * Returns [this] unchanged if the track is already monophonic.
-     */
-    fun splitIntoVoices(): List<MelodyTrack> {
-        if (notes.size <= 1) return listOf(this)
-
-        val sorted = notes.sortedBy { it.startTick }
-
-        // Collect all unique event times
-        val times = sortedSetOf<Long>()
-        for (n in sorted) {
-            times.add(n.startTick)
-            times.add(n.endTick)
-        }
-        val eventTimes = times.toList()
-        if (eventTimes.size < 2) return listOf(this)
-
-        // Determine max simultaneous notes (polyphony)
-        var maxActive = 0
-        for (i in 0 until eventTimes.size - 1) {
-            val mid = (eventTimes[i] + eventTimes[i + 1]) / 2
-            val count = sorted.count { it.startTick <= mid && mid < it.endTick }
-            if (count > maxActive) maxActive = count
-        }
-        if (maxActive <= 1) return listOf(this)
-
-        // Build voice tracks by scanning intervals
-        val voiceNotes = Array(maxActive) { mutableListOf<NoteEvent>() }
-        val currentNote = arrayOfNulls<NoteEvent>(maxActive)
-        val currentStart = arrayOfNulls<Long>(maxActive)
-        val noteVoice = mutableMapOf<NoteEvent, Int>()
-
-        for (i in 0 until eventTimes.size - 1) {
-            val intervalStart = eventTimes[i]
-            val intervalEnd = eventTimes[i + 1]
-            if (intervalStart == intervalEnd) continue
-            val mid = (intervalStart + intervalEnd) / 2
-
-            val active = sorted.filter { it.startTick <= mid && mid < it.endTick }
-
-            // Identify continuing notes (same NoteEvent on same voice) and new notes
-            val assignedVoices = mutableSetOf<Int>()
-            val unassignedNotes = mutableListOf<NoteEvent>()
-
-            for (note in active.sortedByDescending { it.noteNumber }) {
-                val existingVoice = noteVoice[note]
-                if (existingVoice != null && currentNote[existingVoice] === note) {
-                    assignedVoices.add(existingVoice)
-                } else {
-                    unassignedNotes.add(note)
-                }
-            }
-
-            val unassignedIter = unassignedNotes.iterator()
-            for (v in 0 until maxActive) {
-                if (v in assignedVoices) {
-                    // Note continues on this voice
-                } else if (unassignedIter.hasNext()) {
-                    val note = unassignedIter.next()
-                    if (currentNote[v] !== note) {
-                        val prev = currentNote[v]
-                        val start = currentStart[v]
-                        if (prev != null && start != null) {
-                            val dur = intervalStart - start
-                            if (dur > 0) {
-                                voiceNotes[v].add(NoteEvent(prev.noteNumber, prev.velocity, start, dur))
-                            }
-                        }
-                        currentNote[v] = note
-                        currentStart[v] = intervalStart
-                        noteVoice[note] = v
-                    }
-                } else {
-                    val prev = currentNote[v]
-                    val start = currentStart[v]
-                    if (prev != null && start != null) {
-                        val dur = intervalStart - start
-                        if (dur > 0) {
-                            voiceNotes[v].add(NoteEvent(prev.noteNumber, prev.velocity, start, dur))
-                        }
-                        currentNote[v] = null
-                        currentStart[v] = null
-                    }
-                }
-            }
-        }
-
-        // Finalize any remaining active notes
-        val lastTime = eventTimes.last()
-        for (v in 0 until maxActive) {
-            val prev = currentNote[v]
-            val start = currentStart[v]
-            if (prev != null && start != null) {
-                val dur = lastTime - start
-                if (dur > 0) {
-                    voiceNotes[v].add(NoteEvent(prev.noteNumber, prev.velocity, start, dur))
-                }
-            }
-        }
-
-        return voiceNotes.map { notes ->
-            MelodyTrack(
-                name = name,
-                notes = notes,
-                tempoChanges = tempoChanges,
-                timeSignatures = timeSignatures,
-                ticksPerQuarterNote = ticksPerQuarterNote,
-                channel = channel,
-                isMetronome = isMetronome
-            )
-        }
-    }
 }

@@ -77,44 +77,31 @@ object MidiImporter {
     fun convertToPlayedNotes(multiTrackMidi: MultiTrackMidi): MidiImportResult {
         val tpq = multiTrackMidi.ticksPerQuarterNote.toDouble()
         val bpmD = multiTrackMidi.bpm.toDouble()
-        val usPerBeat = (60_000_000.0 / bpmD).toLong()
 
         fun tickToMs(tick: Long): Long =
             (tick.toDouble() / tpq * 60_000.0 / bpmD).toLong()
 
         val playedNotes = mutableListOf<PlayedNote>()
-        var globalVoiceIdx = 0
 
-        for ((trackOrigin, voiceNotes) in multiTrackMidi.voiceTracks.withIndex()) {
-            // Build a temporary MelodyTrack so we can use splitIntoVoices()
-            val tmpTrack = MelodyTrack(
-                name = "",
-                notes = voiceNotes,
-                tempoChanges = listOf(TempoEvent(0, usPerBeat)),
-                timeSignatures = emptyList(),
-                ticksPerQuarterNote = multiTrackMidi.ticksPerQuarterNote
-            )
-            val splitTracks = tmpTrack.splitIntoVoices()
-            for (voiceTrack in splitTracks) {
-                for (note in voiceTrack.notes) {
-                    val startMs = tickToMs(note.startTick)
-                    val endMs = tickToMs(note.endTick)
-                    if (endMs <= startMs) continue
+        // Each MIDI track is one voice/staff; a track may contain chords (simultaneous notes).
+        for ((voiceIdx, trackNotes) in multiTrackMidi.voiceTracks.withIndex()) {
+            for (note in trackNotes) {
+                val startMs = tickToMs(note.startTick)
+                val endMs = tickToMs(note.endTick)
+                if (endMs <= startMs) continue
 
-                    val resolution = NoteUtils.resolveMidiNote(note.noteNumber)
+                val resolution = NoteUtils.resolveMidiNote(note.noteNumber)
 
-                    playedNotes.add(PlayedNote(
-                        noteName = resolution.noteName,
-                        octave = resolution.octave,
-                        midiNumber = note.noteNumber,
-                        startTimeMs = startMs,
-                        endTimeMs = endMs,
-                        id = UUID.randomUUID().toString(),
-                        voiceIndex = globalVoiceIdx,
-                        trackOrigin = trackOrigin
-                    ))
-                }
-                globalVoiceIdx++
+                playedNotes.add(PlayedNote(
+                    noteName = resolution.noteName,
+                    octave = resolution.octave,
+                    midiNumber = note.noteNumber,
+                    startTimeMs = startMs,
+                    endTimeMs = endMs,
+                    id = UUID.randomUUID().toString(),
+                    voiceIndex = voiceIdx,
+                    trackOrigin = voiceIdx
+                ))
             }
         }
         return MidiImportResult(
