@@ -41,17 +41,17 @@
     <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">Sensibilidade do microfone</string>
     <string name="settings_silence_threshold">Limiar de silêncio: %1$.0f dB</string>
-    <string name="settings_in_out">Entrada/Saída: %1$s / %2$s</string>
-    <string name="settings_audio_delay">Atraso de áudio: %1$d ms</string>
-    <string name="settings_edit_audio_delay">Editar atraso de áudio</string>
-    <string name="settings_delay_ms">Atraso (ms)</string>
+    <string name="settings_devices">%1$s / %2$s</string>
+    <string name="settings_input_delay_title">Audio input delay</string>
+    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">Auto</string>
     <string name="settings_calibrating_stop">Parar</string>
     <string name="settings_no_detection">O microfone não consegue detetar tons</string>
     <string name="settings_calibrating">Calibrando… %1$d/5 tons detetados</string>
-    <string name="settings_visual_delay">Atraso visual: %1$d ms</string>
-    <string name="settings_visual_delay_min">0 ms</string>
-    <string name="settings_visual_delay_max">200 ms</string>
+    <string name="settings_input_delay">Audio input delay: %1$dms</string>
+    <string name="settings_input_delay_min">0ms</string>
+    <string name="settings_input_delay_max">500ms</string>
+    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">Restaurar para os padrão?</string>
     <string name="settings_reset_dialog_body">Todas as configurações serão restauradas para os valores padrão, incluindo:\n\n\u2022 Diapasão (A = 440 Hz)\n\u2022 Limiar de silêncio\n\u2022 Velocidade, tempo, compasso, ajuste de notas no Modo livre</string>
     <string name="settings_reset">Restaurar</string>
@@ -142,8 +142,8 @@
     <string name="melody_play_transpose_0">Transposição: 0</string>
     <string name="melody_play_transpose_plus">Transposição: +%1$d</string>
     <string name="melody_play_transpose">Transposição: %1$d</string>
-    <string name="melody_play_audio_delay">Atraso de áudio: %1$d ms</string>
-    <string name="melody_play_visual_delay">Atraso visual: %1$d ms</string>
+    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
     <string name="melody_play_uncalibrated">%1$s não está calibrado</string>
 
     <!-- Score results -->

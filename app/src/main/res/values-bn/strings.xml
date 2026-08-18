@@ -41,17 +41,17 @@
     <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">মাইক্রোফোন সংবেদনশীলতা</string>
     <string name="settings_silence_threshold">নীরবতা সীমা: %1$.0f dB</string>
-    <string name="settings_in_out">ইনপুট/আউটপুট: %1$s / %2$s</string>
-    <string name="settings_audio_delay">অডিও বিলম্ব: %1$d ms</string>
-    <string name="settings_edit_audio_delay">অডিও বিলম্ব সম্পাদনা করুন</string>
-    <string name="settings_delay_ms">বিলম্ব (ms)</string>
+    <string name="settings_devices">%1$s / %2$s</string>
+    <string name="settings_input_delay_title">Audio input delay</string>
+    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">অটো</string>
     <string name="settings_calibrating_stop">থামান</string>
     <string name="settings_no_detection">মাইক্রোফোন কোনো স্বর সনাক্ত করতে পারে না</string>
     <string name="settings_calibrating">ক্যালিব্রেট করছে… %1$d/5 স্বর সনাক্ত</string>
-    <string name="settings_visual_delay">ভিজ্যুয়াল বিলম্ব: %1$d ms</string>
-    <string name="settings_visual_delay_min">0 ms</string>
-    <string name="settings_visual_delay_max">200 ms</string>
+    <string name="settings_input_delay">Audio input delay: %1$dms</string>
+    <string name="settings_input_delay_min">0ms</string>
+    <string name="settings_input_delay_max">500ms</string>
+    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">ডিফল্টে রিসেট করবেন?</string>
     <string name="settings_reset_dialog_body">সমস্ত সেটিংস তাদের ডিফল্ট মানগুলিতে ফিরে যাবে, যার মধ্যে রয়েছে:\n\n\u2022 কনসার্ট পিচ (A = 440 Hz)\n\u2022 নীরবতা সীমা\n\u2022 মুক্ত বাজনার গতি, টেম্পো, সময়ের স্বরলিপি, নোট স্ন্যাপ</string>
     <string name="settings_reset">রিসেট</string>
@@ -142,8 +142,8 @@
     <string name="melody_play_transpose_0">ট্রান্সপোজ: 0</string>
     <string name="melody_play_transpose_plus">ট্রান্সপোজ: +%1$d</string>
     <string name="melody_play_transpose">ট্রান্সপোজ: %1$d</string>
-    <string name="melody_play_audio_delay">অডিও বিলম্ব: %1$d ms</string>
-    <string name="melody_play_visual_delay">ভিজ্যুয়াল বিলম্ব: %1$d ms</string>
+    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
     <string name="melody_play_uncalibrated">%1$s ক্যালিব্রেট করা হয়নি</string>
 
     <!-- Score results -->

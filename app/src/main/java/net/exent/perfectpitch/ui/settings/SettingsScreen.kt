@@ -2,7 +2,6 @@ package net.exent.perfectpitch.ui.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -16,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -26,6 +24,7 @@ import android.content.pm.PackageManager
 import net.exent.perfectpitch.R
 import net.exent.perfectpitch.data.LocaleManager
 import net.exent.perfectpitch.music.Instrument
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,8 +36,6 @@ fun SettingsScreen(
     val isCalibrating by viewModel.isCalibrating.collectAsState()
     val calibrationTonesDetected by viewModel.calibrationTonesDetected.collectAsState()
     val calibrationNoDetection by viewModel.calibrationNoDetection.collectAsState()
-    var showEditAudioDialog by remember { mutableStateOf(false) }
-    var editAudioText by remember { mutableStateOf("") }
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -74,31 +71,6 @@ fun SettingsScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showResetConfirm = false }) { Text(stringResource(R.string.cancel)) }
-                }
-            )
-        }
-
-        if (showEditAudioDialog) {
-            AlertDialog(
-                onDismissRequest = { showEditAudioDialog = false },
-                title = { Text(stringResource(R.string.settings_edit_audio_delay)) },
-                text = {
-                    OutlinedTextField(
-                        value = editAudioText,
-                        onValueChange = { editAudioText = it },
-                        label = { Text(stringResource(R.string.settings_delay_ms)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true
-                    )
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.setAudioDelayFromText(editAudioText)
-                        showEditAudioDialog = false
-                    }) { Text(stringResource(R.string.save)) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showEditAudioDialog = false }) { Text(stringResource(R.string.cancel)) }
                 }
             )
         }
@@ -281,41 +253,28 @@ fun SettingsScreen(
                 }
             }
 
-            // Audio delay
+            // Audio input delay
             SettingSection(
-                title = stringResource(R.string.settings_audio_delay_title),
-                helpText = stringResource(R.string.settings_audio_delay_help)
+                title = stringResource(R.string.settings_input_delay_title),
+                helpText = stringResource(R.string.settings_input_delay_help)
             ) {
                 val device by viewModel.currentDevice.collectAsState()
                 val inputDevice by viewModel.currentInputDevice.collectAsState()
-                val audioDelay by viewModel.activeAudioDelay.collectAsState()
+                val inputDelay by viewModel.activeInputDelay.collectAsState()
+                val totalDelay by viewModel.activeTotalDelay.collectAsState()
 
                 val inName = inputDevice?.name ?: context.getString(R.string.microphone)
                 val outName = device?.name ?: context.getString(R.string.speaker)
-                Text(
-                    text = stringResource(R.string.settings_in_out, inName, outName),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = stringResource(R.string.settings_audio_delay, audioDelay),
-                        style = MaterialTheme.typography.bodyLarge,
+                        text = stringResource(R.string.settings_devices, inName, outName),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
-                    OutlinedButton(
-                        onClick = {
-                            editAudioText = audioDelay.toString()
-                            showEditAudioDialog = true
-                        },
-                        enabled = !isCalibrating
-                    ) { Text(stringResource(R.string.edit)) }
                     Button(
                         onClick = {
                             if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
@@ -344,34 +303,38 @@ fun SettingsScreen(
                         )
                     }
                 }
-            }
 
-            // Visual delay
-            SettingSection(
-                title = stringResource(R.string.settings_visual_delay_title),
-                helpText = stringResource(R.string.settings_visual_delay_help)
-            ) {
-                val visualDelay by viewModel.activeVisualDelay.collectAsState()
+                if (totalDelay > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.settings_total_delay, totalDelay),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Slider(
-                    value = visualDelay.toFloat(),
-                    onValueChange = { viewModel.setVisualDelay(it.toInt()) },
-                    valueRange = 0f..200f,
+                    value = inputDelay.toFloat(),
+                    onValueChange = { viewModel.setInputDelay(((it / 25f).roundToInt() * 25).coerceIn(0, 500)) },
+                    valueRange = 0f..500f,
                     steps = 19,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Box(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        stringResource(R.string.settings_visual_delay_min),
+                        stringResource(R.string.settings_input_delay_min),
                         style = MaterialTheme.typography.labelLarge,
                         modifier = Modifier.align(Alignment.CenterStart)
                     )
                     Text(
-                        stringResource(R.string.settings_visual_delay_max),
+                        stringResource(R.string.settings_input_delay_max),
                         style = MaterialTheme.typography.labelLarge,
                         modifier = Modifier.align(Alignment.CenterEnd)
                     )
                     Text(
-                        text = stringResource(R.string.settings_visual_delay, visualDelay),
+                        text = stringResource(R.string.settings_input_delay, inputDelay),
                         style = MaterialTheme.typography.labelLarge,
                         modifier = Modifier.align(Alignment.Center)
                     )

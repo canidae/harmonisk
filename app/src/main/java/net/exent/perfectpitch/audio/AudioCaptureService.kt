@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
+import android.media.AudioTimestamp
 import android.media.MediaRecorder
 import androidx.core.app.ActivityCompat
 import android.content.Context
@@ -36,6 +37,24 @@ class AudioCaptureService(
     private val minBufferSize = AudioRecord.getMinBufferSize(
         SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT
     )
+
+    /** Estimated mic-to-read latency in ms, measured via AudioRecord.getTimestamp(). */
+    @Volatile
+    var captureLatencyMs: Int = 0
+        private set
+
+    private var totalFramesRead: Long = 0L
+
+    private fun updateCaptureLatency(record: AudioRecord) {
+        val ts = AudioTimestamp()
+        if (record.getTimestamp(ts, AudioTimestamp.TIMEBASE_MONOTONIC) == AudioRecord.SUCCESS) {
+            val nsSinceCapture = System.nanoTime() - ts.nanoTime
+            val framesBehind = (ts.framePosition - totalFramesRead).coerceAtLeast(0)
+            val ms = nsSinceCapture / 1_000_000.0 + framesBehind * 1000.0 / SAMPLE_RATE
+            val rounded = ms.toInt()
+            if (rounded in 0..200) captureLatencyMs = rounded
+        }
+    }
 
     fun audioFlow(): Flow<FloatArray> = callbackFlow {
         if (ActivityCompat.checkSelfPermission(
@@ -74,6 +93,8 @@ class AudioCaptureService(
                     buffer, 0, BUFFER_SIZE_SAMPLES, AudioRecord.READ_BLOCKING
                 )
                 if (read > 0) {
+                    totalFramesRead += read
+                    updateCaptureLatency(audioRecord)
                     trySend(buffer.copyOf(read))
                 }
             }

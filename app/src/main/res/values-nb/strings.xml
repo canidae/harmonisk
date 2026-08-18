@@ -41,17 +41,17 @@
     <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">Mikrofonfølsomhet</string>
     <string name="settings_silence_threshold">Stilleterskel: %1$.0f dB</string>
-    <string name="settings_in_out">Inn/Ut: %1$s / %2$s</string>
-    <string name="settings_audio_delay">Lydforsinkelse: %1$dms</string>
-    <string name="settings_edit_audio_delay">Rediger lydforsinkelse</string>
-    <string name="settings_delay_ms">Forsinkelse (ms)</string>
+    <string name="settings_devices">%1$s / %2$s</string>
+    <string name="settings_input_delay_title">Audio input delay</string>
+    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">Auto</string>
     <string name="settings_calibrating_stop">Stopp</string>
     <string name="settings_no_detection">Mikrofonen kan ikke oppdage toner</string>
     <string name="settings_calibrating">Kalibrerer\u2026 %1$d/5 toner oppdaget</string>
-    <string name="settings_visual_delay">Visuell forsinkelse: %1$dms</string>
-    <string name="settings_visual_delay_min">0ms</string>
-    <string name="settings_visual_delay_max">200ms</string>
+    <string name="settings_input_delay">Audio input delay: %1$dms</string>
+    <string name="settings_input_delay_min">0ms</string>
+    <string name="settings_input_delay_max">500ms</string>
+    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">Tilbakestill til standard?</string>
     <string name="settings_reset_dialog_body">Alle innstillinger vil bli tilbakestilt til standardverdier, inkludert:\n\n\u2022 Kammertone (A = 440 Hz)\n\u2022 Stilleterskel\n\u2022 Fri Spill-hastighet, tempo, taktart, noteinnsnapping</string>
     <string name="settings_reset">Tilbakestill</string>
@@ -142,8 +142,8 @@
     <string name="melody_play_transpose_0">Transponer: 0</string>
     <string name="melody_play_transpose_plus">Transponer: +%1$d</string>
     <string name="melody_play_transpose">Transponer: %1$d</string>
-    <string name="melody_play_audio_delay">Lydforsinkelse: %1$dms</string>
-    <string name="melody_play_visual_delay">Visuell forsinkelse: %1$dms</string>
+    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
     <string name="melody_play_uncalibrated">%1$s er ikke kalibrert</string>
 
     <!-- Score results -->

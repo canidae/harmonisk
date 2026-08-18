@@ -17,7 +17,6 @@ class MelodyPlayer(
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
     private val activeSynthNotes = mutableMapOf<Int, NoteEvent>()
-    private var totalAudioDelayMs: Long = 0L
 
     /**
      * Switch the backend at runtime. Silences the current player before switching.
@@ -123,10 +122,6 @@ class MelodyPlayer(
 
         activeSynthNotes.clear()
         activeSynthNotes.putAll(nextActive)
-    }
-
-    fun setTotalAudioDelay(delayMs: Long) {
-        totalAudioDelayMs = delayMs.coerceIn(0, 500)
     }
 
     fun stop() {

@@ -21,6 +21,9 @@ class PitchProcessor(
          */
         const val ANALYSIS_WINDOW_SIZE = 2822
 
+        /** Duration of the analysis window in ms — part of the input detection latency. */
+        const val ANALYSIS_WINDOW_MS = (ANALYSIS_WINDOW_SIZE * 1000 + AudioConstants.SAMPLE_RATE / 2) / AudioConstants.SAMPLE_RATE
+
         /**
          * Energy rise (in dB) within one chunk that triggers an onset reset.
          * On onset the sliding window is cleared so the very first CREPE inference
@@ -34,6 +37,13 @@ class PitchProcessor(
         private const val ONSET_DEBOUNCE_CHUNKS = 2
 
         /**
+         * Onset detection delay in ms. A fresh note needs this many consecutive
+         * chunks of rising energy before the sliding window resets, adding to the
+         * input detection latency for real instruments.
+         */
+        const val INPUT_ONSET_MS = (ONSET_DEBOUNCE_CHUNKS * AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000 + AudioConstants.SAMPLE_RATE / 2) / AudioConstants.SAMPLE_RATE
+
+        /**
          * After this many milliseconds of consecutive silence, the prior-note frequency
          * hint is cleared. Prevents a note before a long rest from biasing the next note.
          */
@@ -43,6 +53,11 @@ class PitchProcessor(
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB
     private var referenceA4 = NoteUtils.DEFAULT_A4_FREQ
+
+    /** Duration of the most recent CREPE inference, used for input-delay calibration. */
+    @Volatile
+    var inferenceLatencyMs: Int = 0
+        private set
 
     /** Frequency of the most recently detected pitch, passed to CREPE as an octave-hint. */
     private var lastFrequency = 0f
@@ -100,7 +115,10 @@ class PitchProcessor(
         val rmsDb = AudioUtils.linearToDb(AudioUtils.rms(buffer))
         if (rmsDb < silenceThresholdDb) return handleSilent()
 
+        val start = System.nanoTime()
         val result = crepeDetector.detectPitch(buffer = buffer, hintFreq = lastFrequency)
+        val elapsed = ((System.nanoTime() - start) / 1_000_000).toInt()
+        if (elapsed in 0..500) inferenceLatencyMs = elapsed
         if (result.frequency <= 0f) return handleSilent()
 
         lastFrequency = result.frequency

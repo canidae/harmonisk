@@ -41,17 +41,17 @@
     <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">माइक्रोफ़ोन संवेदनशीलता</string>
     <string name="settings_silence_threshold">मौन सीमा: %1$.0f dB</string>
-    <string name="settings_in_out">इनपुट/आउटपुट: %1$s / %2$s</string>
-    <string name="settings_audio_delay">ऑडियो विलंब: %1$d ms</string>
-    <string name="settings_edit_audio_delay">ऑडियो विलंब संपादित करें</string>
-    <string name="settings_delay_ms">विलंब (ms)</string>
+    <string name="settings_devices">%1$s / %2$s</string>
+    <string name="settings_input_delay_title">Audio input delay</string>
+    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">ऑटो</string>
     <string name="settings_calibrating_stop">रोकें</string>
     <string name="settings_no_detection">माइक्रोफ़ोन कोई स्वर नहीं पकड़ सकता</string>
     <string name="settings_calibrating">कैलिब्रेट कर रहा है… %1$d/5 स्वर पकड़े गए</string>
-    <string name="settings_visual_delay">दृश्य विलंब: %1$d ms</string>
-    <string name="settings_visual_delay_min">0 ms</string>
-    <string name="settings_visual_delay_max">200 ms</string>
+    <string name="settings_input_delay">Audio input delay: %1$dms</string>
+    <string name="settings_input_delay_min">0ms</string>
+    <string name="settings_input_delay_max">500ms</string>
+    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">डिफ़ॉल्ट पर रीसेट करें?</string>
     <string name="settings_reset_dialog_body">सभी सेटिंग्स उनके डिफ़ॉल्ट मानों पर रीसेट हो जाएंगी, जिनमें शामिल हैं:\n\n\u2022 मानक स्वर (A = 440 Hz)\n\u2022 मौन सीमा\n\u2022 मुक्त अभ्यास की गति, टेम्पो, ताल, नोट स्नैप</string>
     <string name="settings_reset">रीसेट</string>
@@ -142,8 +142,8 @@
     <string name="melody_play_transpose_0">ट्रांसपोज़: 0</string>
     <string name="melody_play_transpose_plus">ट्रांसपोज़: +%1$d</string>
     <string name="melody_play_transpose">ट्रांसपोज़: %1$d</string>
-    <string name="melody_play_audio_delay">ऑडियो विलंब: %1$d ms</string>
-    <string name="melody_play_visual_delay">दृश्य विलंब: %1$d ms</string>
+    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
     <string name="melody_play_uncalibrated">%1$s कैलिब्रेटेड नहीं है</string>
 
     <!-- Score results -->

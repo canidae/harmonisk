@@ -61,8 +61,8 @@ fun MelodyPlayScreen(
     val deviceState by viewModel.deviceState.collectAsStateWithLifecycle()
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
     val uncalibratedDevice by viewModel.uncalibratedDevicePrompt.collectAsState()
-    val audioDelay by viewModel.activeAudioDelay.collectAsState()
-    val visualDelay by viewModel.activeVisualDelay.collectAsState()
+    val inputDelay by viewModel.activeInputDelay.collectAsState()
+    val totalDelay by viewModel.activeTotalDelay.collectAsState()
     val scoreHistory by viewModel.currentScoreHistory.collectAsStateWithLifecycle()
     val canAdvance by viewModel.canAdvanceLevel.collectAsStateWithLifecycle()
     val celebrationLevel by viewModel.celebrationLevel.collectAsStateWithLifecycle()
@@ -268,8 +268,8 @@ fun MelodyPlayScreen(
                         onLevelChange = { viewModel.setLevel(it) },
                         transposeSemitones = gameState.transposeSemitones,
                         onTransposeChange = { viewModel.setTranspose(it) },
-                        audioDelay = audioDelay,
-                        visualDelay = visualDelay,
+                        inputDelay = inputDelay,
+                        totalDelay = totalDelay,
                         accompanimentMode = gameState.accompanimentMode,
                         onAccompanimentModeChange = { viewModel.setAccompanimentMode(it) }
                     )
@@ -284,7 +284,7 @@ fun MelodyPlayScreen(
                     val track = gameState.melodyTrack
                     // In READY the view is static, so show bars exactly at the now line.
                     val adjustedNow = if (gameState.phase == PlayPhase.READY) gameState.currentTimeSeconds
-                                      else gameState.currentTimeSeconds - maxOf(0, audioDelay - visualDelay) / 1000.0
+                                      else gameState.currentTimeSeconds + inputDelay / 1000.0
 
                     if (track != null) {
                         val alphaTex = remember(track) { MidiToAlphaTex.generate(track) }
@@ -469,8 +469,8 @@ private fun MelodySettingsMenu(
     onLevelChange: (Int) -> Unit,
     transposeSemitones: Int,
     onTransposeChange: (Int) -> Unit,
-    audioDelay: Int,
-    visualDelay: Int,
+    inputDelay: Int,
+    totalDelay: Int,
     accompanimentMode: AccompanimentMode,
     onAccompanimentModeChange: (AccompanimentMode) -> Unit
 ) {
@@ -555,11 +555,11 @@ private fun MelodySettingsMenu(
             }
             HorizontalDivider()
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.melody_play_audio_delay, audioDelay)) },
+                text = { Text(stringResource(R.string.melody_play_input_delay, inputDelay)) },
                 onClick = {}
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.melody_play_visual_delay, visualDelay)) },
+                text = { Text(stringResource(R.string.melody_play_total_delay, totalDelay)) },
                 onClick = {}
             )
         }

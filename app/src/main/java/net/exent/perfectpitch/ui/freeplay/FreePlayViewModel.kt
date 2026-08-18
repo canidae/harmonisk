@@ -72,7 +72,10 @@ class FreePlayViewModel @Inject constructor(
     private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val snackbarMessage: SharedFlow<String> = _snackbarMessage.asSharedFlow()
 
-    val activeVisualDelay: StateFlow<Int> = audioDelayRepository.activeVisualDelay
+    val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val activeTotalDelay: StateFlow<Int> = audioDelayRepository.activeTotalDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     private var listeningJob: Job? = null
@@ -99,8 +102,8 @@ class FreePlayViewModel @Inject constructor(
     // MIDI input tracking (polyphonic: key = MIDI note number, value = active PlayedNote)
     private val activeMidiNotes = mutableMapOf<Int, PlayedNote>()
 
-    private var totalAudioDelayMs: Int = 0
-    private var visualDelayMs: Int = 0
+    private var inputDelayMs: Int = 0
+    private var totalDelayMs: Int = 0
     private var replayGeneration = 0
     private var isPausedByGesture = false
 
@@ -170,13 +173,13 @@ class FreePlayViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            audioDelayRepository.activeAudioDelay.collect { delayMs ->
-                totalAudioDelayMs = delayMs
+            audioDelayRepository.activeInputDelay.collect { delayMs ->
+                inputDelayMs = delayMs
             }
         }
         viewModelScope.launch {
-            audioDelayRepository.activeVisualDelay.collect { delayMs ->
-                visualDelayMs = delayMs
+            audioDelayRepository.activeTotalDelay.collect { delayMs ->
+                totalDelayMs = delayMs
             }
         }
     }
@@ -1017,7 +1020,7 @@ evts.add(Event(endMs, note.midiNumber, false, note.trackOrigin))
                 return evts
             }
 
-            val visualStartOffsetMs = maxOf(0L, totalAudioDelayMs.toLong() - visualDelayMs.toLong())
+            val visualStartOffsetMs = -inputDelayMs.toLong()
             var audioPositionMs = _state.value.songPositionMs
             var allowVisualBeforeLoopStart = true
             var seekAnchorMs = Long.MIN_VALUE
@@ -1069,8 +1072,10 @@ evts.add(Event(endMs, note.midiNumber, false, note.trackOrigin))
 
                 audioPositionMs += delta
 
-                // Fire due events at natural song time
-                while (eventIndex < events.size && events[eventIndex].timeMs <= audioPositionMs) {
+                // Fire due events total-delay early so notes are heard when the
+                // bar crosses the now line and detected on the beat.
+                val totalOffsetMs = totalDelayMs.toLong()
+                while (eventIndex < events.size && events[eventIndex].timeMs - totalOffsetMs <= audioPositionMs) {
                     val ev = events[eventIndex++]
                     if (ev.trackOrigin == 9) {
                         if (ev.isOn) soundFontSynthesizer.noteOn(9, ev.midiNote, 80)

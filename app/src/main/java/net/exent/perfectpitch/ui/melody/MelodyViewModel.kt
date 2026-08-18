@@ -129,10 +129,10 @@ class MelodyViewModel @Inject constructor(
 
     // Melody audio output delay
     private var synthOpenJob: Job? = null
-    // Total round-trip audio delay (output + input), from calibration
-    private var totalAudioDelayMs: Int = 0
-    // Visual delay fine-tuning for input latency compensation
-    private var visualDelayMs: Int = 0
+    // Mic-to-detection input delay, drives the canvas offset (bars lead the beat)
+    private var inputDelayMs: Int = 0
+    // Measured total round-trip delay (output + input), used for app playback scheduling
+    private var totalDelayMs: Int = 0
 
     init {
         viewModelScope.launch {
@@ -163,17 +163,16 @@ class MelodyViewModel @Inject constructor(
                 }
             }
         }
-        // Observe per-device audio delay and update the melody player
+        // Observe per-device input delay for the canvas offset
         viewModelScope.launch {
-            audioDelayRepository.activeAudioDelay.collect { delayMs ->
-                totalAudioDelayMs = delayMs
-                melodyPlayer.setTotalAudioDelay(delayMs.toLong())
+            audioDelayRepository.activeInputDelay.collect { delayMs ->
+                inputDelayMs = delayMs
             }
         }
-        // Observe per-device visual delay for canvas rendering offset
+        // Observe per-device total delay for app playback scheduling
         viewModelScope.launch {
-            audioDelayRepository.activeVisualDelay.collect { delayMs ->
-                visualDelayMs = delayMs
+            audioDelayRepository.activeTotalDelay.collect { delayMs ->
+                totalDelayMs = delayMs
             }
         }
         // Observe MIDI availability
@@ -200,10 +199,10 @@ class MelodyViewModel @Inject constructor(
         loadAllMelodyDifficulties()
     }
 
-    val activeAudioDelay: StateFlow<Int> = audioDelayRepository.activeAudioDelay
+    val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val activeVisualDelay: StateFlow<Int> = audioDelayRepository.activeVisualDelay
+    val activeTotalDelay: StateFlow<Int> = audioDelayRepository.activeTotalDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     /** Emits a device name when an uncalibrated device is detected, null otherwise. */
@@ -621,10 +620,10 @@ class MelodyViewModel @Inject constructor(
         return 120f
     }
 
-    /** "Now" time used by the canvas, minus the visual delay (except in READY, where the view is static). */
+    /** "Now" time used by the canvas — the bars lead the beat by the input delay (except in READY, where the view is static). */
     private fun adjustedNowSeconds(phase: PlayPhase, currentTimeSeconds: Double): Double =
         if (phase == PlayPhase.READY) currentTimeSeconds
-        else currentTimeSeconds - maxOf(0, totalAudioDelayMs - visualDelayMs) / 1000.0
+        else currentTimeSeconds + inputDelayMs / 1000.0
 
     /** Seconds of the 2-bar lead-in at the song's initial tempo/time signature. */
     private fun twoBarLeadInSeconds(): Double {
@@ -912,7 +911,7 @@ class MelodyViewModel @Inject constructor(
 
                 // Only track notes once pitch detection is active
                 if (pitchDetectionStarted) {
-                    updateCurrentNote(currentTime - totalAudioDelayMs / 1000.0)
+                    updateCurrentNote(currentTime)
                 }
 
                 // Audio plays at natural song time — visual offset handles sync.
@@ -941,7 +940,9 @@ class MelodyViewModel @Inject constructor(
                     }
                 }
                 if (playTracks.isNotEmpty() && soundFontSynthesizer.isReady) {
-                    melodyPlayer.updateGameTime(currentTime, playTracks)
+                    // The app plays the total delay early so its notes are heard
+                    // when the bar crosses the now line and detected on the beat.
+                    melodyPlayer.updateGameTime(currentTime + totalDelayMs / 1000.0, playTracks)
                 }
 
                 delay(16)
@@ -1158,7 +1159,7 @@ class MelodyViewModel @Inject constructor(
             if (abs(noteUtils.frequencyToCents(current.pitchResult.frequency, expectedFreq)) > 50f) {
                 return@update current
             }
-            val pos = ((current.currentTimeSeconds - totalAudioDelayMs / 1000.0 - noteStartSeconds) / noteDurationSeconds).toFloat().coerceIn(0f, 1f)
+            val pos = ((current.currentTimeSeconds - noteStartSeconds) / noteDurationSeconds).toFloat().coerceIn(0f, 1f)
             val existingHistory = current.noteCentsHistory[noteIndex] ?: emptyList()
             val existingPositions = current.noteCentsPositions[noteIndex] ?: emptyList()
             val updatedFirstDetection = if (!current.noteFirstDetectionStart.containsKey(noteIndex)) {

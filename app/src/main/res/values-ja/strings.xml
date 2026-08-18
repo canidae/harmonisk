@@ -41,17 +41,17 @@
     <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">マイク感度</string>
     <string name="settings_silence_threshold">無音しきい値：%1$.0f dB</string>
-    <string name="settings_in_out">入力/出力：%1$s / %2$s</string>
-    <string name="settings_audio_delay">音声遅延：%1$d ms</string>
-    <string name="settings_edit_audio_delay">音声遅延を編集</string>
-    <string name="settings_delay_ms">遅延（ms）</string>
+    <string name="settings_devices">%1$s / %2$s</string>
+    <string name="settings_input_delay_title">Audio input delay</string>
+    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">自動</string>
     <string name="settings_calibrating_stop">停止</string>
     <string name="settings_no_detection">マイクが音を検出できません</string>
     <string name="settings_calibrating">キャリブレーション中… %1$d/5 音検出</string>
-    <string name="settings_visual_delay">視覚遅延：%1$d ms</string>
-    <string name="settings_visual_delay_min">0 ms</string>
-    <string name="settings_visual_delay_max">200 ms</string>
+    <string name="settings_input_delay">Audio input delay: %1$dms</string>
+    <string name="settings_input_delay_min">0ms</string>
+    <string name="settings_input_delay_max">500ms</string>
+    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">デフォルトにリセットしますか？</string>
     <string name="settings_reset_dialog_body">すべての設定がデフォルト値にリセットされます。以下を含みます：\n\n\u2022 基準ピッチ（A = 440 Hz）\n\u2022 無音しきい値\n\u2022 フリープレイの速度、テンポ、拍子記号、音符スナップ</string>
     <string name="settings_reset">リセット</string>
@@ -142,8 +142,8 @@
     <string name="melody_play_transpose_0">移調：0</string>
     <string name="melody_play_transpose_plus">移調：+%1$d</string>
     <string name="melody_play_transpose">移調：%1$d</string>
-    <string name="melody_play_audio_delay">音声遅延：%1$d ms</string>
-    <string name="melody_play_visual_delay">視覚遅延：%1$d ms</string>
+    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
     <string name="melody_play_uncalibrated">%1$s は調整されていません</string>
 
     <!-- Score results -->

@@ -41,17 +41,17 @@
     <string name="settings_concert_pitch_max">460 赫兹</string>
     <string name="settings_mic_sensitivity">麦克风灵敏度</string>
     <string name="settings_silence_threshold">静音阈值：%1$.0f dB</string>
-    <string name="settings_in_out">输入/输出：%1$s / %2$s</string>
-    <string name="settings_audio_delay">音频延迟：%1$d 毫秒</string>
-    <string name="settings_edit_audio_delay">编辑音频延迟</string>
-    <string name="settings_delay_ms">延迟（毫秒）</string>
+    <string name="settings_devices">%1$s / %2$s</string>
+    <string name="settings_input_delay_title">Audio input delay</string>
+    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">自动</string>
     <string name="settings_calibrating_stop">停止</string>
     <string name="settings_no_detection">麦克风无法检测到任何音调</string>
     <string name="settings_calibrating">校准中… %1$d/5 个音调已检测</string>
-    <string name="settings_visual_delay">视觉延迟：%1$d 毫秒</string>
-    <string name="settings_visual_delay_min">0 毫秒</string>
-    <string name="settings_visual_delay_max">200 毫秒</string>
+    <string name="settings_input_delay">Audio input delay: %1$dms</string>
+    <string name="settings_input_delay_min">0ms</string>
+    <string name="settings_input_delay_max">500ms</string>
+    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">重置为默认值？</string>
     <string name="settings_reset_dialog_body">所有设置将恢复为默认值，包括：\n\n\u2022 标准音高（A = 440 赫兹）\n\u2022 静音阈值\n\u2022 自由演奏的速度、节拍、拍号、音符吸附</string>
     <string name="settings_reset">重置</string>
@@ -142,8 +142,8 @@
     <string name="melody_play_transpose_0">移调：0</string>
     <string name="melody_play_transpose_plus">移调：+%1$d</string>
     <string name="melody_play_transpose">移调：%1$d</string>
-    <string name="melody_play_audio_delay">音频延迟：%1$d 毫秒</string>
-    <string name="melody_play_visual_delay">视觉延迟：%1$d 毫秒</string>
+    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
     <string name="melody_play_uncalibrated">%1$s 未校准</string>
 
     <!-- Score results -->
