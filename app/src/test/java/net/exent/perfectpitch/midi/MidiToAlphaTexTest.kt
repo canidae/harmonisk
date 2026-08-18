@@ -95,7 +95,7 @@ class MidiToAlphaTexTest {
     }
 
     @Test
-    fun `overlapping notes after quantization are clamped`() {
+    fun `overlapping notes are rendered as chords`() {
         val tex = MidiToAlphaTex.generate(
             track(
                 listOf(
@@ -104,7 +104,22 @@ class MidiToAlphaTexTest {
                 )
             )
         )
-        assertEquals("\\tempo 120 \\instrument piano . \\ts 4 4 C4.4 C4{t}.16 D4.16 D4{t}.8{d} r.4{dd} |", tex)
+        assertEquals("\\tempo 120 \\instrument piano . \\ts 4 4 C4.4 C4{t}.16 (C4{t} D4).16 (C4{t} D4{t}).8 D4{t}.16 r.4{dd} |", tex)
+    }
+
+    @Test
+    fun `simultaneous notes form a chord`() {
+        val tex = MidiToAlphaTex.generate(
+            track(
+                listOf(
+                    note(60, 0, 480),
+                    note(64, 0, 480),
+                    note(67, 0, 480),
+                    note(62, 480, 480)
+                )
+            )
+        )
+        assertEquals("\\tempo 120 \\instrument piano . \\ts 4 4 (C4 E4 G4).4 D4.4 r.2 |", tex)
     }
 
     @Test

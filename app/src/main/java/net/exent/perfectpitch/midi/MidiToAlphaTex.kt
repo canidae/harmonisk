@@ -3,9 +3,10 @@ package net.exent.perfectpitch.midi
 import kotlin.math.roundToInt
 
 /**
- * Converts a (monophonic) [MelodyTrack] into alphaTex notation for sheet music
- * rendering with alphaTab. Note timings are quantized to a sixteenth-note grid
- * and arbitrary durations are decomposed into standard note values joined by ties.
+ * Converts a [MelodyTrack] into alphaTex notation for sheet music rendering with
+ * alphaTab. Note timings are quantized to a sixteenth-note grid, arbitrary
+ * durations are decomposed into standard note values joined by ties, and
+ * simultaneous notes are rendered as chords.
  */
 object MidiToAlphaTex {
 
@@ -29,6 +30,9 @@ object MidiToAlphaTex {
 
     /** Note with start/end quantized to grid units (one grid unit = a sixteenth note). */
     private data class QNote(val noteNumber: Int, val start: Long, val end: Long)
+
+    /** A note within a chord together with its tie state. */
+    private data class ChordNote(val name: String, val tied: Boolean)
 
     private data class Bar(
         val startTick: Long,
@@ -92,18 +96,24 @@ object MidiToAlphaTex {
             val barEndGrid = bar.startGrid + bar.lengthGrid
             while (pos < barEndGrid) {
                 while (noteIndex < notes.size && notes[noteIndex].end <= pos) noteIndex++
-                val active = notes.getOrNull(noteIndex)?.takeIf { it.start <= pos && pos < it.end }
+                val active = mutableListOf<QNote>()
+                var scan = noteIndex
+                while (scan < notes.size && notes[scan].start <= pos) {
+                    if (notes[scan].end > pos) active.add(notes[scan])
+                    scan++
+                }
                 val beatProps = midBarTempos[pos]?.let { "{tempo $it}" } ?: ""
                 val nextTempoBoundary = midBarTempos.keys.filter { it > pos }.minOrNull() ?: Long.MAX_VALUE
-                val segEnd = if (active != null) {
-                    minOf(barEndGrid, active.end, nextTempoBoundary)
-                } else {
-                    minOf(barEndGrid, notes.getOrNull(noteIndex)?.start ?: Long.MAX_VALUE, nextTempoBoundary)
-                }
+                val nextStart = if (scan < notes.size) notes[scan].start else Long.MAX_VALUE
+                val minEnd = active.minOfOrNull { it.end } ?: Long.MAX_VALUE
+                val segEnd = minOf(barEndGrid, nextStart, minEnd, nextTempoBoundary)
                 val segLength = segEnd - pos
                 if (segLength <= 0) break
-                if (active != null) {
-                    tokens.addAll(noteTokens(noteName(active.noteNumber), pos - bar.startGrid, segLength, tie = pos > active.start, firstPieceBeatProps = beatProps))
+                if (active.isNotEmpty()) {
+                    val chordNotes = active
+                        .sortedBy { it.noteNumber }
+                        .map { ChordNote(noteName(it.noteNumber), tied = pos > it.start) }
+                    tokens.addAll(chordTokens(chordNotes, pos - bar.startGrid, segLength, firstPieceBeatProps = beatProps))
                 } else {
                     tokens.addAll(restTokens(segLength, firstPieceBeatProps = beatProps))
                 }
@@ -115,19 +125,25 @@ object MidiToAlphaTex {
     }
 
     private fun quantizeNotes(track: MelodyTrack, tickToGrid: (Long) -> Long): List<QNote> {
-        val raw = track.notes
+        val quantized = track.notes
             .sortedBy { it.startTick }
             .filter { it.endTick > 0 }
-            .map { note ->
+            .mapNotNull { note ->
                 val start = tickToGrid(note.startTick.coerceAtLeast(0))
-                QNote(note.noteNumber, start, maxOf(start + 1, tickToGrid(note.endTick)))
+                val end = maxOf(start + 1, tickToGrid(note.endTick))
+                if (end > start) QNote(note.noteNumber, start, end) else null
             }
-        // Clamp overlaps (the track is monophonic, but quantization may round a
-        // note end past the next note's start)
-        return raw.mapIndexedNotNull { index, note ->
-            val clampedEnd = if (index + 1 < raw.size) minOf(note.end, raw[index + 1].start) else note.end
-            if (clampedEnd > note.start) note.copy(end = clampedEnd) else null
+        // Merge same-pitch overlapping notes so a pitch appears at most once in a chord
+        val merged = mutableListOf<QNote>()
+        for (note in quantized) {
+            val last = merged.lastOrNull()
+            if (last != null && last.noteNumber == note.noteNumber && note.start < last.end) {
+                merged[merged.lastIndex] = last.copy(end = maxOf(last.end, note.end))
+            } else {
+                merged.add(note)
+            }
         }
+        return merged
     }
 
     private fun buildBars(
@@ -162,12 +178,15 @@ object MidiToAlphaTex {
         return bars
     }
 
-    /** Decomposes [gridLength] into tied note pieces, respecting beat alignment. */
-    private fun noteTokens(
-        name: String,
+    /**
+     * Decomposes [gridLength] into tied chord pieces, respecting beat alignment.
+     * All notes in the chord share the same duration; a note carries a tie marker
+     * when it continues from a previous segment.
+     */
+    private fun chordTokens(
+        notes: List<ChordNote>,
         startGridInBar: Long,
         gridLength: Long,
-        tie: Boolean,
         firstPieceBeatProps: String = ""
     ): List<String> {
         val tokens = mutableListOf<String>()
@@ -176,9 +195,16 @@ object MidiToAlphaTex {
         var first = true
         while (remaining > 0) {
             val piece = DURATION_PIECES.first { it.gridLength <= remaining && pos % it.align == 0L }
-            val tied = if (first && !tie) "" else "{t}"
+            val body = if (notes.size == 1) {
+                val note = notes[0]
+                "${note.name}${if (first && note.tied || !first) "{t}" else ""}"
+            } else {
+                "(" + notes.joinToString(" ") { note ->
+                    "${note.name}${if (first && note.tied || !first) "{t}" else ""}"
+                } + ")"
+            }
             val beatProps = if (first) firstPieceBeatProps else ""
-            tokens.add("$name$tied.${piece.value}${dotsSuffix(piece.dots)}$beatProps")
+            tokens.add("$body.${piece.value}${dotsSuffix(piece.dots)}$beatProps")
             remaining -= piece.gridLength
             pos += piece.gridLength
             first = false
