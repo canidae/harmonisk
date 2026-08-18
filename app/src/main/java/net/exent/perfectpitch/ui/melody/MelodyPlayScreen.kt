@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.perfectpitch.R
@@ -304,7 +305,7 @@ fun MelodyPlayScreen(
                             songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
                             durationSeconds = track.durationSeconds,
                             onScrolledToTime = { viewModel.seekToViewTime(it) },
-                            modifier = Modifier.fillMaxWidth().height(205.dp)
+                            modifier = Modifier.fillMaxWidth().height(205.dp).zIndex(1f)
                         )
                     }
 
@@ -313,15 +314,13 @@ fun MelodyPlayScreen(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .pointerInput(violinMode) {
+                            .pointerInput(Unit) {
                                 detectTransformGestures { _, pan, zoom, _ ->
                                     if (zoom != 1f) viewModel.onVerticalZoom(zoom)
-                                    val panValue = if (violinMode) pan.x else pan.y
+                                    val panValue = pan.y
                                     if (panValue != 0f) {
                                         val secondsPerPx = 1.0 / (viewState.fallSpeedPxPerSec * density.density)
-                                        // Violin scrolls right-to-left: dragging left scrubs forward in time
-                                        val sign = if (violinMode) -1f else 1f
-                                        viewModel.onVerticalScroll(sign * panValue * secondsPerPx)
+                                        viewModel.onVerticalScroll(panValue * secondsPerPx)
                                     }
                                 }
                             }
