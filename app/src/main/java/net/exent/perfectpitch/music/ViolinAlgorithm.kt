@@ -15,10 +15,12 @@ data class ViolinPosition(
  * Recommends violin fingerings for a sequence of notes in first position.
  *
  * Finger placement (semitone offsets above a string's open pitch) follows the
- * standard first-position spacing: finger 1 = +2, finger 2 = +4, finger 3 low =
- * +5, finger 3 high = +6, finger 4 = +7. Chromatic notes are therefore playable
- * with "low" or "high" finger variants. Notes outside first position (below G3
- * or above B5) have no valid position and return null.
+ * standard first-position spacing: finger 1 = +2, finger 2 = +4, finger 3 = +5,
+ * finger 4 = +7. Chromatic notes are therefore playable with "low" finger
+ * variants (e.g. low 1 = +1, low 2 = +3). Notes that would need a sharp "high"
+ * finger placement (e.g. high 3 = +6) have no first-position fingering and
+ * return null. Notes outside first position (below G3 or above B5) also have
+ * no valid position and return null.
  */
 class ViolinAlgorithm {
 
@@ -142,12 +144,12 @@ class ViolinAlgorithm {
         const val MIN_FIRST_POSITION_MIDI = 55 // G3
         const val MAX_FIRST_POSITION_MIDI = 83 // B5
 
-        /** Finger -> semitone offset(s) above the open string (low, natural/high variants). */
+        /** Finger -> semitone offset(s) above the open string (low, natural variants). */
         private val FINGER_OFFSETS = listOf(
             0 to listOf(0),
             1 to listOf(1, 2),
             2 to listOf(3, 4),
-            3 to listOf(5, 6),
+            3 to listOf(5),
             4 to listOf(7)
         )
 
@@ -183,8 +185,9 @@ class ViolinAlgorithm {
         }
 
         /**
-         * Vertical deviation (in semitones) of a note's placement from the finger's
-         * default on the given string: negative = below the line, positive = above.
+         * Semitone deviation of a note's placement from the finger's default on
+         * the given string: negative = low (flat) placement, positive = high
+         * (sharp) placement.
          */
         fun fingerOffsetDeviation(midi: Int, string: ViolinString, finger: Int): Int? =
             defaultFingerOffset(finger)?.let { semitoneOffset(midi, string) - it }

@@ -59,7 +59,7 @@ private const val CORNER_RADIUS_DP = 4f
 
 // Violin fingering board
 private const val VIOLIN_LANE_COUNT = 4
-private val VIOLIN_STRING_LABELS = listOf("E", "A", "D", "G")
+private val VIOLIN_STRING_LABELS = listOf("G", "D", "A", "E")
 // Reference portrait canvas width (dp) the horizontal time scale is normalized to
 private const val VIOLIN_REFERENCE_WIDTH_DP = 411f
 private val FINGER_COLORS = mapOf(
@@ -71,13 +71,13 @@ private val FINGER_COLORS = mapOf(
 )
 private val OUT_OF_RANGE_GREY = Color(0xFF9E9E9E)
 
-// Vertical shift per semitone of deviation from a finger's default placement
+// Horizontal shift per semitone of deviation from a finger's default placement
 private const val VIOLIN_FINGER_OFFSET_FRACTION = 0.07f
 
-/** Horizontal time scale for the violin board, normalized to the canvas width so
- *  the visible time window stays consistent across portrait and landscape. */
-private fun violinPixelsPerSecond(fallSpeedPxPerSec: Float, canvasWidth: Float): Float =
-    fallSpeedPxPerSec * canvasWidth / VIOLIN_REFERENCE_WIDTH_DP
+/** Time scale for the violin board, normalized to the canvas span so the
+ *  visible time window stays consistent across portrait and landscape. */
+private fun violinPixelsPerSecond(fallSpeedPxPerSec: Float, canvasSpan: Float): Float =
+    fallSpeedPxPerSec * canvasSpan / VIOLIN_REFERENCE_WIDTH_DP
 
 val VOICE_COLORS = listOf(
     Color(0xFF4FC3F7), // Teal/light blue
@@ -752,44 +752,44 @@ private fun DrawScope.drawViolinBoard(
 ) {
     val width = size.width
     val height = size.height
-    val bandHeight = height / VIOLIN_LANE_COUNT
+    val bandWidth = width / VIOLIN_LANE_COUNT
 
-    // Alternating subtle band backgrounds (band 0 = E at the bottom, up to G on top)
+    // Alternating subtle band backgrounds (band 0 = G on the left, up to E on the right)
     for (i in 0 until VIOLIN_LANE_COUNT) {
         if (i % 2 == 0) {
-            val top = height - (i + 1) * bandHeight
-            drawRect(color = Color(0x0DFFFFFF), topLeft = Offset(0f, top), size = Size(width, bandHeight))
+            val left = i * bandWidth
+            drawRect(color = Color(0x0DFFFFFF), topLeft = Offset(left, 0f), size = Size(bandWidth, height))
         }
     }
 
-    // Horizontal string lines (one per band) and band boundaries
+    // Vertical string lines (one per band) and band boundaries
     for (i in 0 until VIOLIN_LANE_COUNT) {
-        val centerY = height - (i + 0.5f) * bandHeight
+        val centerX = (i + 0.5f) * bandWidth
         drawLine(
             color = Color(0x2EFFFFFF),
-            start = Offset(0f, centerY),
-            end = Offset(width, centerY),
+            start = Offset(centerX, 0f),
+            end = Offset(centerX, height),
             strokeWidth = 1.5f * density
         )
     }
     for (i in 1 until VIOLIN_LANE_COUNT) {
-        val y = height - i * bandHeight
+        val x = i * bandWidth
         drawLine(
             color = Color(0x1AFFFFFF),
-            start = Offset(0f, y),
-            end = Offset(width, y),
+            start = Offset(x, 0f),
+            end = Offset(x, height),
             strokeWidth = 1f * density
         )
     }
 
-    // String labels on the left edge of each band, on a dark pill for readability
+    // String labels at the bottom edge of each band, on a dark pill for readability
     val labelStyle = TextStyle(
         color = Color.White.copy(alpha = 0.7f),
         fontSize = (14f * density / 2.75f).sp,
         fontWeight = FontWeight.Bold
     )
     for (i in 0 until VIOLIN_LANE_COUNT) {
-        val centerY = height - (i + 0.5f) * bandHeight
+        val centerX = (i + 0.5f) * bandWidth
         val textLayout = textMeasurer.measure(
             text = buildAnnotatedString { append(VIOLIN_STRING_LABELS[i]) },
             style = labelStyle
@@ -797,16 +797,17 @@ private fun DrawScope.drawViolinBoard(
         val pad = 4f * density
         val boxW = textLayout.size.width + pad * 2f
         val boxH = textLayout.size.height + pad * 1.6f
-        val boxTop = centerY - boxH / 2f
+        val boxLeft = centerX - boxW / 2f
+        val boxTop = height - boxH - 2f * density
         drawRoundRect(
             color = CANVAS_BG.copy(alpha = 0.8f),
-            topLeft = Offset(2f * density, boxTop),
+            topLeft = Offset(boxLeft, boxTop),
             size = Size(boxW, boxH),
             cornerRadius = CornerRadius(3f * density, 3f * density)
         )
         drawText(
             textLayout,
-            topLeft = Offset(2f * density + pad, boxTop + (boxH - textLayout.size.height) / 2f)
+            topLeft = Offset(boxLeft + (boxW - textLayout.size.width) / 2f, boxTop + pad)
         )
     }
 }
@@ -818,11 +819,11 @@ private fun DrawScope.drawViolinBarLines(
     textMeasurer: TextMeasurer
 ) {
     val track = mode.melodyTrack
-    val pixelsPerSecond = violinPixelsPerSecond(mode.fallSpeedPxPerSec, size.width)
+    val pixelsPerSecond = violinPixelsPerSecond(mode.fallSpeedPxPerSec, size.height)
     if (pixelsPerSecond <= 0f) return
 
     val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
-    val visibleRangeSeconds = size.width / pixelsPerSecond
+    val visibleRangeSeconds = size.height / pixelsPerSecond
 
     val firstTempoUs = track.tempoChanges.firstOrNull()?.microsecondsPerBeat ?: 500_000L
     val songDurationSeconds = track.durationSeconds
@@ -877,12 +878,12 @@ private fun DrawScope.drawViolinBarLines(
 
     for (beat in beats) {
         val relativeSeconds = beat.seconds - viewTimeSeconds
-        val x = (relativeSeconds * pixelsPerSecond).toFloat()
-        if (x < -2f || x > size.width + 2f) continue
+        val y = (size.height - relativeSeconds * pixelsPerSecond).toFloat()
+        if (y < -2f || y > size.height + 2f) continue
         drawLine(
             color = Color.White.copy(alpha = if (beat.isBarLine) 0.18f else 0.07f),
-            start = Offset(x, 0f),
-            end = Offset(x, size.height),
+            start = Offset(0f, y),
+            end = Offset(size.width, y),
             strokeWidth = if (beat.isBarLine) 1.5f * density else 1f * density
         )
         if (beat.isBarLine && beat.barNumber > 0L) {
@@ -890,7 +891,10 @@ private fun DrawScope.drawViolinBarLines(
                 text = buildAnnotatedString { append(beat.barNumber.toString()) },
                 style = barLabelStyle
             )
-            drawText(label, topLeft = Offset(x + 3f * density, 3f * density))
+            val labelY = (y - label.size.height - 2f * density).coerceAtLeast(0f)
+            if (labelY + label.size.height <= size.height) {
+                drawText(label, topLeft = Offset(3f * density, labelY))
+            }
         }
     }
 }
@@ -905,9 +909,9 @@ private fun DrawScope.drawViolinMelodyNotes(
 
     val width = size.width
     val height = size.height
-    val pixelsPerSecond = violinPixelsPerSecond(mode.fallSpeedPxPerSec, width)
+    val pixelsPerSecond = violinPixelsPerSecond(mode.fallSpeedPxPerSec, height)
     val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
-    val bandHeight = height / VIOLIN_LANE_COUNT
+    val bandWidth = width / VIOLIN_LANE_COUNT
     val positions = mode.violinPositions
     val minGapPx = 4f * density
 
@@ -919,44 +923,44 @@ private fun DrawScope.drawViolinMelodyNotes(
         val relativeStart = noteStartTime - viewTimeSeconds
         val relativeEnd = noteEndTime - viewTimeSeconds
 
-        var rawLeftX = (relativeStart * pixelsPerSecond).toFloat()
-        var rawRightX = (relativeEnd * pixelsPerSecond).toFloat()
+        // Notes fall toward the bottom now line: future times sit above it
+        var rawBottomY = (size.height - relativeStart * pixelsPerSecond).toFloat()
+        var rawTopY = (size.height - relativeEnd * pixelsPerSecond).toFloat()
 
         if (index > 0 && mode.melodyTrack.notes[index - 1].noteNumber == note.noteNumber) {
-            rawLeftX += minGapPx / 2f
+            rawBottomY -= minGapPx / 2f
         }
         if (index < mode.melodyTrack.notes.size - 1 && mode.melodyTrack.notes[index + 1].noteNumber == note.noteNumber) {
-            rawRightX -= minGapPx / 2f
+            rawTopY += minGapPx / 2f
         }
 
-        if (rawRightX < 0f || rawLeftX > width) return@forEachIndexed
+        if (rawTopY > size.height || rawBottomY < 0f) return@forEachIndexed
 
         val pos = positions.getOrNull(index)
         val string = pos?.string ?: ViolinAlgorithm.nearestString(note.noteNumber)
-        val bandIndex = VIOLIN_LANE_COUNT - 1 - string.ordinal
-        val bandTop = height - (bandIndex + 1) * bandHeight
+        val bandIndex = string.ordinal
+        val bandLeft = bandIndex * bandWidth
 
-        var barW = rawRightX - rawLeftX
-        if (barW < 2f) return@forEachIndexed
+        var barLen = rawBottomY - rawTopY
+        if (barLen < 2f) return@forEachIndexed
 
-        val barH = (bandHeight * 0.13f).coerceAtLeast(14f * density)
-        // Ensure a minimum visible width that adapts to the canvas
-        val minBarW = maxOf(barH, width * 0.035f)
-        var barLeft = rawLeftX
-        if (barW < minBarW) {
-            val pad = (minBarW - barW) / 2f
-            barLeft -= pad
-            barW = minBarW
+        val barThickness = (bandWidth * 0.13f).coerceAtLeast(14f * density)
+        // Ensure a minimum visible length that adapts to the canvas
+        val minBarLen = maxOf(barThickness, height * 0.035f)
+        var barTop = rawTopY
+        if (barLen < minBarLen) {
+            val pad = (minBarLen - barLen) / 2f
+            barTop -= pad
+            barLen = minBarLen
         }
 
-        // String line; non-default finger placements shift slightly (high = up, low = down)
-        val stringLineY = bandTop + bandHeight / 2f
+        // String line; flat (low finger) placements sit to the left of the string
+        val stringLineX = bandLeft + bandWidth / 2f
         val deviation = if (pos == null) 0f else
             (ViolinAlgorithm.fingerOffsetDeviation(note.noteNumber, string, pos.finger) ?: 0f).toFloat()
-        val centerY = stringLineY - deviation * bandHeight * VIOLIN_FINGER_OFFSET_FRACTION
+        val centerX = stringLineX + deviation * bandWidth * VIOLIN_FINGER_OFFSET_FRACTION
 
-        val barTop = centerY - barH / 2f
-        val barBottom = centerY + barH / 2f
+        val barLeft = centerX - barThickness / 2f
 
         val r = CORNER_RADIUS_DP * density
         val visuallyActive = viewTimeSeconds >= noteStartTime && viewTimeSeconds < noteEndTime
@@ -965,7 +969,7 @@ private fun DrawScope.drawViolinMelodyNotes(
         drawRoundRect(
             color = color,
             topLeft = Offset(barLeft, barTop),
-            size = Size(barW, barH),
+            size = Size(barThickness, barLen),
             cornerRadius = CornerRadius(r, r)
         )
 
@@ -973,14 +977,14 @@ private fun DrawScope.drawViolinMelodyNotes(
             drawRoundRect(
                 color = Color.White.copy(alpha = 0.30f),
                 topLeft = Offset(barLeft - 2f * density, barTop - 2f * density),
-                size = Size(barW + 4f * density, barH + 4f * density),
+                size = Size(barThickness + 4f * density, barLen + 4f * density),
                 cornerRadius = CornerRadius(r, r),
                 style = Stroke(width = 4f * density, cap = StrokeCap.Round)
             )
             drawRoundRect(
                 color = Color.White.copy(alpha = 0.95f),
                 topLeft = Offset(barLeft, barTop),
-                size = Size(barW, barH),
+                size = Size(barThickness, barLen),
                 cornerRadius = CornerRadius(r, r),
                 style = Stroke(width = 1.5f * density, cap = StrokeCap.Round)
             )
@@ -988,24 +992,23 @@ private fun DrawScope.drawViolinMelodyNotes(
             drawRoundRect(
                 color = Color.White.copy(alpha = 0.25f),
                 topLeft = Offset(barLeft, barTop),
-                size = Size(barW, barH),
+                size = Size(barThickness, barLen),
                 cornerRadius = CornerRadius(r, r),
                 style = Stroke(width = 1f * density)
             )
         }
 
-        // Wiggly pitch line along the horizontal bar
+        // Wiggly pitch line along the vertical bar
         val centsHistory = mode.noteCentsHistory[index] ?: emptyList()
         val centsPositions = mode.noteCentsPositions[index] ?: emptyList()
         val playProgress = mode.notePlayProgress[index] ?: 0f
         val detectionStart = mode.noteFirstDetectionStart[index] ?: 0f
         if (centsHistory.isNotEmpty() && centsPositions.size == centsHistory.size && playProgress > 0f) {
-            drawHorizontalPitchLine(
+            drawVerticalPitchLine(
                 barLeft = barLeft,
-                barW = barW,
+                barThickness = barThickness,
                 barTop = barTop,
-                barBottom = barBottom,
-                barH = barH,
+                barBottom = barTop + barLen,
                 centsHistory = centsHistory,
                 centsPositions = centsPositions,
                 playProgress = playProgress,
@@ -1019,7 +1022,7 @@ private fun DrawScope.drawViolinMelodyNotes(
         if (finger != null && finger in 1..4) {
             val textStyle = TextStyle(
                 color = Color.Black.copy(alpha = 0.85f),
-                fontSize = (barH * 0.6f / density).sp,
+                fontSize = (barThickness * 0.6f / density).sp,
                 fontWeight = FontWeight.Bold
             )
             val textLayout = textMeasurer.measure(
@@ -1029,8 +1032,8 @@ private fun DrawScope.drawViolinMelodyNotes(
             drawText(
                 textLayout,
                 topLeft = Offset(
-                    barLeft + (barW - textLayout.size.width) / 2f,
-                    centerY - textLayout.size.height / 2f
+                    centerX - textLayout.size.width / 2f,
+                    barTop + (barLen - textLayout.size.height) / 2f
                 )
             )
         }
@@ -1049,33 +1052,32 @@ private fun DrawScope.drawViolinPitchIndicator(
 
     val pos = mode.violinPositions.getOrNull(expectedIndex)
     val string = pos?.string ?: ViolinAlgorithm.nearestString(expectedNote.noteNumber)
-    val bandIndex = VIOLIN_LANE_COUNT - 1 - string.ordinal
-    val bandHeight = size.height / VIOLIN_LANE_COUNT
-    val bandTop = size.height - (bandIndex + 1) * bandHeight
+    val bandIndex = string.ordinal
+    val bandWidth = size.width / VIOLIN_LANE_COUNT
+    val bandLeft = bandIndex * bandWidth
 
-    val stringLineY = bandTop + bandHeight / 2f
+    val stringLineX = bandLeft + bandWidth / 2f
     val deviation = if (pos == null) 0f else
         (ViolinAlgorithm.fingerOffsetDeviation(expectedNote.noteNumber, string, pos.finger) ?: 0f).toFloat()
-    val centerY = stringLineY - deviation * bandHeight * VIOLIN_FINGER_OFFSET_FRACTION
+    val centerX = stringLineX + deviation * bandWidth * VIOLIN_FINGER_OFFSET_FRACTION
 
     val indicatorColor = getIndicatorColor(detectedMidi, mode.detectedCentsOff, track, expectedIndex)
 
-    val indicatorW = 6f * density
-    val indicatorH = (bandHeight * 0.1f).coerceAtLeast(10f * density)
+    val indicatorW = (bandWidth * 0.1f).coerceAtLeast(10f * density)
+    val indicatorH = 6f * density
     drawRoundRect(
         color = indicatorColor,
-        topLeft = Offset(0f, centerY - indicatorH / 2f),
+        topLeft = Offset(centerX - indicatorW / 2f, size.height - indicatorH),
         size = Size(indicatorW, indicatorH),
         cornerRadius = CornerRadius(2f * density, 2f * density)
     )
 }
 
-private fun DrawScope.drawHorizontalPitchLine(
+private fun DrawScope.drawVerticalPitchLine(
     barLeft: Float,
-    barW: Float,
+    barThickness: Float,
     barTop: Float,
     barBottom: Float,
-    barH: Float,
     centsHistory: List<Float>,
     centsPositions: List<Float>,
     playProgress: Float,
@@ -1087,19 +1089,19 @@ private fun DrawScope.drawHorizontalPitchLine(
 
     val start = detectionStart.coerceIn(0f, 1f)
     val end = playProgress.coerceIn(start + 0.001f, 1f)
-    val lineWidth = barW * (end - start)
-    if (lineWidth < 1f) return
+    val lineLength = (barBottom - barTop) * (end - start)
+    if (lineLength < 1f) return
 
-    val centerY = (barTop + barBottom) / 2f
-    val maxDeviationPx = barH / 2f - 2f
+    val centerX = barLeft + barThickness / 2f
+    val maxDeviationPx = barThickness / 2f - 2f
     val gapThreshold = 0.05f
 
     val path = Path()
     for (i in centsHistory.indices) {
         val t = centsPositions[i].coerceIn(0f, 1f)
         val normalized = (centsHistory[i] / 50f).coerceIn(-1f, 1f)
-        val x = barLeft + t * barW
-        val y = centerY - normalized * maxDeviationPx
+        val x = centerX + normalized * maxDeviationPx
+        val y = barTop + t * (barBottom - barTop)
         if (i == 0) {
             path.moveTo(x, y)
         } else if (t - centsPositions[i - 1] > gapThreshold) {
@@ -1109,7 +1111,7 @@ private fun DrawScope.drawHorizontalPitchLine(
         }
     }
 
-    clipRect(left = barLeft, top = barTop, right = barLeft + barW, bottom = barBottom) {
+    clipRect(left = barLeft, top = barTop, right = barLeft + barThickness, bottom = barBottom) {
         drawGlowPath(path, density)
     }
 }
