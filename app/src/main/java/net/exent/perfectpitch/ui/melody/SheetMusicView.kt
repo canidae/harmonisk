@@ -96,16 +96,22 @@ fun SheetMusicView(
     fun scrubTouchListener(context: android.content.Context): View.OnTouchListener {
         val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
         var lastX = 0f
+        var lastDownTime = 0L
         var totalDx = 0f
         var dragging = false
         return View.OnTouchListener { _, event ->
+            // ACTION_DOWN is not always delivered to this view (a parent consumes
+            // it), so lastX would stay 0 and the first MOVE would report a huge dx,
+            // jumping the sheet. Anchor each gesture to its first delivered event
+            // instead of relying on ACTION_DOWN.
+            if (event.downTime != lastDownTime) {
+                lastDownTime = event.downTime
+                lastX = event.x
+                totalDx = 0f
+                dragging = false
+                return@OnTouchListener false
+            }
             when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    lastX = event.x
-                    totalDx = 0f
-                    dragging = false
-                    false
-                }
                 MotionEvent.ACTION_MOVE -> {
                     if (playing) return@OnTouchListener true
                     val dx = event.x - lastX
