@@ -273,13 +273,23 @@ fun SheetMusicView(
             // stop scrolling and let the cursor finish moving to the right instead.
             val lastMusicX = (beatPositions.lastOrNull { !it.isRest }?.xCss ?: 0.0) * density
             val pageable = params.leftMargin + viewportWidth / 2f < lastMusicX
-            if ((onScreenX > pageRightX || onScreenX < 0) && pageable) {
+            if (onScreenX < 0) {
+                // The cursor reset to the start (the song finished): scroll all the
+                // way back so the staff clef is visible again.
+                scroll.scrollTo(0, scroll.scrollY)
+            } else if (onScreenX > pageRightX && pageable) {
                 scroll.scrollTo((params.leftMargin - leadX).coerceAtLeast(0), scroll.scrollY)
             }
         } else if (beatPositions.isNotEmpty()) {
             val timeMs = scrollTime.coerceIn(0.0, durationSec) * 1000.0
             val targetX = (xForTime(timeMs, beatPositions) * density).toInt() - cursorInsetPx.toInt()
-            scroll.scrollTo(targetX.coerceAtLeast(0), scroll.scrollY)
+            // At the very start of the score the staff clef sits before the first
+            // beat; once the target is within that zone, scroll fully to the left so
+            // the clef is visible instead of clipping it (e.g. when a finished song
+            // scrolls back to the beginning).
+            val firstBeatX = (beatPositions.first().xCss * density).toInt()
+            val startX = if (targetX < firstBeatX + cursorInsetPx.toInt()) 0 else targetX.coerceAtLeast(0)
+            scroll.scrollTo(startX, scroll.scrollY)
         }
     }
 }
