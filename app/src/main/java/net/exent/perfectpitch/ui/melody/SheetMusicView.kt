@@ -34,12 +34,16 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.sample
 import net.exent.perfectpitch.BuildConfig
+import net.exent.perfectpitch.midi.MelodyTrack
 import kotlin.math.abs
 
 private const val TAG = "SheetMusicView"
 
 /** Leading space kept between the sheet's left edge and the cursor position. */
 private const val CURSOR_INSET_DP = 18f
+
+/** alphaTab's MIDI tick resolution (ticks per quarter note), used by its tick lookup. */
+private const val ALPHATAB_TICKS_PER_QUARTER = 960.0
 
 /** Fill color of alphaTab's beat cursor (the vertical line), used to locate its view. */
 private val BEAT_CURSOR_COLOR = android.graphics.Color.argb(255, 64, 64, 255)
@@ -64,6 +68,7 @@ private val BEAT_CURSOR_COLOR = android.graphics.Color.argb(255, 64, 64, 255)
  */
 @Composable
 fun SheetMusicView(
+    melodyTrack: MelodyTrack,
     alphaTex: String,
     currentTimeSeconds: Double,
     isPlaying: Boolean,
@@ -197,7 +202,7 @@ fun SheetMusicView(
             var firstRenderDone = false
             api.postRenderFinished.on {
                 firstRenderDone = true
-                beatPositions = buildBeatPositions(api)
+                beatPositions = buildBeatPositions(api, melodyTrack)
                 if (beatCursorView == null) beatCursorView = findBeatCursor(view)
             }
             api.scoreLoaded.on {
@@ -346,19 +351,26 @@ private class BeatPosition(val timeMs: Double, val xCss: Double, val isRest: Boo
  * alphaTab's layout so time <-> x lookups follow the real score layout instead
  * of assuming a linear time axis (which drifts whenever note durations and
  * rests vary).
+ *
+ * alphaTab's tick lookup reports beat starts in its own MIDI ticks (960 per
+ * quarter note), not milliseconds. Map those ticks through the melody track's
+ * own tick -> seconds conversion so the sheet's time axis matches the game
+ * clock and the note-bar canvas.
  */
-private fun buildBeatPositions(api: AlphaTabApiBase<AlphaTabView>): List<BeatPosition> {
+private fun buildBeatPositions(api: AlphaTabApiBase<AlphaTabView>, track: MelodyTrack): List<BeatPosition> {
     val lookup = api.boundsLookup ?: return emptyList()
     val tickCache = api.tickCache ?: return emptyList()
     val score = api.score ?: return emptyList()
     val positions = mutableListOf<BeatPosition>()
-    for (track in score.tracks) {
-        for (staff in track.staves) {
+    for (scoreTrack in score.tracks) {
+        for (staff in scoreTrack.staves) {
             for (bar in staff.bars) {
                 for (voice in bar.voices) {
                     for (beat in voice.beats) {
                         val bounds = lookup.findBeat(beat) ?: continue
-                        positions.add(BeatPosition(tickCache.getBeatStart(beat), bounds.onNotesX, beat.isRest))
+                        val alphaTabTick = tickCache.getBeatStart(beat)
+                        val trackTick = (alphaTabTick * track.ticksPerQuarterNote.coerceAtLeast(1) / ALPHATAB_TICKS_PER_QUARTER).toLong()
+                        positions.add(BeatPosition(track.tickToSeconds(trackTick) * 1000.0, bounds.onNotesX, beat.isRest))
                     }
                 }
             }

@@ -290,6 +290,7 @@ fun MelodyPlayScreen(
                         val alphaTex = remember(track) { MidiToAlphaTex.generate(track) }
                         val viewTimeSeconds = adjustedNow + viewState.songTimeOffsetSeconds
                         SheetMusicView(
+                            melodyTrack = track,
                             alphaTex = alphaTex,
                             currentTimeSeconds = adjustedNow,
                             isPlaying = gameState.phase == PlayPhase.PLAYING,
