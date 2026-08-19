@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
-import net.exent.perfectpitch.R
 import net.exent.perfectpitch.midi.MelodyTrack
 import net.exent.perfectpitch.midi.MidiParser
 import net.exent.perfectpitch.music.DifficultyCalculator
@@ -50,27 +49,46 @@ class MelodyRepository(
 
     companion object {
         private const val MAX_CACHE_ENTRIES = 20
+
+        /** Folder key for user-imported melodies. */
+        const val IMPORTED_FOLDER = "imported"
+
+        /** Asset directory holding bundled melodies, one subdirectory per folder. */
+        const val MELODY_ASSETS_DIR = "melodies"
     }
 
     data class MelodyInfo(
         val id: String,
         val name: String,
         val isBundled: Boolean,
+        val folder: String? = null,
         val uri: Uri? = null,
-        val rawResId: Int? = null
+        val assetPath: String? = null
     )
 
-    /** Bundled melodies from raw resources. */
+    /** Bundled melodies from the assets/melodies directory tree. */
     fun getBundledMelodies(): List<MelodyInfo> {
-        return R.raw::class.java.fields.map { field ->
-            val resId = field.getInt(null)
-            MelodyInfo(field.name, resourceNameToDisplayName(field.name), true, rawResId = resId)
+        val result = mutableListOf<MelodyInfo>()
+        val folders = context.assets.list(MELODY_ASSETS_DIR).orEmpty()
+        for (folder in folders) {
+            val folderPrefix = "$MELODY_ASSETS_DIR/$folder"
+            val files = context.assets.list(folderPrefix).orEmpty()
+                .filter { it.endsWith(".mid") || it.endsWith(".midi") }
+                .sorted()
+            for (file in files) {
+                val assetPath = "$folderPrefix/$file"
+                val displayName = resourceNameToDisplayName(file.substringBeforeLast('.'))
+                result.add(MelodyInfo(assetPath, displayName, true, folder = folder, assetPath = assetPath))
+            }
         }
+        return result
     }
 
     /** Flow of user-imported melodies. */
     val importedMelodies: Flow<List<MelodyInfo>> = importedMelodyStore.flow.map { map ->
-        map.map { (id, mel) -> MelodyInfo(id, mel.name, false, uri = Uri.parse(mel.uri)) }
+        map.map { (id, mel) ->
+            MelodyInfo(id, mel.name, false, folder = IMPORTED_FOLDER, uri = Uri.parse(mel.uri))
+        }
     }
 
     private fun resourceNameToDisplayName(name: String): String {
@@ -87,8 +105,8 @@ class MelodyRepository(
 
         val track = try {
             when {
-                info.rawResId != null -> {
-                    context.resources.openRawResource(info.rawResId).use { stream ->
+                info.assetPath != null -> {
+                    context.assets.open(info.assetPath).use { stream ->
                         parser.parse(stream, info.name)
                     }
                 }
@@ -118,8 +136,8 @@ class MelodyRepository(
 
         val tracks = try {
             when {
-                info.rawResId != null -> {
-                    context.resources.openRawResource(info.rawResId).use { stream ->
+                info.assetPath != null -> {
+                    context.assets.open(info.assetPath).use { stream ->
                         parser.parseMultiTrack(stream, info.name)
                     }
                 }

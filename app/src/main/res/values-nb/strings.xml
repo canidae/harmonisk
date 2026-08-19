@@ -124,6 +124,11 @@
     <string name="melody_difficulty">Vanskelighetsgrad: </string>
     <string name="melody_no_playthroughs">Ingen gjennomspillinger ennå</string>
     <string name="no_melodies_available">Ingen tilgjengelige melodier.\nImporter en MIDI-fil for å komme i gang.</string>
+    <string name="melody_no_imported">Ingen importerte sanger ennå.</string>
+    <string name="melody_folder_imported">Importert</string>
+    <string name="melody_folder_traditional">Tradisjonelle</string>
+    <string name="melody_folder_exercises">Øvelser</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
 
     <!-- Melody Play -->
     <string name="melody_play_midi_input">MIDI-inngang</string>

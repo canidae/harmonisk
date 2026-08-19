@@ -2,6 +2,7 @@ package net.exent.perfectpitch.ui.melody
 
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.perfectpitch.R
+import net.exent.perfectpitch.data.MelodyRepository
 import net.exent.perfectpitch.ui.utils.scoreColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +56,7 @@ fun MelodyScreen(
     val difficulties by viewModel.allMelodyDifficulties.collectAsStateWithLifecycle()
     var previewingMelody by remember { mutableStateOf<String?>(null) }
     var expandedMelodyId by remember { mutableStateOf<String?>(null) }
+    var currentFolder by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.initSynthesizer()
@@ -71,6 +74,10 @@ fun MelodyScreen(
         }
     }
 
+    BackHandler(enabled = currentFolder != null) {
+        currentFolder = null
+    }
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -85,12 +92,65 @@ fun MelodyScreen(
         }
     }
 
+    fun folderDisplayName(folder: String): String {
+        val resId = context.resources.getIdentifier("melody_folder_$folder", "string", context.packageName)
+        return if (resId != 0) context.getString(resId) else folder.replaceFirstChar { it.uppercase() }
+    }
+
+    val melodies by viewModel.sortedMelodies.collectAsStateWithLifecycle()
+    val importedMelodies = melodies.filter { !it.isBundled }
+    val bundledFolders = melodies.filter { it.isBundled && it.folder != null }.groupBy { it.folder!! }
+    val looseBundled = melodies.filter { it.isBundled && it.folder == null }
+
+    val currentFolderSongs = when (currentFolder) {
+        null -> emptyList()
+        MelodyRepository.IMPORTED_FOLDER -> importedMelodies
+        else -> bundledFolders[currentFolder].orEmpty()
+    }
+
+    val songCard: @Composable (MelodyRepository.MelodyInfo) -> Unit = { info ->
+        MelodyCard(
+            viewModel = viewModel,
+            info = info,
+            combinedScore = combinedScores[info.id],
+            difficulty = difficulties[info.id],
+            isPreviewing = previewingMelody == info.name && isPreviewPlaying,
+            isExpanded = expandedMelodyId == info.id,
+            onPlay = {
+                viewModel.stopPreview()
+                previewingMelody = null
+                if (viewModel.loadMelody(info)) {
+                    onStartPlay()
+                } else {
+                    Toast.makeText(context, context.getString(R.string.melody_failed_load_melody), Toast.LENGTH_SHORT).show()
+                }
+            },
+            onTogglePreview = {
+                if (previewingMelody == info.name && isPreviewPlaying) {
+                    viewModel.stopPreview()
+                    previewingMelody = null
+                } else {
+                    previewingMelody = info.name
+                    viewModel.previewMelody(info)
+                }
+            },
+            onToggleExpand = {
+                expandedMelodyId = if (expandedMelodyId == info.id) null else info.id
+                if (expandedMelodyId == info.id) {
+                    viewModel.loadMelody(info)
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.melody_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        if (currentFolder != null) currentFolder = null else onBack()
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 }
@@ -104,74 +164,108 @@ fun MelodyScreen(
                 .padding(16.dp)
         ) {
             Text(
-                text = stringResource(R.string.melody_choose),
+                text = if (currentFolder != null) folderDisplayName(currentFolder!!) else stringResource(R.string.melody_choose),
                 style = MaterialTheme.typography.headlineMedium
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            val melodies by viewModel.sortedMelodies.collectAsStateWithLifecycle()
-            if (melodies.isNotEmpty()) {
-                LazyColumn(
-                    modifier = Modifier.weight(1f, fill = false),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(melodies) { info ->
-                        MelodyCard(
-                            viewModel = viewModel,
-                            info = info,
-                            combinedScore = combinedScores[info.id],
-                            difficulty = difficulties[info.id],
-                            isPreviewing = previewingMelody == info.name && isPreviewPlaying,
-                            isExpanded = expandedMelodyId == info.id,
-                            onPlay = {
-                                viewModel.stopPreview()
-                                previewingMelody = null
-                                if (viewModel.loadMelody(info)) {
-                                    onStartPlay()
-                                } else {
-                                    Toast.makeText(context, context.getString(R.string.melody_failed_load_melody), Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            onTogglePreview = {
-                                if (previewingMelody == info.name && isPreviewPlaying) {
-                                    viewModel.stopPreview()
-                                    previewingMelody = null
-                                } else {
-                                    previewingMelody = info.name
-                                    viewModel.previewMelody(info)
-                                }
-                            },
-                            onToggleExpand = {
-                                expandedMelodyId = if (expandedMelodyId == info.id) null else info.id
-                                if (expandedMelodyId == info.id) {
-                                    viewModel.loadMelody(info)
-                                }
-                            }
-                        )
+            when {
+                currentFolder == null -> {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(looseBundled) { info -> songCard(info) }
+                        item {
+                            FolderCard(
+                                name = folderDisplayName(MelodyRepository.IMPORTED_FOLDER),
+                                count = importedMelodies.size,
+                                onClick = { currentFolder = MelodyRepository.IMPORTED_FOLDER }
+                            )
+                        }
+                        items(bundledFolders.keys.sortedBy { folderDisplayName(it) }) { folder ->
+                            FolderCard(
+                                name = folderDisplayName(folder),
+                                count = bundledFolders[folder]!!.size,
+                                onClick = { currentFolder = folder }
+                            )
+                        }
                     }
                 }
-            } else {
-                Text(
-                    text = context.getString(R.string.no_melodies_available),
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(32.dp)
-                )
-            }
+                currentFolderSongs.isNotEmpty() -> {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(currentFolderSongs) { info -> songCard(info) }
+                    }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedButton(
-                onClick = { filePickerLauncher.launch(arrayOf("audio/midi", "audio/x-midi", "application/x-midi")) },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.melody_import_file))
+                    if (currentFolder == MelodyRepository.IMPORTED_FOLDER) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        ImportButton(onClick = {
+                            filePickerLauncher.launch(arrayOf("audio/midi", "audio/x-midi", "application/x-midi"))
+                        })
+                    }
+                }
+                else -> {
+                    Text(
+                        text = context.getString(R.string.melody_no_imported),
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(32.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    ImportButton(onClick = {
+                        filePickerLauncher.launch(arrayOf("audio/midi", "audio/x-midi", "application/x-midi"))
+                    })
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun FolderCard(
+    name: String,
+    count: Int,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("📂", style = MaterialTheme.typography.headlineMedium)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ImportButton(onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Icon(Icons.Default.Add, contentDescription = null)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(stringResource(R.string.melody_import_file))
     }
 }
 

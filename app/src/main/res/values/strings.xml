@@ -136,6 +136,11 @@
     <string name="melody_reset_score">Reset score</string>
     <string name="melody_import_success">MIDI imported</string>
     <string name="melody_remove_song">Remove song</string>
+    <string name="melody_no_imported">No imported songs yet.</string>
+    <string name="melody_folder_imported">Imported</string>
+    <string name="melody_folder_traditional">Traditional</string>
+    <string name="melody_folder_exercises">Exercises</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
 
     <!-- Melody Play -->
     <string name="melody_play_midi_input">MIDI input</string>

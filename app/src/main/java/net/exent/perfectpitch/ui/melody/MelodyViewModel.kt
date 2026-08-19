@@ -391,6 +391,7 @@ class MelodyViewModel @Inject constructor(
                     id = currentMelodyId ?: return@launch,
                     name = name,
                     isBundled = false,
+                    folder = MelodyRepository.IMPORTED_FOLDER,
                     uri = persistUri
                 )
                 melodyRepository.addImportedMelody(info)
