@@ -1120,7 +1120,9 @@ private fun DrawScope.drawVerticalPitchLine(
         val t = centsPositions[i].coerceIn(0f, 1f)
         val normalized = (centsHistory[i] / 50f).coerceIn(-1f, 1f)
         val x = centerX + normalized * maxDeviationPx
-        val y = barTop + t * (barBottom - barTop)
+        // Violin bars fall toward the play line: the note starts at the bar
+        // bottom, so the pitch line grows upward from detection start.
+        val y = barBottom - t * (barBottom - barTop)
         if (i == 0) {
             path.moveTo(x, y)
         } else if (t - centsPositions[i - 1] > gapThreshold) {
