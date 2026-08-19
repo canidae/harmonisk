@@ -43,6 +43,7 @@ import net.exent.perfectpitch.ui.components.KeepScreenOn
 import net.exent.perfectpitch.ui.components.PIANO_HEIGHT_DP
 import net.exent.perfectpitch.ui.components.RequireMicPermission
 import net.exent.perfectpitch.ui.components.SharedNoteCanvas
+import net.exent.perfectpitch.ui.components.VIOLIN_LABEL_AREA_DP
 import net.exent.perfectpitch.ui.OVERLAY_BG
 import net.exent.perfectpitch.ui.OVERLAY_BUTTON_SIZE
 import net.exent.perfectpitch.ui.OVERLAY_ICON_TINT
@@ -361,7 +362,7 @@ fun MelodyPlayScreen(
                                 },
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
-                                    .padding(bottom = if (violinMode) 24.dp else PIANO_HEIGHT_DP.dp + 24.dp)
+                                    .padding(bottom = if (violinMode) VIOLIN_LABEL_AREA_DP.dp + 24.dp else PIANO_HEIGHT_DP.dp + 24.dp)
                                     .size(72.dp)
                                     .background(PlayGreen.copy(alpha = 0.25f), CircleShape)
                                     .border(2.dp, PlayGreen.copy(alpha = 0.7f), CircleShape)
@@ -380,7 +381,7 @@ fun MelodyPlayScreen(
                         Column(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
-                                .padding(bottom = if (violinMode) 8.dp else PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
+                                .padding(bottom = if (violinMode) VIOLIN_LABEL_AREA_DP.dp + 8.dp else PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
