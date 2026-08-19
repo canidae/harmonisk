@@ -58,9 +58,9 @@ private val BEAT_CURSOR_COLOR = android.graphics.Color.argb(255, 64, 64, 255)
  *
  * While the user pans the shared time line ([songTimeOffsetSeconds] != 0) the
  * sheet scrolls smoothly from [scrollTimeSeconds] so it tracks the note-bar view,
- * and [seekTimeSeconds] anchors the cursor to the leftmost note. Dragging the
- * sheet pans it directly and reports the time under the finger via
- * [onScrolledToTime] so the note-bar view can seek in turn.
+ * and the cursor is pinned to the sheet's left edge so it stays in view. Dragging
+ * the sheet pans it directly (and pins the cursor the same way) and reports the
+ * time under the finger via [onScrolledToTime] so the note-bar view can seek in turn.
  */
 @Composable
 fun SheetMusicView(
@@ -124,6 +124,17 @@ fun SheetMusicView(
                     scroll.scrollTo(scroll.scrollX - dx.toInt(), scroll.scrollY)
                     val positions = beatPositions
                     if (positions.isEmpty()) return@OnTouchListener true
+                    // Pin the marker to the left edge while the sheet is under the
+                    // finger, so it never flies out of the view while panning.
+                    val firstBeatX = (positions.first().xCss * density).toInt()
+                    val cursor = beatCursorView
+                    val cursorParams = cursor?.layoutParams as? android.widget.RelativeLayout.LayoutParams
+                    if (cursor != null && cursorParams != null) {
+                        cursor.clearAnimation()
+                        cursorParams.leftMargin = maxOf(scroll.scrollX + cursorInsetPx.toInt(), firstBeatX)
+                        cursor.visibility = View.VISIBLE
+                        cursor.requestLayout()
+                    }
                     val leftEdgeTime = timeForX(((scroll.scrollX + cursorInsetPx) / density).toDouble(), positions) / 1000.0
                     onScrolledTo(leftEdgeTime)
                     true
@@ -234,15 +245,16 @@ fun SheetMusicView(
             }
     }
 
-    // Push the cursor to alphaTab; when game time freezes (e.g. wait mode) no
-    // updates are emitted and the cursor freezes with it. seekTimeSeconds equals
-    // the game clock during playback (pan offset is 0) and anchors to the
-    // leftmost note while the user is panning.
+    // Push the cursor to alphaTab during playback (pan offset is 0 and the sheet
+    // is not being dragged). While the user pans the sheet or the shared time
+    // line, the cursor is positioned directly instead (see below), so alphaTab's
+    // own tick-based placement is skipped to keep the marker pinned in view.
     LaunchedEffect(midiReady) {
         if (!midiReady) return@LaunchedEffect
         snapshotFlow { seekTime }
             .sample(50)
             .collectLatest { t ->
+                if (isSheetDragging || abs(songOffset) >= 0.001) return@collectLatest
                 (apiRef.value?.player?.output as? IExternalMediaSynthOutput)
                     ?.updatePosition(t.coerceAtLeast(0.0) * 1000.0)
             }
@@ -258,7 +270,7 @@ fun SheetMusicView(
     // While the user is panning the shared time line (songTimeOffsetSeconds != 0) the
     // sheet scrolls smoothly from [scrollTimeSeconds] so it tracks the note-bar view.
     // Skipped while the sheet is being dragged.
-    LaunchedEffect(midiReady, scrollTime, beatPositions, isSheetDragging) {
+    LaunchedEffect(midiReady, scrollTime, beatPositions, isSheetDragging, beatCursorView) {
         if (!midiReady) return@LaunchedEffect
         if (isSheetDragging) return@LaunchedEffect
         val scroll = scrollView ?: return@LaunchedEffect
@@ -290,6 +302,15 @@ fun SheetMusicView(
             val firstBeatX = (beatPositions.first().xCss * density).toInt()
             val startX = if (targetX < firstBeatX + cursorInsetPx.toInt()) 0 else targetX.coerceAtLeast(0)
             scroll.scrollTo(startX, scroll.scrollY)
+            // While panning, keep the marker pinned to the left edge (the panned-to
+            // time sits at the sheet's left edge) so it never leaves the view.
+            val cursor = beatCursorView ?: return@LaunchedEffect
+            val cursorParams = cursor.layoutParams as? android.widget.RelativeLayout.LayoutParams
+                ?: return@LaunchedEffect
+            cursor.clearAnimation()
+            cursorParams.leftMargin = maxOf(startX + cursorInsetPx.toInt(), firstBeatX)
+            cursor.visibility = View.VISIBLE
+            cursor.requestLayout()
         }
     }
 }

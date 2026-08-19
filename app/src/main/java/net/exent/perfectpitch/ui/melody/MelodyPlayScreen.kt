@@ -289,18 +289,11 @@ fun MelodyPlayScreen(
                     if (track != null) {
                         val alphaTex = remember(track) { MidiToAlphaTex.generate(track) }
                         val viewTimeSeconds = adjustedNow + viewState.songTimeOffsetSeconds
-                        // Anchor the cursor to the leftmost note, but never behind the
-                        // left edge (keeps the blue line from leaving the view).
-                        val seekTime = if (viewState.songTimeOffsetSeconds != 0.0) {
-                            maxOf(viewTimeSeconds, nearestNoteStartSeconds(track, viewTimeSeconds))
-                        } else {
-                            adjustedNow
-                        }
                         SheetMusicView(
                             alphaTex = alphaTex,
                             currentTimeSeconds = adjustedNow,
                             isPlaying = gameState.phase == PlayPhase.PLAYING,
-                            seekTimeSeconds = seekTime,
+                            seekTimeSeconds = adjustedNow,
                             scrollTimeSeconds = viewTimeSeconds,
                             songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
                             durationSeconds = track.durationSeconds,
