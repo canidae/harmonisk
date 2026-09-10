@@ -2,6 +2,9 @@ package net.exent.perfectpitch.music
 
 /**
  * Result of pitch detection for a single audio frame.
+ *
+ * [confidence] is the detector's own certainty in [frequency], 0..1. Sources that know the
+ * pitch exactly (MIDI input) report 1.
  */
 data class PitchResult(
     val frequency: Float,
@@ -9,7 +12,8 @@ data class PitchResult(
     val octave: Int,
     val centsOff: Float,
     val midiNoteNumber: Int,
-    val isSilent: Boolean
+    val isSilent: Boolean,
+    val confidence: Float = 1f
 ) {
     val isValid: Boolean get() = !isSilent
 

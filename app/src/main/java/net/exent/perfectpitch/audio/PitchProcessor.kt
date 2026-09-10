@@ -72,14 +72,17 @@ class PitchProcessor(
      * Each incoming chunk (512 samples at 44100 Hz = ~11.6 ms) shifts the 2822-sample
      * analysis window. On energy onset the window is reset so CREPE receives a clean frame
      * for the new note as quickly as possible.
+     *
+     * @param source Raw 44100 Hz chunks. Defaults to the microphone; tests inject recorded audio
+     *               to drive this exact framing with repeatable input.
      */
-    fun pitchFlow(): Flow<PitchResult> {
+    fun pitchFlow(source: Flow<FloatArray> = audioCaptureService.audioFlow()): Flow<PitchResult> {
         val slidingWindow = FloatArray(ANALYSIS_WINDOW_SIZE)
         var windowFilled = 0
         var prevChunkRms = 0f
         var onsetStreak = 0
 
-        return audioCaptureService.audioFlow()
+        return source
             .map { chunk ->
                 val chunkSize = chunk.size.coerceAtMost(ANALYSIS_WINDOW_SIZE)
                 val chunkRms = AudioUtils.rms(chunk)
@@ -131,7 +134,8 @@ class PitchProcessor(
             octave = noteInfo.octave,
             centsOff = noteInfo.centsOff,
             midiNoteNumber = noteInfo.midiNumber,
-            isSilent = false
+            isSilent = false,
+            confidence = result.confidence
         )
     }
 
