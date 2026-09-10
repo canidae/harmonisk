@@ -60,6 +60,14 @@ class MelodyViewModel @Inject constructor(
         private val TAG = "MelodyViewModel"
         const val GRACE_PERIOD_EXTRA_MS = 150L
         const val DRUM_CHANNEL = SoundFontSynthesizer.DRUM_CHANNEL
+
+        /**
+         * Shortest silence in the tone that counts as the player re-attacking a repeated note. A
+         * dropped pitch frame is not a played pause, so this cannot be arbitrarily small.
+         */
+        const val MIN_REARTICULATION_SILENCE_MS = NoteArticulationTracker.DEFAULT_MIN_SILENCE_MS
+
+        private fun elapsedNowMs() = SystemClock.elapsedRealtime().toDouble()
     }
 
     private val _gameState = MutableStateFlow(MelodyGameState())
@@ -112,6 +120,17 @@ class MelodyViewModel @Inject constructor(
 
     // Per-note tracking state (encapsulated for a single reset() call)
     private val noteTracking = NoteTrackingState()
+
+    /**
+     * Detects whether the expected note was re-attacked or is the tail of a tone the player is
+     * holding through repeated notes of the same pitch.
+     */
+    private val articulationTracker =
+        NoteArticulationTracker(minSilenceMs = MIN_REARTICULATION_SILENCE_MS)
+
+    /** Pitch of the note the game expected before the current one, -1 for the first note. */
+    private var previousNoteNumber = -1
+
     private var currentNoteDetectedCorrectly = false
     // Indices of all notes active at the current time (chords = multiple)
     private var currentChordIndices: List<Int> = emptyList()
@@ -689,6 +708,8 @@ class MelodyViewModel @Inject constructor(
         _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
 
         noteTracking.reset()
+        articulationTracker.reset()
+        previousNoteNumber = -1
         currentChordIndices = emptyList()
         _canAdvanceLevel.value = false
         currentNoteDetectedCorrectly = false
@@ -951,6 +972,7 @@ class MelodyViewModel @Inject constructor(
                         is MidiNoteEvent.NoteOn -> {
                             heldNotes.add(event.noteNumber)
                             val result = pitchResultFromMidi(event.noteNumber)
+                            articulationTracker.onValidPitchFrame(elapsedNowMs())
                             _gameState.update { it.copy(pitchResult = result) }
                             for (idx in currentChordIndices) {
                                 updateNoteProgress(idx, result.centsOff)
@@ -962,7 +984,6 @@ class MelodyViewModel @Inject constructor(
                             if (heldNotes.isEmpty()) {
                                 _gameState.update { it.copy(pitchResult = PitchResult.SILENT) }
                                 noteTracking.wasPauseSinceLastWrong = true
-                                noteTracking.pendingRearticulation = false
                             } else {
                                 val result = pitchResultFromMidi(heldNotes.last())
                                 _gameState.update { it.copy(pitchResult = result) }
@@ -972,11 +993,13 @@ class MelodyViewModel @Inject constructor(
                 }
             } else {
                 pitchProcessor.pitchFlow().collect { result ->
+                    val nowMs = elapsedNowMs()
                     _gameState.update { it.copy(pitchResult = result) }
                     if (result.isValid) {
+                        // The pause between two heard pitches is the articulation of a repeated note.
+                        articulationTracker.onValidPitchFrame(nowMs)
                         if (noteTracking.hasSeenSilenceSinceLastValid) {
                             noteTracking.wasPauseSinceLastWrong = true
-                            noteTracking.pendingRearticulation = false
                             noteTracking.hasSeenSilenceSinceLastValid = false
                         }
                         for (idx in currentChordIndices) {
@@ -1002,9 +1025,6 @@ class MelodyViewModel @Inject constructor(
             // Finalize previous note if it wasn't scored
             finalizePreviousNote()
 
-            // Remember the previous note index before it is overwritten below
-            val prevNoteIdx = _gameState.value.currentNoteIndex
-
             // New note/chord entered
             val results = _gameState.value.noteResults.toMutableMap()
             for (idx in activeIndices) results[idx] = NoteResultState.ACTIVE
@@ -1018,20 +1038,11 @@ class MelodyViewModel @Inject constructor(
             currentNoteDetectedCorrectly = false
             noteTracking.resetForNewNote()
 
-            // Detect if the user held through a same-pitch transition (on the primary note)
-            if (prevNoteIdx >= 0 && activeIndices.isNotEmpty() && prevNoteIdx < track.notes.size) {
-                val prevNote = track.notes[prevNoteIdx]
-                val newNote = track.notes[activeIndices.first()]
-                if (prevNote.noteNumber == newNote.noteNumber) {
-                    val currentResult = _gameState.value.pitchResult
-                    val newNoteFreq = NoteUtils.midiToFrequency(newNote.noteNumber)
-                    if (currentResult.isValid && abs(
-                            noteUtils.frequencyToCents(currentResult.frequency, newNoteFreq)
-                        ) <= 50f) {
-                        noteTracking.pendingRearticulation = true
-                    }
-                }
-            }
+            // A repeated pitch must be re-attacked: the game only credits it once the player has
+            // broken the tone with a short pause (see NoteArticulationTracker).
+            val newNoteNumber = activeIndices.firstOrNull()?.let { track.notes.getOrNull(it)?.noteNumber } ?: -1
+            articulationTracker.startNote(newNoteNumber, previousNoteNumber, elapsedNowMs())
+            previousNoteNumber = newNoteNumber
 
             // In wait mode, start grace period before freezing
             if (activeIndices.isNotEmpty() && _gameState.value.waitMode) {
@@ -1071,14 +1082,13 @@ class MelodyViewModel @Inject constructor(
 
         if (noteTracking.isWaitingForNote) {
             if (isCorrectNote) {
-                if (noteTracking.pendingRearticulation) {
+                if (articulationTracker.isAwaitingPause) {
                     // Same-pitch note held through — need a pause + re-attack
                 } else {
                     currentNoteDetectedCorrectly = true
                     noteTracking.isWaitingForNote = false
                     noteTracking.lastWrongMidiNote = -1
                     noteTracking.wasPauseSinceLastWrong = false
-                    noteTracking.pendingRearticulation = false
                     pauseOffset = _gameState.value.currentTimeSeconds
                     playbackStartTime = SystemClock.elapsedRealtime()
                     _gameState.update { it.copy(phase = PlayPhase.PLAYING) }
@@ -1091,7 +1101,6 @@ class MelodyViewModel @Inject constructor(
                     noteTracking.isWaitingForNote = false
                     noteTracking.lastWrongMidiNote = result.midiNoteNumber
                     noteTracking.wasPauseSinceLastWrong = false
-                    noteTracking.pendingRearticulation = false
                     pauseOffset = _gameState.value.currentTimeSeconds
                     playbackStartTime = SystemClock.elapsedRealtime()
                     _gameState.update { it.copy(phase = PlayPhase.PLAYING) }
@@ -1101,7 +1110,7 @@ class MelodyViewModel @Inject constructor(
         } else {
             // Continuous mode (not waiting)
             if (isCorrectNote && !currentNoteDetectedCorrectly) {
-                if (noteTracking.pendingRearticulation) {
+                if (articulationTracker.isAwaitingPause) {
                     // Same-pitch note held through — need a pause + re-attack
                 } else {
                     currentNoteDetectedCorrectly = true
@@ -1350,9 +1359,6 @@ private class NoteTrackingState {
     var lastWrongMidiNote = -1
     var wasPauseSinceLastWrong = false
 
-    // Same-pitch rearticulation (per-note)
-    var pendingRearticulation = false
-
     // Transient silence tracking between valid pitch frames
     var hasSeenSilenceSinceLastValid = false
 
@@ -1367,7 +1373,6 @@ private class NoteTrackingState {
         waitGraceDurationMs = 0L
         lastWrongMidiNote = -1
         wasPauseSinceLastWrong = false
-        pendingRearticulation = false
         hasSeenSilenceSinceLastValid = false
     }
 
@@ -1377,6 +1382,5 @@ private class NoteTrackingState {
         centsOffCount = 0
         correctPitchFrameCount = 0
         detectedPitchFrameCount = 0
-        pendingRearticulation = false
     }
 }
