@@ -22,15 +22,22 @@ android-sdk/platform-tools/adb shell am start -n net.exent.perfectpitch/.MainAct
 ./gradlew :app:test
 ```
 
-### Run Android instrumentation tests (requires connected device)
-```bash
-./gradlew :app:connectedDebugAndroidTest
-```
-
-### View pitch accuracy test results
-```bash
-android-sdk/platform-tools/adb logcat -d -s PitchAccTest:I
-```
+## Testing
+- There is no permanent instrumentation, device or measurement suite. It grew to twenty-one tests taking seven and a half minutes, of which four minutes was the detector running over rendered performances and tests that play a tone through the speaker and record it in real time: too slow to run, so not run.
+- For every change, write temporary tests that
+  - exercise the existing functionality the change could have broken, and
+  - verify the new behaviour works as intended.
+  Put what they measured in the commit message, then remove them: they are a working tool, not a deliverable.
+- Temporary instrumentation tests go in `app/src/androidTest` and run on the connected device with
+  ```bash
+  ./gradlew :app:connectedDebugAndroidTest
+  ```
+  or a single class with
+  ```bash
+  android-sdk/platform-tools/adb shell am instrument -w -e class <class> net.exent.perfectpitch.test/androidx.test.runner.AndroidJUnitRunner
+  ```
+  The dependencies and runner are configured in `app/build.gradle.kts` and stay there.
+- Unit tests in `app/src/test` run in seconds and stay.
 
 ## Instructions
 - If local uncommited changes, find out their purpose and commit them before starting a new task.
