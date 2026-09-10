@@ -283,9 +283,9 @@ fun MelodyPlayScreen(
                         .fillMaxWidth()
                 ) {
                     val track = gameState.melodyTrack
-                    // In READY the view is static, so show bars exactly at the now line.
-                    val adjustedNow = if (gameState.phase == PlayPhase.READY) gameState.currentTimeSeconds
-                                      else gameState.currentTimeSeconds + inputDelay / 1000.0
+                    // How far the bars run ahead of the game clock, on the same rule the view model uses.
+                    val adjustedNow = gameState.currentTimeSeconds +
+                            nowLineLeadSeconds(gameState.waitMode, gameState.phase, inputDelay)
 
                     if (track != null) {
                         val alphaTex = remember(track) { MidiToAlphaTex.generate(track) }

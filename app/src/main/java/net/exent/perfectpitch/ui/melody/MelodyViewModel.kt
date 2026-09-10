@@ -59,7 +59,6 @@ class MelodyViewModel @Inject constructor(
 
     companion object {
         private val TAG = "MelodyViewModel"
-        const val GRACE_PERIOD_EXTRA_MS = 150L
         const val DRUM_CHANNEL = SoundFontSynthesizer.DRUM_CHANNEL
 
         /**
@@ -618,10 +617,9 @@ class MelodyViewModel @Inject constructor(
         return 120f
     }
 
-    /** "Now" time used by the canvas — the bars lead the beat by the input delay (except in READY, where the view is static). */
+    /** "Now" time used by the canvas — the bars lead the beat by the input delay (see [nowLineLeadSeconds]). */
     private fun adjustedNowSeconds(phase: PlayPhase, currentTimeSeconds: Double): Double =
-        if (phase == PlayPhase.READY) currentTimeSeconds
-        else currentTimeSeconds + inputDelayMs / 1000.0
+        currentTimeSeconds + nowLineLeadSeconds(_gameState.value.waitMode, phase, inputDelayMs)
 
     /** Seconds of the 2-bar lead-in at the song's initial tempo/time signature. */
     private fun twoBarLeadInSeconds(): Double {
@@ -881,15 +879,10 @@ class MelodyViewModel @Inject constructor(
             var pitchDetectionStarted = false
 
             while (isActive) {
-                // Grace period: continue advancing time for a while after entering wait mode
+                // Waiting for the player: the clock holds where the last tick left it.
                 if (noteTracking.isWaitingForNote) {
-                    val graceElapsed = SystemClock.elapsedRealtime() - noteTracking.waitGraceStartTime
-                    if (graceElapsed >= noteTracking.waitGraceDurationMs) {
-                        // Grace expired — actually freeze time
-                        delay(16)
-                        continue
-                    }
-                    // Still in grace period — keep time moving (fall through)
+                    delay(16)
+                    continue
                 }
 
                 val elapsed = (SystemClock.elapsedRealtime() - playbackStartTime) / 1000.0
@@ -1068,12 +1061,17 @@ class MelodyViewModel @Inject constructor(
                 elapsedNowMs()
             )
 
-            // In wait mode, start grace period before freezing
+            // In wait mode, the song stops on the note it is waiting for, and the clock is brought
+            // back onto the note's start: the loop notices the new note a tick late, and the note the
+            // player is asked to play has to come to rest on the now line rather than just past it.
             if (activeIndices.isNotEmpty() && _gameState.value.waitMode) {
+                val noteStart = activeIndices.minOf { track.noteStartSeconds(track.notes[it]) }
                 noteTracking.isWaitingForNote = true
-                noteTracking.waitGraceStartTime = SystemClock.elapsedRealtime()
-                noteTracking.waitGraceDurationMs = GRACE_PERIOD_EXTRA_MS
-                _gameState.update { it.copy(phase = PlayPhase.WAITING_FOR_NOTE) }
+                pauseOffset = noteStart
+                playbackStartTime = SystemClock.elapsedRealtime()
+                _gameState.update {
+                    it.copy(currentTimeSeconds = noteStart, phase = PlayPhase.WAITING_FOR_NOTE)
+                }
             }
         }
     }
@@ -1384,8 +1382,6 @@ private class NoteTrackingState {
     var detectedPitchFrameCount = 0
     var isWaitingForNote = false
     var wasWaitingForNote = false
-    var waitGraceStartTime = 0L
-    var waitGraceDurationMs = 0L
 
     // Wrong-note hold detection (persists across note boundaries)
     var lastWrongMidiNote = -1
@@ -1401,8 +1397,6 @@ private class NoteTrackingState {
         detectedPitchFrameCount = 0
         isWaitingForNote = false
         wasWaitingForNote = false
-        waitGraceStartTime = 0L
-        waitGraceDurationMs = 0L
         lastWrongMidiNote = -1
         wasPauseSinceLastWrong = false
         hasSeenSilenceSinceLastValid = false

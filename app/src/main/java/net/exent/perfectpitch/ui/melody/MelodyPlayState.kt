@@ -79,3 +79,19 @@ enum class PlayPhase {
 enum class NoteResultState {
     ACTIVE, PERFECT, GREAT, GOOD, OK, MISS
 }
+
+/**
+ * How far the bars run ahead of the game clock.
+ *
+ * The bars lead the beat by the input delay, so that a note played as a bar reaches the now line is
+ * scored against that note once the microphone and the detector have caught up: the sound arrives
+ * that much later than the player made it.
+ *
+ * A song that stops for the player has no use for that lead. The clock stops on the note it is
+ * waiting for and stays there until the player plays it, so the sound cannot arrive too late to be
+ * scored, and the lead would only carry the note the player is asked to play past the now line.
+ * READY is a still picture of the music, a song the player has not started, and is drawn on the now
+ * line too.
+ */
+fun nowLineLeadSeconds(waitMode: Boolean, phase: PlayPhase, inputDelayMs: Int): Double =
+    if (waitMode || phase == PlayPhase.READY) 0.0 else inputDelayMs / 1000.0
