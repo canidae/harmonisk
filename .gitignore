@@ -5,6 +5,7 @@
 .idea/
 build/
 .gradle/
+.kotlin/
 local.properties
 android-sdk/
 gradle-dist/
