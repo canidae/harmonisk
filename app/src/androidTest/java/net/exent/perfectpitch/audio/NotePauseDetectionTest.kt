@@ -48,6 +48,12 @@ class NotePauseDetectionTest {
 
         /** A frame this many cents off the played note counts as the detector missing it. */
         private const val TOLERANCE_CENTS = 50f
+
+        /**
+         * Silence the notation leaves between two notes, as "Jeg Kan Spille Fiolin" has between its
+         * opening notes. Short enough that a tone held across it is still one tone.
+         */
+        private const val NOTATED_GAP_MS = 26.0
     }
 
     private lateinit var processor: PitchProcessor
@@ -107,8 +113,9 @@ class NotePauseDetectionTest {
             accepted[gapMs] = repeatedNoteAccepted(gapMs)
             Log.i(TAG, "gap=${gapMs}ms repeatedNoteAccepted=${accepted[gapMs]}")
         }
-        Log.i(TAG, "pauses of 40-50 ms sit on the detector's own resolution: the 64 ms analysis " +
-                "window only refills after the new note starts, so they read like a held tone")
+        Log.i(TAG, "a played pause of 40-60 ms leaves only one to three frames unheard, as short as " +
+                "the detector's own dropped frames while a note is held (26-34 ms measured), so only " +
+                "pauses from about 100 ms can be told apart from a held tone")
 
         // A tone the player never broke must not count as a second note, and the pause a player makes
         // when repeating a note must be enough for the game to hear the note as a new one.
@@ -121,25 +128,32 @@ class NotePauseDetectionTest {
 
     /**
      * What the game sees for a repeated A4 played with [gapMs] of silence between the two notes: the
-     * first note is expected from the start, the repeat from the note boundary, and every frame the
-     * detector gets right is reported to the tracker the way the melody game reports it.
+     * first note is expected from the start, the notation leaves a short rest between the two, and the
+     * repeat is expected from the note boundary. Every frame the detector gets right is reported to the
+     * tracker the way the melody game reports it.
      */
     private fun repeatedNoteAccepted(gapMs: Int): Boolean {
         val frames = detect(pairedTone(gapMs))
-        val boundaryMs = NOTE_SECONDS * 1000
         val tracker = NoteArticulationTracker()
-        tracker.reset()
-        tracker.startNote(A4_MIDI, -1, 0.0)
-        var expectingRepeat = false
+        // A melody's own timeline: the note, the gap the notation leaves after it (which the game
+        // reports as no expected note), then the repeated note.
+        val timeline = listOf(
+            Expected(A4_MIDI, 0.0),
+            Expected(NoteArticulationTracker.NO_NOTE, NOTE_SECONDS * 1000 - NOTATED_GAP_MS),
+            Expected(A4_MIDI, NOTE_SECONDS * 1000)
+        )
+        var next = 0
         for (frame in frames) {
-            if (!expectingRepeat && frame.timeMs >= boundaryMs) {
-                expectingRepeat = true
-                tracker.startNote(A4_MIDI, A4_MIDI, frame.timeMs)
+            while (next < timeline.size && timeline[next].atMs <= frame.timeMs) {
+                tracker.expectNote(timeline[next].note, timeline[next].atMs)
+                next++
             }
             if (frame.onPitch) tracker.onValidPitchFrame(frame.timeMs)
         }
         return !tracker.isAwaitingPause
     }
+
+    private data class Expected(val note: Int, val atMs: Double)
 
     private data class Frame(val timeMs: Double, val onPitch: Boolean)
 
@@ -202,16 +216,6 @@ class NotePauseDetectionTest {
             best = maxOf(best, current)
         }
         return best
-    }
-
-    private fun countRuns(values: List<Boolean>): Int {
-        var runs = 0
-        var previous = false
-        for (value in values) {
-            if (value && !previous) runs++
-            previous = value
-        }
-        return runs
     }
 
     /** Frame-by-frame view of the fixture, `.` on pitch and `x` off it, around the note boundary. */

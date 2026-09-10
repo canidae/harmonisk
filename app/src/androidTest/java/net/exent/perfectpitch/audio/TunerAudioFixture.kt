@@ -64,6 +64,41 @@ object TunerAudioFixture {
         tone(firstHz, secondsEach) + tone(secondHz, secondsEach, seed = 12)
 
     /**
+     * Play [audio] through the speaker at full volume, so the microphone can hear it. The returned
+     * track keeps playing until it is stopped and released.
+     */
+    fun play(context: Context, audio: FloatArray): AudioTrack {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager.setStreamVolume(
+            AudioManager.STREAM_MUSIC,
+            audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC),
+            0
+        )
+        val track = buildTrack(audio)
+        track.write(audio, 0, audio.size, AudioTrack.WRITE_BLOCKING)
+        track.play()
+        return track
+    }
+
+    private fun buildTrack(audio: FloatArray): AudioTrack = AudioTrack.Builder()
+        .setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build()
+        )
+        .setAudioFormat(
+            AudioFormat.Builder()
+                .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
+                .setSampleRate(AudioConstants.SAMPLE_RATE)
+                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                .build()
+        )
+        .setTransferMode(AudioTrack.MODE_STATIC)
+        .setBufferSizeInBytes(audio.size * Float.SIZE_BYTES)
+        .build()
+
+    /**
      * Play [audio] through the speaker and record it back through the microphone, returning the
      * chunks the app's own capture service delivered.
      *
@@ -74,45 +109,21 @@ object TunerAudioFixture {
     fun playAndRecord(context: Context, audio: FloatArray, listenSeconds: Double): List<FloatArray> {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val previousVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        audioManager.setStreamVolume(
-            AudioManager.STREAM_MUSIC,
-            audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC),
-            0
-        )
 
-        val track = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build()
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
-                    .setSampleRate(AudioConstants.SAMPLE_RATE)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .build()
-            )
-            .setTransferMode(AudioTrack.MODE_STATIC)
-            .setBufferSizeInBytes(audio.size * Float.SIZE_BYTES)
-            .build()
-
+        val track = play(context, audio)
         val service = AudioCaptureService(context)
         val recorded = mutableListOf<FloatArray>()
         try {
-            track.write(audio, 0, audio.size, AudioTrack.WRITE_BLOCKING)
             runBlocking {
                 val capture = launch(Dispatchers.IO) {
                     withTimeoutOrNull((listenSeconds * 1000).toLong()) {
                         service.audioFlow().collect { recorded.add(it) }
                     }
                 }
-                track.play()
                 capture.join()
-                track.stop()
             }
         } finally {
+            track.stop()
             track.release()
             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, previousVolume, 0)
         }
