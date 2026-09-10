@@ -64,14 +64,21 @@ object TunerAudioFixture {
         tone(firstHz, secondsEach) + tone(secondHz, secondsEach, seed = 12)
 
     /**
-     * Play [audio] through the speaker at full volume, so the microphone can hear it. The returned
+     * Half the media volume: loud enough for the microphone to hear the speaker, well short of the
+     * maximum, where the speaker's own limiting squashes the level the tests measure.
+     */
+    fun testVolume(audioManager: AudioManager): Int =
+        (audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) / 2).coerceAtLeast(1)
+
+    /**
+     * Play [audio] through the speaker at the test volume, so the microphone can hear it. The returned
      * track keeps playing until it is stopped and released.
      */
     fun play(context: Context, audio: FloatArray): AudioTrack {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         audioManager.setStreamVolume(
             AudioManager.STREAM_MUSIC,
-            audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC),
+            testVolume(audioManager),
             0
         )
         val track = buildTrack(audio)

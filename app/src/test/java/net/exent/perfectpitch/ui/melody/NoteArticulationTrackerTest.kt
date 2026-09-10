@@ -42,7 +42,7 @@ class NoteArticulationTrackerTest {
     ): Double {
         var t = fromMs
         while (t < fromMs + durationMs) {
-            tracker.onValidPitchFrame(t)
+            tracker.onToneHeard(t)
             t += FRAME_MS
         }
         return t
@@ -67,7 +67,7 @@ class NoteArticulationTrackerTest {
         expect(tracker, C4, 0.0)
         assertFalse(tracker.isAwaitingPause)
 
-        tracker.onValidPitchFrame(0.0)
+        tracker.onToneHeard(0.0)
         assertFalse(tracker.isAwaitingPause)
     }
 
@@ -184,12 +184,12 @@ class NoteArticulationTrackerTest {
 
         // The player lifts and re-attacks inside the previous note, then holds that tone through the
         // boundary: the same pitch is sounding, but it has already been broken once.
-        tracker.onValidPitchFrame(t + CLEAR_PAUSE_MS)
+        tracker.onToneHeard(t + CLEAR_PAUSE_MS)
         expect(tracker, C4, t + CLEAR_PAUSE_MS + FRAME_MS)
 
         assertFalse(tracker.isAwaitingPause)
 
-        tracker.onValidPitchFrame(t + CLEAR_PAUSE_MS + 2 * FRAME_MS)
+        tracker.onToneHeard(t + CLEAR_PAUSE_MS + 2 * FRAME_MS)
         assertFalse(tracker.isAwaitingPause)
     }
 
@@ -213,7 +213,7 @@ class NoteArticulationTrackerTest {
         val t = attack(tracker, C4, 0.0)
 
         expect(tracker, C4, t)
-        tracker.onValidPitchFrame(t + 4 * FRAME_MS)
+        tracker.onToneHeard(t + 4 * FRAME_MS)
 
         assertTrue("a dropped frame is not a played pause", tracker.isAwaitingPause)
     }

@@ -7,10 +7,11 @@ package net.exent.perfectpitch.ui.melody
  * tone that is simply held. A repeated pitch therefore only counts once the input has heard the tone
  * stop for at least [minSilenceMs]: that silence is the articulation.
  *
- * The game calls [expectNote] when the expected note changes, and reports the pitch frames it hears
- * through [onValidPitchFrame]. The silence is timed between heard frames, so the pause is found
- * whether the player lifted a finger late, right on the beat, or early enough that the tone is
- * sounding again by the time the note comes due.
+ * The game calls [expectNote] when the expected note changes, and reports every frame it hears a tone
+ * in through [onToneHeard]: a pitch the detector found, or a frame where only the level says a note is
+ * sounding. The silence is timed between heard frames, so the pause is found whether the player lifted
+ * a finger late, right on the beat, or early enough that the tone is sounding again by the time the
+ * note comes due.
  */
 class NoteArticulationTracker(
     private val minSilenceMs: Double = DEFAULT_MIN_SILENCE_MS
@@ -68,8 +69,11 @@ class NoteArticulationTracker(
         lastExpectedNote = noteNumber
     }
 
-    /** A pitch frame of the note the game expects was detected at [nowMs]. */
-    fun onValidPitchFrame(nowMs: Double) {
+    /**
+     * The player has a tone going at [nowMs]. A note does not stop just because the detector had
+     * nothing to say about a frame, so a frame where only the level shows a note is reported here too.
+     */
+    fun onToneHeard(nowMs: Double) {
         val silenceSinceLastFrame = if (lastFrameMs == Double.NEGATIVE_INFINITY) minSilenceMs
         else (nowMs - lastFrameMs).coerceAtLeast(0.0)
         if (silenceSinceLastFrame >= minSilenceMs && isAwaitingPause) {

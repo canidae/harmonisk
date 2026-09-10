@@ -73,6 +73,10 @@ class PitchProcessor(
      * analysis window. On energy onset the window is reset so CREPE receives a clean frame
      * for the new note as quickly as possible.
      *
+     * Every result carries the level of the analysis window it was measured from, silence included,
+     * so a caller that has to tell a held note from the tail of a released one can judge the level
+     * itself rather than guess from whether a pitch came out.
+     *
      * @param source Raw 44100 Hz chunks. Defaults to the microphone; tests inject recorded audio
      *               to drive this exact framing with repeatable input.
      */
@@ -108,21 +112,25 @@ class PitchProcessor(
                     System.arraycopy(chunk, 0, slidingWindow, windowFilled, toCopy)
                     windowFilled += toCopy
                 }
-                if (windowFilled < ANALYSIS_WINDOW_SIZE) PitchResult.SILENT
-                else processBuffer(slidingWindow)
+                // Every frame carries the level of the audio it came from, whether or not a pitch
+                // came with it: a frame the detector has no pitch for is not the same as silence,
+                // and only the level can say which it is.
+                val windowDb = AudioUtils.linearToDb(AudioUtils.rms(slidingWindow, windowFilled))
+                when {
+                    windowDb < silenceThresholdDb -> handleSilent(windowDb)
+                    windowFilled < ANALYSIS_WINDOW_SIZE -> handleSilent(windowDb)
+                    else -> processBuffer(slidingWindow, windowDb)
+                }
             }
             .flowOn(Dispatchers.Default)
     }
 
-    private fun processBuffer(buffer: FloatArray): PitchResult {
-        val rmsDb = AudioUtils.linearToDb(AudioUtils.rms(buffer))
-        if (rmsDb < silenceThresholdDb) return handleSilent()
-
+    private fun processBuffer(buffer: FloatArray, rmsDb: Float): PitchResult {
         val start = System.nanoTime()
         val result = crepeDetector.detectPitch(buffer = buffer, hintFreq = lastFrequency)
         val elapsed = ((System.nanoTime() - start) / 1_000_000).toInt()
         if (elapsed in 0..500) inferenceLatencyMs = elapsed
-        if (result.frequency <= 0f) return handleSilent()
+        if (result.frequency <= 0f) return handleSilent(rmsDb)
 
         lastFrequency = result.frequency
         lastDetectedNano = System.nanoTime()
@@ -135,12 +143,13 @@ class PitchProcessor(
             centsOff = noteInfo.centsOff,
             midiNoteNumber = noteInfo.midiNumber,
             isSilent = false,
-            confidence = result.confidence
+            confidence = result.confidence,
+            levelDb = rmsDb
         )
     }
 
-    private fun handleSilent(): PitchResult {
+    private fun handleSilent(rmsDb: Float): PitchResult {
         if (System.nanoTime() - lastDetectedNano > HINT_RESET_NANOS) lastFrequency = 0f
-        return PitchResult.SILENT
+        return PitchResult.SILENT.copy(levelDb = rmsDb)
     }
 }

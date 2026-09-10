@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import net.exent.perfectpitch.music.NoteUtils
+import net.exent.perfectpitch.music.PitchResult
 import net.exent.perfectpitch.ui.melody.NoteArticulationTracker
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -15,6 +16,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.sin
 
 /**
@@ -54,6 +56,18 @@ class NotePauseDetectionTest {
          * opening notes. Short enough that a tone held across it is still one tone.
          */
         private const val NOTATED_GAP_MS = 26.0
+
+        /** How long the first note of the lingering fixture is played before it is released. */
+        private const val PLAY_SECONDS = 0.35
+
+        /** How long the released note takes to fall away, as a player's note does. */
+        private const val RELEASE_SECONDS = 0.08
+
+        /** Tail of the released note, relative to the played note, while it rings on. */
+        private const val TAIL_DB = -12.0
+
+        /** Silence this long between two heard pitches is the articulation of a repeated note. */
+        private const val PAUSE_MS = NoteArticulationTracker.DEFAULT_MIN_SILENCE_MS
     }
 
     private lateinit var processor: PitchProcessor
@@ -113,9 +127,9 @@ class NotePauseDetectionTest {
             accepted[gapMs] = repeatedNoteAccepted(gapMs)
             Log.i(TAG, "gap=${gapMs}ms repeatedNoteAccepted=${accepted[gapMs]}")
         }
-        Log.i(TAG, "a played pause of 40-60 ms leaves only one to three frames unheard, as short as " +
-                "the detector's own dropped frames while a note is held (26-34 ms measured), so only " +
-                "pauses from about 100 ms can be told apart from a held tone")
+        Log.i(TAG, "the level gate adds the note's own release and attack to the pause it hears: a " +
+                "played pause of 40 ms now registers, while a tone held across the boundary still " +
+                "does not (its level never moves)")
 
         // A tone the player never broke must not count as a second note, and the pause a player makes
         // when repeating a note must be enough for the game to hear the note as a new one.
@@ -127,6 +141,42 @@ class NotePauseDetectionTest {
     }
 
     /**
+     * A note the player releases without the sound stopping: the string, the body and the room ring
+     * on, and the detector goes on reporting the pitch of a note nobody is playing. Nothing in the
+     * pitch stream then says the player stopped, so the pause is never heard and the repeated note is
+     * never credited — which is what the level gate is for.
+     */
+    @Test
+    fun aReleasedNoteThatGoesOnRingingCountsAsThePause() {
+        Log.i(TAG, "=== Repeated note on ${android.os.Build.MODEL}: first note released, still ringing ===")
+        val frames = detect(lingeringNote())
+        val tail = frames.filter { it.timeMs > (PLAY_SECONDS + RELEASE_SECONDS) * 1000 && it.timeMs < NOTE_SECONDS * 1000 }
+        val gate = SoundingToneGate()
+        val heard = frames.map { it.onPitch && gate.isSounding(it.levelDb?.toDouble()) }
+
+        Log.i(TAG, "released note still detected on pitch: ${tail.count { it.onPitch }}/${tail.size} " +
+                "frames, level ${"%.1f".format(tail.mapNotNull { it.levelDb }.average())}dB " +
+                "(silence threshold ${PitchProcessor.SILENCE_THRESHOLD_DB}dB)")
+        Log.i(TAG, "longest unheard run: without gate=${longestUnheardRun(frames, null)}ms " +
+                "with gate=${longestUnheardRun(frames, heard)}ms, pause needed=${PAUSE_MS.toInt()}ms")
+        Log.i(TAG, "repeated note accepted: without gate=${repeatedNoteAccepted(frames, null)} " +
+                "with gate=${repeatedNoteAccepted(frames, heard)}")
+
+        assertTrue(
+            "the tail of the released note must still be heard as pitch, or there is no pause to miss",
+            tail.last().onPitch
+        )
+        assertFalse(
+            "pitch alone must not see the pause the player made",
+            repeatedNoteAccepted(frames, null)
+        )
+        assertTrue(
+            "the level must see the pause the player made",
+            repeatedNoteAccepted(frames, heard)
+        )
+    }
+
+    /**
      * What the game sees for a repeated A4 played with [gapMs] of silence between the two notes: the
      * first note is expected from the start, the notation leaves a short rest between the two, and the
      * repeat is expected from the note boundary. Every frame the detector gets right is reported to the
@@ -134,6 +184,16 @@ class NotePauseDetectionTest {
      */
     private fun repeatedNoteAccepted(gapMs: Int): Boolean {
         val frames = detect(pairedTone(gapMs))
+        val gate = SoundingToneGate()
+        return repeatedNoteAccepted(frames, frames.map { it.onPitch && gate.isSounding(it.levelDb?.toDouble()) })
+    }
+
+    /**
+     * Whether the game hears [frames] as two notes, with [heard] saying which frames it treats as
+     * sound: null to take every frame the detector got right, or the result of the level gate the
+     * melody game runs over them.
+     */
+    private fun repeatedNoteAccepted(frames: List<Frame>, heard: List<Boolean>?): Boolean {
         val tracker = NoteArticulationTracker()
         // A melody's own timeline: the note, the gap the notation leaves after it (which the game
         // reports as no expected note), then the repeated note.
@@ -143,19 +203,19 @@ class NotePauseDetectionTest {
             Expected(A4_MIDI, NOTE_SECONDS * 1000)
         )
         var next = 0
-        for (frame in frames) {
+        frames.forEachIndexed { index, frame ->
             while (next < timeline.size && timeline[next].atMs <= frame.timeMs) {
                 tracker.expectNote(timeline[next].note, timeline[next].atMs)
                 next++
             }
-            if (frame.onPitch) tracker.onValidPitchFrame(frame.timeMs)
+            if (heard?.get(index) ?: frame.onPitch) tracker.onToneHeard(frame.timeMs)
         }
         return !tracker.isAwaitingPause
     }
 
     private data class Expected(val note: Int, val atMs: Double)
 
-    private data class Frame(val timeMs: Double, val onPitch: Boolean)
+    private data class Frame(val timeMs: Double, val onPitch: Boolean, val levelDb: Float?)
 
     /** Run the fixture through the production pitch flow and time each frame. */
     private fun detect(audio: FloatArray): List<Frame> = runBlocking {
@@ -168,7 +228,7 @@ class NotePauseDetectionTest {
             } else {
                 Float.MAX_VALUE
             }
-            Frame(index * hopMs, result.isValid && cents <= TOLERANCE_CENTS)
+            Frame(index * hopMs, result.isValid && cents <= TOLERANCE_CENTS, result.levelDb)
         }
     }
 
@@ -183,7 +243,7 @@ class NotePauseDetectionTest {
      * A held A4 with a short attack and a clean release, so the boundary between two notes is a
      * real silence. A square envelope is deliberately avoided: a click is not a musical attack.
      */
-    private fun toneWithAttack(seconds: Double): FloatArray {
+    private fun toneWithAttack(seconds: Double, gainDb: Double = 0.0): FloatArray {
         val samples = (seconds * SAMPLE_RATE).toInt()
         val attack = (0.02 * SAMPLE_RATE).toInt()
         val release = (0.03 * SAMPLE_RATE).toInt()
@@ -196,7 +256,7 @@ class NotePauseDetectionTest {
             out[i] = value.toFloat()
             peak = maxOf(peak, abs(value))
         }
-        val inv = (0.5 / peak).toFloat()
+        val inv = (0.5 / peak * dBToLinear(gainDb)).toFloat()
         for (i in out.indices) {
             val envelope = when {
                 i < attack -> i.toDouble() / attack
@@ -207,6 +267,70 @@ class NotePauseDetectionTest {
         }
         return out
     }
+
+    /**
+     * A note played, then released while it keeps ringing at [TAIL_DB] below the played note, then
+     * played again. The tail sits well above the silence threshold, so the detector keeps reporting
+     * it as pitch — the level is the only thing that says the note was released.
+     *
+     * One continuous signal, because splicing a quiet tail onto the note would leave a dip and a rise
+     * at the join, and the detector's onset reset would drop frames there — inventing a pause.
+     */
+    private fun lingeringNote(): FloatArray {
+        val releaseEnd = PLAY_SECONDS + RELEASE_SECONDS
+        return toneWithLevels(NOTE_SECONDS + 0.5, listOf(
+            0.0 to 0.0,
+            PLAY_SECONDS to 0.0,
+            releaseEnd to TAIL_DB,
+            NOTE_SECONDS to TAIL_DB,
+            NOTE_SECONDS + 0.03 to 0.0
+        ))
+    }
+
+    /**
+     * An A4 with a harmonic stack and a short attack, played at the gain given by [points]: a list of
+     * (seconds, dB) joined by straight ramps in dB, so the note can be released and taken up again the
+     * way a player does it, without a click.
+     */
+    private fun toneWithLevels(seconds: Double, points: List<Pair<Double, Double>>): FloatArray {
+        val samples = (seconds * SAMPLE_RATE).toInt()
+        val attack = (0.02 * SAMPLE_RATE).toInt()
+        val out = FloatArray(samples)
+        var peak = 0.0
+        for (i in 0 until samples) {
+            val t = i.toDouble() / SAMPLE_RATE
+            var value = 0.0
+            for (h in 1..8) value += sin(2 * PI * A4_HZ * h * t) / h
+            out[i] = value.toFloat()
+            peak = maxOf(peak, abs(value))
+        }
+        val inv = (0.5 / peak).toFloat()
+        for (i in 0 until samples) {
+            val gain = dBToLinear(levelAt(points, i.toDouble() / SAMPLE_RATE))
+            val attackRamp = if (i < attack) i.toDouble() / attack else 1.0
+            out[i] *= inv * (gain * attackRamp).toFloat()
+        }
+        return out
+    }
+
+    private fun levelAt(points: List<Pair<Double, Double>>, seconds: Double): Double {
+        if (seconds <= points.first().first) return points.first().second
+        for (i in 1 until points.size) {
+            val (toSeconds, toDb) = points[i]
+            if (seconds <= toSeconds) {
+                val (fromSeconds, fromDb) = points[i - 1]
+                return fromDb + (toDb - fromDb) * (seconds - fromSeconds) / (toSeconds - fromSeconds)
+            }
+        }
+        return points.last().second
+    }
+
+    private fun dBToLinear(db: Double): Double = 10.0.pow(db / 20.0)
+
+    /** Longest run of frames the game treats as silence. */
+    private fun longestUnheardRun(frames: List<Frame>, heard: List<Boolean>?): Int =
+        longestRun(frames.indices.map { !(heard?.get(it) ?: frames[it].onPitch) }) *
+                AudioConstants.FRAME_DURATION_MS.toInt()
 
     private fun longestRun(values: List<Boolean>): Int {
         var best = 0
