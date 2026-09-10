@@ -33,8 +33,7 @@ android-sdk/platform-tools/adb logcat -d -s PitchAccTest:I
 ```
 
 ## Instructions
-- If local uncommited changes, find out their purpose and commit them before beginning on a new task.
+- If local uncommited changes, find out their purpose and commit them before starting a new task.
 - Minimize comments in code, only comment code that isn't self-explanatory.
-- Build app before committing, Don't commit code that doesn't compile.
-- When implementing multiple changes, split the changes into multiple logically grouped commits.
-- Attempt to install and start the app on a connected device when task is complete.
+- All changes should be done on a new branch forked from the default branch. Split changes into logically grouped commits.
+- Attempt to build, install, start and test the app on a connected device before committing.
