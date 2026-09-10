@@ -32,6 +32,8 @@ fun PitchGauge(
     maxCents: Float = 50f
 ) {
     val clampedCents = centsOff.coerceIn(-maxCents, maxCents)
+    // Fine smoothing lives in PitchStabilizer; this tween only interpolates between frames, so
+    // shortening it costs needle steadiness without making the reading any more accurate.
     val normalizedPosition by animateFloatAsState(
         targetValue = (clampedCents + maxCents) / (2 * maxCents),
         animationSpec = tween(durationMillis = 100),
