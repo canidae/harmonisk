@@ -128,9 +128,6 @@ class MelodyViewModel @Inject constructor(
     private val articulationTracker =
         NoteArticulationTracker(minSilenceMs = MIN_REARTICULATION_SILENCE_MS)
 
-    /** Pitch of the note the game expected before the current one, -1 for the first note. */
-    private var previousNoteNumber = -1
-
     private var currentNoteDetectedCorrectly = false
     // Indices of all notes active at the current time (chords = multiple)
     private var currentChordIndices: List<Int> = emptyList()
@@ -709,7 +706,6 @@ class MelodyViewModel @Inject constructor(
 
         noteTracking.reset()
         articulationTracker.reset()
-        previousNoteNumber = -1
         currentChordIndices = emptyList()
         _canAdvanceLevel.value = false
         currentNoteDetectedCorrectly = false
@@ -1039,10 +1035,11 @@ class MelodyViewModel @Inject constructor(
             noteTracking.resetForNewNote()
 
             // A repeated pitch must be re-attacked: the game only credits it once the player has
-            // broken the tone with a short pause (see NoteArticulationTracker).
-            val newNoteNumber = activeIndices.firstOrNull()?.let { track.notes.getOrNull(it)?.noteNumber } ?: -1
-            articulationTracker.startNote(newNoteNumber, previousNoteNumber, elapsedNowMs())
-            previousNoteNumber = newNoteNumber
+            // broken the tone with a short pause (see NoteArticulationTracker). A window with no note
+            // (a rest, or the gap between two notes) is reported as NO_NOTE and leaves the tone alone.
+            val newNoteNumber = activeIndices.firstOrNull()?.let { track.notes.getOrNull(it)?.noteNumber }
+                ?: NoteArticulationTracker.NO_NOTE
+            articulationTracker.expectNote(newNoteNumber, elapsedNowMs())
 
             // In wait mode, start grace period before freezing
             if (activeIndices.isNotEmpty() && _gameState.value.waitMode) {
