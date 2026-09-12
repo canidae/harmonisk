@@ -19,6 +19,9 @@ class ScoringEngine {
         // Duration scoring ratio thresholds
         const val PERFECT_DURATION_RATIO = 0.85f
 
+        // Playing the song up to this much longer than its own duration scores full marks
+        const val TIME_GRACE_RATIO = 1.05
+
         // Scoring weights — timing excluded (latency-agnostic)
         const val PITCH_WEIGHT = 0.6f
         const val DURATION_WEIGHT = 0.4f
@@ -45,8 +48,9 @@ class ScoringEngine {
 
         /**
          * Computes a time score (0–1) based on how long the user took relative
-         * to the song's real duration.  Thresholds vary by level so that time
-         * matters more at higher difficulties.
+         * to the song's real duration: min(1, songDuration * 1.05 / playTime).
+         * Full marks up to 5% over the song's duration, then the score decays
+         * with the overrun but never reaches zero.  Levels 4–5 ignore time.
          *
          * @param ratio  totalWallTimeSeconds / songDurationSeconds  (≥ 0)
          * @param level  game level (1–5)
@@ -54,15 +58,8 @@ class ScoringEngine {
          */
         fun scoreTime(ratio: Double, level: Int): Float {
             if (level >= 4) return 1f
-            val (fullRatio, zeroRatio) = when (level) {
-                1 -> 3.0 to 5.0
-                2 -> 2.0 to 4.0
-                3 -> 1.1 to 3.0
-                else -> return 1f
-            }
-            if (ratio <= fullRatio) return 1f
-            if (ratio >= zeroRatio) return 0f
-            return ((zeroRatio - ratio) / (zeroRatio - fullRatio)).toFloat()
+            if (ratio <= 0.0) return 1f
+            return min(1.0, TIME_GRACE_RATIO / ratio).toFloat()
         }
 
         fun scoreTier(score: Float): ScoreTier = when {

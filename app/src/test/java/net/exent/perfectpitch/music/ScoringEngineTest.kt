@@ -288,58 +288,46 @@ class ScoringEngineTest {
     // Time scoring tests
 
     @Test
-    fun `time score for level 1 returns 1 for ratio at full threshold`() {
-        assertEquals(1f, ScoringEngine.scoreTime(3.0, 1), 0.01f)
+    fun `time score is full marks when the song is played at its own duration`() {
+        assertEquals(1f, ScoringEngine.scoreTime(1.0, 1), 0.01f)
     }
 
     @Test
-    fun `time score for level 1 returns 0 for ratio at zero threshold`() {
-        assertEquals(0f, ScoringEngine.scoreTime(5.0, 1), 0.01f)
+    fun `time score is full marks at the 5 percent grace boundary`() {
+        assertEquals(1f, ScoringEngine.scoreTime(1.05, 1), 0.01f)
     }
 
     @Test
-    fun `time score for level 1 is linear between thresholds`() {
-        assertEquals(0.5f, ScoringEngine.scoreTime(4.0, 1), 0.01f)
+    fun `time score stays full when the song is played faster than its duration`() {
+        assertEquals(1f, ScoringEngine.scoreTime(0.5, 1), 0.01f)
     }
 
     @Test
-    fun `time score for level 1 returns 1 for ratio below full threshold`() {
-        assertEquals(1f, ScoringEngine.scoreTime(2.0, 1), 0.01f)
+    fun `time score falls off with the ratio beyond the grace boundary`() {
+        assertEquals(0.525f, ScoringEngine.scoreTime(2.0, 2), 0.001f)
+        assertEquals(0.21f, ScoringEngine.scoreTime(5.0, 2), 0.001f)
     }
 
     @Test
-    fun `time score for level 1 returns 0 for ratio above zero threshold`() {
-        assertEquals(0f, ScoringEngine.scoreTime(6.0, 1), 0.01f)
+    fun `time score still awards points for a very long play time`() {
+        assertEquals(0.105f, ScoringEngine.scoreTime(10.0, 3), 0.001f)
+        assertEquals(0.0105f, ScoringEngine.scoreTime(100.0, 3), 0.0001f)
+        assertTrue(ScoringEngine.scoreTime(1000.0, 3) > 0f)
     }
 
     @Test
-    fun `time score for level 2 returns 1 for ratio at full threshold`() {
-        assertEquals(1f, ScoringEngine.scoreTime(2.0, 2), 0.01f)
+    fun `time score does not depend on the level below level 4`() {
+        val ratios = listOf(0.5, 1.0, 1.05, 1.5, 4.0, 250.0)
+        for (ratio in ratios) {
+            val score = ScoringEngine.scoreTime(ratio, 1)
+            assertEquals(score, ScoringEngine.scoreTime(ratio, 2), 0.0001f)
+            assertEquals(score, ScoringEngine.scoreTime(ratio, 3), 0.0001f)
+        }
     }
 
     @Test
-    fun `time score for level 2 returns 0 for ratio at zero threshold`() {
-        assertEquals(0f, ScoringEngine.scoreTime(4.0, 2), 0.01f)
-    }
-
-    @Test
-    fun `time score for level 2 is linear between thresholds`() {
-        assertEquals(0.5f, ScoringEngine.scoreTime(3.0, 2), 0.01f)
-    }
-
-    @Test
-    fun `time score for level 3 returns 1 for ratio at full threshold`() {
-        assertEquals(1f, ScoringEngine.scoreTime(1.1, 3), 0.01f)
-    }
-
-    @Test
-    fun `time score for level 3 returns 0 for ratio at zero threshold`() {
-        assertEquals(0f, ScoringEngine.scoreTime(3.0, 3), 0.01f)
-    }
-
-    @Test
-    fun `time score for level 3 is linear at midpoint`() {
-        assertEquals(0.5f, ScoringEngine.scoreTime(2.05, 3), 0.01f)
+    fun `time score with no song duration is full marks`() {
+        assertEquals(1f, ScoringEngine.scoreTime(0.0, 1), 0.01f)
     }
 
     @Test
