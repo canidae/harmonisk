@@ -5,11 +5,6 @@ package net.exent.perfectpitch.music
  *
  * [confidence] is the detector's own certainty in [frequency], 0..1. Sources that know the
  * pitch exactly (MIDI input) report 1.
- *
- * [levelDb] is how loud the audio the pitch was measured from is, in dBFS. Play by Melody reads it
- * to tell a note the player is holding from the tail of one they have released, since a tail keeps
- * producing a pitch long after the note has stopped being played. It is null when there is nothing
- * to measure (silence, a source with no level such as MIDI).
  */
 data class PitchResult(
     val frequency: Float,
@@ -18,8 +13,7 @@ data class PitchResult(
     val centsOff: Float,
     val midiNoteNumber: Int,
     val isSilent: Boolean,
-    val confidence: Float = 1f,
-    val levelDb: Float? = null
+    val confidence: Float = 1f
 ) {
     val isValid: Boolean get() = !isSilent
 
