@@ -12,6 +12,7 @@ import net.exent.perfectpitch.audio.MelodyPlayer
 import net.exent.perfectpitch.audio.PitchProcessor
 import net.exent.perfectpitch.audio.SoundFontSynthesizer
 import net.exent.perfectpitch.data.AudioDelayRepository
+import net.exent.perfectpitch.data.DevModeState
 import net.exent.perfectpitch.data.DifficultyRepository
 import net.exent.perfectpitch.data.MelodyRepository
 import net.exent.perfectpitch.data.MelodySettingsRepository
@@ -92,7 +93,8 @@ class MelodyRepeatedNoteDeviceTest {
             midiInputReceiver = MidiInputReceiver(context, midiDeviceManager),
             midiOutputSender = MidiOutputSender(context, midiDeviceManager),
             scoreHistoryRepository = ScoreHistoryRepository(context),
-            violinAlgorithm = ViolinAlgorithm()
+            violinAlgorithm = ViolinAlgorithm(),
+            devModeState = DevModeState()
         )
     }
 

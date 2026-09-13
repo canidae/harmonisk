@@ -293,8 +293,21 @@ class ScoringEngineTest {
     }
 
     @Test
-    fun `time score is full marks at the 5 percent grace boundary`() {
-        assertEquals(1f, ScoringEngine.scoreTime(1.05, 1), 0.01f)
+    fun `time score is full marks at the level 1 grace boundary`() {
+        assertEquals(1f, ScoringEngine.scoreTime(1.20, 1), 0.001f)
+        assertEquals(0.99f, ScoringEngine.scoreTime(1.21, 1), 0.01f)
+    }
+
+    @Test
+    fun `time score is full marks at the level 2 grace boundary`() {
+        assertEquals(1f, ScoringEngine.scoreTime(1.10, 2), 0.001f)
+        assertEquals(0.99f, ScoringEngine.scoreTime(1.11, 2), 0.01f)
+    }
+
+    @Test
+    fun `time score is full marks at the level 3 grace boundary`() {
+        assertEquals(1f, ScoringEngine.scoreTime(1.05, 3), 0.001f)
+        assertEquals(0.99f, ScoringEngine.scoreTime(1.06, 3), 0.01f)
     }
 
     @Test
@@ -304,25 +317,34 @@ class ScoringEngineTest {
 
     @Test
     fun `time score falls off with the ratio beyond the grace boundary`() {
-        assertEquals(0.525f, ScoringEngine.scoreTime(2.0, 2), 0.001f)
-        assertEquals(0.21f, ScoringEngine.scoreTime(5.0, 2), 0.001f)
+        assertEquals(0.6f, ScoringEngine.scoreTime(2.0, 1), 0.001f)
+        assertEquals(0.55f, ScoringEngine.scoreTime(2.0, 2), 0.001f)
+        assertEquals(0.525f, ScoringEngine.scoreTime(2.0, 3), 0.001f)
+        assertEquals(0.24f, ScoringEngine.scoreTime(5.0, 1), 0.001f)
+        assertEquals(0.22f, ScoringEngine.scoreTime(5.0, 2), 0.001f)
+        assertEquals(0.21f, ScoringEngine.scoreTime(5.0, 3), 0.001f)
     }
 
     @Test
     fun `time score still awards points for a very long play time`() {
+        assertEquals(0.12f, ScoringEngine.scoreTime(10.0, 1), 0.001f)
+        assertEquals(0.11f, ScoringEngine.scoreTime(10.0, 2), 0.001f)
         assertEquals(0.105f, ScoringEngine.scoreTime(10.0, 3), 0.001f)
         assertEquals(0.0105f, ScoringEngine.scoreTime(100.0, 3), 0.0001f)
         assertTrue(ScoringEngine.scoreTime(1000.0, 3) > 0f)
     }
 
     @Test
-    fun `time score does not depend on the level below level 4`() {
-        val ratios = listOf(0.5, 1.0, 1.05, 1.5, 4.0, 250.0)
-        for (ratio in ratios) {
-            val score = ScoringEngine.scoreTime(ratio, 1)
-            assertEquals(score, ScoringEngine.scoreTime(ratio, 2), 0.0001f)
-            assertEquals(score, ScoringEngine.scoreTime(ratio, 3), 0.0001f)
+    fun `time score gives the lower levels more leeway`() {
+        for (ratio in listOf(1.05, 1.1, 1.2, 1.5, 4.0, 250.0)) {
+            val level1 = ScoringEngine.scoreTime(ratio, 1)
+            val level2 = ScoringEngine.scoreTime(ratio, 2)
+            val level3 = ScoringEngine.scoreTime(ratio, 3)
+            assertTrue("level 1 must not be stricter than level 2 at $ratio", level1 >= level2)
+            assertTrue("level 2 must not be stricter than level 3 at $ratio", level2 >= level3)
         }
+        assertTrue(ScoringEngine.scoreTime(1.15, 1) > ScoringEngine.scoreTime(1.15, 2))
+        assertTrue(ScoringEngine.scoreTime(1.15, 2) > ScoringEngine.scoreTime(1.15, 3))
     }
 
     @Test

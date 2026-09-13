@@ -19,8 +19,18 @@ class ScoringEngine {
         // Duration scoring ratio thresholds
         const val PERFECT_DURATION_RATIO = 0.85f
 
-        // Playing the song up to this much longer than its own duration scores full marks
-        const val TIME_GRACE_RATIO = 1.05
+        // Playing the song up to this much longer than its own duration scores full marks, with more
+        // leeway the lower the level
+        const val TIME_GRACE_RATIO_LEVEL_1 = 1.20
+        const val TIME_GRACE_RATIO_LEVEL_2 = 1.10
+        const val TIME_GRACE_RATIO_LEVEL_3 = 1.05
+
+        /** How much longer than the song itself a player may take and still score full marks. */
+        fun timeGraceRatio(level: Int): Double = when (level) {
+            1 -> TIME_GRACE_RATIO_LEVEL_1
+            2 -> TIME_GRACE_RATIO_LEVEL_2
+            else -> TIME_GRACE_RATIO_LEVEL_3
+        }
 
         // Scoring weights — timing excluded (latency-agnostic)
         const val PITCH_WEIGHT = 0.6f
@@ -48,18 +58,19 @@ class ScoringEngine {
 
         /**
          * Computes a time score (0–1) based on how long the user took relative
-         * to the song's real duration: min(1, songDuration * 1.05 / playTime).
-         * Full marks up to 5% over the song's duration, then the score decays
-         * with the overrun but never reaches zero.  Levels 4–5 ignore time.
+         * to the song's real duration: min(1, songDuration * grace / playTime).
+         * Full marks up to the level's grace over the song's duration — 20% at level 1,
+         * 10% at level 2, 5% at level 3 — then the score decays with the overrun but never
+         * reaches zero.  Levels 4–5 ignore time.
          *
-         * @param ratio  totalWallTimeSeconds / songDurationSeconds  (≥ 0)
+         * @param ratio  playTimeSeconds / songPlayingSeconds  (≥ 0)
          * @param level  game level (1–5)
          * @return       0f–1f time-score multiplier
          */
         fun scoreTime(ratio: Double, level: Int): Float {
             if (level >= 4) return 1f
             if (ratio <= 0.0) return 1f
-            return min(1.0, TIME_GRACE_RATIO / ratio).toFloat()
+            return min(1.0, timeGraceRatio(level) / ratio).toFloat()
         }
 
         fun scoreTier(score: Float): ScoreTier = when {

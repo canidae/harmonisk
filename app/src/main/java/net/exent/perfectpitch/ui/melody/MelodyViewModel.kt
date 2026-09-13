@@ -108,11 +108,11 @@ class MelodyViewModel @Inject constructor(
     private var playbackStartTime = 0L
     private var pauseOffset = 0.0
 
-    // Wall-clock tracking for time-based scoring (excludes explicit pauses)
-    private var sessionStartWallMs = 0L
-    private var sessionTotalPausedMs = 0L
-    private var sessionPauseStartMs = 0L
-    private var leadInSeconds = 0.0
+    // Play time for time-based scoring. A song that waits for the player holds its clock for them,
+    // so the time it holds is tracked here, along with the number of notes it held for.
+    private var waitStartWallMs = 0L
+    private var waitMs = 0L
+    private var waitedNotes = 0
 
     // Per-note tracking state (encapsulated for a single reset() call)
     private val noteTracking = NoteTrackingState()
@@ -696,10 +696,9 @@ class MelodyViewModel @Inject constructor(
         currentChordIndices = emptyList()
         _canAdvanceLevel.value = false
         currentNoteDetectedCorrectly = false
-        leadInSeconds = leadIn
-        sessionStartWallMs = SystemClock.elapsedRealtime()
-        sessionTotalPausedMs = 0L
-        sessionPauseStartMs = 0L
+        waitStartWallMs = 0L
+        waitMs = 0L
+        waitedNotes = 0
 
         // Stop any preview playback and reset game sync
         melodyPlayer.stop()
@@ -721,15 +720,11 @@ class MelodyViewModel @Inject constructor(
         melodyPlayer.resetGameSync()
         noteTracking.wasWaitingForNote = noteTracking.isWaitingForNote
         noteTracking.isWaitingForNote = false
-        sessionPauseStartMs = SystemClock.elapsedRealtime()
+        endWait()
         _gameState.update { it.copy(phase = PlayPhase.PAUSED) }
     }
 
     fun resume() {
-        if (sessionPauseStartMs > 0L) {
-            sessionTotalPausedMs += SystemClock.elapsedRealtime() - sessionPauseStartMs
-            sessionPauseStartMs = 0L
-        }
         val currentGameState = _gameState.value
         val currentViewState = _viewState.value
 
@@ -737,9 +732,11 @@ class MelodyViewModel @Inject constructor(
         if (currentViewState.songTimeOffsetSeconds != 0.0) {
             _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
             noteTracking.isWaitingForNote = false
+            endWait()
             noteTracking.wasWaitingForNote = false
         } else if (noteTracking.wasWaitingForNote) {
             noteTracking.isWaitingForNote = true
+            beginWait()
             noteTracking.wasWaitingForNote = false
             _gameState.update { it.copy(phase = PlayPhase.WAITING_FOR_NOTE) }
             startPlaybackTimer()
@@ -784,7 +781,7 @@ class MelodyViewModel @Inject constructor(
         pauseOffset = 0.0
         noteTracking.isWaitingForNote = false
         noteTracking.wasWaitingForNote = false
-        sessionPauseStartMs = 0L
+        endWait()
         _gameState.update {
             it.copy(
                 phase = PlayPhase.NOT_STARTED,
@@ -857,6 +854,27 @@ class MelodyViewModel @Inject constructor(
 
     // --- Playback ---
 
+    /** Start timing a wait: the song has stopped to wait for the player to play the current note. */
+    private fun beginWait() {
+        if (waitStartWallMs == 0L) waitStartWallMs = SystemClock.elapsedRealtime()
+    }
+
+    /** Stop timing a wait, if one is running. */
+    private fun endWait() {
+        if (waitStartWallMs == 0L) return
+        waitMs += SystemClock.elapsedRealtime() - waitStartWallMs
+        waitStartWallMs = 0L
+        waitedNotes++
+    }
+
+    /**
+     * Time the player spent that the song did not: everything the song held its clock for, less the
+     * app's own lag, which is its calibrated input delay for each note it held for. The app lags that
+     * long behind a note the player has already played, so it is not time the player took.
+     */
+    private fun playerWaitMs(): Long =
+        (waitMs - inputDelayMs.toLong() * waitedNotes).coerceAtLeast(0L)
+
     private fun startPlaybackTimer() {
         // Outside developer mode a preview may not ring on into the take that is being scored.
         if (!devModeState.isEnabled) melodyPlayer.stop()
@@ -871,6 +889,7 @@ class MelodyViewModel @Inject constructor(
             while (isActive) {
                 // Waiting for the player: the clock holds where the last tick left it.
                 if (noteTracking.isWaitingForNote) {
+                    beginWait()
                     delay(16)
                     continue
                 }
@@ -1023,6 +1042,7 @@ class MelodyViewModel @Inject constructor(
             if (activeIndices.isNotEmpty() && _gameState.value.waitMode) {
                 val noteStart = activeIndices.minOf { track.noteStartSeconds(track.notes[it]) }
                 noteTracking.isWaitingForNote = true
+                beginWait()
                 pauseOffset = noteStart
                 playbackStartTime = SystemClock.elapsedRealtime()
                 _gameState.update {
@@ -1062,6 +1082,7 @@ class MelodyViewModel @Inject constructor(
             if (isCorrectNote) {
                 currentNoteDetectedCorrectly = true
                 noteTracking.isWaitingForNote = false
+                endWait()
                 noteTracking.lastWrongMidiNote = -1
                 noteTracking.wasPauseSinceLastWrong = false
                 pauseOffset = _gameState.value.currentTimeSeconds
@@ -1073,6 +1094,7 @@ class MelodyViewModel @Inject constructor(
                 if (!isSameHeldWrong) {
                     scoreCurrentNote(expectedNote, primaryIdx)
                     noteTracking.isWaitingForNote = false
+                    endWait()
                     noteTracking.lastWrongMidiNote = result.midiNoteNumber
                     noteTracking.wasPauseSinceLastWrong = false
                     pauseOffset = _gameState.value.currentTimeSeconds
@@ -1219,19 +1241,14 @@ class MelodyViewModel @Inject constructor(
         melodyPlayer.resetGameSync()
         pauseOffset = 0.0
         noteTracking.isWaitingForNote = false
+        endWait()
 
         val noteScores = _gameState.value.noteScores
         val melodyScore = scoringEngine.calculateMelodyScore(noteScores)
 
         // Apply time-based scoring modifier
         val currentLevel = _gameState.value.currentLevel
-        val now = SystemClock.elapsedRealtime()
-        val totalWallMs = now - sessionStartWallMs - sessionTotalPausedMs
-        val leadInMs = (leadInSeconds * 1000).toLong()
-        val effectivePlayMs = (totalWallMs - leadInMs).coerceAtLeast(0L)
-        val totalPlaySec = effectivePlayMs / 1000.0
-        val songDurationSec = track.durationSeconds
-        val timeRatio = if (songDurationSec > 0.0) totalPlaySec / songDurationSec else 0.0
+        val timeRatio = songTimeRatio(track, playerWaitMs())
         val timeScore = ScoringEngine.scoreTime(timeRatio, currentLevel)
 
         // Wrong note count and score derived from notesHit/totalNotes

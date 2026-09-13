@@ -12,6 +12,7 @@ import net.exent.perfectpitch.audio.MelodyPlayer
 import net.exent.perfectpitch.audio.PitchProcessor
 import net.exent.perfectpitch.audio.SoundFontSynthesizer
 import net.exent.perfectpitch.data.AudioDelayRepository
+import net.exent.perfectpitch.data.DevModeState
 import net.exent.perfectpitch.data.DifficultyRepository
 import net.exent.perfectpitch.data.MelodyRepository
 import net.exent.perfectpitch.data.MelodySettingsRepository
@@ -29,13 +30,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlin.math.min
 
 /**
- * The score for song duration is min(1, songDuration * 1.05 / playTime): full marks for up to 5%
- * over the song's own duration, and points that dwindle but never reach zero however long the
- * player takes. This plays the shortest bundled melody to the end, dawdling on purpose, and checks
- * the score the game reports against the time it actually spent.
+ * Song duration is scored on the time the player took against the music they had to play: the song's
+ * own length, from its first note to the end of its last, plus whatever the song sat waiting for them.
+ * The two bars counted in before the first note, the slack the song lingers for after its last note
+ * and the app's own lag are not the player's time, so a song played at its own pace scores full marks
+ * on its duration and only dawdling costs points.
  *
  * The player here is the app's own soundfont on its own output, so nothing is laid over the app's
  * own playing, and the media volume is left at half of maximum.
@@ -82,7 +83,8 @@ class MelodySongDurationScoreDeviceTest {
             midiInputReceiver = MidiInputReceiver(context, midiDeviceManager),
             midiOutputSender = MidiOutputSender(context, midiDeviceManager),
             scoreHistoryRepository = ScoreHistoryRepository(context),
-            violinAlgorithm = ViolinAlgorithm()
+            violinAlgorithm = ViolinAlgorithm(),
+            devModeState = DevModeState()
         )
     }
 
@@ -117,10 +119,10 @@ class MelodySongDurationScoreDeviceTest {
     }
 
     @Test
-    fun aSlowPlayIsScoredOnHowLongTheSongTook() {
+    fun aSongPlayedAtItsOwnPaceScoresFullMarksOnDuration() {
         val viewModel = viewModel()
-        val melodyRepository = MelodyRepository(context, DifficultyRepository(context))
-        val melody = melodyRepository.getBundledMelodies().first { it.id.contains(SHORTEST_MELODY) }
+        val melody = MelodyRepository(context, DifficultyRepository(context))
+            .getBundledMelodies().first { it.id.contains(SHORTEST_MELODY) }
         assertTrue("the bundled melody must load", viewModel.loadMelody(melody))
         val track = viewModel.gameState.value.melodyTrack!!
         viewModel.configure(WAIT_LEVEL, AccompanimentMode.NONE)
@@ -130,35 +132,45 @@ class MelodySongDurationScoreDeviceTest {
             player.open()
             assertTrue("the player's instrument must open", player.isReady)
 
-            val startWallMs = SystemClock.elapsedRealtime()
-            viewModel.startPlaying()
-            val leadInSeconds = -viewModel.gameState.value.currentTimeSeconds
-
-            val state = playThrough(viewModel, track, player)
-            val playSeconds = (SystemClock.elapsedRealtime() - startWallMs) / 1000.0 - leadInSeconds
-            val ratio = playSeconds / track.durationSeconds
-            val expected = min(1.0, ScoringEngine.TIME_GRACE_RATIO / ratio).toFloat()
+            val state = playThrough(viewModel, track, player, dawdleAt = null)
             val score = state.melodyScore
 
-            val report = (
-                    "played %.1fs of a %.1fs song (%.2fx, lead-in %.1fs): phase=%s notes=%d " +
-                            "timeScore=%.3f expected=%.3f overall=%.1f"
-                    ).format(
-                    playSeconds, track.durationSeconds, ratio, leadInSeconds, state.phase,
-                    state.noteResults.size, score?.timeScore ?: -1f, expected,
-                    score?.overallScore ?: -1f
-                )
-            Log.i(TAG, report)
+            assertEquals("the song must be played to its end", PlayPhase.FINISHED, state.phase)
+            assertNotNull("the finished song must report a score", score)
+            assertEquals(
+                "a song played at the pace of the song itself must score full marks on its duration",
+                1f, score!!.timeScore, 0.001f
+            )
+        } finally {
+            viewModel.stop()
+            player.close()
+        }
+    }
+
+    @Test
+    fun aDawdledSongIsScoredOnHowLongItTook() {
+        val viewModel = viewModel()
+        val melody = MelodyRepository(context, DifficultyRepository(context))
+            .getBundledMelodies().first { it.id.contains(SHORTEST_MELODY) }
+        assertTrue("the bundled melody must load", viewModel.loadMelody(melody))
+        val track = viewModel.gameState.value.melodyTrack!!
+        viewModel.configure(WAIT_LEVEL, AccompanimentMode.NONE)
+
+        val player = PlayerInstrument()
+        try {
+            player.open()
+            assertTrue("the player's instrument must open", player.isReady)
+
+            val state = playThrough(viewModel, track, player, dawdleAt = DAWDLE_AT_INDEX)
+            val score = state.melodyScore
 
             assertEquals("the song must be played to its end", PlayPhase.FINISHED, state.phase)
             assertNotNull("the finished song must report a score", score)
             assertTrue(
-                "the dawdled song must run well past its own duration (ratio=%.2f)".format(ratio),
-                ratio > 2.0
-            )
-            assertEquals(
-                "song duration score must be min(1, %.2f / ratio)".format(ScoringEngine.TIME_GRACE_RATIO),
-                expected, score!!.timeScore, 0.05f
+                "dawdling for %.0fs on a %.1fs song must cost the duration score (%.3f)".format(
+                    DAWDLE_MS / 1000.0, track.durationSeconds, score!!.timeScore
+                ),
+                score.timeScore < 0.5f
             )
             assertTrue(
                 "however long the song took, the score must stay above zero (%.3f)".format(score.timeScore),
@@ -170,34 +182,49 @@ class MelodySongDurationScoreDeviceTest {
         }
     }
 
-    /** Follows the song's notes on the player's instrument, dawdling once it is under way. */
+    /** Follows the song's notes on the player's instrument, dawdling once it is under way if asked. */
     private fun playThrough(
         viewModel: MelodyViewModel,
         track: net.exent.perfectpitch.midi.MelodyTrack,
-        player: PlayerInstrument
+        player: PlayerInstrument,
+        dawdleAt: Int?
     ): MelodyGameState {
+        val startWallMs = SystemClock.elapsedRealtime()
+        viewModel.startPlaying()
+        val leadInSeconds = -viewModel.gameState.value.currentTimeSeconds
         val deadline = SystemClock.elapsedRealtime() + PLAY_DEADLINE_MS
         var heldNote = -1
         var dawdled = false
         while (SystemClock.elapsedRealtime() < deadline) {
             val state = viewModel.gameState.value
             if (state.phase == PlayPhase.FINISHED) break
-            val index = state.currentNoteIndex
-            val wanted = track.notes.getOrNull(index)?.noteNumber
+            val wanted = track.notes.getOrNull(state.currentNoteIndex)?.noteNumber
             if (wanted != null && wanted != heldNote) {
                 player.hold(wanted)
                 heldNote = wanted
             }
-            if (!dawdled && state.noteResults[DAWDLE_AT_INDEX] != NoteResultState.ACTIVE &&
-                state.noteResults[DAWDLE_AT_INDEX] != null
+            if (!dawdled && dawdleAt != null && state.noteResults[dawdleAt] != null &&
+                state.noteResults[dawdleAt] != NoteResultState.ACTIVE
             ) {
                 Log.i(TAG, "dawdling for ${DAWDLE_MS / 1000}s on note $heldNote")
                 Thread.sleep(DAWDLE_MS)
                 dawdled = true
             }
-            Thread.sleep(50)
+            Thread.sleep(20)
         }
-        return viewModel.gameState.value
+        val state = viewModel.gameState.value
+        val playSeconds = (SystemClock.elapsedRealtime() - startWallMs) / 1000.0 - leadInSeconds
+        Log.i(
+            TAG,
+            ("played %.1fs of a %.1fs song (%.2fx, lead-in %.1fs, dawdled=%s): phase=%s notes=%d " +
+                    "misses=%d timeScore=%.3f overall=%.1f").format(
+                playSeconds, track.durationSeconds, playSeconds / track.durationSeconds,
+                leadInSeconds, dawdled, state.phase, state.noteResults.size,
+                state.noteResults.count { it.value == NoteResultState.MISS },
+                state.melodyScore?.timeScore ?: -1f, state.melodyScore?.overallScore ?: -1f
+            )
+        )
+        return state
     }
 
     private fun MelodyViewModel.configure(level: Int, accompaniment: AccompanimentMode) {

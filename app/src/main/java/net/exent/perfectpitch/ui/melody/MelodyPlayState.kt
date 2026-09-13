@@ -118,3 +118,23 @@ fun audibleMelodyTracks(
         AccompanimentMode.NONE -> emptyList()
     }
 }
+
+/** The music the player has to play: from the first note of the song to the end of the last one. */
+fun songPlayingSeconds(track: MelodyTrack): Double {
+    val firstNote = track.notes.minByOrNull { it.startTick } ?: return 0.0
+    return (track.durationSeconds - track.noteStartSeconds(firstNote)).coerceAtLeast(0.0)
+}
+
+/**
+ * How long the player took, against the music they had to play.
+ *
+ * A song that waits for the player holds its clock for them, so that time is added to the music's
+ * own length. The two bars counted in before the first note, any rest the song opens with, and the
+ * slack the song lingers for after its last note are the song's own time, not the player's, and are
+ * left out of both the measurement and the song length it is measured against.
+ */
+fun songTimeRatio(track: MelodyTrack, waitMs: Long): Double {
+    val songSeconds = songPlayingSeconds(track)
+    if (songSeconds <= 0.0) return 0.0
+    return (songSeconds + waitMs / 1000.0) / songSeconds
+}
