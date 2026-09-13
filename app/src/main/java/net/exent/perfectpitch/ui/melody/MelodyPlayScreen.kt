@@ -69,6 +69,7 @@ fun MelodyPlayScreen(
     val canAdvance by viewModel.canAdvanceLevel.collectAsStateWithLifecycle()
     val celebrationLevel by viewModel.celebrationLevel.collectAsStateWithLifecycle()
     val currentInstrument by viewModel.currentInstrument.collectAsStateWithLifecycle()
+    val devModeEnabled by viewModel.devModeEnabled.collectAsStateWithLifecycle()
     val violinMode = currentInstrument == Instrument.VIOLIN
     val density = LocalDensity.current
     val context = LocalContext.current
@@ -188,9 +189,10 @@ fun MelodyPlayScreen(
 
                     Spacer(Modifier.weight(1f))
 
-                    // Preview melody button
+                    // Preview melody button. Listening to the song is allowed before the take
+                    // starts; while being scored it is a developer feature.
                     if (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED ||
-                        gameState.phase == PlayPhase.PLAYING || gameState.phase == PlayPhase.WAITING_FOR_NOTE) {
+                        devModeEnabled && (gameState.phase == PlayPhase.PLAYING || gameState.phase == PlayPhase.WAITING_FOR_NOTE)) {
                         IconButton(
                             onClick = { if (isPreviewPlaying) viewModel.stopPreview() else viewModel.previewMelody() },
                             modifier = Modifier.size(PANEL_BTN_SIZE)
@@ -272,7 +274,8 @@ fun MelodyPlayScreen(
                         inputDelay = inputDelay,
                         totalDelay = totalDelay,
                         accompanimentMode = gameState.accompanimentMode,
-                        onAccompanimentModeChange = { viewModel.setAccompanimentMode(it) }
+                        onAccompanimentModeChange = { viewModel.setAccompanimentMode(it) },
+                        showPlayVoices = devModeEnabled
                     )
                 }
 
@@ -466,7 +469,8 @@ private fun MelodySettingsMenu(
     inputDelay: Int,
     totalDelay: Int,
     accompanimentMode: AccompanimentMode,
-    onAccompanimentModeChange: (AccompanimentMode) -> Unit
+    onAccompanimentModeChange: (AccompanimentMode) -> Unit,
+    showPlayVoices: Boolean
 ) {
     Box {
         IconButton(
@@ -511,39 +515,41 @@ private fun MelodySettingsMenu(
                 steps = 47,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
-            HorizontalDivider()
-            // Accompaniment mode selector
-            DropdownMenuItem(
-                text = { Text("Play voices:") },
-                onClick = {}
-            )
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                listOf(
-                    AccompanimentMode.ALL to "All",
-                    AccompanimentMode.EXCEPT to "Except",
-                    AccompanimentMode.SELECTED_ONLY to "Selected",
-                    AccompanimentMode.NONE to "None"
-                ).forEach { (mode, label) ->
-                    val isSelected = accompanimentMode == mode
-                    val bg = if (isSelected) MaterialTheme.colorScheme.primary else Color.DarkGray.copy(alpha = 0.3f)
-                    val fg = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.7f)
-                    Box(
-                        modifier = Modifier
-                            .height(28.dp)
-                            .clip(MaterialTheme.shapes.small)
-                            .background(bg)
-                            .clickable { onAccompanimentModeChange(mode) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = fg,
-                            modifier = Modifier.padding(horizontal = 10.dp)
-                        )
+            if (showPlayVoices) {
+                HorizontalDivider()
+                // Accompaniment mode selector
+                DropdownMenuItem(
+                    text = { Text("Play voices:") },
+                    onClick = {}
+                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(
+                        AccompanimentMode.ALL to "All",
+                        AccompanimentMode.EXCEPT to "Except",
+                        AccompanimentMode.SELECTED_ONLY to "Selected",
+                        AccompanimentMode.NONE to "None"
+                    ).forEach { (mode, label) ->
+                        val isSelected = accompanimentMode == mode
+                        val bg = if (isSelected) MaterialTheme.colorScheme.primary else Color.DarkGray.copy(alpha = 0.3f)
+                        val fg = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.7f)
+                        Box(
+                            modifier = Modifier
+                                .height(28.dp)
+                                .clip(MaterialTheme.shapes.small)
+                                .background(bg)
+                                .clickable { onAccompanimentModeChange(mode) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = fg,
+                                modifier = Modifier.padding(horizontal = 10.dp)
+                            )
+                        }
                     }
                 }
             }

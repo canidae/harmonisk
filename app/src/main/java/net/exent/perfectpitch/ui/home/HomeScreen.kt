@@ -1,6 +1,8 @@
 package net.exent.perfectpitch.ui.home
 
 import android.content.res.Configuration
+import android.widget.Toast
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -8,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -20,8 +23,13 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import net.exent.perfectpitch.audio.AudioDeviceMonitor
 import net.exent.perfectpitch.data.AudioDelayRepository
+import net.exent.perfectpitch.data.DevModeState
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
+
+/** How long the home heading must be held down to toggle developer mode. */
+private const val DEV_MODE_HOLD_MS = 7_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,7 +92,15 @@ fun HomeScreen(
                     .padding(24.dp),
                 onNavigateToFreePlay = onNavigateToFreePlay,
                 onNavigateToMelody = onNavigateToMelody,
-                onNavigateToTuner = onNavigateToTuner
+                onNavigateToTuner = onNavigateToTuner,
+                onToggleDevMode = {
+                    val enabled = viewModel.toggleDevMode()
+                    Toast.makeText(
+                        context,
+                        context.getString(if (enabled) R.string.dev_mode_enabled else R.string.dev_mode_disabled),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             )
         }
     }
@@ -95,7 +111,8 @@ private fun PortraitContent(
     modifier: Modifier,
     onNavigateToFreePlay: () -> Unit,
     onNavigateToMelody: () -> Unit,
-    onNavigateToTuner: () -> Unit
+    onNavigateToTuner: () -> Unit,
+    onToggleDevMode: () -> Unit
 ) {
     Column(
         modifier = modifier,
@@ -105,7 +122,17 @@ private fun PortraitContent(
         Text(
             text = stringResource(R.string.home_heading),
             style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        // Only a press held for the full duration toggles developer mode.
+                        if (withTimeoutOrNull(DEV_MODE_HOLD_MS) { tryAwaitRelease() } == null) {
+                            onToggleDevMode()
+                        }
+                    }
+                )
+            }
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -244,7 +271,8 @@ private fun ModeCard(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val audioDeviceMonitor: AudioDeviceMonitor,
-    private val audioDelayRepository: AudioDelayRepository
+    private val audioDelayRepository: AudioDelayRepository,
+    private val devModeState: DevModeState
 ) : ViewModel() {
 
     val uncalibratedDeviceNames: StateFlow<List<String>?> = combine(
@@ -269,4 +297,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun shouldShowPrompt(): Boolean = !promptDismissed
+
+    /** Toggle developer mode, returning whether it is now enabled. */
+    fun toggleDevMode(): Boolean = devModeState.toggle()
 }

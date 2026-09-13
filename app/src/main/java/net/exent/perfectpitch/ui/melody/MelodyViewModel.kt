@@ -11,6 +11,7 @@ import net.exent.perfectpitch.audio.SoundFontSynthesizer
 import net.exent.perfectpitch.audio.NotePlayer
 import net.exent.perfectpitch.audio.PitchProcessor
 import net.exent.perfectpitch.data.AudioDelayRepository
+import net.exent.perfectpitch.data.DevModeState
 import net.exent.perfectpitch.data.MelodyRepository
 import net.exent.perfectpitch.data.MelodySettingsRepository
 import net.exent.perfectpitch.data.ScoreHistoryRepository
@@ -53,7 +54,8 @@ class MelodyViewModel @Inject constructor(
     private val midiInputReceiver: MidiInputReceiver,
     private val midiOutputSender: MidiOutputSender,
     private val scoreHistoryRepository: ScoreHistoryRepository,
-    private val violinAlgorithm: ViolinAlgorithm
+    private val violinAlgorithm: ViolinAlgorithm,
+    private val devModeState: DevModeState
 ) : ViewModel() {
 
     companion object {
@@ -69,6 +71,9 @@ class MelodyViewModel @Inject constructor(
 
     private val _deviceState = MutableStateFlow(MelodyDeviceState())
     val deviceState: StateFlow<MelodyDeviceState> = _deviceState.asStateFlow()
+
+    /** Developer mode gates playing melody voices while the player is being scored. */
+    val devModeEnabled: StateFlow<Boolean> = devModeState.enabled
 
     val availableMelodies: StateFlow<List<MelodyRepository.MelodyInfo>> =
         melodyRepository.importedMelodies
@@ -853,6 +858,8 @@ class MelodyViewModel @Inject constructor(
     // --- Playback ---
 
     private fun startPlaybackTimer() {
+        // Outside developer mode a preview may not ring on into the take that is being scored.
+        if (!devModeState.isEnabled) melodyPlayer.stop()
         playbackStartTime = SystemClock.elapsedRealtime()
         playbackJob = viewModelScope.launch {
             val track = _gameState.value.melodyTrack ?: return@launch
@@ -894,16 +901,16 @@ class MelodyViewModel @Inject constructor(
                 val gs = _gameState.value
 
                 val playTracks = buildList {
-                    addAll(when (gs.accompanimentMode) {
-                        AccompanimentMode.ALL -> gs.melodyTracks
-                        AccompanimentMode.EXCEPT -> {
-                            gs.melodyTracks.filterIndexed { i, _ -> i != gs.activeVoiceIndex }
-                        }
-                        AccompanimentMode.SELECTED_ONLY -> {
-                            gs.melodyTracks.getOrNull(gs.activeVoiceIndex)?.let { listOf(it) } ?: emptyList()
-                        }
-                        AccompanimentMode.NONE -> emptyList()
-                    })
+                    // Voices are a developer feature, so the game stays silent under a scored take
+                    // unless developer mode is on.
+                    addAll(
+                        audibleMelodyTracks(
+                            melodyTracks = gs.melodyTracks,
+                            activeVoiceIndex = gs.activeVoiceIndex,
+                            accompanimentMode = gs.accompanimentMode,
+                            devModeEnabled = devModeState.isEnabled
+                        )
+                    )
                     // Conditionally include the metronome track
                     val mt = gs.metronomeTrack
                     if (mt != null && gs.metronomeEnabled &&

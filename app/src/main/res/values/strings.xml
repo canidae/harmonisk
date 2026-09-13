@@ -24,6 +24,8 @@
     <string name="home_tuner_desc">See your pitch and tune up</string>
     <string name="home_tuner_desc_short">Tune up</string>
     <string name="home_uncalibrated">Audio not calibrated: %1$s</string>
+    <string name="dev_mode_enabled">Developer mode enabled</string>
+    <string name="dev_mode_disabled">Developer mode disabled</string>
 
     <!-- Permissions -->
     <string name="permission_title">Microphone Access Required</string>

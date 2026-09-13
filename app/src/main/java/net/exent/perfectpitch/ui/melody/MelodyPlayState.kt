@@ -95,3 +95,26 @@ enum class NoteResultState {
  */
 fun nowLineLeadSeconds(waitMode: Boolean, phase: PlayPhase, inputDelayMs: Int): Double =
     if (waitMode || phase == PlayPhase.READY) 0.0 else inputDelayMs / 1000.0
+
+/**
+ * The voices the app may sound while the player is being scored.
+ *
+ * Playing voices is a developer feature: outside developer mode the song stays silent under the
+ * player's own take, so the melody has to be played by ear. Listening to the song first is a preview,
+ * which is played before the take starts.
+ */
+fun audibleMelodyTracks(
+    melodyTracks: List<MelodyTrack>,
+    activeVoiceIndex: Int,
+    accompanimentMode: AccompanimentMode,
+    devModeEnabled: Boolean
+): List<MelodyTrack> {
+    if (!devModeEnabled) return emptyList()
+    return when (accompanimentMode) {
+        AccompanimentMode.ALL -> melodyTracks
+        AccompanimentMode.EXCEPT -> melodyTracks.filterIndexed { i, _ -> i != activeVoiceIndex }
+        AccompanimentMode.SELECTED_ONLY ->
+            melodyTracks.getOrNull(activeVoiceIndex)?.let { listOf(it) } ?: emptyList()
+        AccompanimentMode.NONE -> emptyList()
+    }
+}
