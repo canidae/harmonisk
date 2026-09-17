@@ -275,6 +275,7 @@ fun MelodyPlayScreen(
                         totalDelay = totalDelay,
                         accompanimentMode = gameState.accompanimentMode,
                         onAccompanimentModeChange = { viewModel.setAccompanimentMode(it) },
+                        showLevelControl = devModeEnabled,
                         showPlayVoices = devModeEnabled
                     )
                 }
@@ -470,6 +471,7 @@ private fun MelodySettingsMenu(
     totalDelay: Int,
     accompanimentMode: AccompanimentMode,
     onAccompanimentModeChange: (AccompanimentMode) -> Unit,
+    showLevelControl: Boolean,
     showPlayVoices: Boolean
 ) {
     Box {
@@ -484,18 +486,21 @@ private fun MelodySettingsMenu(
             onDismissRequest = onDismiss,
             offset = DpOffset((-180).dp, 0.dp)
         ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.melody_play_level, currentLevel)) },
-                onClick = {}
-            )
-            Slider(
-                value = currentLevel.toFloat(),
-                onValueChange = { onLevelChange(it.roundToInt().coerceIn(1, 5)) },
-                valueRange = 1f..5f,
-                steps = 3,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-            HorizontalDivider()
+            // Levels are earned by scoring; picking one freely is a developer feature.
+            if (showLevelControl) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.melody_play_level, currentLevel)) },
+                    onClick = {}
+                )
+                Slider(
+                    value = currentLevel.toFloat(),
+                    onValueChange = { onLevelChange(it.roundToInt().coerceIn(1, 5)) },
+                    valueRange = 1f..5f,
+                    steps = 3,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                HorizontalDivider()
+            }
             DropdownMenuItem(
                 text = {
                     Text(
