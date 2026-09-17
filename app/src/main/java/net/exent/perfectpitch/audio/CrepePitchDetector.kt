@@ -117,7 +117,13 @@ class CrepePitchDetector(context: Context) {
         val confidence = activation[peakBin]
         if (confidence < CONFIDENCE_THRESHOLD) return PitchDetectionResult.NONE
 
-        val freq = weightedFrequency(activation, peakBin, hintFreq)
+        // The model can rank the 2nd harmonic above a weak fundamental (see SubharmonicCorrector).
+        val fundamentalBin = SubharmonicCorrector.fundamentalBin(activation, peakBin)
+        val freq = if (fundamentalBin != peakBin) {
+            localWeightedFreq(activation, fundamentalBin)
+        } else {
+            weightedFrequency(activation, peakBin, hintFreq)
+        }
         if (freq <= 0f) return PitchDetectionResult.NONE
 
         return PitchDetectionResult(freq, confidence)

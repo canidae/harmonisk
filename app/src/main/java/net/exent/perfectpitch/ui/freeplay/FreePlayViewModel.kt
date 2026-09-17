@@ -107,8 +107,6 @@ class FreePlayViewModel @Inject constructor(
     private var replayGeneration = 0
     private var isPausedByGesture = false
 
-    private data class Event(val timeMs: Long, val midiNote: Int, val isOn: Boolean, val trackOrigin: Int = 0)
-
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
@@ -590,7 +588,7 @@ class FreePlayViewModel @Inject constructor(
         if (enabled) snapToGrid(timeMs) else timeMs.coerceAtLeast(0L)
 
     private fun addMetronomeEvents(
-        evts: MutableList<Event>,
+        evts: MutableList<ReplayEvent>,
         startTime: Long,
         loopEndMs: Long,
         bpm: Float,
@@ -607,8 +605,8 @@ class FreePlayViewModel @Inject constructor(
         if (beatTime < startTime) beatTime += interval
         while (beatTime < loopEndMs) {
             val c = click(beatTime / interval)
-            evts.add(Event(beatTime, c.note, true, 9))
-            evts.add(Event(beatTime + c.dur, c.note, false, 9))
+            evts.add(ReplayEvent(beatTime, c.note, true, 9))
+            evts.add(ReplayEvent(beatTime + c.dur, c.note, false, 9))
             beatTime += interval
         }
     }
@@ -999,20 +997,10 @@ class FreePlayViewModel @Inject constructor(
             var lastBuiltBeatsPerBar = _state.value.beatsPerBar
             var lastBuiltLoopEndMs = 0L
 
-            fun buildEvents(startTime: Long): List<Event> {
-                val evts = mutableListOf<Event>()
-                val (loopStartMs, loopEndMs) = effectiveLoopBounds()
+            fun buildEvents(startTime: Long): List<ReplayEvent> {
+                val (_, loopEndMs) = effectiveLoopBounds()
                 lastBuiltLoopEndMs = loopEndMs
-                val currentNotes = _state.value.playedNotes
-                    .filter { it.endTimeMs != null }
-                    .sortedBy { it.startTimeMs }
-                for (note in currentNotes) {
-                    val endMs = note.endTimeMs ?: continue
-                    if (endMs <= startTime) continue
-                    val onTime = if (note.startTimeMs <= startTime) startTime else note.startTimeMs
-evts.add(Event(onTime, note.midiNumber, true, note.trackOrigin))
-evts.add(Event(endMs, note.midiNumber, false, note.trackOrigin))
-                }
+                val evts = ReplayEvents.notes(_state.value.playedNotes, startTime, loopEndMs).toMutableList()
                 if (_state.value.metronomeEnabled) {
                     addMetronomeEvents(evts, startTime, loopEndMs, lastBuiltBpm, lastBuiltBeatsPerBar)
                 }

@@ -12,6 +12,6 @@ enum class Instrument(
 
     companion object {
         fun fromName(name: String): Instrument =
-            entries.firstOrNull { it.name == name } ?: PIANO
+            entries.firstOrNull { it.name == name } ?: VIOLIN
     }
 }

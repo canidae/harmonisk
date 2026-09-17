@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.util.Log
 import net.exent.perfectpitch.BuildConfig
+import net.exent.perfectpitch.music.Instrument
 import java.io.File
 import java.io.IOException
 
@@ -61,8 +62,8 @@ class SoundFontSynthesizer(
     @Volatile
     private var channelsInitialized = false
 
-    private var currentBank: Int = 0
-    private var currentProgram: Int = 0
+    private var currentBank: Int = Instrument.VIOLIN.midiBank
+    private var currentProgram: Int = Instrument.VIOLIN.midiProgram
 
     private val renderThread = AudioRenderThread(
         threadName = "SoundFontRenderThread",

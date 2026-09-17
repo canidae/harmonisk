@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import net.exent.perfectpitch.music.Instrument
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -48,7 +49,7 @@ class SettingsRepository(
             freeplayMetronomeEnabled = prefs[FREEPLAY_METRONOME_ENABLED] ?: false,
             melodyMetronomeEnabled = prefs[MELODY_METRONOME_ENABLED] ?: false,
             languageCode = prefs[LANGUAGE_CODE] ?: "system",
-            instrumentName = prefs[INSTRUMENT_NAME] ?: "PIANO"
+            instrumentName = prefs[INSTRUMENT_NAME] ?: Instrument.VIOLIN.name
         )
     }
 
@@ -114,5 +115,5 @@ data class AppSettings(
     val freeplayMetronomeEnabled: Boolean = false,
     val melodyMetronomeEnabled: Boolean = false,
     val languageCode: String = "system",
-    val instrumentName: String = "PIANO"
+    val instrumentName: String = Instrument.VIOLIN.name
 )

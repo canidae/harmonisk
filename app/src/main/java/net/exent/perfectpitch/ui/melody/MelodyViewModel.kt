@@ -124,12 +124,12 @@ class MelodyViewModel @Inject constructor(
     private var originalMelodyTracks: List<MelodyTrack> = emptyList()
     private var currentMelodyId: String? = null
 
-    private val _currentInstrument = MutableStateFlow("PIANO")
+    private val _currentInstrument = MutableStateFlow(Instrument.VIOLIN.name)
     private val currentInstrumentFlow: StateFlow<String> = _currentInstrument.asStateFlow()
 
     val currentInstrument: StateFlow<Instrument> = currentInstrumentFlow
         .map { Instrument.fromName(it) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Instrument.PIANO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Instrument.VIOLIN)
 
     // Melody audio output delay
     private var synthOpenJob: Job? = null
