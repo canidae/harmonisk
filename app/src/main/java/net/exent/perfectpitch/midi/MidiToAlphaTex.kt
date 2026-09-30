@@ -7,6 +7,12 @@ import kotlin.math.roundToInt
  * alphaTab. Note timings are quantized to a sixteenth-note grid, arbitrary
  * durations are decomposed into standard note values joined by ties, and
  * simultaneous notes are rendered as chords.
+ *
+ * Exporters such as MuseScore cut notes short by around 5% (gate time), which
+ * leaves a gap that is far smaller than the grid. Quantizing such a note ends it
+ * one grid early, so it renders as a dotted note tied to a sliver. Notes are
+ * therefore held until the next onset when the gap between them is smaller than
+ * one grid step, which is what the gap is too small to notate anyway.
  */
 object MidiToAlphaTex {
 
@@ -27,6 +33,16 @@ object MidiToAlphaTex {
         DurationPiece(2, 8, 0, 2),
         DurationPiece(1, 16, 0, 1)
     )
+
+    /**
+     * Gaps shorter than half a grid step are cut-short notes; anything longer is a rest that
+     * can be written, and filling it would change the music. Exporter gate times come to
+     * well under this: a quarter note exported at 470 ticks leaves an eighth of a step.
+     */
+    private const val GAP_MERGE_LIMIT_GRID = 0.5
+
+    /** Grid steps in one beat; four grid steps make a quarter note. */
+    private const val BEAT_GRID = 4L
 
     /** Note with start/end quantized to grid units (one grid unit = a sixteenth note). */
     private data class QNote(val noteNumber: Int, val start: Long, val end: Long)
@@ -53,7 +69,7 @@ object MidiToAlphaTex {
         val grid = (ppq / 4).toLong()
         fun tickToGrid(tick: Long) = (tick + grid / 2) / grid
 
-        val notes = quantizeNotes(track, ::tickToGrid)
+        val notes = normalizeGaps(quantizeNotes(track, grid, ::tickToGrid))
         val bars = buildBars(track, ppq, ::tickToGrid, notes.maxOfOrNull { it.end } ?: 0L)
 
         val tokens = mutableListOf<String>()
@@ -124,13 +140,16 @@ object MidiToAlphaTex {
         return tokens.joinToString(" ")
     }
 
-    private fun quantizeNotes(track: MelodyTrack, tickToGrid: (Long) -> Long): List<QNote> {
+    private fun quantizeNotes(track: MelodyTrack, grid: Long, tickToGrid: (Long) -> Long): List<QNote> {
+        // Both ends are rounded against the grid itself rather than the duration being rounded,
+        // so a note that starts a little off the grid still reaches its own grid position.
+        fun tickToGridAbsolute(tick: Long) = (tick + grid / 2) / grid
         val quantized = track.notes
             .sortedBy { it.startTick }
             .filter { it.endTick > 0 }
             .mapNotNull { note ->
                 val start = tickToGrid(note.startTick.coerceAtLeast(0))
-                val end = maxOf(start + 1, tickToGrid(note.endTick))
+                val end = maxOf(start + 1, tickToGridAbsolute(note.endTick))
                 if (end > start) QNote(note.noteNumber, start, end) else null
             }
         // Merge same-pitch overlapping notes so a pitch appears at most once in a chord
@@ -144,6 +163,21 @@ object MidiToAlphaTex {
             }
         }
         return merged
+    }
+
+    /**
+     * Holds a note until the next onset when the gap between them is smaller than one grid
+     * step. Such a gap is too small to notate: leaving it turns a plain note into a dotted
+     * note tied to a sliver. A whole grid step is left alone, because a rest that can be
+     * written must not be filled in.
+     */
+    private fun normalizeGaps(notes: List<QNote>): List<QNote> {
+        if (notes.isEmpty()) return notes
+        val startsAfter = notes.map { note -> notes.filter { it.start >= note.end }.minOfOrNull { it.start } }
+        return notes.mapIndexed { index, note ->
+            val next = startsAfter[index]
+            if (next != null && next - note.end < GAP_MERGE_LIMIT_GRID) note.copy(end = next) else note
+        }
     }
 
     private fun buildBars(
@@ -194,7 +228,7 @@ object MidiToAlphaTex {
         var pos = startGridInBar
         var first = true
         while (remaining > 0) {
-            val piece = DURATION_PIECES.first { it.gridLength <= remaining && pos % it.align == 0L }
+            val piece = pickPiece(remaining, pos)
             val body = if (notes.size == 1) {
                 val note = notes[0]
                 "${note.name}${if (first && note.tied || !first) "{t}" else ""}"
@@ -210,6 +244,17 @@ object MidiToAlphaTex {
             first = false
         }
         return tokens
+    }
+
+    /**
+     * Largest piece that fits and is aligned, but one that uses up whole beats is preferred
+     * over a longer one that eats into the next beat. Without that preference a note of two
+     * beats is written as a double-dotted note tied to a thirty-second instead of two quarters.
+     */
+    private fun pickPiece(remaining: Long, pos: Long): DurationPiece {
+        val candidates = DURATION_PIECES.filter { it.gridLength <= remaining && pos % it.align == 0L }
+        val (endsOnBeat, rest) = candidates.partition { (pos + it.gridLength) % BEAT_GRID == 0L }
+        return endsOnBeat.firstOrNull() ?: rest.first()
     }
 
     /** Decomposes [gridLength] into rest pieces (largest first, no alignment needed). */

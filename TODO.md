@@ -1,2 +1,3 @@
-# MIDI notes aren't converted to clean notes in alphaTab
-The MIDI files have a small gap between each notes. This leads to alphaTab rendering a whole note as a half or quarter note with dots and/or slurs. The tools exporting MIDI files tend to make the note 95% the length of its actual length (files are exported from Musescore). For the falling bars this is not an issue, but the notation becomes unreadable.
+# Open issues
+
+None.

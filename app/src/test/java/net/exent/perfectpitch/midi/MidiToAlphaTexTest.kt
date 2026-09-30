@@ -74,7 +74,7 @@ class MidiToAlphaTexTest {
                 )
             )
         )
-        assertEquals("\\tempo 120 \\instrument piano . \\ts 4 4 C4.8 D4.8 E4.4{d} r.4{d} |", tex)
+        assertEquals("\\tempo 120 \\instrument piano . \\ts 4 4 C4.8 D4.8 E4.4 E4{t}.8 r.4{d} |", tex)
     }
 
     @Test
@@ -91,7 +91,7 @@ class MidiToAlphaTexTest {
         val tex = MidiToAlphaTex.generate(
             track(listOf(note(60, 120, 480)))
         )
-        assertEquals("\\tempo 120 \\instrument piano . \\ts 4 4 r.16 C4.16 C4{t}.8{d} r.2 r.8{d} |", tex)
+        assertEquals("\\tempo 120 \\instrument piano . \\ts 4 4 r.16 C4.16 C4{t}.8 C4{t}.16 r.2 r.8{d} |", tex)
     }
 
     @Test
@@ -181,5 +181,80 @@ class MidiToAlphaTexTest {
             )
         )
         assertEquals("\\tempo 120 \\instrument piano . \\ts 4 4 C4.4 r.4 D4.4 r.4 |", tex)
+    }
+
+    @Test
+    fun `truncated quarter notes read as plain quarters`() {
+        // MuseScore exports a quarter note as 470 ticks with a 10 tick gap, so quantizing its
+        // end lands one grid step early and the note used to become a dotted note tied to a
+        // sixteenth. Only the last note still carries the shortened duration.
+        val tex = MidiToAlphaTex.generate(
+            track(
+                listOf(
+                    note(60, 10, 470),
+                    note(62, 490, 470),
+                    note(64, 970, 470)
+                )
+            )
+        )
+        assertEquals("\\tempo 120 \\instrument piano . \\ts 4 4 C4.4 D4.4 E4.4 r.4 |", tex)
+    }
+
+    @Test
+    fun `truncated sixteenth notes read as plain sixteenths`() {
+        val tex = MidiToAlphaTex.generate(
+            track(
+                listOf(
+                    note(60, 5, 115),
+                    note(62, 125, 115),
+                    note(64, 245, 115),
+                    note(65, 365, 115)
+                )
+            )
+        )
+        assertEquals("\\tempo 120 \\instrument piano . \\ts 4 4 C4.16 D4.16 E4.16 F4.16 r.2{d} |", tex)
+    }
+
+    @Test
+    fun `a gap of a grid step is left as a rest`() {
+        // A rest that can be written must not be filled in, even at the merge limit.
+        val tex = MidiToAlphaTex.generate(
+            track(
+                listOf(
+                    note(60, 0, 480),
+                    note(62, 600, 480)
+                )
+            )
+        )
+        assertEquals("\\tempo 120 \\instrument piano . \\ts 4 4 C4.4 r.16 D4.16 D4{t}.8 D4{t}.16 r.4{dd} |", tex)
+    }
+
+    @Test
+    fun `a clipped half note is not written as a double dot tied to a sliver`() {
+        // godnatt has a note of 959 ticks in 3/4: it must not come out as D4.4{dd} D4{t}.16.
+        val tex = MidiToAlphaTex.generate(
+            track(
+                notes = listOf(
+                    note(69, 0, 479),
+                    note(62, 480, 959)
+                ),
+                timeSignatures = listOf(TimeSignatureEvent(0, 3, 4))
+            )
+        )
+        assertEquals("\\tempo 120 \\instrument piano . \\ts 3 4 A4.4 D4.4 D4{t}.4 |", tex)
+    }
+
+    @Test
+    fun `a note that stops well short is not extended`() {
+        // A staccato quarter leaves an audible gap, far larger than any gate time.
+        val tex = MidiToAlphaTex.generate(
+            track(
+                listOf(
+                    note(60, 0, 240),
+                    note(62, 480, 480)
+                )
+            )
+        )
+        assertEquals("\\tempo 120 \\instrument piano . \\ts 4 4 C4.8 r.8 D4.4 r.2 |", tex)
     }
 }
