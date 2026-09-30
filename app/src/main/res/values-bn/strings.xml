@@ -133,8 +133,6 @@
     <string name="melody_play_transpose_0">ট্রান্সপোজ: 0</string>
     <string name="melody_play_transpose_plus">ট্রান্সপোজ: +%1$d</string>
     <string name="melody_play_transpose">ট্রান্সপোজ: %1$d</string>
-    <string name="melody_play_output_delay">Audio output delay: %1$dms</string>
-    <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
 
     <!-- Score results -->
     <string name="score_dismiss">বাতিল করুন</string>

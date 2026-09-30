@@ -210,9 +210,6 @@ class MelodyViewModel @Inject constructor(
     val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val activeOutputDelay: StateFlow<Int> = audioDelayRepository.activeOutputDelay
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
     fun toggleMidiInput() {
         midiDeviceManager.setInputOverride(
             computeNextOverride(midiDeviceManager.inputOverride.value, _deviceState.value.midiInputEnabled)

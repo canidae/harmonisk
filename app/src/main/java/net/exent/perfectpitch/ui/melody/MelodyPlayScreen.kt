@@ -66,7 +66,6 @@ fun MelodyPlayScreen(
     val deviceState by viewModel.deviceState.collectAsStateWithLifecycle()
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
     val inputDelay by viewModel.activeInputDelay.collectAsState()
-    val outputDelay by viewModel.activeOutputDelay.collectAsState()
     val scoreHistory by viewModel.currentScoreHistory.collectAsStateWithLifecycle()
     val canAdvance by viewModel.canAdvanceLevel.collectAsStateWithLifecycle()
     val celebrationLevel by viewModel.celebrationLevel.collectAsStateWithLifecycle()
@@ -246,8 +245,6 @@ fun MelodyPlayScreen(
                         onLevelChange = { viewModel.setLevel(it) },
                         transposeSemitones = gameState.transposeSemitones,
                         onTransposeChange = { viewModel.setTranspose(it) },
-                        inputDelay = inputDelay,
-                        outputDelay = outputDelay,
                         accompanimentMode = gameState.accompanimentMode,
                         onAccompanimentModeChange = { viewModel.setAccompanimentMode(it) },
                         showLevelControl = devModeEnabled,
@@ -459,8 +456,6 @@ private fun MelodySettingsMenu(
     onLevelChange: (Int) -> Unit,
     transposeSemitones: Int,
     onTransposeChange: (Int) -> Unit,
-    inputDelay: Int,
-    outputDelay: Int,
     accompanimentMode: AccompanimentMode,
     onAccompanimentModeChange: (AccompanimentMode) -> Unit,
     showLevelControl: Boolean,
@@ -550,15 +545,6 @@ private fun MelodySettingsMenu(
                     }
                 }
             }
-            HorizontalDivider()
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.melody_play_input_delay, inputDelay)) },
-                onClick = {}
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.melody_play_output_delay, outputDelay)) },
-                onClick = {}
-            )
         }
     }
 }
