@@ -18,8 +18,26 @@ playback and note previews.
 ./gradlew assembleDebug
 ```
 
-## Testing
+### Install the app to a connected device
+```bash
+android-sdk/platform-tools/adb install app/build/outputs/apk/debug/app-debug.apk
+```
 
+### Start the app on the device
+```bash
+android-sdk/platform-tools/adb shell am start -n net.exent.perfectpitch/.MainActivity
+```
+
+### Run unit tests
 ```bash
 ./gradlew :app:test
 ```
+
+### Run Android instrumentation tests (requires connected device)
+```bash
+./gradlew :app:connectedDebugAndroidTest
+```
+
+### View pitch accuracy test results
+```bash
+android-sdk/platform-tools/adb logcat -d -s PitchAccTest:I
