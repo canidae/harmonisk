@@ -22,6 +22,7 @@ import net.exent.perfectpitch.music.ScoringEngine
 import net.exent.perfectpitch.music.ScoreTier
 import net.exent.perfectpitch.ui.celebration.CelebrationLevel
 import net.exent.perfectpitch.ui.celebration.ScoreCelebrationOverlay
+import net.exent.perfectpitch.ui.utils.formatScore
 import net.exent.perfectpitch.ui.utils.scoreColor
 
 @Composable
@@ -81,7 +82,7 @@ fun ScoreResultModal(
                         EnthusiasmDisplay(
                             modifier = pulseModifier,
                             level = enthusiasm,
-                            scoreText = "%.0f".format(animatedScore),
+                            scoreText = formatScore(animatedScore),
                             scoreColor = scoreColor(score)
                         )
 

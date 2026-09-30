@@ -41,6 +41,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.perfectpitch.R
 import net.exent.perfectpitch.data.MelodyRepository
+import net.exent.perfectpitch.ui.utils.formatScore
 import net.exent.perfectpitch.ui.utils.scoreColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -374,7 +375,7 @@ private fun CombinedScoreBadge(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "${score.toInt()}",
+            text = formatScore(score),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = color

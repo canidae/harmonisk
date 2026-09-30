@@ -1,7 +1,3 @@
-# Mismatching score?
-Is the score displayed in the modal after a playthrough identical to the score shown in the list of songs in "Play by Melody"?
-I suspect a rounding error, as I'm certain I saw a score of 88 in the modal after a playthrough, then a score of 87 in the list of songs.
-
 # Wrong list of songs when exiting a melody in "Play by Melody"
 When user exits a song it will list the directories rather than the directory the user was in before selecting a song to play. Exiting a song should take the user back to the directory where they selected which song to play.
 
