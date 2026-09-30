@@ -127,8 +127,6 @@
     <string name="melody_play_mic_input">মাইক ইনপুট</string>
     <string name="melody_play_midi_output_on">MIDI আউটপুট সক্রিয়</string>
     <string name="melody_play_midi_output_off">MIDI আউটপুট বন্ধ</string>
-    <string name="melody_play_status">Lv.%1$d  %2$d  %3$d/%4$d</string>
-    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
     <string name="melody_play_start">শুরু</string>
     <string name="melody_play_resume">চালিয়ে যান</string>
     <string name="melody_play_scroll_start">শুরুতে স্ক্রোল করুন</string>

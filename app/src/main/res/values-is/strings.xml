@@ -127,8 +127,6 @@
     <string name="melody_play_mic_input">Mic inntak</string>
     <string name="melody_play_midi_output_on">MIDI úttak virkt</string>
     <string name="melody_play_midi_output_off">MIDI úttak óvirkt</string>
-    <string name="melody_play_status">Stig%1$d  %2$d  %3$d/%4$d</string>
-    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
     <string name="melody_play_start">Byrja</string>
     <string name="melody_play_resume">Halda áfram</string>
     <string name="melody_play_scroll_start">Skruna til upphafs</string>

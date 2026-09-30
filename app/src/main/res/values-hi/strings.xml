@@ -127,8 +127,6 @@
     <string name="melody_play_mic_input">माइक इनपुट</string>
     <string name="melody_play_midi_output_on">MIDI आउटपुट सक्रिय</string>
     <string name="melody_play_midi_output_off">MIDI आउटपुट बंद</string>
-    <string name="melody_play_status">Lv.%1$d  %2$d  %3$d/%4$d</string>
-    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
     <string name="melody_play_start">शुरू करें</string>
     <string name="melody_play_resume">जारी रखें</string>
     <string name="melody_play_scroll_start">शुरुआत पर स्क्रॉल करें</string>

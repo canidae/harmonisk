@@ -127,8 +127,6 @@
     <string name="melody_play_mic_input">Mik-Eingang</string>
     <string name="melody_play_midi_output_on">MIDI-Ausgang aktiv</string>
     <string name="melody_play_midi_output_off">MIDI-Ausgang aus</string>
-    <string name="melody_play_status">St.%1$d  %2$d  %3$d/%4$d</string>
-    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
     <string name="melody_play_start">Start</string>
     <string name="melody_play_resume">Fortsetzen</string>
     <string name="melody_play_scroll_start">Zum Anfang scrollen</string>

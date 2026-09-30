@@ -127,8 +127,6 @@
     <string name="melody_play_mic_input">Мік-вхід</string>
     <string name="melody_play_midi_output_on">MIDI-вихід активний</string>
     <string name="melody_play_midi_output_off">MIDI-вихід вимкнено</string>
-    <string name="melody_play_status">Рів.%1$d  %2$d  %3$d/%4$d</string>
-    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
     <string name="melody_play_start">Старт</string>
     <string name="melody_play_resume">Продовжити</string>
     <string name="melody_play_scroll_start">Прокрутити до початку</string>

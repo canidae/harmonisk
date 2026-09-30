@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -49,6 +50,7 @@ import net.exent.perfectpitch.ui.OVERLAY_BG
 import net.exent.perfectpitch.ui.OVERLAY_BUTTON_SIZE
 import net.exent.perfectpitch.ui.OVERLAY_ICON_TINT
 import net.exent.perfectpitch.ui.PANEL_BG
+import net.exent.perfectpitch.ui.utils.formatScore
 import net.exent.perfectpitch.ui.PANEL_BTN_SIZE
 import net.exent.perfectpitch.ui.theme.*
 import kotlin.math.roundToInt
@@ -140,31 +142,20 @@ fun MelodyPlayScreen(
                         }
                     }
 
-                    // BPM / time sig + live progress
-                    val track = gameState.melodyTrack
-                    if (track != null) {
-                        val currentTick = track.secondsToTick(gameState.currentTimeSeconds.coerceAtLeast(0.0))
-                        val currentBpm = track.bpmAt(currentTick).roundToInt()
-                        val currentTimeSig = track.timeSignatureAt(currentTick)
+                    // Song title, level and latest score
+                    gameState.melodyName?.let { name ->
                         Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = stringResource(R.string.melody_play_status, gameState.currentLevel, currentBpm, currentTimeSig.numerator, currentTimeSig.denominator),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.85f)
-                        )
-                        val showProgress = gameState.phase == PlayPhase.PLAYING ||
-                                gameState.phase == PlayPhase.PAUSED ||
-                                gameState.phase == PlayPhase.WAITING_FOR_NOTE
-                        if (showProgress) {
-                            val progress = if (track.durationSeconds > 0)
-                                (gameState.currentTimeSeconds / track.durationSeconds * 100).toInt().coerceAtMost(100)
-                            else 0
-                            val notesHit = gameState.noteResults.count {
-                                it.value != NoteResultState.MISS && it.value != NoteResultState.ACTIVE
-                            }
-                            Spacer(Modifier.width(8.dp))
+                        val latestScore = scoreHistory.lastOrNull()?.let { formatScore(it.overallScore) }
+                        Column {
                             Text(
-                                text = stringResource(R.string.melody_play_progress, progress, notesHit, track.notes.size),
+                                text = name,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(alpha = 0.85f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = levelAndScoreText(gameState.currentLevel, latestScore),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(alpha = 0.7f)
                             )

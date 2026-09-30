@@ -95,6 +95,9 @@ class MelodyViewModel @Inject constructor(
     private val _allMelodyDifficulties = MutableStateFlow<Map<String, Float>>(emptyMap())
     val allMelodyDifficulties: StateFlow<Map<String, Float>> = _allMelodyDifficulties.asStateFlow()
 
+    private val _allMelodyLevels = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val allMelodyLevels: StateFlow<Map<String, Int>> = _allMelodyLevels.asStateFlow()
+
     private val _canAdvanceLevel = MutableStateFlow(false)
     val canAdvanceLevel: StateFlow<Boolean> = _canAdvanceLevel.asStateFlow()
 
@@ -200,6 +203,7 @@ class MelodyViewModel @Inject constructor(
         }
         loadAllMelodyCombinedScores()
         loadAllMelodyDifficulties()
+        loadAllMelodyLevels()
     }
 
     val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
@@ -270,6 +274,28 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun loadAllMelodyLevels() {
+        viewModelScope.launch {
+            combine(availableMelodies, currentInstrumentFlow) { melodies, instrument ->
+                melodies to instrument
+            }.flatMapLatest { (melodies, instrument) ->
+                if (melodies.isEmpty()) {
+                    flowOf(emptyMap())
+                } else {
+                    val flows = melodies.map { info ->
+                        melodySettingsRepository.getSettings(info.id, instrument).map { settings ->
+                            info.id to settings.level.coerceIn(1, 5)
+                        }
+                    }
+                    combine(flows) { pairs -> pairs.toMap() }
+                }
+            }.collect { result ->
+                _allMelodyLevels.value = result
+            }
+        }
+    }
+
     private fun levelToSettings(level: Int): Pair<Boolean, Boolean> {
         return when (level) {
             1 -> Pair(true, false)
@@ -313,11 +339,12 @@ class MelodyViewModel @Inject constructor(
             val melodyTracks = assignChannels(tracks.filter { it.notes.isNotEmpty() })
             originalMelodyTracks = melodyTracks
             currentMelodyId = info.id
+            val melodyName = info.name
             currentChordIndices = emptyList()
             val primary = melodyTracks.first()
             val metronomeTrack = generateMetronomeTrack(primary)
             val (viewMin, viewMax) = viewRangeFor(primary)
-            _gameState.update { it.withLoadedMelody(primary, melodyTracks, metronomeTrack) }
+            _gameState.update { it.withLoadedMelody(primary, melodyTracks, metronomeTrack, melodyName) }
             _viewState.update {
                 it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax, songTimeOffsetSeconds = 0.0)
             }
@@ -335,11 +362,12 @@ class MelodyViewModel @Inject constructor(
             val melodyTracks = assignChannels(tracks.filter { it.notes.isNotEmpty() })
             originalMelodyTracks = melodyTracks
             currentMelodyId = melodyRepository.uriMelodyId(uri)
+            val melodyName = name
             currentChordIndices = emptyList()
             val primary = melodyTracks.first()
             val metronomeTrack = generateMetronomeTrack(primary)
             val (viewMin, viewMax) = viewRangeFor(primary)
-            _gameState.update { it.withLoadedMelody(primary, melodyTracks, metronomeTrack) }
+            _gameState.update { it.withLoadedMelody(primary, melodyTracks, metronomeTrack, melodyName) }
             _viewState.update {
                 it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax, songTimeOffsetSeconds = 0.0)
             }
@@ -373,11 +401,13 @@ class MelodyViewModel @Inject constructor(
     private fun MelodyGameState.withLoadedMelody(
         primary: MelodyTrack,
         melodyTracks: List<MelodyTrack>,
-        metronomeTrack: MelodyTrack?
+        metronomeTrack: MelodyTrack?,
+        name: String
     ): MelodyGameState = copy(
         melodyTrack = primary,
         melodyTracks = melodyTracks,
         metronomeTrack = metronomeTrack,
+        melodyName = name,
         activeVoiceIndex = 0,
         accompanimentMode = accompanimentMode,
         phase = PlayPhase.NOT_STARTED,

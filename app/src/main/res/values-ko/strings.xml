@@ -127,8 +127,6 @@
     <string name="melody_play_mic_input">마이크 입력</string>
     <string name="melody_play_midi_output_on">MIDI 출력 활성화</string>
     <string name="melody_play_midi_output_off">MIDI 출력 비활성화</string>
-    <string name="melody_play_status">Lv.%1$d  %2$d  %3$d/%4$d</string>
-    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
     <string name="melody_play_start">시작</string>
     <string name="melody_play_resume">재개</string>
     <string name="melody_play_scroll_start">처음으로 스크롤</string>

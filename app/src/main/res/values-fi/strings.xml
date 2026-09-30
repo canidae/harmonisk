@@ -127,8 +127,6 @@
     <string name="melody_play_mic_input">Mik-tulo</string>
     <string name="melody_play_midi_output_on">MIDI-lähtö aktiivinen</string>
     <string name="melody_play_midi_output_off">MIDI-lähtö pois</string>
-    <string name="melody_play_status">Tas%1$d  %2$d  %3$d/%4$d</string>
-    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
     <string name="melody_play_start">Aloita</string>
     <string name="melody_play_resume">Jatka</string>
     <string name="melody_play_scroll_start">Vieritä alkuun</string>

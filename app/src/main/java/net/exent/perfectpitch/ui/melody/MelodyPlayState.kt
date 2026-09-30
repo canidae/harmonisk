@@ -39,6 +39,7 @@ data class MelodyGameState(
     val metronomeEnabled: Boolean = false,
     val metronomeTrack: MelodyTrack? = null,
     val currentLevel: Int = 1,
+    val melodyName: String? = null,
     val hideNoteBars: Boolean = false
 ) {
     /**
@@ -97,6 +98,10 @@ enum class NoteResultState {
  */
 fun nowLineLeadSeconds(waitMode: Boolean, phase: PlayPhase, inputDelayMs: Int): Double =
     if (waitMode || phase == PlayPhase.READY) 0.0 else inputDelayMs / 1000.0
+
+/** Level and score of the last take, as shown next to the song title. */
+fun levelAndScoreText(level: Int, latestScore: String?): String =
+    if (latestScore == null) "Lv.$level" else "Lv.$level  Score: $latestScore"
 
 /**
  * The voices the app may sound while the player is being scored.

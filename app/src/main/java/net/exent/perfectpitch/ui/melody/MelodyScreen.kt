@@ -21,7 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -56,6 +56,7 @@ fun MelodyScreen(
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsStateWithLifecycle()
     val combinedScores by viewModel.allMelodyCombinedScores.collectAsStateWithLifecycle()
     val difficulties by viewModel.allMelodyDifficulties.collectAsStateWithLifecycle()
+    val levels by viewModel.allMelodyLevels.collectAsStateWithLifecycle()
     var previewingMelody by remember { mutableStateOf<String?>(null) }
     var expandedMelodyId by remember { mutableStateOf<String?>(null) }
     // The folder the player was in has to outlive the trip into a song, or coming back lists the
@@ -118,6 +119,7 @@ fun MelodyScreen(
             info = info,
             combinedScore = combinedScores[info.id],
             difficulty = difficulties[info.id],
+            level = levels[info.id],
             isPreviewing = previewingMelody == info.name && isPreviewPlaying,
             isExpanded = expandedMelodyId == info.id,
             onPlay = {
@@ -280,6 +282,7 @@ private fun MelodyCard(
     info: net.exent.perfectpitch.data.MelodyRepository.MelodyInfo,
     combinedScore: Float?,
     difficulty: Float?,
+    level: Int?,
     isPreviewing: Boolean,
     isExpanded: Boolean,
     onPlay: () -> Unit,
@@ -305,8 +308,20 @@ private fun MelodyCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(info.name, style = MaterialTheme.typography.titleMedium)
-                    if (difficulty != null) {
-                        DifficultyBadge(difficulty = difficulty)
+                    if (difficulty != null || level != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (difficulty != null) {
+                                DifficultyBadge(difficulty = difficulty)
+                            }
+                            if (level != null) {
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(R.string.melody_level, level),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -317,7 +332,7 @@ private fun MelodyCard(
 
                 IconButton(onClick = onTogglePreview) {
                     Icon(
-                        imageVector = if (isPreviewing) Icons.Filled.Close else Icons.Filled.PlayArrow,
+                        imageVector = if (isPreviewing) Icons.Filled.Close else Icons.Filled.MusicNote,
                         contentDescription = if (isPreviewing) stringResource(R.string.melody_stop_preview) else stringResource(R.string.melody_preview),
                         tint = MaterialTheme.colorScheme.primary
                     )

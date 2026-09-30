@@ -127,8 +127,6 @@
     <string name="melody_play_mic_input">麦克风输入</string>
     <string name="melody_play_midi_output_on">MIDI 输出已开启</string>
     <string name="melody_play_midi_output_off">MIDI 输出已关闭</string>
-    <string name="melody_play_status">Lv.%1$d  %2$d  %3$d/%4$d</string>
-    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
     <string name="melody_play_start">开始</string>
     <string name="melody_play_resume">继续</string>
     <string name="melody_play_scroll_start">滚动到开头</string>

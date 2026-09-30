@@ -149,8 +149,6 @@
     <string name="melody_play_mic_input">Mic input</string>
     <string name="melody_play_midi_output_on">MIDI output active</string>
     <string name="melody_play_midi_output_off">MIDI output off</string>
-    <string name="melody_play_status">Lv.%1$d  %2$d  %3$d/%4$d</string>
-    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
     <string name="melody_play_start">Start</string>
     <string name="melody_play_resume">Resume</string>
     <string name="melody_play_scroll_start">Scroll to beginning</string>
@@ -158,6 +156,7 @@
     <string name="melody_play_again">Play Again</string>
     <string name="melody_play_go_back">Go Back</string>
     <string name="melody_play_level">Level: %1$d</string>
+    <string name="melody_level">Lv.%1$d</string>
     <string name="melody_play_transpose_0">Transpose: 0</string>
     <string name="melody_play_transpose_plus">Transpose: +%1$d</string>
     <string name="melody_play_transpose">Transpose: %1$d</string>
@@ -191,6 +190,10 @@
     <string name="note_thirty_second">32nd</string>
 
 </resources>
+
+
+
+
 
 
 

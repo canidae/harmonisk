@@ -127,8 +127,6 @@
     <string name="melody_play_mic_input">マイク入力</string>
     <string name="melody_play_midi_output_on">MIDI出力 ON</string>
     <string name="melody_play_midi_output_off">MIDI出力 OFF</string>
-    <string name="melody_play_status">Lv.%1$d  %2$d  %3$d/%4$d</string>
-    <string name="melody_play_progress">%1$d%%  %2$d/%3$d</string>
     <string name="melody_play_start">スタート</string>
     <string name="melody_play_resume">再開</string>
     <string name="melody_play_scroll_start">先頭にスクロール</string>
