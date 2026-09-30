@@ -33,6 +33,8 @@ data class MelodyGameState(
     val noteFirstDetectionStart: Map<Int, Float> = emptyMap(),
     // Non-zero during a mid-song countdown resume: the game-time value at which scoring starts
     val countdownResumeTarget: Double = 0.0,
+    /** Song time of a running melody preview, or null when nothing is being previewed. */
+    val previewTimeSeconds: Double? = null,
     // Metronome
     val metronomeEnabled: Boolean = false,
     val metronomeTrack: MelodyTrack? = null,

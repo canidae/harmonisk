@@ -1,7 +1,3 @@
-# Preview song should make the canvas scroll
-The user can click on the note symbol after opening a song in "Play by Melody". When they do, it should make the play canvas scroll (as if they were playing themselves).
-No scoring, and there should be a discrete note (perhaps a "Preview" label in top right corner of play canvas?) showing the user that it's a preview.
-
 # Misplaced position when opening a song in "Play by Melody"
 When you open a song in "Play by Melody" it seems like position is remembered from a previous session.
 Instead the position should be the start of the melody (including the two bar lead up).

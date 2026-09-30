@@ -27,11 +27,17 @@ class MelodyPlayer(
         notePlayer = player
     }
 
-    /** Plays melody tracks with absolute timing. Supports multi-track polyphonic playback. */
+    /**
+     * Plays melody tracks with absolute timing. Supports multi-track polyphonic playback.
+     *
+     * [leadInSeconds] shifts every event later by that much, so a track that counts the music in
+     * (the metronome, whose notes sit before the song's first beat) can start from a standstill.
+     */
     fun playWithTiming(
         melodyTracks: List<MelodyTrack>,
         scope: CoroutineScope,
-        tempo: Float = 1.0f
+        tempo: Float = 1.0f,
+        leadInSeconds: Double = 0.0
     ) {
         stop()
         _isPlaying.value = true
@@ -44,9 +50,9 @@ class MelodyPlayer(
                 for (track in melodyTracks) {
                     val channel = track.channel
                     for (note in track.notes) {
-                        val startMs = (track.noteStartSeconds(note) / tempo * 1000).toLong()
-                        val endMs = (track.noteStartSeconds(note) + track.noteDurationSeconds(note))
-                            .let { (it / tempo * 1000).toLong() }
+                        val noteStart = track.noteStartSeconds(note) + leadInSeconds
+                        val startMs = (noteStart / tempo * 1000).toLong()
+                        val endMs = ((noteStart + track.noteDurationSeconds(note)) / tempo * 1000).toLong()
                         events.add(TimedEvent(startMs, note.noteNumber, true, note.velocity.coerceIn(1, 127), channel))
                         events.add(TimedEvent(endMs, note.noteNumber, false, 0, channel))
                     }

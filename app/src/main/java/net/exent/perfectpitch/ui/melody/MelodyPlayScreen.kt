@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MusicNote
@@ -290,6 +291,8 @@ fun MelodyPlayScreen(
                     // How far the bars run ahead of the game clock, on the same rule the view model uses.
                     val adjustedNow = gameState.currentTimeSeconds +
                             nowLineLeadSeconds(gameState.waitMode, gameState.phase, inputDelay)
+                    // A preview drives the canvas with the song's own time, at the pace of the audio.
+                    val canvasNow = gameState.previewTimeSeconds ?: adjustedNow
 
                     if (track != null) {
                         val alphaTex = remember(track) { MidiToAlphaTex.generate(track) }
@@ -342,7 +345,7 @@ fun MelodyPlayScreen(
                                 noteCentsPositions = gameState.noteCentsPositions,
                                 notePlayProgress = gameState.notePlayProgress,
                                 noteFirstDetectionStart = gameState.noteFirstDetectionStart,
-                                currentTimeSeconds = adjustedNow,
+                                currentTimeSeconds = canvasNow,
                                 songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
                                 fallSpeedPxPerSec = viewState.fallSpeedPxPerSec,
                                 detectedMidiNote = if (gameState.pitchResult.isValid) gameState.pitchResult.midiNoteNumber else null,
@@ -357,7 +360,22 @@ fun MelodyPlayScreen(
                             modifier = Modifier.fillMaxSize()
                         )
 
-                        if (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED) {
+                        if (gameState.previewTimeSeconds != null) {
+                            Text(
+                                text = stringResource(R.string.melody_preview),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(8.dp)
+                                    .background(OVERLAY_BG, RoundedCornerShape(50))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        if (gameState.previewTimeSeconds == null &&
+                            (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED)
+                        ) {
                             IconButton(
                                 onClick = {
                                     if (isPreviewPlaying) viewModel.stopPreview()

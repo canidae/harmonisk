@@ -105,6 +105,7 @@ class MelodyViewModel @Inject constructor(
 
     private var playbackJob: Job? = null
     private var pitchJob: Job? = null
+    private var previewClockJob: Job? = null
     private var playbackStartTime = 0L
     private var pauseOffset = 0.0
 
@@ -333,6 +334,7 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun loadMelody(info: MelodyRepository.MelodyInfo): Boolean {
+        stopPreview()
         val tracks = melodyRepository.loadMultiTrack(info)
         if (tracks.isNotEmpty()) {
             val melodyTracks = assignChannels(tracks.filter { it.notes.isNotEmpty() })
@@ -544,9 +546,21 @@ class MelodyViewModel @Inject constructor(
 
     /** Preview the loaded melody (audio only, standalone playback). */
     fun previewMelody() {
-        val tracks = _gameState.value.melodyTracks
+        val state = _gameState.value
+        val tracks = state.melodyTracks
         if (tracks.isEmpty() || !soundFontSynthesizer.isReady) return
-        melodyPlayer.playWithTiming(tracks, viewModelScope)
+        // The song is counted in with the metronome's two bars, as it is when the player plays it.
+        val leadIn = twoBarLeadInSeconds()
+        melodyPlayer.playWithTiming(
+            tracks + leadInMetronome(state.metronomeTrack),
+            viewModelScope,
+            leadInSeconds = leadIn
+        )
+        // The canvas follows a preview only while the game is not keeping the score, which is
+        // where the note button is offered: a scored take has its own clock and its own notes.
+        if (state.phase == PlayPhase.READY || state.phase == PlayPhase.PAUSED) {
+            startPreviewClock(state.melodyTrack, leadIn)
+        }
     }
 
     /** Preview a specific melody info (plays all voice tracks). */
@@ -559,10 +573,56 @@ class MelodyViewModel @Inject constructor(
     /** Stop any ongoing melody preview. */
     fun stopPreview() {
         melodyPlayer.stop()
+        endPreviewClock()
     }
 
     /** Whether a melody preview is currently playing. */
     val isPreviewPlaying: StateFlow<Boolean> = melodyPlayer.isPlaying
+
+    /** The metronome's count-in only: its clicks before the song's first beat. */
+    private fun leadInMetronome(metronome: MelodyTrack?): List<MelodyTrack> {
+        val clicks = metronome?.notes?.filter { it.startTick < 0 } ?: return emptyList()
+        if (clicks.isEmpty()) return emptyList()
+        return listOf(
+            MelodyTrack(
+                name = metronome.name,
+                notes = clicks,
+                tempoChanges = metronome.tempoChanges,
+                timeSignatures = metronome.timeSignatures,
+                ticksPerQuarterNote = metronome.ticksPerQuarterNote,
+                channel = metronome.channel,
+                isMetronome = true
+            )
+        )
+    }
+
+    /**
+     * Run the play canvas through the melody with the preview, at the song's own time and with no
+     * scoring. The clock stops with the audio, at the end of the song or when the preview is stopped.
+     */
+    private fun startPreviewClock(track: MelodyTrack?, leadInSeconds: Double) {
+        endPreviewClock()
+        if (track == null) return
+        _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
+        _gameState.update { it.copy(previewTimeSeconds = -leadInSeconds) }
+        previewClockJob = viewModelScope.launch {
+            val startTime = SystemClock.elapsedRealtime()
+            while (isActive && melodyPlayer.isPlaying.value) {
+                val previewTime = (SystemClock.elapsedRealtime() - startTime) / 1000.0 - leadInSeconds
+                _gameState.update { it.copy(previewTimeSeconds = previewTime) }
+                delay(16)
+            }
+            if (isActive) _gameState.update { it.copy(previewTimeSeconds = null) }
+        }
+    }
+
+    private fun endPreviewClock() {
+        previewClockJob?.cancel()
+        previewClockJob = null
+        if (_gameState.value.previewTimeSeconds != null) {
+            _gameState.update { it.copy(previewTimeSeconds = null) }
+        }
+    }
 
     /** Toggle in-game melody audio playback. */
     fun setActiveVoice(index: Int) {
@@ -701,7 +761,7 @@ class MelodyViewModel @Inject constructor(
         waitedNotes = 0
 
         // Stop any preview playback and reset game sync
-        melodyPlayer.stop()
+        stopPreview()
         melodyPlayer.resetGameSync()
 
         // Start pitch detection early so the audio pipeline is warm by the time
@@ -777,7 +837,7 @@ class MelodyViewModel @Inject constructor(
     fun stop() {
         playbackJob?.cancel()
         pitchJob?.cancel()
-        melodyPlayer.stop()
+        stopPreview()
         pauseOffset = 0.0
         noteTracking.isWaitingForNote = false
         noteTracking.wasWaitingForNote = false
