@@ -33,11 +33,4 @@ android-sdk/platform-tools/adb shell am start -n net.exent.perfectpitch/.MainAct
 ./gradlew :app:test
 ```
 
-### Run Android instrumentation tests (requires connected device)
-```bash
-./gradlew :app:connectedDebugAndroidTest
-```
-
-### View pitch accuracy test results
-```bash
-android-sdk/platform-tools/adb logcat -d -s PitchAccTest:I
+Test audio fixtures live in `app/src/test/resources/audio`.
