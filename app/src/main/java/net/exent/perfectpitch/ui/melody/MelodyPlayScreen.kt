@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -461,6 +462,7 @@ private fun MelodySettingsMenu(
     showLevelControl: Boolean,
     showPlayVoices: Boolean
 ) {
+    val minMenuWidth = LocalConfiguration.current.screenWidthDp.dp * 2f / 3f
     Box {
         IconButton(
             onClick = onOpen,
@@ -471,7 +473,8 @@ private fun MelodySettingsMenu(
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = onDismiss,
-            offset = DpOffset((-180).dp, 0.dp)
+            offset = DpOffset((-180).dp, 0.dp),
+            modifier = Modifier.widthIn(min = minMenuWidth)
         ) {
             // Levels are earned by scoring; picking one freely is a developer feature.
             if (showLevelControl) {
