@@ -58,7 +58,6 @@ private const val INDICATOR_HEIGHT_PX = 8f
 private const val CORNER_RADIUS_DP = 4f
 
 // Violin fingering board
-private const val VIOLIN_LANE_COUNT = 4
 private val VIOLIN_STRING_LABELS = listOf("G", "D", "A", "E")
 // Reference portrait canvas width (dp) the horizontal time scale is normalized to
 private const val VIOLIN_REFERENCE_WIDTH_DP = 411f
@@ -76,8 +75,41 @@ private val FINGER_COLORS = mapOf(
 )
 private val OUT_OF_RANGE_GREY = Color(0xFF9E9E9E)
 
-// Horizontal shift per semitone of deviation from a finger's default placement
-private const val VIOLIN_FINGER_OFFSET_FRACTION = 0.07f
+// Semitones between two open violin strings: each string is a fifth above the one before it.
+private const val VIOLIN_SEMITONES_PER_STRING = 7
+// Slots kept below the G string and above the E string, so a pitch past either outer string still
+// has a place to sit: the board stays symmetrical and a note played high up the E string shows.
+private const val VIOLIN_SLOTS_BEYOND_STRINGS = 6
+// Slot columns across the board: the three string gaps and a margin at either end.
+private const val VIOLIN_SLOT_COUNT = 3 * VIOLIN_SEMITONES_PER_STRING + 2 * VIOLIN_SLOTS_BEYOND_STRINGS
+// A low or high finger placement sits this far to the side of its string line, in slots.
+private const val VIOLIN_FINGER_OFFSET_SLOTS = 0.5f
+
+/** Width of one semitone slot. */
+internal fun violinSlotWidth(canvasWidth: Float): Float = canvasWidth / VIOLIN_SLOT_COUNT
+
+/** Horizontal position of a string's line; the G string sits a margin of slots in from the left. */
+internal fun violinStringX(stringIndex: Int, canvasWidth: Float): Float =
+    violinSlotWidth(canvasWidth) *
+        (VIOLIN_SLOTS_BEYOND_STRINGS + stringIndex * VIOLIN_SEMITONES_PER_STRING)
+
+/**
+ * Where the pitch marker sits for a note played [semitonesOff] semitones from the expected one.
+ *
+ * The marker belongs on the string the player actually played, so it slides a slot per semitone:
+ * a played open G under an expected D lands on the G string, and the six semitones between two open
+ * strings are the six slots between their lines. Further off than the margins allow, it stops at
+ * the edge of the board.
+ */
+internal fun violinPitchMarkerX(
+    expectedCenterX: Float,
+    canvasWidth: Float,
+    semitonesOff: Int
+): Float {
+    val slotWidth = violinSlotWidth(canvasWidth)
+    return (expectedCenterX + semitonesOff * slotWidth)
+        .coerceIn(slotWidth / 2f, canvasWidth - slotWidth / 2f)
+}
 
 /** Time scale for the violin board, normalized to the canvas span so the
  *  visible time window stays consistent across portrait and landscape. */
@@ -769,33 +801,29 @@ private fun DrawScope.drawViolinBoard(
 ) {
     val width = size.width
     val height = size.height
-    val bandWidth = width / VIOLIN_LANE_COUNT
+    val stringXs = VIOLIN_STRING_LABELS.indices.map { violinStringX(it, width) }
 
-    // Alternating subtle band backgrounds (band 0 = G on the left, up to E on the right)
-    for (i in 0 until VIOLIN_LANE_COUNT) {
+    // Alternating subtle backgrounds, one per string's stretch of the board (G on the left)
+    val boundaries = listOf(0f) +
+        (0 until stringXs.lastIndex).map { (stringXs[it] + stringXs[it + 1]) / 2f } +
+        listOf(width)
+    for (i in 0 until boundaries.lastIndex) {
         if (i % 2 == 0) {
-            val left = i * bandWidth
-            drawRect(color = Color(0x0DFFFFFF), topLeft = Offset(left, 0f), size = Size(bandWidth, height))
+            drawRect(
+                color = Color(0x0DFFFFFF),
+                topLeft = Offset(boundaries[i], 0f),
+                size = Size(boundaries[i + 1] - boundaries[i], height)
+            )
         }
     }
 
-    // Vertical string lines (one per band) and band boundaries
-    for (i in 0 until VIOLIN_LANE_COUNT) {
-        val centerX = (i + 0.5f) * bandWidth
+    // Vertical string lines, with the slots kept either side of the outer strings left empty
+    for (x in stringXs) {
         drawLine(
             color = Color(0x2EFFFFFF),
-            start = Offset(centerX, 0f),
-            end = Offset(centerX, height),
-            strokeWidth = 1.5f * density
-        )
-    }
-    for (i in 1 until VIOLIN_LANE_COUNT) {
-        val x = i * bandWidth
-        drawLine(
-            color = Color(0x1AFFFFFF),
             start = Offset(x, 0f),
             end = Offset(x, height),
-            strokeWidth = 1f * density
+            strokeWidth = 1.5f * density
         )
     }
 
@@ -805,8 +833,8 @@ private fun DrawScope.drawViolinBoard(
         fontSize = (VIOLIN_LABEL_FONT_DP * density / 2.75f).sp,
         fontWeight = FontWeight.Bold
     )
-    for (i in 0 until VIOLIN_LANE_COUNT) {
-        val centerX = (i + 0.5f) * bandWidth
+    for (i in VIOLIN_STRING_LABELS.indices) {
+        val centerX = stringXs[i]
         val textLayout = textMeasurer.measure(
             text = buildAnnotatedString { append(VIOLIN_STRING_LABELS[i]) },
             style = labelStyle
@@ -929,7 +957,7 @@ private fun DrawScope.drawViolinMelodyNotes(
     val width = size.width
     val pixelsPerSecond = violinPixelsPerSecond(mode.fallSpeedPxPerSec, nowLineY)
     val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
-    val bandWidth = width / VIOLIN_LANE_COUNT
+    val slotWidth = violinSlotWidth(width)
     val positions = mode.violinPositions
     val minGapPx = 4f * density
 
@@ -956,13 +984,11 @@ private fun DrawScope.drawViolinMelodyNotes(
 
         val pos = positions.getOrNull(index)
         val string = pos?.string ?: ViolinAlgorithm.nearestString(note.noteNumber)
-        val bandIndex = string.ordinal
-        val bandLeft = bandIndex * bandWidth
 
         var barLen = rawBottomY - rawTopY
         if (barLen < 2f) return@forEachIndexed
 
-        val barThickness = (bandWidth * 0.13f).coerceAtLeast(14f * density)
+        val barThickness = (slotWidth * 0.9f).coerceAtLeast(4f * density)
         // Ensure a minimum visible length that adapts to the canvas
         val minBarLen = maxOf(barThickness, nowLineY * 0.035f)
         var barTop = rawTopY
@@ -972,11 +998,11 @@ private fun DrawScope.drawViolinMelodyNotes(
             barLen = minBarLen
         }
 
-        // String line; flat (low finger) placements sit to the left of the string
-        val stringLineX = bandLeft + bandWidth / 2f
+        // The string line; low (flat) finger placements sit to the left of the string
         val deviation = if (pos == null) 0f else
             (ViolinAlgorithm.fingerOffsetDeviation(note.noteNumber, string, pos.finger) ?: 0f).toFloat()
-        val centerX = stringLineX + deviation * bandWidth * VIOLIN_FINGER_OFFSET_FRACTION
+        val centerX = violinStringX(string.ordinal, width) +
+                deviation * slotWidth * VIOLIN_FINGER_OFFSET_SLOTS
 
         val barLeft = centerX - barThickness / 2f
 
@@ -1071,22 +1097,25 @@ private fun DrawScope.drawViolinPitchIndicator(
 
     val pos = mode.violinPositions.getOrNull(expectedIndex)
     val string = pos?.string ?: ViolinAlgorithm.nearestString(expectedNote.noteNumber)
-    val bandIndex = string.ordinal
-    val bandWidth = size.width / VIOLIN_LANE_COUNT
-    val bandLeft = bandIndex * bandWidth
-
-    val stringLineX = bandLeft + bandWidth / 2f
+    val slotWidth = violinSlotWidth(size.width)
     val deviation = if (pos == null) 0f else
         (ViolinAlgorithm.fingerOffsetDeviation(expectedNote.noteNumber, string, pos.finger) ?: 0f).toFloat()
-    val centerX = stringLineX + deviation * bandWidth * VIOLIN_FINGER_OFFSET_FRACTION
+    val expectedCenterX = violinStringX(string.ordinal, size.width) +
+            deviation * slotWidth * VIOLIN_FINGER_OFFSET_SLOTS
+
+    val markerX = violinPitchMarkerX(
+        expectedCenterX = expectedCenterX,
+        canvasWidth = size.width,
+        semitonesOff = detectedMidi - expectedNote.noteNumber
+    )
 
     val indicatorColor = getIndicatorColor(detectedMidi, mode.detectedCentsOff, track, expectedIndex)
 
-    val indicatorW = (bandWidth * 0.1f).coerceAtLeast(10f * density)
+    val indicatorW = (slotWidth * 0.8f).coerceAtLeast(6f * density)
     val indicatorH = 6f * density
     drawRoundRect(
         color = indicatorColor,
-        topLeft = Offset(centerX - indicatorW / 2f, nowLineY - indicatorH),
+        topLeft = Offset(markerX - indicatorW / 2f, nowLineY - indicatorH),
         size = Size(indicatorW, indicatorH),
         cornerRadius = CornerRadius(2f * density, 2f * density)
     )
