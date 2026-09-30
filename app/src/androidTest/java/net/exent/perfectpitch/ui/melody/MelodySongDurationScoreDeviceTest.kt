@@ -185,20 +185,4 @@ class MelodySongDurationScoreDeviceTest {
         return state
     }
 
-    private fun MelodyViewModel.configure(level: Int, accompaniment: AccompanimentMode) {
-        Thread.sleep(3000)
-        val deadline = SystemClock.elapsedRealtime() + 5000
-        do {
-            setAccompanimentMode(accompaniment)
-            setLevel(level)
-            Thread.sleep(100)
-            val state = gameState.value
-            if (state.currentLevel == level && state.accompanimentMode == accompaniment) return
-        } while (SystemClock.elapsedRealtime() < deadline)
-        val state = gameState.value
-        throw AssertionError(
-            "the game must run at level $level with $accompaniment, not level ${state.currentLevel} " +
-                    "/ ${state.accompanimentMode}"
-        )
-    }
 }

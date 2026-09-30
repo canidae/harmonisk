@@ -1,6 +1,3 @@
-# Lead up metronome missing first beat
-When you start a song in "Play by Melody", it won't play the first beat of the lead up bar, just the 3 last beats. It should play the first beat of the first lead up bar as well.
-
 # Mismatching score?
 Is the score displayed in the modal after a playthrough identical to the score shown in the list of songs in "Play by Melody"?
 I suspect a rounding error, as I'm certain I saw a score of 88 in the modal after a playthrough, then a score of 87 in the list of songs.

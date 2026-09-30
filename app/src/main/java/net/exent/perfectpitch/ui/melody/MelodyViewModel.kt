@@ -749,11 +749,12 @@ class MelodyViewModel @Inject constructor(
         if (_gameState.value.phase == PlayPhase.PLAYING || _gameState.value.phase == PlayPhase.WAITING_FOR_NOTE) return
 
         val leadIn = twoBarLeadInSeconds()
+        val startTime = playbackStartTime(leadIn)
 
         _gameState.update {
             it.copy(
                 phase = PlayPhase.PLAYING,
-                currentTimeSeconds = -leadIn,
+                currentTimeSeconds = startTime,
                 noteResults = emptyMap(),
                 noteScores = emptyList(),
                 currentNoteIndex = -1,
@@ -783,9 +784,18 @@ class MelodyViewModel @Inject constructor(
         startPitchDetection()
 
         // Start the playback timer immediately — bars begin falling during lead-in.
-        pauseOffset = -leadIn
+        pauseOffset = startTime
         startPlaybackTimer()
     }
+
+    /**
+     * Where the game clock starts for a count-in of [leadInSeconds]. The app's own notes are
+     * scheduled early by the measured round-trip delay so that they are heard on the beat, so the
+     * clock starts that much earlier as well: otherwise the count-in's first beat, which sits on the
+     * very first tick, is scheduled before the clock has started and is never heard.
+     */
+    private fun playbackStartTime(leadInSeconds: Double): Double =
+        -leadInSeconds - totalDelayMs / 1000.0
 
     fun pause() {
         pauseOffset = _gameState.value.currentTimeSeconds
@@ -826,6 +836,7 @@ class MelodyViewModel @Inject constructor(
 
         // Rewind 2 bars before the target
         val track = _gameState.value.melodyTrack
+        val countInStart = playbackStartTime(twoBarLeadInSeconds())
         val rewindTo = if (track != null) {
             val tick = track.secondsToTick(targetTime)
             val timeSig = track.timeSignatureAt(tick)
@@ -833,9 +844,9 @@ class MelodyViewModel @Inject constructor(
             if (ticksPerBar > 0) {
                 val currentBarTick = (tick / ticksPerBar) * ticksPerBar
                 val startBarTick = currentBarTick - 2 * ticksPerBar
-                if (startBarTick < 0) -twoBarLeadInSeconds() else track.tickToSeconds(startBarTick)
-            } else -twoBarLeadInSeconds()
-        } else -twoBarLeadInSeconds()
+                if (startBarTick < 0) countInStart else track.tickToSeconds(startBarTick)
+            } else countInStart
+        } else countInStart
 
         pauseOffset = rewindTo
         _gameState.update {

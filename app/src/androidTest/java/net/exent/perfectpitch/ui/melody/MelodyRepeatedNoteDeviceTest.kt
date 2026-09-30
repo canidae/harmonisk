@@ -198,22 +198,6 @@ class MelodyRepeatedNoteDeviceTest {
      * Puts the game into a known level and accompaniment, after the melody's saved settings have
      * landed — they are read asynchronously and would otherwise overwrite what the test asks for.
      */
-    private fun MelodyViewModel.configure(level: Int, accompaniment: AccompanimentMode) {
-        Thread.sleep(3000)
-        val deadline = SystemClock.elapsedRealtime() + 5000
-        do {
-            setAccompanimentMode(accompaniment)
-            setLevel(level)
-            Thread.sleep(100)
-            val state = gameState.value
-            if (state.currentLevel == level && state.accompanimentMode == accompaniment) return
-        } while (SystemClock.elapsedRealtime() < deadline)
-        val state = gameState.value
-        throw AssertionError(
-            "the game must run at level $level with $accompaniment, not level ${state.currentLevel} " +
-                    "/ ${state.accompanimentMode}"
-        )
-    }
 
     /**
      * Runs the game until the repeat is behind it — the song stops again at the note where the pitch
