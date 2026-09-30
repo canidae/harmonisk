@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,7 +58,9 @@ fun MelodyScreen(
     val difficulties by viewModel.allMelodyDifficulties.collectAsStateWithLifecycle()
     var previewingMelody by remember { mutableStateOf<String?>(null) }
     var expandedMelodyId by remember { mutableStateOf<String?>(null) }
-    var currentFolder by remember { mutableStateOf<String?>(null) }
+    // The folder the player was in has to outlive the trip into a song, or coming back lists the
+    // folders again instead of the songs that were being chosen from.
+    var currentFolder by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.initSynthesizer()
