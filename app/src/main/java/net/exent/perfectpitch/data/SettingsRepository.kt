@@ -15,7 +15,6 @@ class SettingsRepository(
     private val context: Context
 ) {
     companion object {
-        private val CONCERT_PITCH = floatPreferencesKey("concert_pitch")
         private val SILENCE_THRESHOLD_DB = floatPreferencesKey("silence_threshold_db")
         private val FREEPLAY_FALL_SPEED = floatPreferencesKey("freeplay_fall_speed")
         private val FREEPLAY_BEATS_PER_BAR = intPreferencesKey("freeplay_beats_per_bar")
@@ -39,7 +38,6 @@ class SettingsRepository(
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
         AppSettings(
-            concertPitch = prefs[CONCERT_PITCH] ?: 440f,
             silenceThresholdDb = prefs[SILENCE_THRESHOLD_DB] ?: -40f,
             freeplayFallSpeed = prefs[FREEPLAY_FALL_SPEED] ?: 75f,
             freeplayBeatsPerBar = prefs[FREEPLAY_BEATS_PER_BAR] ?: 4,
@@ -51,10 +49,6 @@ class SettingsRepository(
             languageCode = prefs[LANGUAGE_CODE] ?: "system",
             instrumentName = prefs[INSTRUMENT_NAME] ?: Instrument.VIOLIN.name
         )
-    }
-
-    suspend fun updateConcertPitch(pitch: Float) {
-        context.dataStore.edit { it[CONCERT_PITCH] = pitch }
     }
 
     suspend fun updateSilenceThreshold(db: Float) {
@@ -105,7 +99,6 @@ class SettingsRepository(
 }
 
 data class AppSettings(
-    val concertPitch: Float = 440f,
     val silenceThresholdDb: Float = -40f,
     val freeplayFallSpeed: Float = 75f,
     val freeplayBeatsPerBar: Int = 4,

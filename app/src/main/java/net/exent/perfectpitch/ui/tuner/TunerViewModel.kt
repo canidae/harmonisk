@@ -60,15 +60,10 @@ class TunerViewModel @Inject constructor(
     // Hysteresis: the MIDI note number currently committed to for display (-1 = none)
     private var displayedMidi: Int = -1
 
-    private var referenceA4 = NoteUtils.DEFAULT_A4_FREQ
-
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
-                referenceA4 = settings.concertPitch
-                pitchProcessor.setReferenceA4(settings.concertPitch)
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
-                _state.update { it.copy(referenceFrequency = settings.concertPitch) }
             }
         }
     }
@@ -94,10 +89,10 @@ class TunerViewModel @Inject constructor(
             else ((now - lastFrameNanos) / 1e9).coerceIn(0.0, 0.25)
             lastFrameNanos = now
 
-            val rawSemitones = 12.0 * log2(result.frequency / referenceA4.toDouble())
+            val rawSemitones = 12.0 * log2(result.frequency / NoteUtils.DEFAULT_A4_FREQ.toDouble())
             val smoothedSemitones = stabilizer.accept(rawSemitones, result.confidence, dt)
-            val smoothedFreq = (referenceA4 * 2.0.pow(smoothedSemitones / 12.0)).toFloat()
-            val rawNoteInfo = noteUtils.frequencyToNote(smoothedFreq, referenceA4)
+            val smoothedFreq = (NoteUtils.DEFAULT_A4_FREQ * 2.0.pow(smoothedSemitones / 12.0)).toFloat()
+            val rawNoteInfo = noteUtils.frequencyToNote(smoothedFreq)
 
             // Hysteresis: only switch displayed note name when the smoothed pitch has moved
             // clearly past the semitone boundary (> 50 + HYSTERESIS_CENTS from current centre).
@@ -109,7 +104,7 @@ class TunerViewModel @Inject constructor(
                 }
                 rawNoteInfo.midiNumber == displayedMidi -> rawNoteInfo
                 else -> {
-                    val displayedCenter = NoteUtils.midiToFrequency(displayedMidi, referenceA4)
+                    val displayedCenter = NoteUtils.midiToFrequency(displayedMidi)
                     val centsFromDisplayed = noteUtils.frequencyToCents(smoothedFreq, displayedCenter)
                     if (abs(centsFromDisplayed) > 50f + HYSTERESIS_CENTS) {
                         // Crossed decisively into the adjacent semitone — switch.
@@ -118,7 +113,7 @@ class TunerViewModel @Inject constructor(
                     } else {
                         // Still within the hysteresis band — keep the current note name but
                         // show the actual cents offset relative to the displayed note centre.
-                        noteUtils.frequencyToNote(displayedCenter, referenceA4)
+                        noteUtils.frequencyToNote(displayedCenter)
                             .copy(centsOff = centsFromDisplayed)
                     }
                 }

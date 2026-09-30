@@ -34,10 +34,6 @@
 
     <!-- Settings -->
     <string name="settings_title">Indstillinger</string>
-    <string name="settings_concert_pitch">Kammertone</string>
-    <string name="settings_concert_pitch_value">A4 = %1$.1f Hz</string>
-    <string name="settings_concert_pitch_min">420 Hz</string>
-    <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">Mikrofonfølsomhed</string>
     <string name="settings_silence_threshold">Stilletærskel: %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
@@ -50,7 +46,7 @@
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
     <string name="settings_reset_dialog_title">Nulstil til standard?</string>
-    <string name="settings_reset_dialog_body">Alle indstillinger nulstilles til deres standardværdier, inklusive:\n\n\u2022 Kammertone (A = 440 Hz)\n\u2022 Stilletærskel\n\u2022 Frit spil-hastighed, tempo, taktart, note-snap</string>
+    <string name="settings_reset_dialog_body">Alle indstillinger nulstilles til deres standardværdier, inklusive:\n\n\u2022 Stilletærskel\n\u2022 Frit spil-hastighed, tempo, taktart, note-snap</string>
     <string name="settings_reset">Nulstil</string>
     <string name="settings_reset_to_defaults">Nulstil til standard</string>
     <string name="settings_language">Sprog</string>

@@ -34,10 +34,6 @@
 
     <!-- Settings -->
     <string name="settings_title">Asetukset</string>
-    <string name="settings_concert_pitch">Konserttisävelkorkeus</string>
-    <string name="settings_concert_pitch_value">A4 = %1$.1f Hz</string>
-    <string name="settings_concert_pitch_min">420 Hz</string>
-    <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">Mikrofonin herkkyys</string>
     <string name="settings_silence_threshold">Hiljaisuuden kynnys: %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
@@ -50,7 +46,7 @@
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
     <string name="settings_reset_dialog_title">Palauta oletusarvot?</string>
-    <string name="settings_reset_dialog_body">Kaikki asetukset palautetaan oletusarvoihinsa, mukaan lukien:\n\n\u2022 Konserttisävelkorkeus (A = 440 Hz)\n\u2022 Hiljaisuuden kynnys\n\u2022 Vapaan soiton nopeus, tempo, tahtilaji, nuottien kohdistus</string>
+    <string name="settings_reset_dialog_body">Kaikki asetukset palautetaan oletusarvoihinsa, mukaan lukien:\n\n\u2022 Hiljaisuuden kynnys\n\u2022 Vapaan soiton nopeus, tempo, tahtilaji, nuottien kohdistus</string>
     <string name="settings_reset">Nollaa</string>
     <string name="settings_reset_to_defaults">Palauta oletusarvot</string>
     <string name="settings_language">Kieli</string>

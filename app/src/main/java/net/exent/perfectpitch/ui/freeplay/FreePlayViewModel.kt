@@ -64,7 +64,6 @@ class FreePlayViewModel @Inject constructor(
     }
 
     private var lastAdvanceWallMs: Long = 0L
-    private var referenceA4: Float = NoteUtils.DEFAULT_A4_FREQ
 
     private val _state = MutableStateFlow(FreePlayState())
     val state: StateFlow<FreePlayState> = _state.asStateFlow()
@@ -110,8 +109,6 @@ class FreePlayViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
-                referenceA4 = settings.concertPitch
-                pitchProcessor.setReferenceA4(settings.concertPitch)
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
             }
         }
@@ -826,7 +823,7 @@ class FreePlayViewModel @Inject constructor(
         honingActive = false
         if (honingFreqs.isEmpty()) return
         val avgFreq = honingFreqs.average().toFloat()
-        val noteInfo = noteUtils.frequencyToNote(avgFreq, referenceA4)
+        val noteInfo = noteUtils.frequencyToNote(avgFreq)
         val confirmedMidi = noteInfo.midiNumber
         currentNoteMidi = confirmedMidi
         currentNoteStartMs = snapToGrid(honingStartSongMs)

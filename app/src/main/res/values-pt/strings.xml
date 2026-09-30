@@ -34,10 +34,6 @@
 
     <!-- Settings -->
     <string name="settings_title">Configurações</string>
-    <string name="settings_concert_pitch">Diapasão</string>
-    <string name="settings_concert_pitch_value">A4 = %1$.1f Hz</string>
-    <string name="settings_concert_pitch_min">420 Hz</string>
-    <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">Sensibilidade do microfone</string>
     <string name="settings_silence_threshold">Limiar de silêncio: %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
@@ -50,7 +46,7 @@
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
     <string name="settings_reset_dialog_title">Restaurar para os padrão?</string>
-    <string name="settings_reset_dialog_body">Todas as configurações serão restauradas para os valores padrão, incluindo:\n\n\u2022 Diapasão (A = 440 Hz)\n\u2022 Limiar de silêncio\n\u2022 Velocidade, tempo, compasso, ajuste de notas no Modo livre</string>
+    <string name="settings_reset_dialog_body">Todas as configurações serão restauradas para os valores padrão, incluindo:\n\n\u2022 Limiar de silêncio\n\u2022 Velocidade, tempo, compasso, ajuste de notas no Modo livre</string>
     <string name="settings_reset">Restaurar</string>
     <string name="settings_reset_to_defaults">Restaurar para os padrão</string>
     <string name="settings_language">Idioma</string>

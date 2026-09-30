@@ -52,7 +52,6 @@ class PitchProcessor(
     }
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB
-    private var referenceA4 = NoteUtils.DEFAULT_A4_FREQ
 
     /** Duration of the most recent CREPE inference, used for input-delay calibration. */
     @Volatile
@@ -64,7 +63,6 @@ class PitchProcessor(
     private var lastDetectedNano = 0L
 
     fun setSilenceThreshold(db: Float) { silenceThresholdDb = db }
-    fun setReferenceA4(freq: Float) { referenceA4 = freq }
 
     /**
      * Sliding-window pitch flow using CREPE for inference.
@@ -127,7 +125,7 @@ class PitchProcessor(
         lastFrequency = result.frequency
         lastDetectedNano = System.nanoTime()
 
-        val noteInfo = noteUtils.frequencyToNote(result.frequency, referenceA4)
+        val noteInfo = noteUtils.frequencyToNote(result.frequency)
         return PitchResult(
             frequency = result.frequency,
             noteName = noteInfo.name,

@@ -34,10 +34,6 @@
 
     <!-- Settings -->
     <string name="settings_title">Налаштування</string>
-    <string name="settings_concert_pitch">Камертон</string>
-    <string name="settings_concert_pitch_value">A4 = %1$.1f Hz</string>
-    <string name="settings_concert_pitch_min">420 Гц</string>
-    <string name="settings_concert_pitch_max">460 Гц</string>
     <string name="settings_mic_sensitivity">Чутливість мікрофона</string>
     <string name="settings_silence_threshold">Поріг тиші: %1$.0f дБ</string>
     <string name="settings_devices">%1$s / %2$s</string>
@@ -50,7 +46,7 @@
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
     <string name="settings_reset_dialog_title">Скинути до стандартних?</string>
-    <string name="settings_reset_dialog_body">Усі налаштування буде скинуто до значень за замовчуванням, зокрема:\n\n\u2022 Камертон (A = 440 Гц)\n\u2022 Поріг тиші\n\u2022 Швидкість, темп, тактовий розмір, прив\'язка нот у Вільній грі</string>
+    <string name="settings_reset_dialog_body">Усі налаштування буде скинуто до значень за замовчуванням, зокрема:\n\n\u2022 Поріг тиші\n\u2022 Швидкість, темп, тактовий розмір, прив\'язка нот у Вільній грі</string>
     <string name="settings_reset">Скинути</string>
     <string name="settings_reset_to_defaults">Скинути до стандартних</string>
     <string name="settings_language">Мова</string>

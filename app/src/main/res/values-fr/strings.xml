@@ -34,10 +34,6 @@
 
     <!-- Settings -->
     <string name="settings_title">Paramètres</string>
-    <string name="settings_concert_pitch">Diapason</string>
-    <string name="settings_concert_pitch_value">A4 = %1$.1f Hz</string>
-    <string name="settings_concert_pitch_min">420 Hz</string>
-    <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">Sensibilité du microphone</string>
     <string name="settings_silence_threshold">Seuil de silence : %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
@@ -50,7 +46,7 @@
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
     <string name="settings_reset_dialog_title">Réinitialiser aux valeurs par défaut ?</string>
-    <string name="settings_reset_dialog_body">Tous les paramètres seront rétablis à leurs valeurs par défaut, notamment :\n\n\u2022 Diapason (A = 440 Hz)\n\u2022 Seuil de silence\n\u2022 Vitesse, tempo, mesure, accrochage des notes en Jeu libre</string>
+    <string name="settings_reset_dialog_body">Tous les paramètres seront rétablis à leurs valeurs par défaut, notamment :\n\n\u2022 Seuil de silence\n\u2022 Vitesse, tempo, mesure, accrochage des notes en Jeu libre</string>
     <string name="settings_reset">Réinitialiser</string>
     <string name="settings_reset_to_defaults">Réinitialiser aux valeurs par défaut</string>
     <string name="settings_language">Langue</string>

@@ -34,10 +34,6 @@
 
     <!-- Settings -->
     <string name="settings_title">सेटिंग्स</string>
-    <string name="settings_concert_pitch">मानक स्वर</string>
-    <string name="settings_concert_pitch_value">A4 = %1$.1f Hz</string>
-    <string name="settings_concert_pitch_min">420 Hz</string>
-    <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">माइक्रोफ़ोन संवेदनशीलता</string>
     <string name="settings_silence_threshold">मौन सीमा: %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
@@ -50,7 +46,7 @@
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
     <string name="settings_reset_dialog_title">डिफ़ॉल्ट पर रीसेट करें?</string>
-    <string name="settings_reset_dialog_body">सभी सेटिंग्स उनके डिफ़ॉल्ट मानों पर रीसेट हो जाएंगी, जिनमें शामिल हैं:\n\n\u2022 मानक स्वर (A = 440 Hz)\n\u2022 मौन सीमा\n\u2022 मुक्त अभ्यास की गति, टेम्पो, ताल, नोट स्नैप</string>
+    <string name="settings_reset_dialog_body">सभी सेटिंग्स उनके डिफ़ॉल्ट मानों पर रीसेट हो जाएंगी, जिनमें शामिल हैं:\n\n\u2022 मौन सीमा\n\u2022 मुक्त अभ्यास की गति, टेम्पो, ताल, नोट स्नैप</string>
     <string name="settings_reset">रीसेट</string>
     <string name="settings_reset_to_defaults">डिफ़ॉल्ट पर रीसेट करें</string>
     <string name="settings_language">भाषा</string>

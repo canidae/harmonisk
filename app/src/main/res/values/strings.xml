@@ -36,10 +36,6 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
-    <string name="settings_concert_pitch">Concert Pitch</string>
-    <string name="settings_concert_pitch_value">%1$.0f Hz</string>
-    <string name="settings_concert_pitch_min">420 Hz</string>
-    <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">Microphone Sensitivity</string>
     <string name="settings_silence_threshold">%1$.0f dB</string>
     <string name="settings_silence_threshold_min">Less sensitive</string>
@@ -57,14 +53,13 @@
     <string name="settings_input_delay_min">0</string>
     <string name="settings_input_delay_max">500</string>
     <string name="settings_reset_dialog_title">Reset to defaults?</string>
-    <string name="settings_reset_dialog_body">All settings will be returned to their default values, including:\n\n\u2022 Concert pitch (A = 440 Hz)\n\u2022 Silence threshold\n\u2022 Free Play speed, tempo, time signature, note snapping</string>
+    <string name="settings_reset_dialog_body">All settings will be returned to their default values, including:\n\n\u2022 Silence threshold\n\u2022 Free Play speed, tempo, time signature, note snapping</string>
     <string name="settings_reset">Reset</string>
     <string name="settings_reset_to_defaults">Reset to defaults</string>
     <string name="settings_language">Language</string>
     <string name="settings_instrument">Instrument</string>
     <string name="settings_help">Help</string>
     <string name="settings_help_got_it">Got it</string>
-    <string name="settings_concert_pitch_help">The reference pitch your instrument is tuned to. Perfect Pitch uses this as the target when detecting notes. Standard tuning is A4 = 440 Hz.</string>
     <string name="instrument_piano">Piano</string>
     <string name="instrument_violin">Violin</string>
     <string name="instrument_cello">Cello</string>

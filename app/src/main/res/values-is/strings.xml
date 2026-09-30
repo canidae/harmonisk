@@ -34,10 +34,6 @@
 
     <!-- Settings -->
     <string name="settings_title">Stillingar</string>
-    <string name="settings_concert_pitch">Kammertónn</string>
-    <string name="settings_concert_pitch_value">A4 = %1$.1f Hz</string>
-    <string name="settings_concert_pitch_min">420 Hz</string>
-    <string name="settings_concert_pitch_max">460 Hz</string>
     <string name="settings_mic_sensitivity">Næmni hljóðnema</string>
     <string name="settings_silence_threshold">Þöglunarmörk: %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
@@ -50,7 +46,7 @@
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
     <string name="settings_reset_dialog_title">Endurstilla í sjálfgefið?</string>
-    <string name="settings_reset_dialog_body">Öllum stillingum verður endurstillt í sjálfgefin gildi, þar á meðal:\n\n\u2022 Kammertónn (A = 440 Hz)\n\u2022 Þöglunarmörk\n\u2022 Frjáls spilun hraði, tempó, taktur, nótnastrenging</string>
+    <string name="settings_reset_dialog_body">Öllum stillingum verður endurstillt í sjálfgefin gildi, þar á meðal:\n\n\u2022 Þöglunarmörk\n\u2022 Frjáls spilun hraði, tempó, taktur, nótnastrenging</string>
     <string name="settings_reset">Endurstilla</string>
     <string name="settings_reset_to_defaults">Endurstilla í sjálfgefið</string>
     <string name="settings_language">Tungumál</string>

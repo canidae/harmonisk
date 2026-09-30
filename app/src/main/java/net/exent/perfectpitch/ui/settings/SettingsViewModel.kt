@@ -80,10 +80,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun updateConcertPitch(pitch: Float) {
-        viewModelScope.launch { settingsRepository.updateConcertPitch(pitch) }
-    }
-
     fun updateSilenceThreshold(db: Float) {
         viewModelScope.launch { settingsRepository.updateSilenceThreshold(db) }
     }

@@ -158,37 +158,6 @@ fun SettingsScreen(
                 }
             }
 
-            // Concert pitch slider
-            SettingSection(
-                title = stringResource(R.string.settings_concert_pitch),
-                helpText = stringResource(R.string.settings_concert_pitch_help)
-            ) {
-                Slider(
-                    value = settings.concertPitch,
-                    onValueChange = { viewModel.updateConcertPitch(it) },
-                    valueRange = 420f..460f,
-                    steps = 39,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        stringResource(R.string.settings_concert_pitch_min),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.align(Alignment.CenterStart)
-                    )
-                    Text(
-                        stringResource(R.string.settings_concert_pitch_max),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.align(Alignment.CenterEnd)
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_concert_pitch_value, settings.concertPitch),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-            }
-
             // Audio delay calibration
             SettingSection(
                 title = stringResource(R.string.settings_delay_title),

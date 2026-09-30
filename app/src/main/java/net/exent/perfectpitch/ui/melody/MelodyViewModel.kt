@@ -145,7 +145,6 @@ class MelodyViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
-                pitchProcessor.setReferenceA4(settings.concertPitch)
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
             }
         }
