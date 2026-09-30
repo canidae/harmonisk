@@ -40,7 +40,7 @@ class SettingsRepository(
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
         AppSettings(
             concertPitch = prefs[CONCERT_PITCH] ?: 440f,
-            silenceThresholdDb = prefs[SILENCE_THRESHOLD_DB] ?: -30f,
+            silenceThresholdDb = prefs[SILENCE_THRESHOLD_DB] ?: -40f,
             freeplayFallSpeed = prefs[FREEPLAY_FALL_SPEED] ?: 75f,
             freeplayBeatsPerBar = prefs[FREEPLAY_BEATS_PER_BAR] ?: 4,
             freeplayBpm = prefs[FREEPLAY_BPM] ?: 120f,
@@ -106,7 +106,7 @@ class SettingsRepository(
 
 data class AppSettings(
     val concertPitch: Float = 440f,
-    val silenceThresholdDb: Float = -30f,
+    val silenceThresholdDb: Float = -40f,
     val freeplayFallSpeed: Float = 75f,
     val freeplayBeatsPerBar: Int = 4,
     val freeplayBpm: Float = 120f,

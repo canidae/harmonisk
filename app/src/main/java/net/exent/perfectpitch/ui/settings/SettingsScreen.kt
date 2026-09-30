@@ -129,15 +129,13 @@ fun SettingsScreen(
                 }
             }
 
-            // Microphone sensitivity (inverted: leftmost is least sensitive, rightmost most sensitive)
+            // Microphone sensitivity, the negated silence threshold: -20 dB at the left,
+            // -60 dB at the right, so moving right detects fainter sounds.
             SettingSection(title = stringResource(R.string.settings_mic_sensitivity)) {
-                // Slider position maps inversely to the stored threshold: -10 dB at the left,
-                // -50 dB at the right, so moving right detects fainter sounds.
-                val sliderValue = (-60f - settings.silenceThresholdDb).coerceIn(-50f, -10f)
                 Slider(
-                    value = sliderValue,
-                    onValueChange = { viewModel.updateSilenceThreshold(-60f - it) },
-                    valueRange = -50f..-10f,
+                    value = -settings.silenceThresholdDb,
+                    onValueChange = { viewModel.updateSilenceThreshold(-it) },
+                    valueRange = 20f..60f,
                     steps = 39,
                     modifier = Modifier.fillMaxWidth()
                 )

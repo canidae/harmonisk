@@ -1,9 +1,3 @@
-# Pitch detection isn't sensitive enough
-Have to play very loud for it to detect pitches.
-It's good that it doesn't pick up everything, but it may be a bit too insensitive as is.
-Increasing "Microphone sensitivity" to "-50 dB" fixes it, but a recent change still made this much less sensitive.
-It's possible we can correct this by just increasing the default microphone sensitive (and changing the range to revolve around the new default), but we should inspect whether the recent changes were too much.
-
 # Preview song should make the canvas scroll
 The user can click on the note symbol after opening a song in "Play by Melody". When they do, it should make the play canvas scroll (as if they were playing themselves).
 No scoring, and there should be a discrete note (perhaps a "Preview" label in top right corner of play canvas?) showing the user that it's a preview.
