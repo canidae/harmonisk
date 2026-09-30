@@ -1,7 +1,3 @@
-# Misplaced position when opening a song in "Play by Melody"
-When you open a song in "Play by Melody" it seems like position is remembered from a previous session.
-Instead the position should be the start of the melody (including the two bar lead up).
-
 # Lead up metronome missing first beat
 When you start a song in "Play by Melody", it won't play the first beat of the lead up bar, just the 3 last beats. It should play the first beat of the first lead up bar as well.
 

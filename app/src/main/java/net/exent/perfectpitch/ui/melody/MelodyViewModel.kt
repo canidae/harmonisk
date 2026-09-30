@@ -344,18 +344,10 @@ class MelodyViewModel @Inject constructor(
             val primary = melodyTracks.first()
             val metronomeTrack = generateMetronomeTrack(primary)
             val (viewMin, viewMax) = viewRangeFor(primary)
-            _gameState.update {
-                it.copy(
-                    melodyTrack = primary,
-                    melodyTracks = melodyTracks,
-                    metronomeTrack = metronomeTrack,
-                    activeVoiceIndex = 0,
-                    accompanimentMode = _gameState.value.accompanimentMode,
-                    phase = PlayPhase.NOT_STARTED,
-                    transposeSemitones = 0
-                )
+            _gameState.update { it.withLoadedMelody(primary, melodyTracks, metronomeTrack) }
+            _viewState.update {
+                it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax, songTimeOffsetSeconds = 0.0)
             }
-            _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
             updateViolinPositions()
             loadMelodySettingsAndHistory(info.id)
             return true
@@ -374,18 +366,10 @@ class MelodyViewModel @Inject constructor(
             val primary = melodyTracks.first()
             val metronomeTrack = generateMetronomeTrack(primary)
             val (viewMin, viewMax) = viewRangeFor(primary)
-            _gameState.update {
-                it.copy(
-                    melodyTrack = primary,
-                    melodyTracks = melodyTracks,
-                    metronomeTrack = metronomeTrack,
-                    activeVoiceIndex = 0,
-                    accompanimentMode = _gameState.value.accompanimentMode,
-                    phase = PlayPhase.NOT_STARTED,
-                    transposeSemitones = 0
-                )
+            _gameState.update { it.withLoadedMelody(primary, melodyTracks, metronomeTrack) }
+            _viewState.update {
+                it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax, songTimeOffsetSeconds = 0.0)
             }
-            _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
             val id = currentMelodyId ?: return false
             updateViolinPositions()
             loadMelodySettingsAndHistory(id)
@@ -408,6 +392,34 @@ class MelodyViewModel @Inject constructor(
         }
         return false
     }
+
+    /**
+     * A freshly loaded song brings none of the last one with it: the canvas stands at the top of
+     * the count-in, and no note of the previous take is left coloured on the new bars.
+     */
+    private fun MelodyGameState.withLoadedMelody(
+        primary: MelodyTrack,
+        melodyTracks: List<MelodyTrack>,
+        metronomeTrack: MelodyTrack?
+    ): MelodyGameState = copy(
+        melodyTrack = primary,
+        melodyTracks = melodyTracks,
+        metronomeTrack = metronomeTrack,
+        activeVoiceIndex = 0,
+        accompanimentMode = accompanimentMode,
+        phase = PlayPhase.NOT_STARTED,
+        transposeSemitones = 0,
+        currentTimeSeconds = -twoBarLeadInSeconds(primary),
+        previewTimeSeconds = null,
+        noteResults = emptyMap(),
+        currentNoteIndex = -1,
+        melodyScore = null,
+        noteCentsHistory = emptyMap(),
+        noteCentsPositions = emptyMap(),
+        notePlayProgress = emptyMap(),
+        noteFirstDetectionStart = emptyMap(),
+        countdownResumeTarget = 0.0
+    )
 
     private fun loadMelodySettingsAndHistory(melodyId: String, instrument: String = _currentInstrument.value) {
         viewModelScope.launch {
@@ -671,8 +683,8 @@ class MelodyViewModel @Inject constructor(
         currentTimeSeconds + nowLineLeadSeconds(_gameState.value.waitMode, phase, inputDelayMs)
 
     /** Seconds of the 2-bar lead-in at the song's initial tempo/time signature. */
-    private fun twoBarLeadInSeconds(): Double {
-        val track = _gameState.value.melodyTrack ?: return 2.0 * 4 * (60.0 / 120.0)
+    private fun twoBarLeadInSeconds(track: MelodyTrack? = _gameState.value.melodyTrack): Double {
+        track ?: return 2.0 * 4 * (60.0 / 120.0)
         val timeSig = track.timeSignatureAt(0)
         val bpm = track.bpmAt(0)
         val beatsPerBar = timeSig.numerator
@@ -723,10 +735,12 @@ class MelodyViewModel @Inject constructor(
         )
     }
 
-    /** Enter READY phase — melody visible but not playing. Bars shown from the start, at the now line. */
+    /** Enter READY phase — melody visible but not playing. The song stands at the top of its count-in. */
     fun enterReadyPhase() {
         if (_gameState.value.phase == PlayPhase.NOT_STARTED) {
-            _gameState.update { it.copy(phase = PlayPhase.READY, currentTimeSeconds = 0.0) }
+            _gameState.update {
+                it.copy(phase = PlayPhase.READY, currentTimeSeconds = -twoBarLeadInSeconds())
+            }
         }
     }
 

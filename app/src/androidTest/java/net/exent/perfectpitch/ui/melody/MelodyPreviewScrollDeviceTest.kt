@@ -3,25 +3,8 @@ package net.exent.perfectpitch.ui.melody
 import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import net.exent.perfectpitch.audio.AudioCaptureService
-import net.exent.perfectpitch.audio.AudioDeviceMonitor
-import net.exent.perfectpitch.audio.CrepePitchDetector
-import net.exent.perfectpitch.audio.MelodyPlayer
-import net.exent.perfectpitch.audio.PitchProcessor
-import net.exent.perfectpitch.audio.SoundFontSynthesizer
-import net.exent.perfectpitch.data.AudioDelayRepository
-import net.exent.perfectpitch.data.DevModeState
 import net.exent.perfectpitch.data.DifficultyRepository
 import net.exent.perfectpitch.data.MelodyRepository
-import net.exent.perfectpitch.data.MelodySettingsRepository
-import net.exent.perfectpitch.data.ScoreHistoryRepository
-import net.exent.perfectpitch.data.SettingsRepository
-import net.exent.perfectpitch.midi.MidiDeviceManager
-import net.exent.perfectpitch.midi.MidiInputReceiver
-import net.exent.perfectpitch.midi.MidiOutputSender
-import net.exent.perfectpitch.music.NoteUtils
-import net.exent.perfectpitch.music.ScoringEngine
-import net.exent.perfectpitch.music.ViolinAlgorithm
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -50,35 +33,9 @@ class MelodyPreviewScrollDeviceTest {
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
-    private fun viewModel(): MelodyViewModel {
-        val captureService = AudioCaptureService(context)
-        val noteUtils = NoteUtils()
-        val deviceMonitor = AudioDeviceMonitor(context)
-        val midiDeviceManager = MidiDeviceManager(context)
-        val synthesizer = SoundFontSynthesizer(context)
-        return MelodyViewModel(
-            pitchProcessor = PitchProcessor(captureService, CrepePitchDetector(context), noteUtils),
-            melodyRepository = MelodyRepository(context, DifficultyRepository(context)),
-            melodySettingsRepository = MelodySettingsRepository(context),
-            settingsRepository = SettingsRepository(context),
-            scoringEngine = ScoringEngine(),
-            noteUtils = noteUtils,
-            soundFontSynthesizer = synthesizer,
-            melodyPlayer = MelodyPlayer(synthesizer),
-            audioDelayRepository = AudioDelayRepository(context, deviceMonitor),
-            audioDeviceMonitor = deviceMonitor,
-            midiDeviceManager = midiDeviceManager,
-            midiInputReceiver = MidiInputReceiver(context, midiDeviceManager),
-            midiOutputSender = MidiOutputSender(context, midiDeviceManager),
-            scoreHistoryRepository = ScoreHistoryRepository(context),
-            violinAlgorithm = ViolinAlgorithm(),
-            devModeState = DevModeState()
-        )
-    }
-
     @Test
     fun previewingRunsTheCanvasThroughTheSong() {
-        val viewModel = viewModel()
+        val viewModel = melodyViewModel(context)
         val melody = MelodyRepository(context, DifficultyRepository(context))
             .getBundledMelodies().first { it.id.contains(SHORTEST_MELODY) }
         assertTrue("the bundled melody must load", viewModel.loadMelody(melody))
