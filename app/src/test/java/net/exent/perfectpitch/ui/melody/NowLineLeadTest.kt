@@ -8,8 +8,8 @@ import org.junit.Test
  *
  * The lead exists so that a note played as a bar reaches the now line can still be scored against
  * that note once the microphone and the detector have caught up with it. A song that stops for the
- * player does not need it, and with the lead the note the player is asked to play would come to rest
- * past the now line.
+ * player leads the same way, and comes to rest one input delay past the line, which is also the lag
+ * its held time must not have taken off it again. Only a song that has not started is drawn still.
  */
 class NowLineLeadTest {
 
@@ -20,42 +20,22 @@ class NowLineLeadTest {
 
     @Test
     fun theBarsLeadTheBeatByTheInputDelayWhileTheSongRuns() {
-        assertEquals(
-            0.1,
-            nowLineLeadSeconds(waitMode = false, phase = PlayPhase.PLAYING, inputDelayMs = INPUT_DELAY_MS),
-            1e-9
-        )
+        assertEquals(0.1, nowLineLeadSeconds(PlayPhase.PLAYING, INPUT_DELAY_MS), 1e-9)
     }
 
     @Test
-    fun aSongThatStopsForThePlayerDrawsTheNoteOnTheNowLine() {
-        assertEquals(
-            0.0,
-            nowLineLeadSeconds(waitMode = true, phase = PlayPhase.PLAYING, inputDelayMs = INPUT_DELAY_MS),
-            1e-9
-        )
-        assertEquals(
-            0.0,
-            nowLineLeadSeconds(waitMode = true, phase = PlayPhase.WAITING_FOR_NOTE, inputDelayMs = INPUT_DELAY_MS),
-            1e-9
-        )
+    fun aSongThatStopsForThePlayerStillLeadsByTheInputDelay() {
+        assertEquals(0.1, nowLineLeadSeconds(PlayPhase.WAITING_FOR_NOTE, INPUT_DELAY_MS), 1e-9)
     }
 
     @Test
     fun aSongThatHasNotStartedIsDrawnOnTheNowLine() {
-        assertEquals(
-            0.0,
-            nowLineLeadSeconds(waitMode = false, phase = PlayPhase.READY, inputDelayMs = INPUT_DELAY_MS),
-            1e-9
-        )
+        assertEquals(0.0, nowLineLeadSeconds(PlayPhase.READY, INPUT_DELAY_MS), 1e-9)
     }
 
     @Test
     fun aCalibratedInputDelayOfZeroLeavesNothingToLeadWith() {
-        assertEquals(
-            0.0,
-            nowLineLeadSeconds(waitMode = false, phase = PlayPhase.PLAYING, inputDelayMs = 0),
-            1e-9
-        )
+        assertEquals(0.0, nowLineLeadSeconds(PlayPhase.PLAYING, 0), 1e-9)
+        assertEquals(0.0, nowLineLeadSeconds(PlayPhase.WAITING_FOR_NOTE, 0), 1e-9)
     }
 }

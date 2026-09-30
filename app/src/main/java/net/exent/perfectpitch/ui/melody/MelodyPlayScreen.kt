@@ -264,7 +264,7 @@ fun MelodyPlayScreen(
                     val track = gameState.melodyTrack
                     // How far the bars run ahead of the game clock, on the same rule the view model uses.
                     val adjustedNow = gameState.currentTimeSeconds +
-                            nowLineLeadSeconds(gameState.waitMode, gameState.phase, inputDelay)
+                            nowLineLeadSeconds(gameState.phase, inputDelay)
                     // A preview drives the canvas with the song's own time, at the pace of the audio.
                     val canvasNow = gameState.previewTimeSeconds ?: adjustedNow
 

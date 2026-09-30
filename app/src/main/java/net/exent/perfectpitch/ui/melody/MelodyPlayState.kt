@@ -90,14 +90,17 @@ enum class NoteResultState {
  * scored against that note once the microphone and the detector have caught up: the sound arrives
  * that much later than the player made it.
  *
- * A song that stops for the player has no use for that lead. The clock stops on the note it is
- * waiting for and stays there until the player plays it, so the sound cannot arrive too late to be
- * scored, and the lead would only carry the note the player is asked to play past the now line.
+ * A song that stops for the player leads the same way. The clock comes to rest on the note one input
+ * delay after its bar reached the line, so the bar runs on that much past the line before it stops,
+ * and the wait is timed from where it comes to rest. By then the sound the player made as the bar
+ * reached the line has been detected, so the input delay is already out of the time the song waited
+ * and must not be taken off it again.
+ *
  * READY is a still picture of the music, a song the player has not started, and is drawn on the now
- * line too.
+ * line.
  */
-fun nowLineLeadSeconds(waitMode: Boolean, phase: PlayPhase, inputDelayMs: Int): Double =
-    if (waitMode || phase == PlayPhase.READY) 0.0 else inputDelayMs / 1000.0
+fun nowLineLeadSeconds(phase: PlayPhase, inputDelayMs: Int): Double =
+    if (phase == PlayPhase.READY) 0.0 else inputDelayMs / 1000.0
 
 /** Level and score of the last take, as shown next to the song title. */
 fun levelAndScoreText(level: Int, latestScore: String?): String =

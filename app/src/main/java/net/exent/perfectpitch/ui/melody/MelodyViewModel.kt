@@ -111,10 +111,12 @@ class MelodyViewModel @Inject constructor(
     private var pauseOffset = 0.0
 
     // Play time for time-based scoring. A song that waits for the player holds its clock for them,
-    // so the time it holds is tracked here, along with the number of notes it held for.
+    // so the time it holds is tracked here. The bars lead the beat by the input delay, so a wait is
+    // timed from the note the clock came to rest on, which it reaches one input delay after the
+    // player was cued, by which time their sound has been detected: what is held is the player's own
+    // time, with the app's lag already out of it.
     private var waitStartWallMs = 0L
     private var waitMs = 0L
-    private var waitedNotes = 0
 
     // Per-note tracking state (encapsulated for a single reset() call)
     private val noteTracking = NoteTrackingState()
@@ -683,7 +685,7 @@ class MelodyViewModel @Inject constructor(
 
     /** "Now" time used by the canvas — the bars lead the beat by the input delay (see [nowLineLeadSeconds]). */
     private fun adjustedNowSeconds(phase: PlayPhase, currentTimeSeconds: Double): Double =
-        currentTimeSeconds + nowLineLeadSeconds(_gameState.value.waitMode, phase, inputDelayMs)
+        currentTimeSeconds + nowLineLeadSeconds(phase, inputDelayMs)
 
     /** Seconds of the 2-bar lead-in at the song's initial tempo/time signature. */
     private fun twoBarLeadInSeconds(track: MelodyTrack? = _gameState.value.melodyTrack): Double {
@@ -776,7 +778,6 @@ class MelodyViewModel @Inject constructor(
         currentNoteDetectedCorrectly = false
         waitStartWallMs = 0L
         waitMs = 0L
-        waitedNotes = 0
 
         // Stop any preview playback and reset game sync
         stopPreview()
@@ -952,16 +953,7 @@ class MelodyViewModel @Inject constructor(
         if (waitStartWallMs == 0L) return
         waitMs += SystemClock.elapsedRealtime() - waitStartWallMs
         waitStartWallMs = 0L
-        waitedNotes++
     }
-
-    /**
-     * Time the player spent that the song did not: everything the song held its clock for, less the
-     * app's own lag, which is its calibrated input delay for each note it held for. The app lags that
-     * long behind a note the player has already played, so it is not time the player took.
-     */
-    private fun playerWaitMs(): Long =
-        (waitMs - inputDelayMs.toLong() * waitedNotes).coerceAtLeast(0L)
 
     private fun startPlaybackTimer() {
         // Outside developer mode a preview may not ring on into the take that is being scored.
@@ -1336,7 +1328,7 @@ class MelodyViewModel @Inject constructor(
 
         // Apply time-based scoring modifier
         val currentLevel = _gameState.value.currentLevel
-        val timeRatio = songTimeRatio(track, playerWaitMs())
+        val timeRatio = songTimeRatio(track, waitMs)
         val timeScore = ScoringEngine.scoreTime(timeRatio, currentLevel)
 
         // Wrong note count and score derived from notesHit/totalNotes
