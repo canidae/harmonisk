@@ -23,7 +23,6 @@
     <string name="home_tuner_title">楽器をチューニング</string>
     <string name="home_tuner_desc">ピッチを確認してチューニング</string>
     <string name="home_tuner_desc_short">チューニング</string>
-    <string name="home_uncalibrated">オーディオが調整されていません：%1$s</string>
 
     <!-- Permissions -->
     <string name="permission_title">マイクへのアクセスが必要です</string>
@@ -48,10 +47,8 @@
     <string name="settings_calibrating_stop">停止</string>
     <string name="settings_no_detection">マイクが音を検出できません</string>
     <string name="settings_calibrating">キャリブレーション中… %1$d/5 音検出</string>
-    <string name="settings_input_delay">Audio input delay: %1$dms</string>
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
-    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">デフォルトにリセットしますか？</string>
     <string name="settings_reset_dialog_body">すべての設定がデフォルト値にリセットされます。以下を含みます：\n\n\u2022 基準ピッチ（A = 440 Hz）\n\u2022 無音しきい値\n\u2022 フリープレイの速度、テンポ、拍子記号、音符スナップ</string>
     <string name="settings_reset">リセット</string>
@@ -142,9 +139,8 @@
     <string name="melody_play_transpose_0">移調：0</string>
     <string name="melody_play_transpose_plus">移調：+%1$d</string>
     <string name="melody_play_transpose">移調：%1$d</string>
-    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_output_delay">Audio output delay: %1$dms</string>
     <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
-    <string name="melody_play_uncalibrated">%1$s は調整されていません</string>
 
     <!-- Score results -->
     <string name="score_dismiss">閉じる</string>

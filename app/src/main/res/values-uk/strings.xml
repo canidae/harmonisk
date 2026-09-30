@@ -23,7 +23,6 @@
     <string name="home_tuner_title">Налаштувати інструмент</string>
     <string name="home_tuner_desc">Побачити висоту та налаштувати</string>
     <string name="home_tuner_desc_short">Налаштувати</string>
-    <string name="home_uncalibrated">Аудіо не відкалібровано: %1$s</string>
 
     <!-- Permissions -->
     <string name="permission_title">Потрібен доступ до мікрофона</string>
@@ -48,10 +47,8 @@
     <string name="settings_calibrating_stop">Стоп</string>
     <string name="settings_no_detection">Мікрофон не може виявити жодного тону</string>
     <string name="settings_calibrating">Калібрування… %1$d/5 тонів виявлено</string>
-    <string name="settings_input_delay">Audio input delay: %1$dms</string>
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
-    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">Скинути до стандартних?</string>
     <string name="settings_reset_dialog_body">Усі налаштування буде скинуто до значень за замовчуванням, зокрема:\n\n\u2022 Камертон (A = 440 Гц)\n\u2022 Поріг тиші\n\u2022 Швидкість, темп, тактовий розмір, прив\'язка нот у Вільній грі</string>
     <string name="settings_reset">Скинути</string>
@@ -142,9 +139,8 @@
     <string name="melody_play_transpose_0">Транспозиція: 0</string>
     <string name="melody_play_transpose_plus">Транспозиція: +%1$d</string>
     <string name="melody_play_transpose">Транспозиція: %1$d</string>
-    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_output_delay">Audio output delay: %1$dms</string>
     <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
-    <string name="melody_play_uncalibrated">%1$s не відкалібровано</string>
 
     <!-- Score results -->
     <string name="score_dismiss">Закрити</string>

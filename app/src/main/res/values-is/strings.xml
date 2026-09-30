@@ -23,7 +23,6 @@
     <string name="home_tuner_title">Stilla hljóðfæri</string>
     <string name="home_tuner_desc">Sjá tónhæð og stilla</string>
     <string name="home_tuner_desc_short">Stilla</string>
-    <string name="home_uncalibrated">Hljóð ekki kvarðað: %1$s</string>
 
     <!-- Permissions -->
     <string name="permission_title">Aðgangur að hljóðnema krafist</string>
@@ -48,10 +47,8 @@
     <string name="settings_calibrating_stop">Stöðva</string>
     <string name="settings_no_detection">Hljóðnemi getur ekki greint neina tóna</string>
     <string name="settings_calibrating">Kvarða… %1$d/5 tónar greindir</string>
-    <string name="settings_input_delay">Audio input delay: %1$dms</string>
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
-    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">Endurstilla í sjálfgefið?</string>
     <string name="settings_reset_dialog_body">Öllum stillingum verður endurstillt í sjálfgefin gildi, þar á meðal:\n\n\u2022 Kammertónn (A = 440 Hz)\n\u2022 Þöglunarmörk\n\u2022 Frjáls spilun hraði, tempó, taktur, nótnastrenging</string>
     <string name="settings_reset">Endurstilla</string>
@@ -142,9 +139,8 @@
     <string name="melody_play_transpose_0">Tónflutningur: 0</string>
     <string name="melody_play_transpose_plus">Tónflutningur: +%1$d</string>
     <string name="melody_play_transpose">Tónflutningur: %1$d</string>
-    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_output_delay">Audio output delay: %1$dms</string>
     <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
-    <string name="melody_play_uncalibrated">%1$s er ekki kvarðað</string>
 
     <!-- Score results -->
     <string name="score_dismiss">Hafna</string>

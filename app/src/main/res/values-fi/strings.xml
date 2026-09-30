@@ -23,7 +23,6 @@
     <string name="home_tuner_title">Virita instrumentti</string>
     <string name="home_tuner_desc">Näe sävelkorkeus ja viritä</string>
     <string name="home_tuner_desc_short">Virita</string>
-    <string name="home_uncalibrated">Ääntä ei kalibroitu: %1$s</string>
 
     <!-- Permissions -->
     <string name="permission_title">Mikrofonin käyttöoikeus vaaditaan</string>
@@ -48,10 +47,8 @@
     <string name="settings_calibrating_stop">Pysäytä</string>
     <string name="settings_no_detection">Mikrofoni ei voi havaita ääniä</string>
     <string name="settings_calibrating">Kalibroidaan… %1$d/5 ääntä havaittu</string>
-    <string name="settings_input_delay">Audio input delay: %1$dms</string>
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
-    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">Palauta oletusarvot?</string>
     <string name="settings_reset_dialog_body">Kaikki asetukset palautetaan oletusarvoihinsa, mukaan lukien:\n\n\u2022 Konserttisävelkorkeus (A = 440 Hz)\n\u2022 Hiljaisuuden kynnys\n\u2022 Vapaan soiton nopeus, tempo, tahtilaji, nuottien kohdistus</string>
     <string name="settings_reset">Nollaa</string>
@@ -142,9 +139,8 @@
     <string name="melody_play_transpose_0">Transponointi: 0</string>
     <string name="melody_play_transpose_plus">Transponointi: +%1$d</string>
     <string name="melody_play_transpose">Transponointi: %1$d</string>
-    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_output_delay">Audio output delay: %1$dms</string>
     <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
-    <string name="melody_play_uncalibrated">%1$s ei ole kalibroitu</string>
 
     <!-- Score results -->
     <string name="score_dismiss">Hylkää</string>

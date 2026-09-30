@@ -23,7 +23,6 @@
     <string name="home_tuner_title">악기 튜닝</string>
     <string name="home_tuner_desc">음정 확인하고 튜닝하기</string>
     <string name="home_tuner_desc_short">튜닝</string>
-    <string name="home_uncalibrated">오디오가 보정되지 않음: %1$s</string>
 
     <!-- Permissions -->
     <string name="permission_title">마이크 액세스 필요</string>
@@ -48,10 +47,8 @@
     <string name="settings_calibrating_stop">정지</string>
     <string name="settings_no_detection">마이크가 소리를 감지할 수 없음</string>
     <string name="settings_calibrating">보정 중… %1$d/5 음 감지됨</string>
-    <string name="settings_input_delay">Audio input delay: %1$dms</string>
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
-    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">기본값으로 재설정?</string>
     <string name="settings_reset_dialog_body">모든 설정이 기본값으로 재설정됩니다. 포함 사항:\n\n\u2022 표준 음정 (A = 440 Hz)\n\u2022 무음 임계값\n\u2022 자유 연주 속도, 템포, 박자, 음표 스냅</string>
     <string name="settings_reset">재설정</string>
@@ -142,9 +139,8 @@
     <string name="melody_play_transpose_0">조옮김: 0</string>
     <string name="melody_play_transpose_plus">조옮김: +%1$d</string>
     <string name="melody_play_transpose">조옮김: %1$d</string>
-    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_output_delay">Audio output delay: %1$dms</string>
     <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
-    <string name="melody_play_uncalibrated">%1$s이(가) 보정되지 않음</string>
 
     <!-- Score results -->
     <string name="score_dismiss">닫기</string>

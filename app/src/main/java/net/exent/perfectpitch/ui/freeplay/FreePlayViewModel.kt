@@ -75,7 +75,7 @@ class FreePlayViewModel @Inject constructor(
     val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val activeTotalDelay: StateFlow<Int> = audioDelayRepository.activeTotalDelay
+    val activeOutputDelay: StateFlow<Int> = audioDelayRepository.activeOutputDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     private var listeningJob: Job? = null
@@ -103,7 +103,7 @@ class FreePlayViewModel @Inject constructor(
     private val activeMidiNotes = mutableMapOf<Int, PlayedNote>()
 
     private var inputDelayMs: Int = 0
-    private var totalDelayMs: Int = 0
+    private var outputDelayMs: Int = 0
     private var replayGeneration = 0
     private var isPausedByGesture = false
 
@@ -176,8 +176,8 @@ class FreePlayViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            audioDelayRepository.activeTotalDelay.collect { delayMs ->
-                totalDelayMs = delayMs
+            audioDelayRepository.activeOutputDelay.collect { delayMs ->
+                outputDelayMs = delayMs
             }
         }
     }
@@ -1060,10 +1060,10 @@ class FreePlayViewModel @Inject constructor(
 
                 audioPositionMs += delta
 
-                // Fire due events total-delay early so notes are heard when the
-                // bar crosses the now line and detected on the beat.
-                val totalOffsetMs = totalDelayMs.toLong()
-                while (eventIndex < events.size && events[eventIndex].timeMs - totalOffsetMs <= audioPositionMs) {
+                // Fire due events the output delay early so notes are heard
+                // when the bar crosses the now line.
+                val outputOffsetMs = outputDelayMs.toLong()
+                while (eventIndex < events.size && events[eventIndex].timeMs - outputOffsetMs <= audioPositionMs) {
                     val ev = events[eventIndex++]
                     if (ev.trackOrigin == 9) {
                         if (ev.isOn) soundFontSynthesizer.noteOn(9, ev.midiNote, 80)

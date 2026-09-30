@@ -23,7 +23,6 @@
     <string name="home_tuner_title">调音</string>
     <string name="home_tuner_desc">查看音高并调音</string>
     <string name="home_tuner_desc_short">调音</string>
-    <string name="home_uncalibrated">音频未校准：%1$s</string>
 
     <!-- Permissions -->
     <string name="permission_title">需要麦克风访问权限</string>
@@ -48,10 +47,8 @@
     <string name="settings_calibrating_stop">停止</string>
     <string name="settings_no_detection">麦克风无法检测到任何音调</string>
     <string name="settings_calibrating">校准中… %1$d/5 个音调已检测</string>
-    <string name="settings_input_delay">Audio input delay: %1$dms</string>
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
-    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">重置为默认值？</string>
     <string name="settings_reset_dialog_body">所有设置将恢复为默认值，包括：\n\n\u2022 标准音高（A = 440 赫兹）\n\u2022 静音阈值\n\u2022 自由演奏的速度、节拍、拍号、音符吸附</string>
     <string name="settings_reset">重置</string>
@@ -142,9 +139,8 @@
     <string name="melody_play_transpose_0">移调：0</string>
     <string name="melody_play_transpose_plus">移调：+%1$d</string>
     <string name="melody_play_transpose">移调：%1$d</string>
-    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_output_delay">Audio output delay: %1$dms</string>
     <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
-    <string name="melody_play_uncalibrated">%1$s 未校准</string>
 
     <!-- Score results -->
     <string name="score_dismiss">关闭</string>

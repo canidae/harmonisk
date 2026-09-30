@@ -189,15 +189,15 @@ fun SettingsScreen(
                 }
             }
 
-            // Audio input delay
+            // Audio delay calibration
             SettingSection(
-                title = stringResource(R.string.settings_input_delay_title),
-                helpText = stringResource(R.string.settings_input_delay_help)
+                title = stringResource(R.string.settings_delay_title),
+                helpText = stringResource(R.string.settings_delay_help)
             ) {
                 val device by viewModel.currentDevice.collectAsState()
                 val inputDevice by viewModel.currentInputDevice.collectAsState()
+                val outputDelay by viewModel.activeOutputDelay.collectAsState()
                 val inputDelay by viewModel.activeInputDelay.collectAsState()
-                val totalDelay by viewModel.activeTotalDelay.collectAsState()
 
                 val inName = inputDevice?.name ?: context.getString(R.string.microphone)
                 val outName = device?.name ?: context.getString(R.string.speaker)
@@ -240,41 +240,19 @@ fun SettingsScreen(
                     }
                 }
 
-                if (totalDelay > 0) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(R.string.settings_total_delay, totalDelay),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Slider(
-                    value = inputDelay.toFloat(),
-                    onValueChange = { viewModel.setInputDelay(((it / 25f).roundToInt() * 25).coerceIn(0, 500)) },
-                    valueRange = 0f..500f,
-                    steps = 19,
-                    modifier = Modifier.fillMaxWidth()
+                Spacer(modifier = Modifier.height(12.dp))
+                DelaySlider(
+                    name = stringResource(R.string.settings_output_name),
+                    value = outputDelay,
+                    onValueChange = viewModel::setOutputDelay
                 )
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        stringResource(R.string.settings_input_delay_min),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.align(Alignment.CenterStart)
-                    )
-                    Text(
-                        stringResource(R.string.settings_input_delay_max),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.align(Alignment.CenterEnd)
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_input_delay, inputDelay),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                DelaySlider(
+                    name = stringResource(R.string.settings_input_name),
+                    value = inputDelay,
+                    onValueChange = viewModel::setInputDelay
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -287,6 +265,38 @@ fun SettingsScreen(
                 Text(stringResource(R.string.settings_reset_to_defaults))
             }
         }
+    }
+}
+
+@Composable
+private fun DelaySlider(
+    name: String,
+    value: Int,
+    onValueChange: (Int) -> Unit
+) {
+    Slider(
+        value = value.toFloat(),
+        onValueChange = { onValueChange(((it / 25f).roundToInt() * 25).coerceIn(0, 500)) },
+        valueRange = 0f..500f,
+        steps = 19,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            stringResource(R.string.settings_input_delay_min),
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.align(Alignment.CenterStart)
+        )
+        Text(
+            stringResource(R.string.settings_input_delay_max),
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.align(Alignment.CenterEnd)
+        )
+        Text(
+            text = stringResource(R.string.settings_delay_value, name, value),
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.align(Alignment.Center)
+        )
     }
 }
 

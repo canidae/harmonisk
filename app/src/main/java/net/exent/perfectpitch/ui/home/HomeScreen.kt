@@ -19,12 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import net.exent.perfectpitch.R
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import net.exent.perfectpitch.audio.AudioDeviceMonitor
-import net.exent.perfectpitch.data.AudioDelayRepository
 import net.exent.perfectpitch.data.DevModeState
-import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
@@ -42,24 +38,7 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val uncalibratedDeviceNames by viewModel.uncalibratedDeviceNames.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(uncalibratedDeviceNames) {
-        val names = uncalibratedDeviceNames
-        if (names != null && viewModel.shouldShowPrompt()) {
-            val msg = context.getString(R.string.home_uncalibrated, names.joinToString(", "))
-            val result = snackbarHostState.showSnackbar(
-                message = msg,
-                actionLabel = context.getString(R.string.settings),
-                duration = SnackbarDuration.Indefinite
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                onNavigateToSettings()
-            }
-            viewModel.dismissPrompt()
-        }
-    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -270,33 +249,8 @@ private fun ModeCard(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val audioDeviceMonitor: AudioDeviceMonitor,
-    private val audioDelayRepository: AudioDelayRepository,
     private val devModeState: DevModeState
 ) : ViewModel() {
-
-    val uncalibratedDeviceNames: StateFlow<List<String>?> = combine(
-        audioDeviceMonitor.currentInputDevice,
-        audioDeviceMonitor.currentDevice,
-        audioDelayRepository.allProfiles
-    ) { inputDevice, outputDevice, profiles ->
-        val uncalibrated = mutableListOf<String>()
-        if (!profiles.containsKey(inputDevice.deviceKey)) {
-            uncalibrated.add(inputDevice.name)
-        }
-        if (!profiles.containsKey(outputDevice.deviceKey)) {
-            uncalibrated.add(outputDevice.name)
-        }
-        uncalibrated.ifEmpty { null }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    private var promptDismissed = false
-
-    fun dismissPrompt() {
-        promptDismissed = true
-    }
-
-    fun shouldShowPrompt(): Boolean = !promptDismissed
 
     /** Toggle developer mode, returning whether it is now enabled. */
     fun toggleDevMode(): Boolean = devModeState.toggle()

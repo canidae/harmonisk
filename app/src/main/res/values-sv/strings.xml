@@ -23,7 +23,6 @@
     <string name="home_tuner_title">Stäm instrument</string>
     <string name="home_tuner_desc">Se din tonhöjd och stäm</string>
     <string name="home_tuner_desc_short">Stäm</string>
-    <string name="home_uncalibrated">Ljud inte kalibrerat: %1$s</string>
 
     <!-- Permissions -->
     <string name="permission_title">Mikrofonåtkomst krävs</string>
@@ -48,10 +47,8 @@
     <string name="settings_calibrating_stop">Stopp</string>
     <string name="settings_no_detection">Mikrofonen kan inte upptäcka toner</string>
     <string name="settings_calibrating">Kalibrerar… %1$d/5 toner upptäckta</string>
-    <string name="settings_input_delay">Audio input delay: %1$dms</string>
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
-    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">Återställ till standard?</string>
     <string name="settings_reset_dialog_body">Alla inställningar kommer att återställas till sina standardvärden, inklusive:\n\n\u2022 Kammarton (A = 440 Hz)\n\u2022 Tystnadströskel\n\u2022 Fritt spel-hastighet, tempo, taktart, notsnäppning</string>
     <string name="settings_reset">Återställ</string>
@@ -142,9 +139,8 @@
     <string name="melody_play_transpose_0">Transponering: 0</string>
     <string name="melody_play_transpose_plus">Transponering: +%1$d</string>
     <string name="melody_play_transpose">Transponering: %1$d</string>
-    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_output_delay">Audio output delay: %1$dms</string>
     <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
-    <string name="melody_play_uncalibrated">%1$s är inte kalibrerad</string>
 
     <!-- Score results -->
     <string name="score_dismiss">Stäng</string>

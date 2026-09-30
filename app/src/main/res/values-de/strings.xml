@@ -23,7 +23,6 @@
     <string name="home_tuner_title">Instrument stimmen</string>
     <string name="home_tuner_desc">Tonhöhe anzeigen und stimmen</string>
     <string name="home_tuner_desc_short">Stimmen</string>
-    <string name="home_uncalibrated">Audio nicht kalibriert: %1$s</string>
 
     <!-- Permissions -->
     <string name="permission_title">Mikrofonzugriff erforderlich</string>
@@ -48,10 +47,8 @@
     <string name="settings_calibrating_stop">Stopp</string>
     <string name="settings_no_detection">Mikrofon kann keine Töne erkennen</string>
     <string name="settings_calibrating">Kalibrieren\u2026 %1$d/5 Töne erkannt</string>
-    <string name="settings_input_delay">Audio input delay: %1$dms</string>
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
-    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">Auf Standard zurücksetzen?</string>
     <string name="settings_reset_dialog_body">Alle Einstellungen werden auf ihre Standardwerte zurückgesetzt, einschließlich:\n\n\u2022 Kammerton (A = 440 Hz)\n\u2022 Ruheschwelle\n\u2022 Freies Spiel Geschwindigkeit, Tempo, Taktart, Noten-Snap</string>
     <string name="settings_reset">Zurücksetzen</string>
@@ -142,9 +139,8 @@
     <string name="melody_play_transpose_0">Transponierung: 0</string>
     <string name="melody_play_transpose_plus">Transponierung: +%1$d</string>
     <string name="melody_play_transpose">Transponierung: %1$d</string>
-    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_output_delay">Audio output delay: %1$dms</string>
     <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
-    <string name="melody_play_uncalibrated">%1$s ist nicht kalibriert</string>
 
     <!-- Score results -->
     <string name="score_dismiss">Schließen</string>

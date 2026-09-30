@@ -23,7 +23,6 @@
     <string name="home_tuner_title">Accorda strumento</string>
     <string name="home_tuner_desc">Vedi l\'altezza e accorda</string>
     <string name="home_tuner_desc_short">Accorda</string>
-    <string name="home_uncalibrated">Audio non calibrato: %1$s</string>
 
     <!-- Permissions -->
     <string name="permission_title">Accesso al microfono richiesto</string>
@@ -48,10 +47,8 @@
     <string name="settings_calibrating_stop">Ferma</string>
     <string name="settings_no_detection">Il microfono non rileva toni</string>
     <string name="settings_calibrating">Calibrazione… %1$d/5 toni rilevati</string>
-    <string name="settings_input_delay">Audio input delay: %1$dms</string>
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
-    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">Ripristinare ai valori predefiniti?</string>
     <string name="settings_reset_dialog_body">Tutte le impostazioni verranno ripristinate ai valori predefiniti, inclusi:\n\n\u2022 Diapason (A = 440 Hz)\n\u2022 Soglia silenzio\n\u2022 Velocità, tempo, metrica, snap delle note in Gioco libero</string>
     <string name="settings_reset">Ripristina</string>
@@ -142,9 +139,8 @@
     <string name="melody_play_transpose_0">Trasposizione: 0</string>
     <string name="melody_play_transpose_plus">Trasposizione: +%1$d</string>
     <string name="melody_play_transpose">Trasposizione: %1$d</string>
-    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_output_delay">Audio output delay: %1$dms</string>
     <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
-    <string name="melody_play_uncalibrated">%1$s non è calibrato</string>
 
     <!-- Score results -->
     <string name="score_dismiss">Chiudi</string>

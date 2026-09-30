@@ -23,7 +23,6 @@
     <string name="home_tuner_title">Still Instrument</string>
     <string name="home_tuner_desc">Se tonehøyden og still inn</string>
     <string name="home_tuner_desc_short">Still inn</string>
-    <string name="home_uncalibrated">Lyd ikke kalibrert: %1$s</string>
 
     <!-- Permissions -->
     <string name="permission_title">Mikrofontilgang kreves</string>
@@ -48,10 +47,8 @@
     <string name="settings_calibrating_stop">Stopp</string>
     <string name="settings_no_detection">Mikrofonen kan ikke oppdage toner</string>
     <string name="settings_calibrating">Kalibrerer\u2026 %1$d/5 toner oppdaget</string>
-    <string name="settings_input_delay">Audio input delay: %1$dms</string>
-    <string name="settings_input_delay_min">0ms</string>
-    <string name="settings_input_delay_max">500ms</string>
-    <string name="settings_total_delay">Total delay: %1$dms</string>
+    <string name="settings_input_delay_min">0</string>
+    <string name="settings_input_delay_max">500</string>
     <string name="settings_reset_dialog_title">Tilbakestill til standard?</string>
     <string name="settings_reset_dialog_body">Alle innstillinger vil bli tilbakestilt til standardverdier, inkludert:\n\n\u2022 Kammertone (A = 440 Hz)\n\u2022 Stilleterskel\n\u2022 Fri Spill-hastighet, tempo, taktart, noteinnsnapping</string>
     <string name="settings_reset">Tilbakestill</string>
@@ -147,9 +144,8 @@
     <string name="melody_play_transpose_0">Transponer: 0</string>
     <string name="melody_play_transpose_plus">Transponer: +%1$d</string>
     <string name="melody_play_transpose">Transponer: %1$d</string>
-    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_output_delay">Audio output delay: %1$dms</string>
     <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
-    <string name="melody_play_uncalibrated">%1$s er ikke kalibrert</string>
 
     <!-- Score results -->
     <string name="score_dismiss">Lukk</string>

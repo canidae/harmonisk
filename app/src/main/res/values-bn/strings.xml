@@ -23,7 +23,6 @@
     <string name="home_tuner_title">যন্ত্র টিউন করুন</string>
     <string name="home_tuner_desc">আপনার পিচ দেখুন এবং টিউন করুন</string>
     <string name="home_tuner_desc_short">টিউন করুন</string>
-    <string name="home_uncalibrated">অডিও ক্যালিব্রেট করা হয়নি: %1$s</string>
 
     <!-- Permissions -->
     <string name="permission_title">মাইক্রোফোন অ্যাক্সেস প্রয়োজন</string>
@@ -48,10 +47,8 @@
     <string name="settings_calibrating_stop">থামান</string>
     <string name="settings_no_detection">মাইক্রোফোন কোনো স্বর সনাক্ত করতে পারে না</string>
     <string name="settings_calibrating">ক্যালিব্রেট করছে… %1$d/5 স্বর সনাক্ত</string>
-    <string name="settings_input_delay">Audio input delay: %1$dms</string>
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
-    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">ডিফল্টে রিসেট করবেন?</string>
     <string name="settings_reset_dialog_body">সমস্ত সেটিংস তাদের ডিফল্ট মানগুলিতে ফিরে যাবে, যার মধ্যে রয়েছে:\n\n\u2022 কনসার্ট পিচ (A = 440 Hz)\n\u2022 নীরবতা সীমা\n\u2022 মুক্ত বাজনার গতি, টেম্পো, সময়ের স্বরলিপি, নোট স্ন্যাপ</string>
     <string name="settings_reset">রিসেট</string>
@@ -142,9 +139,8 @@
     <string name="melody_play_transpose_0">ট্রান্সপোজ: 0</string>
     <string name="melody_play_transpose_plus">ট্রান্সপোজ: +%1$d</string>
     <string name="melody_play_transpose">ট্রান্সপোজ: %1$d</string>
-    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_output_delay">Audio output delay: %1$dms</string>
     <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
-    <string name="melody_play_uncalibrated">%1$s ক্যালিব্রেট করা হয়নি</string>
 
     <!-- Score results -->
     <string name="score_dismiss">বাতিল করুন</string>

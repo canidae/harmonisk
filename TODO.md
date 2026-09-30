@@ -1,7 +1,3 @@
-# Calibration
-Instead of warning the user about missing calibration on a fresh install for built-in microphone and phone speaker, set default audio output delay to 250ms and audio input delay to 100ms.
-Replace "Total delay" with a audio output delay (ranging from 0 to 500ms, like the input delay).
-
 # Changes to song list & title after selecting a song
 We're currently not showing the current level for a song in the song list, just the cumulative score. We should also show the current level.
 The preview song button in the song list is currently a triangle. This is a bit misleading, replace it with a note similar to the one we can press to preview the song after selecting a song.

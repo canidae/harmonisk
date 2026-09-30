@@ -23,7 +23,6 @@
     <string name="home_tuner_title">ضبط آلة موسيقية</string>
     <string name="home_tuner_desc">شاهد الحدة واضبط</string>
     <string name="home_tuner_desc_short">ضبط</string>
-    <string name="home_uncalibrated">الصوت غير معاير: %1$s</string>
 
     <!-- Permissions -->
     <string name="permission_title">الوصول إلى الميكروفون مطلوب</string>
@@ -48,10 +47,8 @@
     <string name="settings_calibrating_stop">إيقاف</string>
     <string name="settings_no_detection">الميكروفون لا يستطيع اكتشاف أي نغمات</string>
     <string name="settings_calibrating">معايرة… %1$d/5 نغمات مكتشفة</string>
-    <string name="settings_input_delay">Audio input delay: %1$dms</string>
     <string name="settings_input_delay_min">0ms</string>
     <string name="settings_input_delay_max">500ms</string>
-    <string name="settings_total_delay">Total delay: %1$dms</string>
     <string name="settings_reset_dialog_title">إعادة تعيين إلى الإعدادات الافتراضية؟</string>
     <string name="settings_reset_dialog_body">سيتم إعادة تعيين جميع الإعدادات إلى قيمها الافتراضية، بما في ذلك:\n\n\u2022 الضبط القياسي (A = 440 هرتز)\n\u2022 حد الصمت\n\u2022 سرعة العزف الحر، الإيقاع، الميزان، التقاط النغمات</string>
     <string name="settings_reset">إعادة تعيين</string>
@@ -142,9 +139,8 @@
     <string name="melody_play_transpose_0">تحويل: 0</string>
     <string name="melody_play_transpose_plus">تحويل: +%1$d</string>
     <string name="melody_play_transpose">تحويل: %1$d</string>
-    <string name="melody_play_total_delay">Total delay: %1$dms</string>
+    <string name="melody_play_output_delay">Audio output delay: %1$dms</string>
     <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
-    <string name="melody_play_uncalibrated">%1$s غير معاير</string>
 
     <!-- Score results -->
     <string name="score_dismiss">إغلاق</string>

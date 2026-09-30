@@ -23,7 +23,6 @@
     <string name="home_tuner_title">Tune Instrument</string>
     <string name="home_tuner_desc">See your pitch and tune up</string>
     <string name="home_tuner_desc_short">Tune up</string>
-    <string name="home_uncalibrated">Audio not calibrated: %1$s</string>
     <string name="dev_mode_enabled">Developer mode enabled</string>
     <string name="dev_mode_disabled">Developer mode disabled</string>
 
@@ -45,16 +44,18 @@
     <string name="settings_silence_threshold">%1$.0f dB</string>
     <string name="settings_silence_threshold_min">Less sensitive</string>
     <string name="settings_silence_threshold_max">More sensitive</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
+    <string name="settings_delay_title">Audio delay calibration</string>
+    <string name="settings_output_name">Output</string>
+    <string name="settings_input_name">Input</string>
+    <string name="settings_delay_value">%1$s delay: %2$d ms</string>
+    <string name="settings_delay_help">A phone takes a moment to turn a note into sound, so the note is always heard a little after the app played it. The output delay tells the app how long that moment is. Increase it if the sound reaches you late, decrease it if it reaches you early.\n\nListening to a note and working out its pitch takes a moment, so the app always registers a note a little after you played it. The input delay tells the app how long that moment is. Increase it if your notes are scored late, decrease it if they are scored early.</string>
     <string name="settings_devices">%1$s / %2$s</string>
     <string name="settings_auto_calibrate">Auto</string>
     <string name="settings_calibrating_stop">Stop</string>
     <string name="settings_no_detection">Microphone can\'t detect any tones</string>
     <string name="settings_calibrating">Calibrating\u2026 %1$d/5 tones detected</string>
-    <string name="settings_input_delay">Audio input delay: %1$dms</string>
-    <string name="settings_input_delay_min">0ms</string>
-    <string name="settings_input_delay_max">500ms</string>
-    <string name="settings_total_delay">Total delay: %1$dms</string>
+    <string name="settings_input_delay_min">0</string>
+    <string name="settings_input_delay_max">500</string>
     <string name="settings_reset_dialog_title">Reset to defaults?</string>
     <string name="settings_reset_dialog_body">All settings will be returned to their default values, including:\n\n\u2022 Concert pitch (A = 440 Hz)\n\u2022 Silence threshold\n\u2022 Free Play speed, tempo, time signature, note snapping</string>
     <string name="settings_reset">Reset</string>
@@ -64,7 +65,6 @@
     <string name="settings_help">Help</string>
     <string name="settings_help_got_it">Got it</string>
     <string name="settings_concert_pitch_help">The reference pitch your instrument is tuned to. Perfect Pitch uses this as the target when detecting notes. Standard tuning is A4 = 440 Hz.</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="instrument_piano">Piano</string>
     <string name="instrument_violin">Violin</string>
     <string name="instrument_cello">Cello</string>
@@ -162,8 +162,7 @@
     <string name="melody_play_transpose_plus">Transpose: +%1$d</string>
     <string name="melody_play_transpose">Transpose: %1$d</string>
     <string name="melody_play_input_delay">Audio input delay: %1$dms</string>
-    <string name="melody_play_total_delay">Total delay: %1$dms</string>
-    <string name="melody_play_uncalibrated">%1$s is not calibrated</string>
+    <string name="melody_play_output_delay">Audio output delay: %1$dms</string>
 
     <!-- Score results -->
     <string name="score_dismiss">Dismiss</string>
@@ -192,3 +191,7 @@
     <string name="note_thirty_second">32nd</string>
 
 </resources>
+
+
+
+

@@ -40,7 +40,8 @@ class SettingsViewModel @Inject constructor(
         private const val TARGET_FREQ = 440f
         private const val FREQ_TOLERANCE = 30f
         private const val REQUIRED_DETECTIONS = 5
-        private const val DELAY_STEP_MS = 25
+        /** Calibration rounds delays to the steps the delay sliders can express. */
+        const val DELAY_STEP_MS = 25
         // Fallbacks when the device doesn't report capture/inference latency
         private const val FALLBACK_CAPTURE_LATENCY_MS = 15
         private const val FALLBACK_INFERENCE_LATENCY_MS = 40
@@ -55,7 +56,7 @@ class SettingsViewModel @Inject constructor(
     val currentInputDevice: StateFlow<AudioInputDevice?> = audioDeviceMonitor.currentInputDevice
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val activeTotalDelay: StateFlow<Int> = audioDelayRepository.activeTotalDelay
+    val activeOutputDelay: StateFlow<Int> = audioDelayRepository.activeOutputDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
@@ -97,6 +98,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setInputDelay(ms: Int) {
         viewModelScope.launch { audioDelayRepository.setInputDelayForCurrentDevices(ms) }
+    }
+
+    fun setOutputDelay(ms: Int) {
+        viewModelScope.launch { audioDelayRepository.setOutputDelayForCurrentDevices(ms) }
     }
 
     fun resetToDefaults() {
@@ -178,11 +183,15 @@ class SettingsViewModel @Inject constructor(
                     }
                 }
 
-                val avg = measurements.average().toInt()
-                val roundedTotal = (avg + DELAY_STEP_MS / 2) / DELAY_STEP_MS * DELAY_STEP_MS
+                // The round trip is everything the tone spends getting out of the speaker, through
+                // the air, and back through the mic and pitch detection. Only what is left after
+                // the input side is the app's own playback delay.
+                val roundTripMs = roundToStep(measurements.average().toInt())
                 val inputMs = measureInputDelayMs()
-                audioDelayRepository.setTotalDelayForCurrentDevices(roundedTotal)
                 audioDelayRepository.setInputDelayForCurrentDevices(inputMs)
+                audioDelayRepository.setOutputDelayForCurrentDevices(
+                    roundToStep(roundTripMs - inputMs).coerceAtLeast(0)
+                )
             } catch (_: Exception) {
             } finally {
                 pitchJob.cancel()
@@ -223,7 +232,7 @@ class SettingsViewModel @Inject constructor(
         val capture = if (captureCount > 0) captureSum / captureCount else FALLBACK_CAPTURE_LATENCY_MS
         val inference = if (inferenceCount > 0) inferenceSum / inferenceCount else FALLBACK_INFERENCE_LATENCY_MS
         val inputMs = capture + PitchProcessor.ANALYSIS_WINDOW_MS + inference + PitchProcessor.INPUT_ONSET_MS
-        return (inputMs + DELAY_STEP_MS / 2) / DELAY_STEP_MS * DELAY_STEP_MS
+        return roundToStep(inputMs)
     }
 
     override fun onCleared() {
@@ -234,3 +243,7 @@ class SettingsViewModel @Inject constructor(
         soundFontSynthesizer.close()
     }
 }
+
+/** Rounds a delay to the nearest step the delay sliders can express. */
+internal fun roundToStep(ms: Int): Int =
+    (ms + SettingsViewModel.DELAY_STEP_MS / 2) / SettingsViewModel.DELAY_STEP_MS * SettingsViewModel.DELAY_STEP_MS

@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import net.exent.perfectpitch.audio.AudioConstants
-import net.exent.perfectpitch.audio.AudioDeviceMonitor
 import net.exent.perfectpitch.audio.MelodyPlayer
 import net.exent.perfectpitch.audio.SoundFontSynthesizer
 import net.exent.perfectpitch.audio.NotePlayer
@@ -49,7 +48,6 @@ class MelodyViewModel @Inject constructor(
     private val soundFontSynthesizer: SoundFontSynthesizer,
     private val melodyPlayer: MelodyPlayer,
     private val audioDelayRepository: AudioDelayRepository,
-    private val audioDeviceMonitor: AudioDeviceMonitor,
     private val midiDeviceManager: MidiDeviceManager,
     private val midiInputReceiver: MidiInputReceiver,
     private val midiOutputSender: MidiOutputSender,
@@ -136,8 +134,8 @@ class MelodyViewModel @Inject constructor(
     private var synthOpenJob: Job? = null
     // Mic-to-detection input delay, drives the canvas offset (bars lead the beat)
     private var inputDelayMs: Int = 0
-    // Measured total round-trip delay (output + input), used for app playback scheduling
-    private var totalDelayMs: Int = 0
+    // Audio output delay, playback is scheduled this much early so it is heard on the beat
+    private var outputDelayMs: Int = 0
 
     init {
         viewModelScope.launch {
@@ -174,10 +172,10 @@ class MelodyViewModel @Inject constructor(
                 inputDelayMs = delayMs
             }
         }
-        // Observe per-device total delay for app playback scheduling
+        // Observe per-device output delay for app playback scheduling
         viewModelScope.launch {
-            audioDelayRepository.activeTotalDelay.collect { delayMs ->
-                totalDelayMs = delayMs
+            audioDelayRepository.activeOutputDelay.collect { delayMs ->
+                outputDelayMs = delayMs
             }
         }
         // Observe MIDI availability
@@ -207,33 +205,8 @@ class MelodyViewModel @Inject constructor(
     val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val activeTotalDelay: StateFlow<Int> = audioDelayRepository.activeTotalDelay
+    val activeOutputDelay: StateFlow<Int> = audioDelayRepository.activeOutputDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
-    /** Emits a device name when an uncalibrated device is detected, null otherwise. */
-    val uncalibratedDevicePrompt: StateFlow<String?> = combine(
-        audioDeviceMonitor.currentInputDevice,
-        audioDeviceMonitor.currentDevice,
-        audioDelayRepository.allProfiles
-    ) { inputDevice, outputDevice, profiles ->
-        // Check if the current input device has a stored calibration
-        if (!profiles.containsKey(inputDevice.deviceKey)) {
-            return@combine inputDevice.name
-        }
-        // Check if the current output device has a stored calibration
-        if (!profiles.containsKey(outputDevice.deviceKey)) {
-            return@combine outputDevice.name
-        }
-        null
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    private var calibrationPromptDismissed = false
-
-    fun dismissCalibrationPrompt() {
-        calibrationPromptDismissed = true
-    }
-
-    fun shouldShowCalibrationPrompt(): Boolean = !calibrationPromptDismissed
 
     fun toggleMidiInput() {
         midiDeviceManager.setInputOverride(
@@ -790,12 +763,12 @@ class MelodyViewModel @Inject constructor(
 
     /**
      * Where the game clock starts for a count-in of [leadInSeconds]. The app's own notes are
-     * scheduled early by the measured round-trip delay so that they are heard on the beat, so the
+     * scheduled early by the measured output delay so that they are heard on the beat, so the
      * clock starts that much earlier as well: otherwise the count-in's first beat, which sits on the
      * very first tick, is scheduled before the clock has started and is never heard.
      */
     private fun playbackStartTime(leadInSeconds: Double): Double =
-        -leadInSeconds - totalDelayMs / 1000.0
+        -leadInSeconds - outputDelayMs / 1000.0
 
     fun pause() {
         pauseOffset = _gameState.value.currentTimeSeconds
@@ -1025,9 +998,9 @@ class MelodyViewModel @Inject constructor(
                 // Driven even with nothing to play, so a voice left to the player is released rather
                 // than ringing on over the pause the game is listening for.
                 if (soundFontSynthesizer.isReady) {
-                    // The app plays the total delay early so its notes are heard
-                    // when the bar crosses the now line and detected on the beat.
-                    melodyPlayer.updateGameTime(currentTime + totalDelayMs / 1000.0, playTracks)
+                    // Playback runs the output delay early so notes are heard
+                    // when the bar crosses the now line.
+                    melodyPlayer.updateGameTime(currentTime + outputDelayMs / 1000.0, playTracks)
                 }
 
                 delay(16)

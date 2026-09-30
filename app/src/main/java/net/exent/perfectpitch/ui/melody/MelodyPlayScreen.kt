@@ -63,9 +63,8 @@ fun MelodyPlayScreen(
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
     val deviceState by viewModel.deviceState.collectAsStateWithLifecycle()
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
-    val uncalibratedDevice by viewModel.uncalibratedDevicePrompt.collectAsState()
     val inputDelay by viewModel.activeInputDelay.collectAsState()
-    val totalDelay by viewModel.activeTotalDelay.collectAsState()
+    val outputDelay by viewModel.activeOutputDelay.collectAsState()
     val scoreHistory by viewModel.currentScoreHistory.collectAsStateWithLifecycle()
     val canAdvance by viewModel.canAdvanceLevel.collectAsStateWithLifecycle()
     val celebrationLevel by viewModel.celebrationLevel.collectAsStateWithLifecycle()
@@ -92,22 +91,6 @@ fun MelodyPlayScreen(
     LaunchedEffect(gameState.phase) {
         if (gameState.phase == PlayPhase.FINISHED) {
             showResultsModal = true
-        }
-    }
-
-    LaunchedEffect(uncalibratedDevice) {
-        val deviceName = uncalibratedDevice
-        if (deviceName != null && viewModel.shouldShowCalibrationPrompt()) {
-            val result = snackbarHostState.showSnackbar(
-                message = context.getString(R.string.melody_play_uncalibrated, deviceName),
-                actionLabel = context.getString(R.string.settings),
-                duration = SnackbarDuration.Long
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                viewModel.stop()
-                onNavigateToSettings()
-            }
-            viewModel.dismissCalibrationPrompt()
         }
     }
 
@@ -273,7 +256,7 @@ fun MelodyPlayScreen(
                         transposeSemitones = gameState.transposeSemitones,
                         onTransposeChange = { viewModel.setTranspose(it) },
                         inputDelay = inputDelay,
-                        totalDelay = totalDelay,
+                        outputDelay = outputDelay,
                         accompanimentMode = gameState.accompanimentMode,
                         onAccompanimentModeChange = { viewModel.setAccompanimentMode(it) },
                         showLevelControl = devModeEnabled,
@@ -486,7 +469,7 @@ private fun MelodySettingsMenu(
     transposeSemitones: Int,
     onTransposeChange: (Int) -> Unit,
     inputDelay: Int,
-    totalDelay: Int,
+    outputDelay: Int,
     accompanimentMode: AccompanimentMode,
     onAccompanimentModeChange: (AccompanimentMode) -> Unit,
     showLevelControl: Boolean,
@@ -582,7 +565,7 @@ private fun MelodySettingsMenu(
                 onClick = {}
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.melody_play_total_delay, totalDelay)) },
+                text = { Text(stringResource(R.string.melody_play_output_delay, outputDelay)) },
                 onClick = {}
             )
         }
