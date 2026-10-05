@@ -57,6 +57,29 @@ class ScoringEngine {
         }
 
         /**
+         * Averages the category scores that are in play at [level] — the note score always,
+         * the song-duration score up to level 3, the correct-notes score from level 3 up —
+         * so two half marks give 50 rather than compounding into 25.
+         *
+         * @param noteScore      0f–100f, pitch and duration averaged per note
+         * @param timeScore      0f–1f from [scoreTime]
+         * @param wrongNoteScore 0f–100f share of notes hit
+         */
+        fun combineScores(noteScore: Float, timeScore: Float, wrongNoteScore: Float, level: Int): Float {
+            var total = noteScore
+            var categories = 1
+            if (level <= 3) {
+                total += timeScore * 100f
+                categories++
+            }
+            if (level >= 3) {
+                total += wrongNoteScore
+                categories++
+            }
+            return total / categories
+        }
+
+        /**
          * Computes a time score (0–1) based on how long the user took relative
          * to the song's real duration: min(1, songDuration * grace / playTime).
          * Full marks up to the level's grace over the song's duration — 20% at level 1,

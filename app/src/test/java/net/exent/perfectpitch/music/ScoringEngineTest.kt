@@ -374,4 +374,35 @@ class ScoringEngineTest {
         // Perfect pitch (100) * 0.6 + perfect duration (100) * 0.4 = 100
         assertEquals(100f, result.overallScore, 0.01f)
     }
+
+    // Total score tests
+
+    @Test
+    fun `total score is 100 when every category in play is perfect`() {
+        for (level in 1..5) {
+            assertEquals(100f, ScoringEngine.combineScores(100f, 1f, 100f, level), 0.01f)
+        }
+    }
+
+    @Test
+    fun `two half marks no longer compound into a quarter`() {
+        // 50% notes and 50% correct notes used to multiply to 25, now they average to 50
+        assertEquals(50f, ScoringEngine.combineScores(50f, 1f, 50f, 4), 0.01f)
+        // 50% notes and half the song duration score used to give 25 at level 1
+        assertEquals(50f, ScoringEngine.combineScores(50f, 0.5f, 100f, 1), 0.01f)
+    }
+
+    @Test
+    fun `total score averages every category in play`() {
+        assertEquals(75f, ScoringEngine.combineScores(100f, 0.5f, 0f, 2), 0.01f)
+        assertEquals(66.67f, ScoringEngine.combineScores(100f, 0.5f, 50f, 3), 0.01f)
+        assertEquals(75f, ScoringEngine.combineScores(100f, 0f, 50f, 4), 0.01f)
+    }
+
+    @Test
+    fun `total score ignores the categories that are not scored at that level`() {
+        // Wrong notes do not count up to level 2, song duration does not count from level 4
+        assertEquals(100f, ScoringEngine.combineScores(100f, 1f, 0f, 2), 0.01f)
+        assertEquals(100f, ScoringEngine.combineScores(100f, 0f, 100f, 4), 0.01f)
+    }
 }

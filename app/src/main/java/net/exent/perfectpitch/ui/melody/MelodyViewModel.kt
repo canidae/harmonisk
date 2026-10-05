@@ -1332,11 +1332,13 @@ class MelodyViewModel @Inject constructor(
         val wrongNoteCount = totalNotes - melodyScore.notesHit
         val wrongNoteScore = if (totalNotes > 0) (melodyScore.notesHit.toFloat() / totalNotes) * 100f else 100f
 
-        // Apply as additional multiplier for levels >= 3
-        var adjustedScore = melodyScore.overallScore * timeScore
-        if (currentLevel >= 3) {
-            adjustedScore *= (wrongNoteScore / 100f)
-        }
+        // Average the category scores that are in play at this level
+        val adjustedScore = ScoringEngine.combineScores(
+            noteScore = melodyScore.overallScore,
+            timeScore = timeScore,
+            wrongNoteScore = wrongNoteScore,
+            level = currentLevel
+        )
         val adjustedMelodyScore = melodyScore.copy(
             overallScore = adjustedScore,
             timeScore = timeScore,
