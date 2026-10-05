@@ -51,7 +51,7 @@ fun ScoreProgressGraph(
         }
 
         val scoreMin = 0f
-        val scoreMax = 500f
+        val scoreMax = 100f
 
         Canvas(
             modifier = Modifier
@@ -93,7 +93,7 @@ fun ScoreProgressGraph(
             val points = scores.mapIndexed { index, entry ->
                 val t = if (scores.size == 1) 1f else index.toFloat() / (scores.size - 1)
                 val x = chartLeft + chartWidth * t
-                val y = chartTop + chartHeight * (1f - (entry.combinedScore - scoreMin) / (scoreMax - scoreMin))
+                val y = chartTop + chartHeight * (1f - (entry.overallScore - scoreMin) / (scoreMax - scoreMin))
                 Offset(x, y.coerceIn(chartTop, chartTop + chartHeight))
             }
 
@@ -119,7 +119,7 @@ fun ScoreProgressGraph(
             // Draw dots
             val dotRadius = if (compact) 5f else 6f
             for (i in points.indices) {
-                val dotColor = scoreColor(scores[i].combinedScore / 5f)
+                val dotColor = scoreColor(scores[i].overallScore)
                 drawCircle(dotColor, dotRadius, points[i])
                 drawCircle(Color.White, dotRadius * 0.5f, points[i])
             }
