@@ -33,6 +33,7 @@ fun ScoreProgressGraph(
     val lineColor = Purple40
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val levelLineColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f)
 
     val density = LocalDensity.current
     val labelSize = if (compact) 9.sp else 11.sp
@@ -97,6 +98,37 @@ fun ScoreProgressGraph(
                 Offset(x, y.coerceIn(chartTop, chartTop + chartHeight))
             }
 
+            // Level-change markers, drawn behind the data
+            for (i in levelChangeIndices(scores)) {
+                val x = points[i].x
+                var y = chartTop
+                while (y < chartTop + chartHeight) {
+                    drawLine(
+                        color = levelLineColor,
+                        start = Offset(x, y),
+                        end = Offset(x, (y + 5f).coerceAtMost(chartTop + chartHeight)),
+                        strokeWidth = 1.5f
+                    )
+                    y += 9f
+                }
+
+                if (!compact) {
+                    val t = if (scores.size == 1) 1f else i.toFloat() / (scores.size - 1)
+                    val nearRight = t > 0.75f
+                    drawContext.canvas.nativeCanvas.drawText(
+                        "Lv.${scores[i].level}",
+                        if (nearRight) x - 3f else x + 3f,
+                        chartTop + with(density) { labelSize.toPx() },
+                        android.graphics.Paint().apply {
+                            color = textColor.hashCode()
+                            this.textSize = with(density) { labelSize.toPx() }
+                            textAlign = if (nearRight) android.graphics.Paint.Align.RIGHT
+                            else android.graphics.Paint.Align.LEFT
+                        }
+                    )
+                }
+            }
+
             // Draw connecting line
             if (points.size >= 2) {
                 val path = Path().apply {
@@ -149,3 +181,7 @@ fun ScoreProgressGraph(
         }
     }
 }
+
+/** Runs played at a different level than the run before, where the graph marks a level change. */
+fun levelChangeIndices(scores: List<ScoreEntry>): List<Int> =
+    scores.indices.filter { it > 0 && scores[it].level != scores[it - 1].level }
