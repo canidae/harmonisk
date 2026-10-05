@@ -137,9 +137,6 @@
     <!-- Score results -->
     <string name="score_dismiss">إغلاق</string>
     <string name="score_level">المستوى %1$d</string>
-    <string name="score_notes_hit">النغمات المصابة</string>
-    <string name="score_perfect">ممتاز</string>
-    <string name="score_great">رائع</string>
     <string name="retry">إعادة المحاولة</string>
     <string name="next_level">المستوى %d</string>
     <string name="level_2_change">في المستوى 2، دقة الحدة ستُحتسب في نتيجتك</string>

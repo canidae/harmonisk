@@ -137,9 +137,6 @@
     <!-- Score results -->
     <string name="score_dismiss">Hylkää</string>
     <string name="score_level">Taso %1$d</string>
-    <string name="score_notes_hit">Nuotit osuttu</string>
-    <string name="score_perfect">Täydellinen</string>
-    <string name="score_great">Loistava</string>
     <string name="retry">Yritä uudelleen</string>
     <string name="next_level">Taso %d</string>
     <string name="level_2_change">Tasolla 2 sävelkorkeuden tarkkuus vaikuttaa pisteisiisi</string>

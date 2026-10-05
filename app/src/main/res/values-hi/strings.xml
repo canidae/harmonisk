@@ -137,9 +137,6 @@
     <!-- Score results -->
     <string name="score_dismiss">खारिज करें</string>
     <string name="score_level">स्तर %1$d</string>
-    <string name="score_notes_hit">हिट नोट्स</string>
-    <string name="score_perfect">परफ़ेक्ट</string>
-    <string name="score_great">बढ़िया</string>
     <string name="retry">पुनः प्रयास करें</string>
     <string name="next_level">स्तर %d</string>
     <string name="level_2_change">स्तर 2 पर पिच सटीकता आपके स्कोर में गिना जाएगा</string>

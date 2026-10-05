@@ -137,9 +137,6 @@
     <!-- Score results -->
     <string name="score_dismiss">Chiudi</string>
     <string name="score_level">Livello %1$d</string>
-    <string name="score_notes_hit">Note centrate</string>
-    <string name="score_perfect">Perfetto</string>
-    <string name="score_great">Ottimo</string>
     <string name="retry">Riprova</string>
     <string name="next_level">Livello %d</string>
     <string name="level_2_change">Al livello 2 la precisione dell\'altezza influirà sul punteggio</string>

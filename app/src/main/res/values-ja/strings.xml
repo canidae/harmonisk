@@ -137,9 +137,6 @@
     <!-- Score results -->
     <string name="score_dismiss">閉じる</string>
     <string name="score_level">レベル %1$d</string>
-    <string name="score_notes_hit">ヒット音符</string>
-    <string name="score_perfect">パーフェクト</string>
-    <string name="score_great">グレート</string>
     <string name="retry">リトライ</string>
     <string name="next_level">レベル %d</string>
     <string name="level_2_change">レベル2では、ピッチの正確さがスコアに影響します</string>

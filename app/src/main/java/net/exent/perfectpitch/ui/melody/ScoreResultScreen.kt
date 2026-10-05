@@ -86,17 +86,6 @@ fun ScoreResultModal(
                             scoreColor = scoreColor(score)
                         )
 
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            StatCard(stringResource(R.string.score_notes_hit), "${melodyScore.notesHit}/${melodyScore.totalNotes}")
-                            StatCard(stringResource(R.string.score_perfect), "${melodyScore.perfectNotes}")
-                            StatCard(stringResource(R.string.score_great), "${melodyScore.greatNotes}")
-                        }
-
                         Spacer(modifier = Modifier.height(16.dp))
 
                         HorizontalDivider()
@@ -189,21 +178,4 @@ private fun enthusiasmLevel(score: Float): EnthusiasmLevel = when (ScoringEngine
     ScoreTier.GOOD -> EnthusiasmLevel.GOOD
     ScoreTier.OK -> EnthusiasmLevel.OK
     ScoreTier.NEEDS_WORK -> EnthusiasmLevel.NEEDS_WORK
-}
-
-@Composable
-private fun StatCard(label: String, value: String) {
-    Card {
-        Column(
-            modifier = Modifier.padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = value, style = MaterialTheme.typography.titleLarge)
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
 }

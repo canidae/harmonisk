@@ -137,9 +137,6 @@
     <!-- Score results -->
     <string name="score_dismiss">关闭</string>
     <string name="score_level">等级 %1$d</string>
-    <string name="score_notes_hit">命中音符</string>
-    <string name="score_perfect">完美</string>
-    <string name="score_great">优秀</string>
     <string name="retry">重试</string>
     <string name="next_level">等级 %d</string>
     <string name="level_2_change">在等级 2，音高准确度将计入得分</string>

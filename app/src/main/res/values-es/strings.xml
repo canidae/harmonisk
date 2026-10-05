@@ -137,9 +137,6 @@
     <!-- Score results -->
     <string name="score_dismiss">Descartar</string>
     <string name="score_level">Nivel %1$d</string>
-    <string name="score_notes_hit">Notas acertadas</string>
-    <string name="score_perfect">Perfecto</string>
-    <string name="score_great">Excelente</string>
     <string name="retry">Reintentar</string>
     <string name="next_level">Nivel %d</string>
     <string name="level_2_change">En el nivel 2 la precisión del tono contará para tu puntuación</string>

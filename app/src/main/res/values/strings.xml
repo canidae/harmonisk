@@ -159,9 +159,6 @@
     <!-- Score results -->
     <string name="score_dismiss">Dismiss</string>
     <string name="score_level">Level %1$d</string>
-    <string name="score_notes_hit">Notes Hit</string>
-    <string name="score_perfect">Perfect</string>
-    <string name="score_great">Great</string>
     <string name="retry">Retry</string>
     <string name="next_level">Level %d</string>
     <string name="level_2_change">On level 2 pitch accuracy will count toward your score</string>

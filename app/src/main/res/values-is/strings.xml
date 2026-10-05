@@ -137,9 +137,6 @@
     <!-- Score results -->
     <string name="score_dismiss">Hafna</string>
     <string name="score_level">Stig %1$d</string>
-    <string name="score_notes_hit">Nótur hittar</string>
-    <string name="score_perfect">Fullkomið</string>
-    <string name="score_great">Frábært</string>
     <string name="retry">Reyna aftur</string>
     <string name="next_level">Stig %d</string>
     <string name="level_2_change">Á stigi 2 mun tónhæðarnákvæmni telja með í skori þínu</string>

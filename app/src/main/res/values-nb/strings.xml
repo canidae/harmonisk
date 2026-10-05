@@ -142,9 +142,6 @@
     <!-- Score results -->
     <string name="score_dismiss">Lukk</string>
     <string name="score_level">Nivå %1$d</string>
-    <string name="score_notes_hit">Noter truffet</string>
-    <string name="score_perfect">Perfekt</string>
-    <string name="score_great">Bra</string>
     <string name="retry">Prøv igjen</string>
     <string name="next_level">Nivå %d</string>
     <string name="level_2_change">På nivå 2 vil tonehøyde-nøyaktighet telle mot poengsummen</string>

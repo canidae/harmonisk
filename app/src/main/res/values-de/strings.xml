@@ -137,9 +137,6 @@
     <!-- Score results -->
     <string name="score_dismiss">Schließen</string>
     <string name="score_level">Stufe %1$d</string>
-    <string name="score_notes_hit">Noten getroffen</string>
-    <string name="score_perfect">Perfekt</string>
-    <string name="score_great">Großartig</string>
     <string name="retry">Wiederholen</string>
     <string name="next_level">Stufe %d</string>
     <string name="level_2_change">Auf Stufe 2 zählt die Tonhöhengenauigkeit zur Punktzahl</string>

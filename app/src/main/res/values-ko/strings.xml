@@ -137,9 +137,6 @@
     <!-- Score results -->
     <string name="score_dismiss">닫기</string>
     <string name="score_level">레벨 %1$d</string>
-    <string name="score_notes_hit">맞춘 음표</string>
-    <string name="score_perfect">완벽</string>
-    <string name="score_great">훌륭</string>
     <string name="retry">재시도</string>
     <string name="next_level">레벨 %d</string>
     <string name="level_2_change">레벨 2에서 음정 정확도가 점수에 반영됩니다</string>

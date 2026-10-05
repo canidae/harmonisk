@@ -137,9 +137,6 @@
     <!-- Score results -->
     <string name="score_dismiss">Закрити</string>
     <string name="score_level">Рівень %1$d</string>
-    <string name="score_notes_hit">Влучні ноти</string>
-    <string name="score_perfect">Ідеально</string>
-    <string name="score_great">Чудово</string>
     <string name="retry">Спробувати знову</string>
     <string name="next_level">Рівень %d</string>
     <string name="level_2_change">На рівні 2 точність висоти звуку впливатиме на ваш рахунок</string>
