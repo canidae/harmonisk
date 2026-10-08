@@ -1,4 +1,4 @@
-# Perfect Pitch
+# Harmonisk
 
 An Android application for pitch detection and musical practice.
 
@@ -25,7 +25,7 @@ android-sdk/platform-tools/adb install app/build/outputs/apk/debug/app-debug.apk
 
 ### Start the app on the device
 ```bash
-android-sdk/platform-tools/adb shell am start -n net.exent.perfectpitch/.MainActivity
+android-sdk/platform-tools/adb shell am start -n net.exent.harmonisk/.MainActivity
 ```
 
 ### Run unit tests

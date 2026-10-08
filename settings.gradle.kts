@@ -21,5 +21,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PerfectPitch"
+rootProject.name = "Harmonisk"
 include(":app")

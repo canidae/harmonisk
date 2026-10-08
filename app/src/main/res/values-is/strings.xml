@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Perfect Pitch</string>
+    <string name="app_name">Harmonisk</string>
 
     <!-- Global -->
     <string name="back">Til baka</string>
@@ -12,8 +12,8 @@
     <string name="edit">Breyta</string>
 
     <!-- Home screen -->
-    <string name="home_title">Perfect Pitch</string>
-    <string name="home_heading">🎵 Perfect Pitch</string>
+    <string name="home_title">Harmonisk</string>
+    <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">Frjáls spilun</string>
     <string name="home_free_play_desc">Spilaðu frjálslega og taktu upp lag</string>
     <string name="home_free_play_desc_short">Tónhæð</string>
@@ -27,8 +27,8 @@
     <!-- Permissions -->
     <string name="permission_title">Aðgangur að hljóðnema krafist</string>
     <string name="permission_permanently_denied">Aðgangur að hljóðnema var varanlega hafnað. Vinsamlegast virkjaðu hann í stillingum tækisins.</string>
-    <string name="permission_rationale">Perfect Pitch þarf aðgang að hljóðnemanum til að greina tónana sem þú spilar. Vinsamlegast veittu leyfið.</string>
-    <string name="permission_description">Perfect Pitch þarf aðgang að hljóðnemanum þínum til að hlusta á hljóðfærið þitt og greina tónhæð í rauntíma.</string>
+    <string name="permission_rationale">Harmonisk þarf aðgang að hljóðnemanum til að greina tónana sem þú spilar. Vinsamlegast veittu leyfið.</string>
+    <string name="permission_description">Harmonisk þarf aðgang að hljóðnemanum þínum til að hlusta á hljóðfærið þitt og greina tónhæð í rauntíma.</string>
     <string name="permission_open_settings">Opna stillingar</string>
     <string name="permission_grant">Veita leyfi</string>
 

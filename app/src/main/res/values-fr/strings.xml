@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Perfect Pitch</string>
+    <string name="app_name">Harmonisk</string>
 
     <!-- Global -->
     <string name="back">Retour</string>
@@ -12,8 +12,8 @@
     <string name="edit">Modifier</string>
 
     <!-- Home screen -->
-    <string name="home_title">Perfect Pitch</string>
-    <string name="home_heading">🎵 Perfect Pitch</string>
+    <string name="home_title">Harmonisk</string>
+    <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">Jeu libre</string>
     <string name="home_free_play_desc">Jouez librement et enregistrez une chanson</string>
     <string name="home_free_play_desc_short">Hauteur de note</string>
@@ -27,8 +27,8 @@
     <!-- Permissions -->
     <string name="permission_title">Accès au microphone requis</string>
     <string name="permission_permanently_denied">L\'accès au microphone a été refusé de manière permanente. Veuillez l\'activer dans les paramètres de votre appareil.</string>
-    <string name="permission_rationale">Perfect Pitch a besoin d\'accéder au microphone pour détecter les notes que vous jouez. Veuillez accorder l\'autorisation.</string>
-    <string name="permission_description">Perfect Pitch a besoin d\'accéder à votre microphone pour écouter votre instrument et détecter la hauteur en temps réel.</string>
+    <string name="permission_rationale">Harmonisk a besoin d\'accéder au microphone pour détecter les notes que vous jouez. Veuillez accorder l\'autorisation.</string>
+    <string name="permission_description">Harmonisk a besoin d\'accéder à votre microphone pour écouter votre instrument et détecter la hauteur en temps réel.</string>
     <string name="permission_open_settings">Ouvrir les paramètres</string>
     <string name="permission_grant">Autoriser</string>
 

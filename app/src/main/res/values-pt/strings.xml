@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Perfect Pitch</string>
+    <string name="app_name">Harmonisk</string>
 
     <!-- Global -->
     <string name="back">Voltar</string>
@@ -12,8 +12,8 @@
     <string name="edit">Editar</string>
 
     <!-- Home screen -->
-    <string name="home_title">Perfect Pitch</string>
-    <string name="home_heading">🎵 Perfect Pitch</string>
+    <string name="home_title">Harmonisk</string>
+    <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">Modo livre</string>
     <string name="home_free_play_desc">Toque livremente e grave uma música</string>
     <string name="home_free_play_desc_short">Altura do som</string>
@@ -27,8 +27,8 @@
     <!-- Permissions -->
     <string name="permission_title">Acesso ao microfone necessário</string>
     <string name="permission_permanently_denied">O acesso ao microfone foi negado permanentemente. Ative-o nas configurações do dispositivo.</string>
-    <string name="permission_rationale">O Perfect Pitch precisa de acesso ao microfone para detetar as notas que toca. Por favor, conceda a permissão.</string>
-    <string name="permission_description">O Perfect Pitch precisa de aceder ao seu microfone para ouvir o seu instrumento e detetar a altura do som em tempo real.</string>
+    <string name="permission_rationale">O Harmonisk precisa de acesso ao microfone para detetar as notas que toca. Por favor, conceda a permissão.</string>
+    <string name="permission_description">O Harmonisk precisa de aceder ao seu microfone para ouvir o seu instrumento e detetar a altura do som em tempo real.</string>
     <string name="permission_open_settings">Abrir configurações</string>
     <string name="permission_grant">Conceder permissão</string>
 

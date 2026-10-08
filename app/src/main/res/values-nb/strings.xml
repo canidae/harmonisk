@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Perfect Pitch</string>
+    <string name="app_name">Harmonisk</string>
 
     <!-- Global -->
     <string name="back">Tilbake</string>
@@ -12,8 +12,8 @@
     <string name="edit">Rediger</string>
 
     <!-- Home screen -->
-    <string name="home_title">Perfect Pitch</string>
-    <string name="home_heading">🎵 Perfect Pitch</string>
+    <string name="home_title">Harmonisk</string>
+    <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">Fri Spill</string>
     <string name="home_free_play_desc">Spill fritt og ta opp en sang</string>
     <string name="home_free_play_desc_short">Tonehøyde</string>
@@ -27,8 +27,8 @@
     <!-- Permissions -->
     <string name="permission_title">Mikrofontilgang kreves</string>
     <string name="permission_permanently_denied">Mikrofontilgang ble permanent avslått. Aktiver den i enhetsinnstillingene.</string>
-    <string name="permission_rationale">Perfect Pitch trenger tilgang til mikrofonen for å oppdage tonene du spiller. Vennligst gi tillatelse.</string>
-    <string name="permission_description">Perfect Pitch trenger tilgang til mikrofonen din for å lytte til instrumentet ditt og oppdage tonehøyde i sanntid.</string>
+    <string name="permission_rationale">Harmonisk trenger tilgang til mikrofonen for å oppdage tonene du spiller. Vennligst gi tillatelse.</string>
+    <string name="permission_description">Harmonisk trenger tilgang til mikrofonen din for å lytte til instrumentet ditt og oppdage tonehøyde i sanntid.</string>
     <string name="permission_open_settings">Åpne Innstillinger</string>
     <string name="permission_grant">Gi Tillatelse</string>
 

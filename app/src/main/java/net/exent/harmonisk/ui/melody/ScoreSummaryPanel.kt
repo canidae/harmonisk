@@ -1,0 +1,61 @@
+package net.exent.harmonisk.ui.melody
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import net.exent.harmonisk.R
+import net.exent.harmonisk.music.MelodyScore
+import net.exent.harmonisk.music.ScoreBreakdown
+import net.exent.harmonisk.music.toBreakdown
+import net.exent.harmonisk.ui.utils.scoreColor
+
+@Composable
+fun ScoreSummaryPanel(
+    score: MelodyScore,
+    currentLevel: Int,
+    modifier: Modifier = Modifier
+) {
+    val breakdown = score.toBreakdown()
+
+    Column(modifier = modifier.padding(top = 8.dp)) {
+        if (currentLevel > 1) {
+            BreakdownRow(stringResource(R.string.score_pitch_accuracy), breakdown.avgPitchScore)
+        }
+        BreakdownRow(stringResource(R.string.score_note_duration), breakdown.avgDurationScore)
+        if (currentLevel <= 3) {
+            BreakdownRow(stringResource(R.string.score_song_duration), breakdown.timeScore * 100f)
+        }
+        if (currentLevel >= 3) {
+            BreakdownRow(stringResource(R.string.score_correct_notes), score.wrongNoteScore)
+        }
+    }
+}
+
+@Composable
+private fun BreakdownRow(label: String, value: Float) {
+    val color = scoreColor(value)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 1.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = "${"%.0f".format(value)}%",
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = color
+        )
+    }
+}

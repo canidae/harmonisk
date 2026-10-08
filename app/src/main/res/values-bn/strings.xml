@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">পারফেক্ট পিচ</string>
+    <string name="app_name">Harmonisk</string>
 
     <!-- Global -->
     <string name="back">পেছনে</string>
@@ -12,8 +12,8 @@
     <string name="edit">সম্পাদনা</string>
 
     <!-- Home screen -->
-    <string name="home_title">পারফেক্ট পিচ</string>
-    <string name="home_heading">🎵 পারফেক্ট পিচ</string>
+    <string name="home_title">Harmonisk</string>
+    <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">মুক্ত বাজনা</string>
     <string name="home_free_play_desc">মুক্তভাবে বাজান এবং একটি গান রেকর্ড করুন</string>
     <string name="home_free_play_desc_short">পিচ প্রতিক্রিয়া</string>
@@ -27,8 +27,8 @@
     <!-- Permissions -->
     <string name="permission_title">মাইক্রোফোন অ্যাক্সেস প্রয়োজন</string>
     <string name="permission_permanently_denied">মাইক্রোফোন অ্যাক্সেস স্থায়ীভাবে অস্বীকার করা হয়েছে। অনুগ্রহ করে ডিভাইস সেটিংসে এটি সক্ষম করুন।</string>
-    <string name="permission_rationale">পারফেক্ট পিচের আপনি যে নোট বাজান তা শনাক্ত করতে মাইক্রোফোন অ্যাক্সেস প্রয়োজন। অনুগ্রহ করে অনুমতি দিন।</string>
-    <string name="permission_description">পারফেক্ট পিচের আপনার যন্ত্র শুনতে এবং রিয়েল টাইমে পিচ শনাক্ত করতে আপনার মাইক্রোফোনে অ্যাক্সেস প্রয়োজন।</string>
+    <string name="permission_rationale">Harmoniskের আপনি যে নোট বাজান তা শনাক্ত করতে মাইক্রোফোন অ্যাক্সেস প্রয়োজন। অনুগ্রহ করে অনুমতি দিন।</string>
+    <string name="permission_description">Harmoniskের আপনার যন্ত্র শুনতে এবং রিয়েল টাইমে পিচ শনাক্ত করতে আপনার মাইক্রোফোনে অ্যাক্সেস প্রয়োজন।</string>
     <string name="permission_open_settings">সেটিংস খুলুন</string>
     <string name="permission_grant">অনুমতি দিন</string>
 

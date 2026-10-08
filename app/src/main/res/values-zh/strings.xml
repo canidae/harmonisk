@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">完美音准</string>
+    <string name="app_name">Harmonisk</string>
 
     <!-- Global -->
     <string name="back">返回</string>
@@ -12,8 +12,8 @@
     <string name="edit">编辑</string>
 
     <!-- Home screen -->
-    <string name="home_title">完美音准</string>
-    <string name="home_heading">🎵 完美音准</string>
+    <string name="home_title">Harmonisk</string>
+    <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">自由演奏</string>
     <string name="home_free_play_desc">自由演奏并录制歌曲</string>
     <string name="home_free_play_desc_short">音高反馈</string>
@@ -27,8 +27,8 @@
     <!-- Permissions -->
     <string name="permission_title">需要麦克风访问权限</string>
     <string name="permission_permanently_denied">麦克风访问权限已被永久拒绝。请在设备设置中启用。</string>
-    <string name="permission_rationale">完美音准需要访问麦克风以检测您演奏的音符。请授予权限。</string>
-    <string name="permission_description">完美音准需要访问您的麦克风，以实时聆听您的乐器并检测音高。</string>
+    <string name="permission_rationale">Harmonisk需要访问麦克风以检测您演奏的音符。请授予权限。</string>
+    <string name="permission_description">Harmonisk需要访问您的麦克风，以实时聆听您的乐器并检测音高。</string>
     <string name="permission_open_settings">打开设置</string>
     <string name="permission_grant">授予权限</string>
 

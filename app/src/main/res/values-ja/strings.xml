@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">パーフェクトピッチ</string>
+    <string name="app_name">Harmonisk</string>
 
     <!-- Global -->
     <string name="back">戻る</string>
@@ -12,8 +12,8 @@
     <string name="edit">編集</string>
 
     <!-- Home screen -->
-    <string name="home_title">パーフェクトピッチ</string>
-    <string name="home_heading">🎵 パーフェクトピッチ</string>
+    <string name="home_title">Harmonisk</string>
+    <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">フリープレイ</string>
     <string name="home_free_play_desc">自由に演奏して録音</string>
     <string name="home_free_play_desc_short">ピッチ</string>
@@ -27,8 +27,8 @@
     <!-- Permissions -->
     <string name="permission_title">マイクへのアクセスが必要です</string>
     <string name="permission_permanently_denied">マイクへのアクセスが永久的に拒否されました。デバイス設定で有効にしてください。</string>
-    <string name="permission_rationale">パーフェクトピッチは、あなたが演奏する音を検出するためにマイクへのアクセスが必要です。許可を付与してください。</string>
-    <string name="permission_description">パーフェクトピッチは、あなたの楽器を聴き、リアルタイムでピッチを検出するためにマイクへのアクセスが必要です。</string>
+    <string name="permission_rationale">Harmoniskは、あなたが演奏する音を検出するためにマイクへのアクセスが必要です。許可を付与してください。</string>
+    <string name="permission_description">Harmoniskは、あなたの楽器を聴き、リアルタイムでピッチを検出するためにマイクへのアクセスが必要です。</string>
     <string name="permission_open_settings">設定を開く</string>
     <string name="permission_grant">許可する</string>
 

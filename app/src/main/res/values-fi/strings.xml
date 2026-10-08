@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Perfect Pitch</string>
+    <string name="app_name">Harmonisk</string>
 
     <!-- Global -->
     <string name="back">Takaisin</string>
@@ -12,8 +12,8 @@
     <string name="edit">Muokkaa</string>
 
     <!-- Home screen -->
-    <string name="home_title">Perfect Pitch</string>
-    <string name="home_heading">🎵 Perfect Pitch</string>
+    <string name="home_title">Harmonisk</string>
+    <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">Vapaa soitto</string>
     <string name="home_free_play_desc">Soita vapaasti ja tallenna kappale</string>
     <string name="home_free_play_desc_short">Sävelkorkeus</string>
@@ -27,8 +27,8 @@
     <!-- Permissions -->
     <string name="permission_title">Mikrofonin käyttöoikeus vaaditaan</string>
     <string name="permission_permanently_denied">Mikrofonin käyttöoikeus evättiin pysyvästi. Ota se käyttöön laitteen asetuksista.</string>
-    <string name="permission_rationale">Perfect Pitch tarvitsee pääsyn mikrofoniin havaitakseen soittamasi nuotit. Myönnä käyttöoikeus.</string>
-    <string name="permission_description">Perfect Pitch tarvitsee pääsyn mikrofoniisi kuunnellakseen soitintasi ja havaitakseen sävelkorkeuden reaaliajassa.</string>
+    <string name="permission_rationale">Harmonisk tarvitsee pääsyn mikrofoniin havaitakseen soittamasi nuotit. Myönnä käyttöoikeus.</string>
+    <string name="permission_description">Harmonisk tarvitsee pääsyn mikrofoniisi kuunnellakseen soitintasi ja havaitakseen sävelkorkeuden reaaliajassa.</string>
     <string name="permission_open_settings">Avaa asetukset</string>
     <string name="permission_grant">Myönnä käyttöoikeus</string>
 

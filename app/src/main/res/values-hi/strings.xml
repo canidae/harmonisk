@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">परफ़ेक्ट पिच</string>
+    <string name="app_name">Harmonisk</string>
 
     <!-- Global -->
     <string name="back">वापस</string>
@@ -12,8 +12,8 @@
     <string name="edit">संपादित करें</string>
 
     <!-- Home screen -->
-    <string name="home_title">परफ़ेक्ट पिच</string>
-    <string name="home_heading">🎵 परफ़ेक्ट पिच</string>
+    <string name="home_title">Harmonisk</string>
+    <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">मुक्त अभ्यास</string>
     <string name="home_free_play_desc">खुलकर बजाएं और गाना रिकॉर्ड करें</string>
     <string name="home_free_play_desc_short">स्वर पिच</string>
@@ -27,8 +27,8 @@
     <!-- Permissions -->
     <string name="permission_title">माइक्रोफ़ोन एक्सेस आवश्यक</string>
     <string name="permission_permanently_denied">माइक्रोफ़ोन एक्सेस स्थायी रूप से अस्वीकार कर दिया गया। कृपया इसे डिवाइस सेटिंग्स में सक्षम करें।</string>
-    <string name="permission_rationale">परफ़ेक्ट पिच को आपके द्वारा बजाए जाने वाले नोट्स का पता लगाने के लिए माइक्रोफ़ोन एक्सेस की आवश्यकता है। कृपया अनुमति दें।</string>
-    <string name="permission_description">परफ़ेक्ट पिच को आपके वाद्ययंत्र को सुनने और रीयल टाइम में पिच का पता लगाने के लिए आपके माइक्रोफ़ोन तक पहुंच की आवश्यकता है।</string>
+    <string name="permission_rationale">Harmonisk को आपके द्वारा बजाए जाने वाले नोट्स का पता लगाने के लिए माइक्रोफ़ोन एक्सेस की आवश्यकता है। कृपया अनुमति दें।</string>
+    <string name="permission_description">Harmonisk को आपके वाद्ययंत्र को सुनने और रीयल टाइम में पिच का पता लगाने के लिए आपके माइक्रोफ़ोन तक पहुंच की आवश्यकता है।</string>
     <string name="permission_open_settings">सेटिंग्स खोलें</string>
     <string name="permission_grant">अनुमति दें</string>
 

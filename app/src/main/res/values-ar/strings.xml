@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">الحدة المثالية</string>
+    <string name="app_name">Harmonisk</string>
 
     <!-- Global -->
     <string name="back">رجوع</string>
@@ -12,8 +12,8 @@
     <string name="edit">تعديل</string>
 
     <!-- Home screen -->
-    <string name="home_title">الحدة المثالية</string>
-    <string name="home_heading">🎵 الحدة المثالية</string>
+    <string name="home_title">Harmonisk</string>
+    <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">عزف حر</string>
     <string name="home_free_play_desc">اعزف بحرية وسجل أغنية</string>
     <string name="home_free_play_desc_short">الحدة</string>
@@ -27,8 +27,8 @@
     <!-- Permissions -->
     <string name="permission_title">الوصول إلى الميكروفون مطلوب</string>
     <string name="permission_permanently_denied">تم رفض الوصول إلى الميكروفون بشكل دائم. يرجى تمكينه في إعدادات الجهاز.</string>
-    <string name="permission_rationale">تطبيق الحدة المثالية يحتاج إلى الوصول إلى الميكروفون لاكتشاف النغمات التي تعزفها. يرجى منح الإذن.</string>
-    <string name="permission_description">تطبيق الحدة المثالية يحتاج إلى الوصول إلى الميكروفون الخاص بك للاستماع إلى آلتك الموسيقية واكتشاف الحدة في الوقت الفعلي.</string>
+    <string name="permission_rationale">تطبيق Harmonisk يحتاج إلى الوصول إلى الميكروفون لاكتشاف النغمات التي تعزفها. يرجى منح الإذن.</string>
+    <string name="permission_description">تطبيق Harmonisk يحتاج إلى الوصول إلى الميكروفون الخاص بك للاستماع إلى آلتك الموسيقية واكتشاف الحدة في الوقت الفعلي.</string>
     <string name="permission_open_settings">فتح الإعدادات</string>
     <string name="permission_grant">منح الإذن</string>
 

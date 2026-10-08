@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Perfect Pitch</string>
+    <string name="app_name">Harmonisk</string>
 
     <!-- Global -->
     <string name="back">Назад</string>
@@ -12,8 +12,8 @@
     <string name="edit">Редагувати</string>
 
     <!-- Home screen -->
-    <string name="home_title">Perfect Pitch</string>
-    <string name="home_heading">🎵 Perfect Pitch</string>
+    <string name="home_title">Harmonisk</string>
+    <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">Вільна гра</string>
     <string name="home_free_play_desc">Грайте вільно та записуйте пісню</string>
     <string name="home_free_play_desc_short">Висота звуку</string>
@@ -27,8 +27,8 @@
     <!-- Permissions -->
     <string name="permission_title">Потрібен доступ до мікрофона</string>
     <string name="permission_permanently_denied">Доступ до мікрофона було назавжди заборонено. Увімкніть його в налаштуваннях пристрою.</string>
-    <string name="permission_rationale">Perfect Pitch потребує доступу до мікрофона, щоб виявляти ноти, які ви граєте. Будь ласка, надайте дозвіл.</string>
-    <string name="permission_description">Perfect Pitch потребує доступу до вашого мікрофона, щоб слухати ваш інструмент і визначати висоту звуку в реальному часі.</string>
+    <string name="permission_rationale">Harmonisk потребує доступу до мікрофона, щоб виявляти ноти, які ви граєте. Будь ласка, надайте дозвіл.</string>
+    <string name="permission_description">Harmonisk потребує доступу до вашого мікрофона, щоб слухати ваш інструмент і визначати висоту звуку в реальному часі.</string>
     <string name="permission_open_settings">Відкрити налаштування</string>
     <string name="permission_grant">Надати дозвіл</string>
 

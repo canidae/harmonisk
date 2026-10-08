@@ -74,7 +74,7 @@ static std::vector<SynthCommand> drain_queue(SynthHandle* h) {
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeLoad(
+Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeLoad(
     JNIEnv* env, jclass /*clazz*/, jstring path)
 {
     const char* pathStr = env->GetStringUTFChars(path, nullptr);
@@ -112,7 +112,7 @@ Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeLoad(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeUnload(
+Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeUnload(
     JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_)
 {
     auto* h = reinterpret_cast<SynthHandle*>(handle_);
@@ -132,7 +132,7 @@ Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeUnload(
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeGetPresetIndex(
+Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeGetPresetIndex(
     JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_, jint bank, jint preset)
 {
     auto* h = reinterpret_cast<SynthHandle*>(handle_);
@@ -143,7 +143,7 @@ Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeGetPresetIndex(
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeActiveVoiceCount(
+Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeActiveVoiceCount(
     JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_)
 {
     auto* h = reinterpret_cast<SynthHandle*>(handle_);
@@ -154,7 +154,7 @@ Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeActiveVoiceCount(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeChannelNoteOn(
+Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeChannelNoteOn(
     JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_, jint channel, jint key, jfloat velocity)
 {
     auto* h = reinterpret_cast<SynthHandle*>(handle_);
@@ -164,7 +164,7 @@ Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeChannelNoteOn(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeChannelNoteOff(
+Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeChannelNoteOff(
     JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_, jint channel, jint key)
 {
     auto* h = reinterpret_cast<SynthHandle*>(handle_);
@@ -174,7 +174,7 @@ Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeChannelNoteOff(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeAllNotesOff(
+Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeAllNotesOff(
     JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_)
 {
     auto* h = reinterpret_cast<SynthHandle*>(handle_);
@@ -184,7 +184,7 @@ Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeAllNotesOff(
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeSetChannelPreset(
+Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeSetChannelPreset(
     JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_, jint channel, jint bank, jint preset)
 {
     auto* h = reinterpret_cast<SynthHandle*>(handle_);
@@ -195,7 +195,7 @@ Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeSetChannelPreset(
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeSetChannelDrum(
+Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeSetChannelDrum(
     JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_, jint channel)
 {
     auto* h = reinterpret_cast<SynthHandle*>(handle_);
@@ -206,7 +206,7 @@ Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeSetChannelDrum(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_net_exent_perfectpitch_audio_SoundFontSynthesizer_nativeRender(
+Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeRender(
     JNIEnv* env, jclass /*clazz*/, jlong handle_, jshortArray buffer, jint samples)
 {
     auto* h = reinterpret_cast<SynthHandle*>(handle_);

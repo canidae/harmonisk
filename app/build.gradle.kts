@@ -7,12 +7,12 @@ plugins {
 }
 
 android {
-    namespace = "net.exent.perfectpitch"
+    namespace = "net.exent.harmonisk"
     compileSdk = 37
     ndkVersion = "27.2.12479018"
 
     defaultConfig {
-        applicationId = "net.exent.perfectpitch"
+        applicationId = "net.exent.harmonisk"
         minSdk = 29
         targetSdk = 37
         versionCode = 1
