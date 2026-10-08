@@ -215,8 +215,16 @@ class MelodyRepository(
         }
     }
 
+    /** Drop cached parses so a re-imported file is never served from the previous copy. */
+    private suspend fun evictCached(id: String) {
+        cache.remove(id)
+        multiTrackCache.remove(id)
+        difficultyRepository.remove(id)
+    }
+
     suspend fun addImportedMelody(info: MelodyInfo) {
         val uriStr = info.uri?.toString() ?: return
+        evictCached(info.id)
         importedMelodyStore.set(info.id, ImportedMelody(info.name, uriStr))
     }
 
@@ -271,6 +279,7 @@ class MelodyRepository(
     }
 
     suspend fun removeImportedMelody(id: String) {
+        evictCached(id)
         val entry = importedMelodyStore.flow.first()[id]
         entry?.let { deleteLocalFile(Uri.parse(it.uri)) }
         importedMelodyStore.remove(id)

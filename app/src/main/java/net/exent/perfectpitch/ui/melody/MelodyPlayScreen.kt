@@ -165,11 +165,13 @@ fun MelodyPlayScreen(
                     Spacer(Modifier.weight(1f))
 
                     // Preview melody button. Listening to the song is allowed before the take
-                    // starts; while being scored it is a developer feature.
+                    // starts, after it has been played through, and while it is paused; during a
+                    // scored take it is a developer feature.
                     if (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED ||
+                        gameState.phase == PlayPhase.FINISHED ||
                         devModeEnabled && (gameState.phase == PlayPhase.PLAYING || gameState.phase == PlayPhase.WAITING_FOR_NOTE)) {
                         IconButton(
-                            onClick = { if (isPreviewPlaying) viewModel.stopPreview() else viewModel.previewMelody() },
+                            onClick = { if (isPreviewPlaying) viewModel.stopPreviewAndReturn() else viewModel.previewMelody() },
                             modifier = Modifier.size(PANEL_BTN_SIZE)
                         ) {
                             Icon(
@@ -268,13 +270,13 @@ fun MelodyPlayScreen(
 
                     if (track != null) {
                         val alphaTex = remember(track) { MidiToAlphaTex.generate(track) }
-                        val viewTimeSeconds = adjustedNow + viewState.songTimeOffsetSeconds
+                        val viewTimeSeconds = canvasNow + viewState.songTimeOffsetSeconds
                         SheetMusicView(
                             melodyTrack = track,
                             alphaTex = alphaTex,
-                            currentTimeSeconds = adjustedNow,
-                            isPlaying = gameState.phase == PlayPhase.PLAYING,
-                            seekTimeSeconds = adjustedNow,
+                            currentTimeSeconds = canvasNow,
+                            isPlaying = gameState.phase == PlayPhase.PLAYING || gameState.previewTimeSeconds != null,
+                            seekTimeSeconds = canvasNow,
                             scrollTimeSeconds = viewTimeSeconds,
                             songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
                             durationSeconds = track.durationSeconds,

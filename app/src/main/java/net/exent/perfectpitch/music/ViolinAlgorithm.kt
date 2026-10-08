@@ -15,12 +15,11 @@ data class ViolinPosition(
  * Recommends violin fingerings for a sequence of notes in first position.
  *
  * Finger placement (semitone offsets above a string's open pitch) follows the
- * standard first-position spacing: finger 1 = +2, finger 2 = +4, finger 3 = +5,
- * finger 4 = +7. Chromatic notes are therefore playable with "low" finger
- * variants (e.g. low 1 = +1, low 2 = +3). Notes that would need a sharp "high"
- * finger placement (e.g. high 3 = +6) have no first-position fingering and
- * return null. Notes outside first position (below G3 or above B5) also have
- * no valid position and return null.
+ * standard first-position spacing, including the low and high variants of each
+ * finger: finger 1 = +1/+2, finger 2 = +3/+4, finger 3 = +5/+6, finger 4 = +7.
+ * Every semitone in the first-position range is therefore playable. Notes
+ * outside first position (below G3 or above B5) have no valid position and
+ * return null.
  */
 class ViolinAlgorithm {
 
@@ -144,12 +143,12 @@ class ViolinAlgorithm {
         const val MIN_FIRST_POSITION_MIDI = 55 // G3
         const val MAX_FIRST_POSITION_MIDI = 83 // B5
 
-        /** Finger -> semitone offset(s) above the open string (low, natural variants). */
+        /** Finger -> semitone offset(s) above the open string (low and high variants). */
         private val FINGER_OFFSETS = listOf(
             0 to listOf(0),
             1 to listOf(1, 2),
             2 to listOf(3, 4),
-            3 to listOf(5),
+            3 to listOf(5, 6),
             4 to listOf(7)
         )
 

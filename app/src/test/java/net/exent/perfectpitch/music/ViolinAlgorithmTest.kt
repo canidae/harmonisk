@@ -48,10 +48,10 @@ class ViolinAlgorithmTest {
     }
 
     @Test
-    fun `chromatic notes map to low finger variants`() {
-        // C4 = 3rd finger on G; C#4 would need a sharp high 3 finger and has no first-position fingering
+    fun `chromatic notes map to low and high finger variants`() {
+        // C4 = 3rd finger on G, C#4 = high 3rd finger on G
         assertEquals(ViolinPosition(ViolinString.G, 3), algorithm.findRecommendedPosition(60, null))
-        assertNull(algorithm.findRecommendedPosition(61, null))
+        assertEquals(ViolinPosition(ViolinString.G, 3), algorithm.findRecommendedPosition(61, null))
         // F natural = low 2nd on D, F# = normal 2nd on D
         assertEquals(ViolinPosition(ViolinString.D, 2), algorithm.findRecommendedPosition(65, null))
         assertEquals(ViolinPosition(ViolinString.D, 2), algorithm.findRecommendedPosition(66, null))
@@ -59,24 +59,21 @@ class ViolinAlgorithmTest {
 
     @Test
     fun `every first position note resolves to a fingering`() {
-        // Sharp notes that would need a high finger placement have no fingering
-        val sharpNotes = setOf(61, 68, 75, 82) // C#4, G#4, D#5, G#5
         for (midi in 55..83) {
-            if (midi in sharpNotes) {
-                assertNull("MIDI $midi needs a sharp high finger and has none", algorithm.findRecommendedPosition(midi, null))
-            } else {
-                assertNotNull("MIDI $midi should be playable in first position", algorithm.findRecommendedPosition(midi, null))
-            }
+            assertNotNull("MIDI $midi should be playable in first position", algorithm.findRecommendedPosition(midi, null))
         }
     }
 
     @Test
-    fun `no first position fingering is ever sharp`() {
+    fun `finger placements stay within one semitone of the natural line`() {
         for (midi in 55..83) {
             val pos = algorithm.findRecommendedPosition(midi, null) ?: continue
             val deviation = ViolinAlgorithm.fingerOffsetDeviation(midi, pos.string, pos.finger) ?: 0
-            assertTrue("MIDI $midi should never be sharp", deviation <= 0)
+            assertTrue("MIDI $midi deviation $deviation out of range", deviation in -1..1)
         }
+        // High 3rd finger placements sit one semitone above the natural line
+        assertEquals(1, ViolinAlgorithm.fingerOffsetDeviation(61, ViolinString.G, 3))
+        assertEquals(1, ViolinAlgorithm.fingerOffsetDeviation(75, ViolinString.A, 3))
     }
 
     @Test

@@ -107,6 +107,7 @@ class MelodyViewModel @Inject constructor(
     private var playbackJob: Job? = null
     private var pitchJob: Job? = null
     private var previewClockJob: Job? = null
+    private var previewSavedOffset: Double? = null
     private var playbackStartTime = 0L
     private var pauseOffset = 0.0
 
@@ -557,23 +558,37 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
-    /** Preview the loaded melody (audio only, standalone playback). */
+    /**
+     * Preview the loaded melody (audio only, standalone playback).
+     *
+     * From the top of a song the melody is counted in with the metronome's two bars, as it is when
+     * the player plays it. A pause mid-song instead drops in one bar early, so the player hears the
+     * bar they were at from its first beat with a bar of run-up, and no count-in.
+     */
     fun previewMelody() {
         val state = _gameState.value
         val tracks = state.melodyTracks
         if (tracks.isEmpty() || !soundFontSynthesizer.isReady) return
-        // The song is counted in with the metronome's two bars, as it is when the player plays it.
-        val leadIn = twoBarLeadInSeconds()
-        melodyPlayer.playWithTiming(
-            tracks + leadInMetronome(state.metronomeTrack),
-            viewModelScope,
-            leadInSeconds = leadIn
-        )
+        stopPreview()
+
+        val paused = state.phase == PlayPhase.PAUSED
+        // A pause mid-song drops in one bar early with no count-in; every other preview runs from
+        // the top, counted in with the metronome's two bars as it is when the player plays it.
+        val countIn = !paused
+        val leadIn = if (countIn) twoBarLeadInSeconds() else 0.0
+        val start = if (paused) previewStartSeconds(state.melodyTrack ?: return, state.currentTimeSeconds) else 0.0
         // The canvas follows a preview only while the game is not keeping the score, which is
         // where the note button is offered: a scored take has its own clock and its own notes.
-        if (state.phase == PlayPhase.READY || state.phase == PlayPhase.PAUSED) {
-            startPreviewClock(state.melodyTrack, leadIn)
-        }
+        val followsCanvas = state.phase == PlayPhase.READY || state.phase == PlayPhase.PAUSED ||
+                state.phase == PlayPhase.FINISHED
+        if (followsCanvas) previewSavedOffset = _viewState.value.songTimeOffsetSeconds
+        melodyPlayer.playWithTiming(
+            if (countIn) tracks + leadInMetronome(state.metronomeTrack) else tracks,
+            viewModelScope,
+            leadInSeconds = leadIn,
+            startSeconds = start
+        )
+        if (followsCanvas) startPreviewClock(state.melodyTrack, leadIn, start)
     }
 
     /** Preview a specific melody info (plays all voice tracks). */
@@ -583,10 +598,17 @@ class MelodyViewModel @Inject constructor(
         melodyPlayer.playWithTiming(tracks, viewModelScope)
     }
 
-    /** Stop any ongoing melody preview. */
+    /** Stop any ongoing melody preview, leaving the game clock untouched. */
     fun stopPreview() {
         melodyPlayer.stop()
         endPreviewClock()
+        previewSavedOffset = null
+    }
+
+    /** Stop a preview the player started: put them back at the position they left off from. */
+    fun stopPreviewAndReturn() {
+        melodyPlayer.stop()
+        finishPreview()
     }
 
     /** Whether a melody preview is currently playing. */
@@ -613,20 +635,29 @@ class MelodyViewModel @Inject constructor(
      * Run the play canvas through the melody with the preview, at the song's own time and with no
      * scoring. The clock stops with the audio, at the end of the song or when the preview is stopped.
      */
-    private fun startPreviewClock(track: MelodyTrack?, leadInSeconds: Double) {
-        endPreviewClock()
+    private fun startPreviewClock(track: MelodyTrack?, leadInSeconds: Double, startSeconds: Double) {
+        previewClockJob?.cancel()
+        previewClockJob = null
         if (track == null) return
         _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
-        _gameState.update { it.copy(previewTimeSeconds = -leadInSeconds) }
+        _gameState.update { it.copy(previewTimeSeconds = startSeconds - leadInSeconds) }
         previewClockJob = viewModelScope.launch {
             val startTime = SystemClock.elapsedRealtime()
             while (isActive && melodyPlayer.isPlaying.value) {
-                val previewTime = (SystemClock.elapsedRealtime() - startTime) / 1000.0 - leadInSeconds
-                _gameState.update { it.copy(previewTimeSeconds = previewTime) }
+                val elapsed = (SystemClock.elapsedRealtime() - startTime) / 1000.0
+                _gameState.update { it.copy(previewTimeSeconds = startSeconds + elapsed - leadInSeconds) }
                 delay(16)
             }
-            if (isActive) _gameState.update { it.copy(previewTimeSeconds = null) }
+            if (isActive) finishPreview()
         }
+    }
+
+    /** End the preview and hand the view back to the position the player was at. */
+    private fun finishPreview() {
+        endPreviewClock()
+        val offset = previewSavedOffset ?: return
+        previewSavedOffset = null
+        _viewState.update { it.copy(songTimeOffsetSeconds = offset) }
     }
 
     private fun endPreviewClock() {
@@ -905,6 +936,7 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun onVerticalScroll(deltaSeconds: Double) {
+        if (_gameState.value.previewTimeSeconds != null) return
         val phase = _gameState.value.phase
         if (phase == PlayPhase.PLAYING || phase == PlayPhase.WAITING_FOR_NOTE) return
         val adjustedNow = adjustedNowSeconds(phase, _gameState.value.currentTimeSeconds)
@@ -914,6 +946,7 @@ class MelodyViewModel @Inject constructor(
 
     /** Pan both views so the given time sits at the now line / sheet left edge. */
     fun seekToViewTime(viewTimeSeconds: Double) {
+        if (_gameState.value.previewTimeSeconds != null) return
         val phase = _gameState.value.phase
         if (phase == PlayPhase.PLAYING || phase == PlayPhase.WAITING_FOR_NOTE) return
         val gameSnapshot = _gameState.value

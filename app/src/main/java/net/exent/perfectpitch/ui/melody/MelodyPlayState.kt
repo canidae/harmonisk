@@ -136,6 +136,21 @@ fun songPlayingSeconds(track: MelodyTrack): Double {
 }
 
 /**
+ * Where a mid-song preview drops in: the first beat of the bar before the one [timeSeconds] sits
+ * in, so the player hears the bar they were at from its first beat with a bar of run-up. Times in
+ * the opening bars, or before the music, start at the top of the song.
+ */
+fun previewStartSeconds(track: MelodyTrack, timeSeconds: Double): Double {
+    if (timeSeconds <= 0.0) return 0.0
+    val tick = track.secondsToTick(timeSeconds)
+    val timeSig = track.timeSignatureAt(tick)
+    val ticksPerBar = track.ticksPerQuarterNote.toLong() * 4 * timeSig.numerator / timeSig.denominator
+    if (ticksPerBar <= 0) return 0.0
+    val previousBarTick = (tick / ticksPerBar - 1) * ticksPerBar
+    return if (previousBarTick <= 0) 0.0 else track.tickToSeconds(previousBarTick)
+}
+
+/**
  * How long the player took, against the music they had to play.
  *
  * A song that waits for the player holds its clock for them, so that time is added to the music's

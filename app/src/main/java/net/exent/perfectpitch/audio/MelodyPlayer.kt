@@ -32,12 +32,15 @@ class MelodyPlayer(
      *
      * [leadInSeconds] shifts every event later by that much, so a track that counts the music in
      * (the metronome, whose notes sit before the song's first beat) can start from a standstill.
+     * [startSeconds] drops the song in at that point: earlier notes are skipped, while a note
+     * still sounding there is attacked at once and released at its own end.
      */
     fun playWithTiming(
         melodyTracks: List<MelodyTrack>,
         scope: CoroutineScope,
         tempo: Float = 1.0f,
-        leadInSeconds: Double = 0.0
+        leadInSeconds: Double = 0.0,
+        startSeconds: Double = 0.0
     ) {
         stop()
         _isPlaying.value = true
@@ -50,9 +53,13 @@ class MelodyPlayer(
                 for (track in melodyTracks) {
                     val channel = track.channel
                     for (note in track.notes) {
-                        val noteStart = track.noteStartSeconds(note) + leadInSeconds
-                        val startMs = (noteStart / tempo * 1000).toLong()
-                        val endMs = ((noteStart + track.noteDurationSeconds(note)) / tempo * 1000).toLong()
+                        val noteStart = track.noteStartSeconds(note)
+                        val noteEnd = noteStart + track.noteDurationSeconds(note)
+                        if (noteEnd <= startSeconds) continue
+                        val localStart = (noteStart - startSeconds).coerceAtLeast(0.0) + leadInSeconds
+                        val localEnd = (noteEnd - startSeconds).coerceAtLeast(0.0) + leadInSeconds
+                        val startMs = (localStart / tempo * 1000).toLong()
+                        val endMs = (localEnd / tempo * 1000).toLong()
                         events.add(TimedEvent(startMs, note.noteNumber, true, note.velocity.coerceIn(1, 127), channel))
                         events.add(TimedEvent(endMs, note.noteNumber, false, 0, channel))
                     }

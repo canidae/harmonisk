@@ -30,4 +30,8 @@ class DifficultyRepository(context: Context) {
     suspend fun set(melodyId: String, data: DifficultyData) {
         store.set(melodyId, data)
     }
+
+    suspend fun remove(melodyId: String) {
+        store.remove(melodyId)
+    }
 }
