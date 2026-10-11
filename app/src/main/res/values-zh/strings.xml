@@ -37,8 +37,6 @@
     <string name="settings_mic_sensitivity">麦克风灵敏度</string>
     <string name="settings_silence_threshold">静音阈值：%1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">自动</string>
     <string name="settings_calibrating_stop">停止</string>
     <string name="settings_no_detection">麦克风无法检测到任何音调</string>
@@ -99,7 +97,7 @@
     <string name="freeplay_piano_lower">仅下键盘</string>
     <string name="freeplay_piano_none">无钢琴键盘</string>
     <string name="freeplay_end_bar_mismatch">结束小节必须与开始小节不同</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <string name="freeplay_start_bar_exceeds_end">起始小节必须位于结束小节之前</string>
 
     <!-- Tuner -->
     <string name="tuner_title">调音</string>
@@ -147,7 +145,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">音高准确度</string>
     <string name="score_note_duration">时长准确度</string>
-    <string name="score_song_duration">Song duration</string>
+    <string name="score_song_duration">歌曲时长</string>
     <string name="score_progress">进度</string>
 
     <!-- Note divisions -->
@@ -155,4 +153,29 @@
     <string name="note_eighth">\u266A 八分音符</string>
     <string name="note_sixteenth">\u266C 十六分音符</string>
     <string name="note_thirty_second">三十二分音符</string>
+    <string name="dev_mode_enabled">开发者模式已启用</string>
+    <string name="dev_mode_disabled">开发者模式已停用</string>
+    <string name="settings_silence_threshold_min">降低灵敏度</string>
+    <string name="settings_silence_threshold_max">提高灵敏度</string>
+    <string name="settings_delay_title">音频延迟校准</string>
+    <string name="settings_output_name">输出</string>
+    <string name="settings_input_name">输入</string>
+    <string name="settings_delay_value">%1$s延迟：%2$d 毫秒</string>
+    <string name="settings_delay_help">手机需要一点时间才能把音符变成声音，所以声音总是比应用播放的时刻稍晚被听到。输出延迟告诉应用这段时间有多长。如果声音到达得太晚，就调大它；如果到达得太早，就调小它。\n\n听一个音符并判断其音高也需要一点时间，所以应用总是比你演奏的时刻稍晚记录音符。输入延迟告诉应用这段时间有多长。如果你的音符评分偏晚，就调大它；如果评分偏早，就调小它。</string>
+    <string name="settings_instrument">乐器</string>
+    <string name="settings_help">帮助</string>
+    <string name="settings_help_got_it">知道了</string>
+    <string name="instrument_piano">钢琴</string>
+    <string name="instrument_violin">小提琴</string>
+    <string name="instrument_cello">大提琴</string>
+    <string name="melody_reset_score">重置分数</string>
+    <string name="melody_import_success">MIDI 已导入</string>
+    <string name="melody_remove_song">移除歌曲</string>
+    <string name="melody_no_imported">还没有导入的歌曲。</string>
+    <string name="melody_folder_imported">已导入</string>
+    <string name="melody_folder_traditional">传统</string>
+    <string name="melody_folder_exercises">练习</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
+    <string name="melody_level">等级%1$d</string>
+    <string name="score_correct_notes">正确音符</string>
 </resources>

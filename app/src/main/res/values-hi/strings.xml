@@ -37,8 +37,6 @@
     <string name="settings_mic_sensitivity">माइक्रोफ़ोन संवेदनशीलता</string>
     <string name="settings_silence_threshold">मौन सीमा: %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">ऑटो</string>
     <string name="settings_calibrating_stop">रोकें</string>
     <string name="settings_no_detection">माइक्रोफ़ोन कोई स्वर नहीं पकड़ सकता</string>
@@ -99,7 +97,7 @@
     <string name="freeplay_piano_lower">केवल निचला कीबोर्ड</string>
     <string name="freeplay_piano_none">कोई पियानो कीबोर्ड नहीं</string>
     <string name="freeplay_end_bar_mismatch">समाप्ति बार प्रारंभ बार से भिन्न होना चाहिए</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <string name="freeplay_start_bar_exceeds_end">प्रारंभ बार अंतिम बार से पहले होना चाहिए</string>
 
     <!-- Tuner -->
     <string name="tuner_title">वाद्ययंत्र ट्यून करें</string>
@@ -147,7 +145,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">पिच सटीकता</string>
     <string name="score_note_duration">अवधि सटीकता</string>
-    <string name="score_song_duration">Song duration</string>
+    <string name="score_song_duration">गाने की अवधि</string>
     <string name="score_progress">प्रगति</string>
 
     <!-- Note divisions -->
@@ -155,4 +153,29 @@
     <string name="note_eighth">\u266A आठवां</string>
     <string name="note_sixteenth">\u266C सोलहवां</string>
     <string name="note_thirty_second">बत्तीसवां</string>
+    <string name="dev_mode_enabled">डेवलपर मोड सक्षम</string>
+    <string name="dev_mode_disabled">डेवलपर मोड अक्षम</string>
+    <string name="settings_silence_threshold_min">कम संवेदनशील</string>
+    <string name="settings_silence_threshold_max">अधिक संवेदनशील</string>
+    <string name="settings_delay_title">ऑडियो विलंब अंशांकन</string>
+    <string name="settings_output_name">आउटपुट</string>
+    <string name="settings_input_name">इनपुट</string>
+    <string name="settings_delay_value">%1$s विलंब: %2$d ms</string>
+    <string name="settings_delay_help">फ़ोन को किसी सुर को ध्वनि में बदलने में थोड़ा समय लगता है, इसलिए सुर ऐप के बजाने के कुछ क्षण बाद ही सुनाई देता है। आउटपुट विलंब ऐप को बताता है कि वह समय कितना है। अगर ध्वनि आप तक देर से पहुँचती है तो इसे बढ़ाएँ, और जल्दी पहुँचती है तो घटाएँ।\n\nकिसी सुर को सुनकर उसकी पिच पहचानने में भी थोड़ा समय लगता है, इसलिए ऐप आपके बजाने के कुछ क्षण बाद ही सुर दर्ज करता है। इनपुट विलंब ऐप को बताता है कि वह समय कितना है। अगर आपके सुरों का मूल्यांकन देर से होता है तो इसे बढ़ाएँ, और जल्दी होता है तो घटाएँ।</string>
+    <string name="settings_instrument">वाद्ययंत्र</string>
+    <string name="settings_help">सहायता</string>
+    <string name="settings_help_got_it">समझ गया</string>
+    <string name="instrument_piano">पियानो</string>
+    <string name="instrument_violin">वायलिन</string>
+    <string name="instrument_cello">सेलो</string>
+    <string name="melody_reset_score">स्कोर रीसेट करें</string>
+    <string name="melody_import_success">MIDI आयात किया गया</string>
+    <string name="melody_remove_song">गाना हटाएँ</string>
+    <string name="melody_no_imported">अभी तक कोई आयातित गाना नहीं।</string>
+    <string name="melody_folder_imported">आयातित</string>
+    <string name="melody_folder_traditional">पारंपरिक</string>
+    <string name="melody_folder_exercises">अभ्यास</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
+    <string name="melody_level">स्तर %1$d</string>
+    <string name="score_correct_notes">सही सुर</string>
 </resources>

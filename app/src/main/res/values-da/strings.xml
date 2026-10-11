@@ -37,8 +37,6 @@
     <string name="settings_mic_sensitivity">Mikrofonfølsomhed</string>
     <string name="settings_silence_threshold">Stilletærskel: %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">Auto</string>
     <string name="settings_calibrating_stop">Stop</string>
     <string name="settings_no_detection">Mikrofonen kan ikke registrere toner</string>
@@ -99,7 +97,7 @@
     <string name="freeplay_piano_lower">Kun nedre keyboard</string>
     <string name="freeplay_piano_none">Ingen keyboard</string>
     <string name="freeplay_end_bar_mismatch">Sluttakt skal være forskellig fra starttakt</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <string name="freeplay_start_bar_exceeds_end">Starttakten skal ligge før sluttakten</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Stem instrument</string>
@@ -147,7 +145,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Tonehøjdenøjagtighed</string>
     <string name="score_note_duration">Varighedsnøjagtighed</string>
-    <string name="score_song_duration">Song duration</string>
+    <string name="score_song_duration">Sangens varighed</string>
     <string name="score_progress">Fremskridt</string>
 
     <!-- Note divisions -->
@@ -155,4 +153,29 @@
     <string name="note_eighth">\u266A Ottendedel</string>
     <string name="note_sixteenth">\u266C Sekstendedel</string>
     <string name="note_thirty_second">Toogtredivtedel</string>
+    <string name="dev_mode_enabled">Udviklertilstand aktiveret</string>
+    <string name="dev_mode_disabled">Udviklertilstand deaktiveret</string>
+    <string name="settings_silence_threshold_min">Mindre følsom</string>
+    <string name="settings_silence_threshold_max">Mere følsom</string>
+    <string name="settings_delay_title">Kalibrering af lydforsinkelse</string>
+    <string name="settings_output_name">Udgang</string>
+    <string name="settings_input_name">Indgang</string>
+    <string name="settings_delay_value">%1$s-forsinkelse: %2$d ms</string>
+    <string name="settings_delay_help">En telefon bruger et øjeblik på at lave en node om til lyd, så noden høres altid lidt efter, at appen har spillet den. Udgangsforsinkelsen fortæller appen, hvor langt det øjeblik er. Øg den, hvis lyden når dig for sent, og sænk den, hvis den når dig for tidligt.\n\nDet tager også et øjeblik at lytte til en node og bestemme dens tonehøjde, så appen registrerer altid en node lidt efter, at du har spillet den. Indgangsforsinkelsen fortæller appen, hvor langt det øjeblik er. Øg den, hvis dine noder vurderes for sent, og sænk den, hvis de vurderes for tidligt.</string>
+    <string name="settings_instrument">Instrument</string>
+    <string name="settings_help">Hjælp</string>
+    <string name="settings_help_got_it">Forstået</string>
+    <string name="instrument_piano">Klaver</string>
+    <string name="instrument_violin">Violin</string>
+    <string name="instrument_cello">Cello</string>
+    <string name="melody_reset_score">Nulstil score</string>
+    <string name="melody_import_success">MIDI importeret</string>
+    <string name="melody_remove_song">Fjern sang</string>
+    <string name="melody_no_imported">Ingen importerede sange endnu.</string>
+    <string name="melody_folder_imported">Importerede</string>
+    <string name="melody_folder_traditional">Traditionelle</string>
+    <string name="melody_folder_exercises">Øvelser</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
+    <string name="melody_level">Niv.%1$d</string>
+    <string name="score_correct_notes">Korrekte noder</string>
 </resources>

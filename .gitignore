@@ -10,3 +10,6 @@ local.properties
 android-sdk/
 gradle-dist/
 app/.cxx/
+*.jks
+*.keystore
+keystore.properties

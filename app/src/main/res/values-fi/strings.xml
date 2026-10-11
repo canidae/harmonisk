@@ -37,8 +37,6 @@
     <string name="settings_mic_sensitivity">Mikrofonin herkkyys</string>
     <string name="settings_silence_threshold">Hiljaisuuden kynnys: %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">Auto</string>
     <string name="settings_calibrating_stop">Pysäytä</string>
     <string name="settings_no_detection">Mikrofoni ei voi havaita ääniä</string>
@@ -99,7 +97,7 @@
     <string name="freeplay_piano_lower">Vain alakoskettamisto</string>
     <string name="freeplay_piano_none">Ei koskettamistoja</string>
     <string name="freeplay_end_bar_mismatch">Lopputahdin on oltava eri kuin aloitustahti</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <string name="freeplay_start_bar_exceeds_end">Aloitustahdin on oltava ennen lopetustahtia</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Virita instrumentti</string>
@@ -147,7 +145,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Sävelkorkeuden tarkkuus</string>
     <string name="score_note_duration">Keston tarkkuus</string>
-    <string name="score_song_duration">Song duration</string>
+    <string name="score_song_duration">Kappaleen kesto</string>
     <string name="score_progress">Edistyminen</string>
 
     <!-- Note divisions -->
@@ -155,4 +153,29 @@
     <string name="note_eighth">\u266A Kahdeksasosa</string>
     <string name="note_sixteenth">\u266C Kuudestoistaosa</string>
     <string name="note_thirty_second">Kolmaskymmeneskahdesosa</string>
+    <string name="dev_mode_enabled">Kehittäjätila käytössä</string>
+    <string name="dev_mode_disabled">Kehittäjätila pois käytöstä</string>
+    <string name="settings_silence_threshold_min">Vähemmän herkkä</string>
+    <string name="settings_silence_threshold_max">Herkempi</string>
+    <string name="settings_delay_title">Ääniviiveen kalibrointi</string>
+    <string name="settings_output_name">Ulostulo</string>
+    <string name="settings_input_name">Sisääntulo</string>
+    <string name="settings_delay_value">%1$s-viive: %2$d ms</string>
+    <string name="settings_delay_help">Puhelimelta kestää hetken muuttaa nuotti ääneksi, joten nuotti kuuluu aina hieman sen jälkeen, kun sovellus on soittanut sen. Ulostuloviive kertoo sovellukselle, kuinka pitkä tuo hetki on. Suurenna sitä, jos ääni saapuu liian myöhään, ja pienennä, jos se saapuu liian aikaisin.\n\nMyös nuotin kuunteleminen ja sen sävelkorkeuden selvittäminen kestää hetken, joten sovellus rekisteröi nuotin aina hieman sen jälkeen, kun olet soittanut sen. Sisääntuloviive kertoo sovellukselle, kuinka pitkä tuo hetki on. Suurenna sitä, jos nuottisi arvostellaan liian myöhään, ja pienennä, jos ne arvostellaan liian aikaisin.</string>
+    <string name="settings_instrument">Soitin</string>
+    <string name="settings_help">Ohje</string>
+    <string name="settings_help_got_it">Selvä</string>
+    <string name="instrument_piano">Piano</string>
+    <string name="instrument_violin">Viulu</string>
+    <string name="instrument_cello">Sello</string>
+    <string name="melody_reset_score">Nollaa pisteet</string>
+    <string name="melody_import_success">MIDI tuotu</string>
+    <string name="melody_remove_song">Poista kappale</string>
+    <string name="melody_no_imported">Ei vielä tuotuja kappaleita.</string>
+    <string name="melody_folder_imported">Tuodut</string>
+    <string name="melody_folder_traditional">Perinteiset</string>
+    <string name="melody_folder_exercises">Harjoitukset</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
+    <string name="melody_level">Taso %1$d</string>
+    <string name="score_correct_notes">Oikeat nuotit</string>
 </resources>

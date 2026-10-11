@@ -37,8 +37,6 @@
     <string name="settings_mic_sensitivity">Mikrofonfølsomhet</string>
     <string name="settings_silence_threshold">Stilleterskel: %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">Auto</string>
     <string name="settings_calibrating_stop">Stopp</string>
     <string name="settings_no_detection">Mikrofonen kan ikke oppdage toner</string>
@@ -99,7 +97,7 @@
     <string name="freeplay_piano_lower">Kun nedre keyboard</string>
     <string name="freeplay_piano_none">Ingen keyboard</string>
     <string name="freeplay_end_bar_mismatch">Sluttakt må være forskjellig fra startakt</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <string name="freeplay_start_bar_exceeds_end">Starttakten må komme før sluttakten</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Still Instrument</string>
@@ -152,7 +150,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Tonehøydenøyaktighet</string>
     <string name="score_note_duration">Varighetsnøyaktighet</string>
-    <string name="score_song_duration">Song duration</string>
+    <string name="score_song_duration">Sangvarighet</string>
     <string name="score_progress">Fremgang</string>
 
     <!-- Note divisions -->
@@ -162,4 +160,24 @@
     <string name="note_thirty_second">32.-del</string>
 
     <!-- Language selector -->
+    <string name="dev_mode_enabled">Utviklermodus aktivert</string>
+    <string name="dev_mode_disabled">Utviklermodus deaktivert</string>
+    <string name="settings_silence_threshold_min">Mindre følsom</string>
+    <string name="settings_silence_threshold_max">Mer følsom</string>
+    <string name="settings_delay_title">Kalibrering av lydforsinkelse</string>
+    <string name="settings_output_name">Utgang</string>
+    <string name="settings_input_name">Inngang</string>
+    <string name="settings_delay_value">%1$s-forsinkelse: %2$d ms</string>
+    <string name="settings_delay_help">En telefon bruker et øyeblikk på å gjøre en tone om til lyd, så tonen høres alltid litt etter at appen spilte den. Utgangsforsinkelsen forteller appen hvor lenge det øyeblikket varer. Øk den hvis lyden når deg for sent, og reduser den hvis den når deg for tidlig.\n\nDet tar også et øyeblikk å lytte til en tone og finne ut tonehøyden, så appen registrerer alltid en tone litt etter at du spilte den. Inngangsforsinkelsen forteller appen hvor lenge det øyeblikket varer. Øk den hvis tonene dine vurderes for sent, og reduser den hvis de vurderes for tidlig.</string>
+    <string name="settings_instrument">Instrument</string>
+    <string name="settings_help">Hjelp</string>
+    <string name="settings_help_got_it">OK</string>
+    <string name="instrument_piano">Piano</string>
+    <string name="instrument_violin">Fiolin</string>
+    <string name="instrument_cello">Cello</string>
+    <string name="melody_reset_score">Nullstill poengsum</string>
+    <string name="melody_import_success">MIDI importert</string>
+    <string name="melody_remove_song">Fjern sang</string>
+    <string name="melody_level">Niv.%1$d</string>
+    <string name="score_correct_notes">Riktige toner</string>
 </resources>

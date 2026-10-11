@@ -34,3 +34,25 @@ android-sdk/platform-tools/adb shell am start -n net.exent.harmonisk/.MainActivi
 ```
 
 Test audio fixtures live in `app/src/test/resources/audio`.
+
+## Release
+
+Versioning is date-based (UTC): `versionName` is `yyyy.MM.dd` and `versionCode` is `yyMMddnn`, where `nn` is `versionBuild` in `gradle.properties`. Bump `versionBuild` only when making a second release on the same day. Google Play requires `versionCode` to increase with every upload, so never release from an earlier date.
+
+Release signing reads `keystore.properties` in the project root (gitignored):
+
+```properties
+storeFile=harmonisk-upload.jks
+storePassword=...
+keyAlias=harmonisk
+keyPassword=...
+```
+
+Build the signed App Bundle for Google Play:
+
+```bash
+./gradlew :app:bundleRelease
+```
+
+The bundle is written to `app/build/outputs/bundle/release/app-release.aab`. The upload keystore and `keystore.properties` are not tracked by git, so back them up somewhere safe; losing them means you can no longer update the app under this key.
+

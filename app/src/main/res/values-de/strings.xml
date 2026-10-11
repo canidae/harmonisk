@@ -37,8 +37,6 @@
     <string name="settings_mic_sensitivity">Mikrofonempfindlichkeit</string>
     <string name="settings_silence_threshold">Ruheschwelle: %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">Auto</string>
     <string name="settings_calibrating_stop">Stopp</string>
     <string name="settings_no_detection">Mikrofon kann keine Töne erkennen</string>
@@ -99,7 +97,7 @@
     <string name="freeplay_piano_lower">Nur untere Tastatur</string>
     <string name="freeplay_piano_none">Keine Tastatur</string>
     <string name="freeplay_end_bar_mismatch">Endtakt muss sich vom Starttakt unterscheiden</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <string name="freeplay_start_bar_exceeds_end">Starttakt muss vor dem Endtakt liegen</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Instrument stimmen</string>
@@ -147,7 +145,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Tonhöhengenauigkeit</string>
     <string name="score_note_duration">Dauergenauigkeit</string>
-    <string name="score_song_duration">Song duration</string>
+    <string name="score_song_duration">Songdauer</string>
     <string name="score_progress">Fortschritt</string>
 
     <!-- Note divisions -->
@@ -157,4 +155,29 @@
     <string name="note_thirty_second">Zweiunddreißigstel</string>
 
     <!-- Language selector -->
+    <string name="dev_mode_enabled">Entwicklermodus aktiviert</string>
+    <string name="dev_mode_disabled">Entwicklermodus deaktiviert</string>
+    <string name="settings_silence_threshold_min">Weniger empfindlich</string>
+    <string name="settings_silence_threshold_max">Empfindlicher</string>
+    <string name="settings_delay_title">Audio-Verzögerung kalibrieren</string>
+    <string name="settings_output_name">Ausgabe</string>
+    <string name="settings_input_name">Eingabe</string>
+    <string name="settings_delay_value">%1$s-Verzögerung: %2$d ms</string>
+    <string name="settings_delay_help">Ein Telefon braucht einen Moment, um einen Ton in Klang umzuwandeln, daher ist der Ton immer etwas später zu hören, als die App ihn abgespielt hat. Die Ausgabeverzögerung sagt der App, wie lang dieser Moment ist. Erhöhe sie, wenn der Klang zu spät bei dir ankommt, oder verringere sie, wenn er zu früh ankommt.\n\nEinen Ton zu hören und seine Tonhöhe zu bestimmen, dauert ebenfalls einen Moment, daher erfasst die App einen Ton immer etwas später, als du ihn gespielt hast. Die Eingabeverzögerung sagt der App, wie lang dieser Moment ist. Erhöhe sie, wenn deine Töne zu spät bewertet werden, oder verringere sie, wenn sie zu früh bewertet werden.</string>
+    <string name="settings_instrument">Instrument</string>
+    <string name="settings_help">Hilfe</string>
+    <string name="settings_help_got_it">Verstanden</string>
+    <string name="instrument_piano">Klavier</string>
+    <string name="instrument_violin">Violine</string>
+    <string name="instrument_cello">Cello</string>
+    <string name="melody_reset_score">Punktzahl zurücksetzen</string>
+    <string name="melody_import_success">MIDI importiert</string>
+    <string name="melody_remove_song">Song entfernen</string>
+    <string name="melody_no_imported">Noch keine importierten Songs.</string>
+    <string name="melody_folder_imported">Importiert</string>
+    <string name="melody_folder_traditional">Traditionell</string>
+    <string name="melody_folder_exercises">Übungen</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
+    <string name="melody_level">St.%1$d</string>
+    <string name="score_correct_notes">Richtige Töne</string>
 </resources>

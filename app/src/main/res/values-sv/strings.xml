@@ -37,8 +37,6 @@
     <string name="settings_mic_sensitivity">Mikrofonkänslighet</string>
     <string name="settings_silence_threshold">Tystnadströskel: %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">Auto</string>
     <string name="settings_calibrating_stop">Stopp</string>
     <string name="settings_no_detection">Mikrofonen kan inte upptäcka toner</string>
@@ -99,7 +97,7 @@
     <string name="freeplay_piano_lower">Endast nedre tangentbord</string>
     <string name="freeplay_piano_none">Inga tangentbord</string>
     <string name="freeplay_end_bar_mismatch">Sluttakt måste skilja sig från starttakt</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <string name="freeplay_start_bar_exceeds_end">Starttakten måste ligga före sluttakten</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Stäm instrument</string>
@@ -147,7 +145,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Tonhöjdsnoggrannhet</string>
     <string name="score_note_duration">Varaktighetsnoggrannhet</string>
-    <string name="score_song_duration">Song duration</string>
+    <string name="score_song_duration">Låtens längd</string>
     <string name="score_progress">Framsteg</string>
 
     <!-- Note divisions -->
@@ -155,4 +153,29 @@
     <string name="note_eighth">\u266A Åttondel</string>
     <string name="note_sixteenth">\u266C Sextondel</string>
     <string name="note_thirty_second">Trettiotvåondel</string>
+    <string name="dev_mode_enabled">Utvecklarläge aktiverat</string>
+    <string name="dev_mode_disabled">Utvecklarläge inaktiverat</string>
+    <string name="settings_silence_threshold_min">Mindre känslig</string>
+    <string name="settings_silence_threshold_max">Känsligare</string>
+    <string name="settings_delay_title">Kalibrering av ljudfördröjning</string>
+    <string name="settings_output_name">Utgång</string>
+    <string name="settings_input_name">Ingång</string>
+    <string name="settings_delay_value">%1$s-fördröjning: %2$d ms</string>
+    <string name="settings_delay_help">En telefon tar en stund på att göra om en ton till ljud, så tonen hörs alltid lite efter att appen spelade upp den. Utgångsfördröjningen talar om för appen hur lång den stunden är. Öka den om ljudet når dig sent, minska den om det når dig tidigt.\n\nDet tar också en stund att lyssna på en ton och avgöra dess tonhöjd, så appen registrerar alltid en ton lite efter att du spelade den. Ingångsfördröjningen talar om för appen hur lång den stunden är. Öka den om dina toner bedöms sent, minska den om de bedöms tidigt.</string>
+    <string name="settings_instrument">Instrument</string>
+    <string name="settings_help">Hjälp</string>
+    <string name="settings_help_got_it">Jag förstår</string>
+    <string name="instrument_piano">Piano</string>
+    <string name="instrument_violin">Violin</string>
+    <string name="instrument_cello">Cello</string>
+    <string name="melody_reset_score">Återställ poäng</string>
+    <string name="melody_import_success">MIDI importerat</string>
+    <string name="melody_remove_song">Ta bort låt</string>
+    <string name="melody_no_imported">Inga importerade låtar ännu.</string>
+    <string name="melody_folder_imported">Importerade</string>
+    <string name="melody_folder_traditional">Traditionella</string>
+    <string name="melody_folder_exercises">Övningar</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
+    <string name="melody_level">Niv.%1$d</string>
+    <string name="score_correct_notes">Rätta toner</string>
 </resources>

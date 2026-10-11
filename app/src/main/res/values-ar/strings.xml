@@ -37,8 +37,6 @@
     <string name="settings_mic_sensitivity">حساسية الميكروفون</string>
     <string name="settings_silence_threshold">حد الصمت: %1$.0f ديسيبل</string>
     <string name="settings_devices">%1$s / %2$s</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">تلقائي</string>
     <string name="settings_calibrating_stop">إيقاف</string>
     <string name="settings_no_detection">الميكروفون لا يستطيع اكتشاف أي نغمات</string>
@@ -99,7 +97,7 @@
     <string name="freeplay_piano_lower">لوحة المفاتيح السفلية فقط</string>
     <string name="freeplay_piano_none">لا توجد لوحات بيانو</string>
     <string name="freeplay_end_bar_mismatch">يجب أن يختلف مقطع النهاية عن مقطع البداية</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <string name="freeplay_start_bar_exceeds_end">يجب أن تكون المازورة الأولى قبل الأخيرة</string>
 
     <!-- Tuner -->
     <string name="tuner_title">ضبط آلة موسيقية</string>
@@ -147,7 +145,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">دقة الحدة</string>
     <string name="score_note_duration">دقة المدة</string>
-    <string name="score_song_duration">Song duration</string>
+    <string name="score_song_duration">مدة الأغنية</string>
     <string name="score_progress">التقدم</string>
 
     <!-- Note divisions -->
@@ -155,4 +153,29 @@
     <string name="note_eighth">\u266A ثمن</string>
     <string name="note_sixteenth">\u266C سدس عشر</string>
     <string name="note_thirty_second">ثانية وثلاثون</string>
+    <string name="dev_mode_enabled">تم تمكين وضع المطوّر</string>
+    <string name="dev_mode_disabled">تم تعطيل وضع المطوّر</string>
+    <string name="settings_silence_threshold_min">أقل حساسية</string>
+    <string name="settings_silence_threshold_max">أكثر حساسية</string>
+    <string name="settings_delay_title">معايرة تأخير الصوت</string>
+    <string name="settings_output_name">الإخراج</string>
+    <string name="settings_input_name">الإدخال</string>
+    <string name="settings_delay_value">تأخير %1$s: %2$d ms</string>
+    <string name="settings_delay_help">يستغرق الهاتف لحظة لتحويل النوتة إلى صوت، لذا تُسمع النوتة دائمًا بعد قليل من تشغيل التطبيق لها. يخبر تأخير الإخراج التطبيق بمدة تلك اللحظة. زِده إذا وصل الصوت إليك متأخرًا، وأنقصه إذا وصل مبكرًا.\n\nيستغرق الاستماع إلى نوتة وتحديد حدتها لحظة أيضًا، لذا يسجّل التطبيق النوتة دائمًا بعد قليل من عزفك لها. يخبر تأخير الإدخال التطبيق بمدة تلك اللحظة. زِده إذا جرى تقييم نوتاتك متأخرًا، وأنقصه إذا جرى تقييمها مبكرًا.</string>
+    <string name="settings_instrument">الآلة</string>
+    <string name="settings_help">مساعدة</string>
+    <string name="settings_help_got_it">فهمت</string>
+    <string name="instrument_piano">بيانو</string>
+    <string name="instrument_violin">كمان</string>
+    <string name="instrument_cello">تشيلو</string>
+    <string name="melody_reset_score">إعادة تعيين النتيجة</string>
+    <string name="melody_import_success">تم استيراد MIDI</string>
+    <string name="melody_remove_song">إزالة الأغنية</string>
+    <string name="melody_no_imported">لا توجد أغانٍ مستوردة بعد.</string>
+    <string name="melody_folder_imported">المستوردة</string>
+    <string name="melody_folder_traditional">التقليدية</string>
+    <string name="melody_folder_exercises">التمارين</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
+    <string name="melody_level">مستوى %1$d</string>
+    <string name="score_correct_notes">النوتات الصحيحة</string>
 </resources>

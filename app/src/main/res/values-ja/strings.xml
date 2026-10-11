@@ -37,8 +37,6 @@
     <string name="settings_mic_sensitivity">マイク感度</string>
     <string name="settings_silence_threshold">無音しきい値：%1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">自動</string>
     <string name="settings_calibrating_stop">停止</string>
     <string name="settings_no_detection">マイクが音を検出できません</string>
@@ -99,7 +97,7 @@
     <string name="freeplay_piano_lower">下キーボードのみ</string>
     <string name="freeplay_piano_none">ピアノ表示なし</string>
     <string name="freeplay_end_bar_mismatch">終了小節は開始小節と異なる必要があります</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <string name="freeplay_start_bar_exceeds_end">開始小節は終了小節より前にしてください</string>
 
     <!-- Tuner -->
     <string name="tuner_title">楽器をチューニング</string>
@@ -147,7 +145,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">ピッチ精度</string>
     <string name="score_note_duration">長さ精度</string>
-    <string name="score_song_duration">Song duration</string>
+    <string name="score_song_duration">曲の長さ</string>
     <string name="score_progress">進捗</string>
 
     <!-- Note divisions -->
@@ -155,4 +153,29 @@
     <string name="note_eighth">\u266A 八分音符</string>
     <string name="note_sixteenth">\u266C 十六分音符</string>
     <string name="note_thirty_second">三十二分音符</string>
+    <string name="dev_mode_enabled">開発者モードが有効になりました</string>
+    <string name="dev_mode_disabled">開発者モードが無効になりました</string>
+    <string name="settings_silence_threshold_min">感度を下げる</string>
+    <string name="settings_silence_threshold_max">感度を上げる</string>
+    <string name="settings_delay_title">オーディオ遅延のキャリブレーション</string>
+    <string name="settings_output_name">出力</string>
+    <string name="settings_input_name">入力</string>
+    <string name="settings_delay_value">%1$s 遅延: %2$d ms</string>
+    <string name="settings_delay_help">スマートフォンが音を出すまでには少し時間がかかるため、音はアプリが再生した瞬間より少し遅れて聞こえます。出力遅延はその時間をアプリに伝えます。音が遅れて聞こえる場合は大きくし、早く聞こえる場合は小さくしてください。\n\n音を聞き取って音程を判定するのにも少し時間がかかるため、アプリはあなたが演奏した瞬間より少し遅れて音を記録します。入力遅延はその時間をアプリに伝えます。採点が遅れる場合は大きくし、早まる場合は小さくしてください。</string>
+    <string name="settings_instrument">楽器</string>
+    <string name="settings_help">ヘルプ</string>
+    <string name="settings_help_got_it">了解</string>
+    <string name="instrument_piano">ピアノ</string>
+    <string name="instrument_violin">バイオリン</string>
+    <string name="instrument_cello">チェロ</string>
+    <string name="melody_reset_score">スコアをリセット</string>
+    <string name="melody_import_success">MIDIをインポートしました</string>
+    <string name="melody_remove_song">曲を削除</string>
+    <string name="melody_no_imported">インポートした曲はまだありません。</string>
+    <string name="melody_folder_imported">インポート</string>
+    <string name="melody_folder_traditional">伝統曲</string>
+    <string name="melody_folder_exercises">練習</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
+    <string name="melody_level">Lv.%1$d</string>
+    <string name="score_correct_notes">正しい音</string>
 </resources>

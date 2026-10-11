@@ -37,8 +37,6 @@
     <string name="settings_mic_sensitivity">Næmni hljóðnema</string>
     <string name="settings_silence_threshold">Þöglunarmörk: %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">Sjálfvirkt</string>
     <string name="settings_calibrating_stop">Stöðva</string>
     <string name="settings_no_detection">Hljóðnemi getur ekki greint neina tóna</string>
@@ -99,7 +97,7 @@
     <string name="freeplay_piano_lower">Aðeins neðra hljómborð</string>
     <string name="freeplay_piano_none">Engin hljómborð</string>
     <string name="freeplay_end_bar_mismatch">Lokataktur verður að vera frábrugðinn upphafstakt</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <string name="freeplay_start_bar_exceeds_end">Upphafstaktur verður að vera á undan lokatakti</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Stilla hljóðfæri</string>
@@ -147,7 +145,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Tónhæðarnákvæmni</string>
     <string name="score_note_duration">Lengdarnákvæmni</string>
-    <string name="score_song_duration">Song duration</string>
+    <string name="score_song_duration">Lengd lags</string>
     <string name="score_progress">Framfarir</string>
 
     <!-- Note divisions -->
@@ -155,4 +153,29 @@
     <string name="note_eighth">\u266A Áttundanóta</string>
     <string name="note_sixteenth">\u266C Sextándanóta</string>
     <string name="note_thirty_second">Tvö og þríræðanóta</string>
+    <string name="dev_mode_enabled">Forritarastilling virk</string>
+    <string name="dev_mode_disabled">Forritarastilling óvirk</string>
+    <string name="settings_silence_threshold_min">Minni næmni</string>
+    <string name="settings_silence_threshold_max">Meiri næmni</string>
+    <string name="settings_delay_title">Kvörðun hljóðtafar</string>
+    <string name="settings_output_name">Úttak</string>
+    <string name="settings_input_name">Inntak</string>
+    <string name="settings_delay_value">%1$s töf: %2$d ms</string>
+    <string name="settings_delay_help">Sími tekur smá stund að breyta nótu í hljóð, svo notan heyrir alltaf aðeins eftir að forritið spilaði hana. Úttakstöfin segir forritinu hversu löng sú stund er. Auka hana ef hljóðið berst þér seint, minnka hana ef það berst þér snemma.\n\nAð hlusta á nótu og ákvarða tónhæð hennar tekur líka smá stund, svo forritið skráir alltaf nótu aðeins eftir að þú spilaðir hana. Inntakstöfin segir forritinu hversu löng sú stund er. Auka hana ef nóturnar þínar eru metnar seint, minnka hana ef þær eru metnar snemma.</string>
+    <string name="settings_instrument">Hljóðfæri</string>
+    <string name="settings_help">Hjálp</string>
+    <string name="settings_help_got_it">Skilið</string>
+    <string name="instrument_piano">Píanó</string>
+    <string name="instrument_violin">Fiðla</string>
+    <string name="instrument_cello">Selló</string>
+    <string name="melody_reset_score">Endurstilla stig</string>
+    <string name="melody_import_success">MIDI flutt inn</string>
+    <string name="melody_remove_song">Fjarlægja lag</string>
+    <string name="melody_no_imported">Engin innflutt lög ennþá.</string>
+    <string name="melody_folder_imported">Innflutt</string>
+    <string name="melody_folder_traditional">Hefðbundin</string>
+    <string name="melody_folder_exercises">Æfingar</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
+    <string name="melody_level">St.%1$d</string>
+    <string name="score_correct_notes">Réttar nótur</string>
 </resources>

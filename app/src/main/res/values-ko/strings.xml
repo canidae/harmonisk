@@ -37,8 +37,6 @@
     <string name="settings_mic_sensitivity">마이크 감도</string>
     <string name="settings_silence_threshold">무음 임계값: %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">자동</string>
     <string name="settings_calibrating_stop">정지</string>
     <string name="settings_no_detection">마이크가 소리를 감지할 수 없음</string>
@@ -99,7 +97,7 @@
     <string name="freeplay_piano_lower">하단 키보드만</string>
     <string name="freeplay_piano_none">피아노 키보드 없음</string>
     <string name="freeplay_end_bar_mismatch">끝 마디는 시작 마디와 달라야 합니다</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <string name="freeplay_start_bar_exceeds_end">시작 마디는 끝 마디보다 앞서야 합니다</string>
 
     <!-- Tuner -->
     <string name="tuner_title">악기 튜닝</string>
@@ -147,7 +145,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">음정 정확도</string>
     <string name="score_note_duration">길이 정확도</string>
-    <string name="score_song_duration">Song duration</string>
+    <string name="score_song_duration">곡 길이</string>
     <string name="score_progress">진행률</string>
 
     <!-- Note divisions -->
@@ -155,4 +153,29 @@
     <string name="note_eighth">\u266A 8분음표</string>
     <string name="note_sixteenth">\u266C 16분음표</string>
     <string name="note_thirty_second">32분음표</string>
+    <string name="dev_mode_enabled">개발자 모드 사용 설정됨</string>
+    <string name="dev_mode_disabled">개발자 모드 해제됨</string>
+    <string name="settings_silence_threshold_min">민감도 낮춤</string>
+    <string name="settings_silence_threshold_max">민감도 높임</string>
+    <string name="settings_delay_title">오디오 지연 보정</string>
+    <string name="settings_output_name">출력</string>
+    <string name="settings_input_name">입력</string>
+    <string name="settings_delay_value">%1$s 지연: %2$d ms</string>
+    <string name="settings_delay_help">휴대폰이 음을 소리로 바꾸는 데 잠깐 시간이 걸리므로, 소리는 앱이 재생한 순간보다 항상 조금 늦게 들립니다. 출력 지연은 그 시간이 얼마나 되는지 앱에 알려 줍니다. 소리가 늦게 들리면 값을 늘리고, 일찍 들리면 줄이세요.\n\n음을 듣고 음높이를 판별하는 데도 잠깐 시간이 걸리므로, 앱은 연주한 순간보다 항상 조금 늦게 음을 인식합니다. 입력 지연은 그 시간이 얼마나 되는지 앱에 알려 줍니다. 채점이 늦으면 값을 늘리고, 이르면 줄이세요.</string>
+    <string name="settings_instrument">악기</string>
+    <string name="settings_help">도움말</string>
+    <string name="settings_help_got_it">알겠습니다</string>
+    <string name="instrument_piano">피아노</string>
+    <string name="instrument_violin">바이올린</string>
+    <string name="instrument_cello">첼로</string>
+    <string name="melody_reset_score">점수 초기화</string>
+    <string name="melody_import_success">MIDI를 가져왔습니다</string>
+    <string name="melody_remove_song">곡 삭제</string>
+    <string name="melody_no_imported">아직 가져온 곡이 없습니다.</string>
+    <string name="melody_folder_imported">가져온 곡</string>
+    <string name="melody_folder_traditional">전통곡</string>
+    <string name="melody_folder_exercises">연습</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
+    <string name="melody_level">Lv.%1$d</string>
+    <string name="score_correct_notes">정확한 음</string>
 </resources>

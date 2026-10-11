@@ -1,9 +1,23 @@
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
     kotlin("plugin.serialization")
+}
+
+val releaseDate = LocalDate.now(ZoneOffset.UTC)
+val versionNameValue = releaseDate.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+val versionBuild = (findProperty("versionBuild") as String?)?.toIntOrNull() ?: 1
+val versionCodeValue = releaseDate.format(DateTimeFormatter.ofPattern("yyMMdd")).toInt() * 100 + versionBuild
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) keystorePropertiesFile.inputStream().use { load(it) }
 }
 
 android {
@@ -15,17 +29,35 @@ android {
         applicationId = "net.exent.harmonisk"
         minSdk = 29
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = versionCodeValue
+        versionName = versionNameValue
 
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
     }
 
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (keystorePropertiesFile.exists()) signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    bundle {
+        language {
+            enableSplit = false
         }
     }
 

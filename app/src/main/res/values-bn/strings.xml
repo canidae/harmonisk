@@ -37,8 +37,6 @@
     <string name="settings_mic_sensitivity">মাইক্রোফোন সংবেদনশীলতা</string>
     <string name="settings_silence_threshold">নীরবতা সীমা: %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">অটো</string>
     <string name="settings_calibrating_stop">থামান</string>
     <string name="settings_no_detection">মাইক্রোফোন কোনো স্বর সনাক্ত করতে পারে না</string>
@@ -99,7 +97,7 @@
     <string name="freeplay_piano_lower">শুধু নিচের কীবোর্ড</string>
     <string name="freeplay_piano_none">কোনো পিয়ানো কীবোর্ড নেই</string>
     <string name="freeplay_end_bar_mismatch">শেষ বার শুরু বার থেকে ভিন্ন হতে হবে</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <string name="freeplay_start_bar_exceeds_end">শুরুর বার শেষ বারের আগে হতে হবে</string>
 
     <!-- Tuner -->
     <string name="tuner_title">যন্ত্র টিউন করুন</string>
@@ -147,7 +145,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">পিচ নির্ভুলতা</string>
     <string name="score_note_duration">সময় নির্ভুলতা</string>
-    <string name="score_song_duration">Song duration</string>
+    <string name="score_song_duration">গানের দৈর্ঘ্য</string>
     <string name="score_progress">অগ্রগতি</string>
 
     <!-- Note divisions -->
@@ -155,4 +153,29 @@
     <string name="note_eighth">\u266A অষ্টমাংশ</string>
     <string name="note_sixteenth">\u266C ষোড়শাংশ</string>
     <string name="note_thirty_second">বত্রিশতম</string>
+    <string name="dev_mode_enabled">ডেভেলপার মোড সক্রিয়</string>
+    <string name="dev_mode_disabled">ডেভেলপার মোড নিষ্ক্রিয়</string>
+    <string name="settings_silence_threshold_min">কম সংবেদনশীল</string>
+    <string name="settings_silence_threshold_max">বেশি সংবেদনশীল</string>
+    <string name="settings_delay_title">অডিও বিলম্ব ক্রমাঙ্কন</string>
+    <string name="settings_output_name">আউটপুট</string>
+    <string name="settings_input_name">ইনপুট</string>
+    <string name="settings_delay_value">%1$s বিলম্ব: %2$d ms</string>
+    <string name="settings_delay_help">ফোনের একটি সুরকে শব্দে পরিণত করতে একটু সময় লাগে, তাই অ্যাপ বাজানোর পরেই সুরটি একটু দেরিতে শোনা যায়। আউটপুট বিলম্ব অ্যাপকে বলে যে সেই সময়টা কত। শব্দ দেরিতে পৌঁছালে এটি বাড়ান, আগে পৌঁছালে কমান।\n\nএকটি সুর শুনে তার পিচ নির্ণয় করতেও একটু সময় লাগে, তাই আপনি বাজানোর পরেই অ্যাপ সুরটি একটু দেরিতে নথিভুক্ত করে। ইনপুট বিলম্ব অ্যাপকে বলে যে সেই সময়টা কত। আপনার সুরগুলোর মূল্যায়ন দেরিতে হলে এটি বাড়ান, আগে হলে কমান।</string>
+    <string name="settings_instrument">যন্ত্র</string>
+    <string name="settings_help">সহায়তা</string>
+    <string name="settings_help_got_it">বুঝেছি</string>
+    <string name="instrument_piano">পিয়ানো</string>
+    <string name="instrument_violin">ভায়োলিন</string>
+    <string name="instrument_cello">চেলো</string>
+    <string name="melody_reset_score">স্কোর রিসেট করুন</string>
+    <string name="melody_import_success">MIDI আমদানি হয়েছে</string>
+    <string name="melody_remove_song">গান সরান</string>
+    <string name="melody_no_imported">এখনও কোনো আমদানি করা গান নেই।</string>
+    <string name="melody_folder_imported">আমদানি করা</string>
+    <string name="melody_folder_traditional">ঐতিহ্যবাহী</string>
+    <string name="melody_folder_exercises">অনুশীলন</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
+    <string name="melody_level">স্তর %1$d</string>
+    <string name="score_correct_notes">সঠিক সুর</string>
 </resources>

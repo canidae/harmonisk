@@ -37,8 +37,6 @@
     <string name="settings_mic_sensitivity">Sensibilité du microphone</string>
     <string name="settings_silence_threshold">Seuil de silence : %1$.0f dB</string>
     <string name="settings_devices">%1$s / %2$s</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">Auto</string>
     <string name="settings_calibrating_stop">Arrêter</string>
     <string name="settings_no_detection">Le microphone ne peut détecter aucune tonalité</string>
@@ -99,7 +97,7 @@
     <string name="freeplay_piano_lower">Clavier inférieur uniquement</string>
     <string name="freeplay_piano_none">Aucun clavier</string>
     <string name="freeplay_end_bar_mismatch">La mesure de fin doit être différente de la mesure de début</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <string name="freeplay_start_bar_exceeds_end">La mesure de début doit précéder la mesure de fin</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Accorder un instrument</string>
@@ -147,7 +145,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Précision de la hauteur</string>
     <string name="score_note_duration">Précision de la durée</string>
-    <string name="score_song_duration">Song duration</string>
+    <string name="score_song_duration">Durée de la chanson</string>
     <string name="score_progress">Progression</string>
 
     <!-- Note divisions -->
@@ -155,4 +153,29 @@
     <string name="note_eighth">\u266A Croche</string>
     <string name="note_sixteenth">\u266C Double croche</string>
     <string name="note_thirty_second">Triple croche</string>
+    <string name="dev_mode_enabled">Mode développeur activé</string>
+    <string name="dev_mode_disabled">Mode développeur désactivé</string>
+    <string name="settings_silence_threshold_min">Moins sensible</string>
+    <string name="settings_silence_threshold_max">Plus sensible</string>
+    <string name="settings_delay_title">Calibration du délai audio</string>
+    <string name="settings_output_name">Sortie</string>
+    <string name="settings_input_name">Entrée</string>
+    <string name="settings_delay_value">Délai %1$s : %2$d ms</string>
+    <string name="settings_delay_help">Un téléphone met un instant à transformer une note en son, la note est donc toujours entendue un peu après que l\'application l\'a jouée. Le délai de sortie indique à l\'application la durée de cet instant. Augmentez-le si le son vous parvient en retard, diminuez-le s\'il vous parvient en avance.\n\nÉcouter une note et déterminer sa hauteur prend un instant, l\'application enregistre donc toujours une note un peu après que vous l\'avez jouée. Le délai d\'entrée indique à l\'application la durée de cet instant. Augmentez-le si vos notes sont évaluées en retard, diminuez-le si elles sont évaluées en avance.</string>
+    <string name="settings_instrument">Instrument</string>
+    <string name="settings_help">Aide</string>
+    <string name="settings_help_got_it">Compris</string>
+    <string name="instrument_piano">Piano</string>
+    <string name="instrument_violin">Violon</string>
+    <string name="instrument_cello">Violoncelle</string>
+    <string name="melody_reset_score">Réinitialiser le score</string>
+    <string name="melody_import_success">MIDI importé</string>
+    <string name="melody_remove_song">Supprimer la chanson</string>
+    <string name="melody_no_imported">Aucune chanson importée pour l\'instant.</string>
+    <string name="melody_folder_imported">Importées</string>
+    <string name="melody_folder_traditional">Traditionnelles</string>
+    <string name="melody_folder_exercises">Exercices</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
+    <string name="melody_level">Niv.%1$d</string>
+    <string name="score_correct_notes">Notes correctes</string>
 </resources>

@@ -6,6 +6,7 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.AudioTimestamp
 import android.media.MediaRecorder
+import android.os.Build
 import androidx.core.app.ActivityCompat
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
@@ -65,7 +66,7 @@ class AudioCaptureService(
             return@callbackFlow
         }
 
-        val audioRecord = AudioRecord.Builder()
+        val builder = AudioRecord.Builder()
             .setAudioSource(AUDIO_SOURCE)
             .setAudioFormat(
                 AudioFormat.Builder()
@@ -75,8 +76,8 @@ class AudioCaptureService(
                     .build()
             )
             .setBufferSizeInBytes(minBufferSize)
-            .setContext(context)
-            .build()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) builder.setContext(context)
+        val audioRecord = builder.build()
 
         if (audioRecord.state != AudioRecord.STATE_INITIALIZED) {
             close(IllegalStateException("AudioRecord failed to initialize"))

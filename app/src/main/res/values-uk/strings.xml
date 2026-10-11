@@ -37,8 +37,6 @@
     <string name="settings_mic_sensitivity">Чутливість мікрофона</string>
     <string name="settings_silence_threshold">Поріг тиші: %1$.0f дБ</string>
     <string name="settings_devices">%1$s / %2$s</string>
-    <string name="settings_input_delay_title">Audio input delay</string>
-    <string name="settings_input_delay_help">The time it takes from you playing a note until the app detects the pitch through the microphone. The note bars lead the beat by this delay, so when you play exactly as a bar reaches the now line, your note is scored on time. Increase it if notes register too late, decrease it if they register too early.</string>
     <string name="settings_auto_calibrate">Авто</string>
     <string name="settings_calibrating_stop">Стоп</string>
     <string name="settings_no_detection">Мікрофон не може виявити жодного тону</string>
@@ -99,7 +97,7 @@
     <string name="freeplay_piano_lower">Лише нижня клавіатура</string>
     <string name="freeplay_piano_none">Без клавіатур</string>
     <string name="freeplay_end_bar_mismatch">Кінцевий такт має відрізнятися від початкового</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <string name="freeplay_start_bar_exceeds_end">Початковий такт має бути перед кінцевим</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Налаштувати інструмент</string>
@@ -147,7 +145,7 @@
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Точність висоти</string>
     <string name="score_note_duration">Точність тривалості</string>
-    <string name="score_song_duration">Song duration</string>
+    <string name="score_song_duration">Тривалість пісні</string>
     <string name="score_progress">Прогрес</string>
 
     <!-- Note divisions -->
@@ -155,4 +153,29 @@
     <string name="note_eighth">\u266A Восьма</string>
     <string name="note_sixteenth">\u266C Шістнадцята</string>
     <string name="note_thirty_second">Тридцять друга</string>
+    <string name="dev_mode_enabled">Режим розробника увімкнено</string>
+    <string name="dev_mode_disabled">Режим розробника вимкнено</string>
+    <string name="settings_silence_threshold_min">Менш чутливо</string>
+    <string name="settings_silence_threshold_max">Більш чутливо</string>
+    <string name="settings_delay_title">Калібрування затримки звуку</string>
+    <string name="settings_output_name">Вихід</string>
+    <string name="settings_input_name">Вхід</string>
+    <string name="settings_delay_value">Затримка %1$s: %2$d мс</string>
+    <string name="settings_delay_help">Телефону потрібен певний час, щоб перетворити ноту на звук, тому нота завжди чути трохи пізніше, ніж застосунок її відтворив. Затримка виходу повідомляє застосунку, скільки триває цей час. Збільште її, якщо звук доходить до вас пізно, зменште, якщо він доходить рано.\n\nПрослуховування ноти та визначення її висоти теж потребує часу, тому застосунок завжди реєструє ноту трохи пізніше, ніж ви її зіграли. Затримка входу повідомляє застосунку, скільки триває цей час. Збільште її, якщо ваші ноти оцінюються пізно, зменште, якщо вони оцінюються рано.</string>
+    <string name="settings_instrument">Інструмент</string>
+    <string name="settings_help">Довідка</string>
+    <string name="settings_help_got_it">Зрозуміло</string>
+    <string name="instrument_piano">Фортепіано</string>
+    <string name="instrument_violin">Скрипка</string>
+    <string name="instrument_cello">Віолончель</string>
+    <string name="melody_reset_score">Скинути рахунок</string>
+    <string name="melody_import_success">MIDI імпортовано</string>
+    <string name="melody_remove_song">Видалити пісню</string>
+    <string name="melody_no_imported">Ще немає імпортованих пісень.</string>
+    <string name="melody_folder_imported">Імпортовані</string>
+    <string name="melody_folder_traditional">Традиційні</string>
+    <string name="melody_folder_exercises">Вправи</string>
+    <string name="melody_folder_kulturskolen">Kulturskolen</string>
+    <string name="melody_level">Рів.%1$d</string>
+    <string name="score_correct_notes">Правильні ноти</string>
 </resources>
