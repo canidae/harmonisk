@@ -1,0 +1,25 @@
+Harmonisk is a music practice companion that listens while you play. It gives you real-time feedback on your intonation, helps you follow along with melodies on an interactive score, and doubles as a tuner.
+
+Harmonisk is currently in beta. Features and bundled content may still change, and you may run into rough edges — your feedback is very welcome.
+
+PLAY BY MELODY
+Follow along with a melody shown as real sheet music and scrolling note bars. Every attempt is scored on pitch accuracy, note duration and correct notes, while five difficulty levels gradually take you from a relaxed pace to full tempo. Play with the microphone or a MIDI instrument, and transpose any melody to a key that suits you.
+
+FREE PLAY
+Play freely and record what you play. Shape your recording note by note: drag notes to change their timing or pitch, split them, delete them, and add extra voices. Set tempo, time signature and note snapping, switch on the metronome, and import or export MIDI files.
+
+TUNE INSTRUMENT
+See your pitch in real time on a clear gauge, with the detected note, frequency and reference pitch. Useful for tuning any instrument or checking intonation while you practise.
+
+BUILT-IN MELODIES
+Start right away with bundled songs, including traditional tunes, a major-scale exercise, and pieces from the Norwegian kulturskolen.
+
+MADE FOR PRACTISING
+• Real-time pitch detection
+• Microphone or MIDI input
+• Practice history and progress graphs for every melody
+• Audio input and output delay calibration for your device
+• Works offline: no account, no ads and no tracking
+• 18 languages: English, Norwegian, Swedish, Danish, Finnish, Icelandic, German, French, Spanish, Italian, Portuguese, Ukrainian, Chinese, Japanese, Korean, Hindi, Bengali and Arabic
+
+Harmonisk is an independent project. If something does not work as expected, or you have an idea for a feature, please get in touch.
