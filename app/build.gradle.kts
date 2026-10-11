@@ -13,8 +13,9 @@ plugins {
 
 val releaseTime = LocalDateTime.now(ZoneOffset.UTC)
 val versionNameValue = releaseTime.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
-val versionCodeValue = ((releaseTime.year - 2000) * 1000 + releaseTime.dayOfYear) * 10000 +
-    releaseTime.hour * 100 + releaseTime.minute
+val versionDay = releaseTime.format(DateTimeFormatter.ofPattern("yyMMdd")).toInt()
+val versionSegment = releaseTime.toLocalTime().toSecondOfDay() * 1000 / 86_400
+val versionCodeValue = versionDay * 1000 + versionSegment
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) keystorePropertiesFile.inputStream().use { load(it) }

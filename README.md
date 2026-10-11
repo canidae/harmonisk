@@ -37,13 +37,13 @@ Test audio fixtures live in `app/src/test/resources/audio`.
 
 ## Release
 
-Versioning is derived from the build time (UTC). `versionName` is `yyyy.MM.dd` and `versionCode` appends the hour and minute to the date:
+Versioning is derived from the build time (UTC). `versionName` is `yyyy.MM.dd` and `versionCode` is `yyMMdd` followed by a three-digit slot that splits the day into 1000 segments:
 
 ```
-versionCode = ((year - 2000) * 1000 + dayOfYear) * 10000 + hour * 100 + minute
+versionCode = yyMMdd * 1000 + (secondsSinceMidnight * 1000 / 86400)
 ```
 
-For 2026-10-11 19:30 UTC that is `262841930`: `26` is the year, `284` is the day of the year, and `1930` is the time. There is no counter to bump and nothing resets daily — the number always grows with the clock. A plain `yyMMddHHmm` would be over Google Play's 2,100,000,000 limit, so the date is packed as year plus day-of-year instead; this stays valid until roughly 2209. The only collision case is two builds in the same minute, so don't cut two releases back to back.
+For 2026-10-11 19:22 UTC that is `261011806`: `261011` is the date and `806` is the time slot. Slots are about 86 seconds long, so the number always grows with the clock, needs no counter, and nothing resets daily. The only collision case is two builds inside the same ~86-second slot, so leave a couple of minutes between releases. The largest possible value this century is `991231999`, well under Google Play's 2,100,000,000 limit.
 
 Release signing reads `keystore.properties` in the project root (gitignored):
 
