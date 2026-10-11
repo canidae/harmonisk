@@ -1,4 +1,4 @@
-import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Properties
@@ -11,10 +11,10 @@ plugins {
     kotlin("plugin.serialization")
 }
 
-val releaseDate = LocalDate.now(ZoneOffset.UTC)
-val versionNameValue = releaseDate.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
-val versionBuild = (findProperty("versionBuild") as String?)?.toIntOrNull() ?: 1
-val versionCodeValue = releaseDate.format(DateTimeFormatter.ofPattern("yyMMdd")).toInt() * 100 + versionBuild
+val releaseTime = LocalDateTime.now(ZoneOffset.UTC)
+val versionNameValue = releaseTime.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+val versionCodeValue = ((releaseTime.year - 2000) * 1000 + releaseTime.dayOfYear) * 10000 +
+    releaseTime.hour * 100 + releaseTime.minute
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) keystorePropertiesFile.inputStream().use { load(it) }
