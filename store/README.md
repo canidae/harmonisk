@@ -39,10 +39,20 @@ adb exec-out screencap -p > shot.png
 adb shell wm size reset
 ```
 
+## Graphics — `graphics/`
+
+| File | Play Console field | Spec |
+| --- | --- | --- |
+| `app-icon-512.png` | App icon | 512x512, 32-bit PNG with alpha |
+| `feature-graphic-1024x500.png` | Feature graphic | 1024x500 PNG |
+
+Both are generated from the same artwork as the launcher icon
+(`app/src/main/res/drawable/ic_launcher_background.xml` and
+`ic_launcher_foreground.xml`): a purple-to-teal gradient with white beamed
+eighth notes. Keep them in sync if the icon changes.
+
 ## Still required by Google Play
 
-- **App icon** 512x512 PNG (32-bit with alpha).
-- **Feature graphic** 1024x500 PNG or JPEG, required for the store listing.
 - **Localized listings** — the app itself ships 18 languages, but only the
   `en-US` listing text exists so far. Add `listing/<locale>/` directories to
   localize the store presence as well.
