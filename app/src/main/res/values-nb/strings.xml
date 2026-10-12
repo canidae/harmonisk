@@ -107,10 +107,11 @@
     <!-- Melody screen -->
     <string name="melody_title">Spill Melodi</string>
     <string name="melody_choose">Velg en melodi</string>
-    <string name="melody_import_file">Importer MIDI-fil</string>
+    <string name="melody_import_file">Importer MIDI- eller ZIP-fil</string>
     <string name="melody_stop_preview">Stopp forhåndsvisning</string>
     <string name="melody_preview">Forhåndsvis</string>
     <string name="melody_failed_load_midi">Kunne ikke laste MIDI-fil</string>
+    <string name="melody_failed_load_zip">Kunne ikke laste ZIP-fil</string>
     <string name="melody_failed_load_melody">Kunne ikke laste melodi</string>
     <string name="melody_difficulty">Vanskelighetsgrad: </string>
     <string name="melody_no_playthroughs">Ingen gjennomspillinger ennå</string>
@@ -176,7 +177,9 @@
     <string name="instrument_cello">Cello</string>
     <string name="melody_reset_score">Nullstill poengsum</string>
     <string name="melody_import_success">MIDI importert</string>
+    <string name="melody_import_zip_success">Sanger importert fra ZIP-filen</string>
     <string name="melody_remove_song">Fjern sang</string>
+    <string name="melody_remove_folder">Fjern mappe</string>
     <string name="melody_level">Niv.%1$d</string>
     <string name="score_correct_notes">Riktige toner</string>
 </resources>

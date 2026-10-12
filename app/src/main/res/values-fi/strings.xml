@@ -107,10 +107,11 @@
     <!-- Melody screen -->
     <string name="melody_title">Soita melodia</string>
     <string name="melody_choose">Valitse melodia</string>
-    <string name="melody_import_file">Tuo MIDI-tiedosto</string>
+    <string name="melody_import_file">Tuo MIDI- tai ZIP-tiedosto</string>
     <string name="melody_stop_preview">Pysäytä esikatselu</string>
     <string name="melody_preview">Esikatsele</string>
     <string name="melody_failed_load_midi">MIDI-tiedoston lataus epäonnistui</string>
+    <string name="melody_failed_load_zip">ZIP-tiedoston lataus epäonnistui</string>
     <string name="melody_failed_load_melody">Melodian lataus epäonnistui</string>
     <string name="melody_difficulty">Vaikeustaso: </string>
     <string name="melody_no_playthroughs">Ei vielä läpisoittoja</string>
@@ -170,7 +171,9 @@
     <string name="instrument_cello">Sello</string>
     <string name="melody_reset_score">Nollaa pisteet</string>
     <string name="melody_import_success">MIDI tuotu</string>
+    <string name="melody_import_zip_success">Kappaleet tuotu ZIP-tiedostosta</string>
     <string name="melody_remove_song">Poista kappale</string>
+    <string name="melody_remove_folder">Poista kansio</string>
     <string name="melody_no_imported">Ei vielä tuotuja kappaleita.</string>
     <string name="melody_folder_imported">Tuodut</string>
     <string name="melody_folder_traditional">Perinteiset</string>

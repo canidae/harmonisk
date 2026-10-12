@@ -84,12 +84,15 @@ class MelodyViewModel @Inject constructor(
     private val _allMelodyCombinedScores = MutableStateFlow<Map<String, Float>>(emptyMap())
     val allMelodyCombinedScores: StateFlow<Map<String, Float>> = _allMelodyCombinedScores.asStateFlow()
 
+    private val lastPlayedAt: StateFlow<Map<String, Long>> = scoreHistoryRepository.lastPlayed
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
     val sortedMelodies: StateFlow<List<MelodyRepository.MelodyInfo>> =
-        combine(availableMelodies, _allMelodyCombinedScores) { melodies, scores ->
-            melodies.sortedWith(compareBy(
-                { it.id !in scores },
-                { it.name }
-            ))
+        combine(availableMelodies, _allMelodyCombinedScores, lastPlayedAt) { melodies, _, lastPlayed ->
+            melodies.sortedWith(
+                compareByDescending<MelodyRepository.MelodyInfo> { lastPlayed[it.id] ?: Long.MIN_VALUE }
+                    .thenBy { it.name }
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _allMelodyDifficulties = MutableStateFlow<Map<String, Float>>(emptyMap())
@@ -353,6 +356,12 @@ class MelodyViewModel @Inject constructor(
         }
         return false
     }
+
+    /** True when the picked file is a zip archive of MIDI files. */
+    fun isZip(uri: android.net.Uri): Boolean = melodyRepository.isZip(uri)
+
+    /** Import every MIDI file in a zip; returns the folder it was extracted into and its song count. */
+    suspend fun importZip(uri: android.net.Uri): Pair<String, Int>? = melodyRepository.importZip(uri)
 
     fun loadMelodyFromUri(uri: android.net.Uri): Boolean {
         val name = melodyRepository.resolveDisplayName(uri)
@@ -921,6 +930,12 @@ class MelodyViewModel @Inject constructor(
         viewModelScope.launch {
             melodyRepository.removeImportedMelody(melodyId)
             scoreHistoryRepository.resetAllScores(melodyId)
+        }
+    }
+
+    fun removeImportedFolder(folder: String) {
+        viewModelScope.launch {
+            melodyRepository.removeImportedFolder(folder).forEach { scoreHistoryRepository.resetAllScores(it) }
         }
     }
 

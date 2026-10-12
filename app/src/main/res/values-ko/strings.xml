@@ -107,10 +107,11 @@
     <!-- Melody screen -->
     <string name="melody_title">멜로디 연주</string>
     <string name="melody_choose">멜로디 선택</string>
-    <string name="melody_import_file">MIDI 파일 가져오기</string>
+    <string name="melody_import_file">MIDI 또는 ZIP 파일 가져오기</string>
     <string name="melody_stop_preview">미리보기 중지</string>
     <string name="melody_preview">미리보기</string>
     <string name="melody_failed_load_midi">MIDI 파일을 불러오지 못했습니다</string>
+    <string name="melody_failed_load_zip">ZIP 파일을 불러오지 못했습니다</string>
     <string name="melody_failed_load_melody">멜로디를 불러오지 못했습니다</string>
     <string name="melody_difficulty">난이도: </string>
     <string name="melody_no_playthroughs">아직 연주 기록이 없습니다</string>
@@ -170,7 +171,9 @@
     <string name="instrument_cello">첼로</string>
     <string name="melody_reset_score">점수 초기화</string>
     <string name="melody_import_success">MIDI를 가져왔습니다</string>
+    <string name="melody_import_zip_success">ZIP 파일에서 곡을 가져왔습니다</string>
     <string name="melody_remove_song">곡 삭제</string>
+    <string name="melody_remove_folder">폴더 삭제</string>
     <string name="melody_no_imported">아직 가져온 곡이 없습니다.</string>
     <string name="melody_folder_imported">가져온 곡</string>
     <string name="melody_folder_traditional">전통곡</string>

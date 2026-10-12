@@ -44,6 +44,15 @@ import net.exent.harmonisk.R
 import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.ui.utils.formatScore
 import net.exent.harmonisk.ui.utils.scoreColor
+import kotlinx.coroutines.launch
+
+private val IMPORT_MIME_TYPES = arrayOf(
+    "audio/midi",
+    "audio/x-midi",
+    "application/x-midi",
+    "application/zip",
+    "application/x-zip-compressed"
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,6 +71,7 @@ fun MelodyScreen(
     // The folder the player was in has to outlive the trip into a song, or coming back lists the
     // folders again instead of the songs that were being chosen from.
     var currentFolder by rememberSaveable { mutableStateOf<String?>(null) }
+    var currentZipFolder by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.initSynthesizer()
@@ -80,14 +90,26 @@ fun MelodyScreen(
     }
 
     BackHandler(enabled = currentFolder != null) {
-        currentFolder = null
+        if (currentZipFolder != null) currentZipFolder = null else currentFolder = null
     }
 
+    val scope = rememberCoroutineScope()
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
-            if (viewModel.loadMelodyFromUri(it)) {
+            if (viewModel.isZip(it)) {
+                scope.launch {
+                    val imported = viewModel.importZip(it)
+                    if (imported != null) {
+                        currentFolder = MelodyRepository.IMPORTED_FOLDER
+                        currentZipFolder = imported.first
+                        Toast.makeText(context, context.getString(R.string.melody_import_zip_success), Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, context.getString(R.string.melody_failed_load_zip), Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else if (viewModel.loadMelodyFromUri(it)) {
                 viewModel.stopPreview()
                 previewingMelody = null
                 Toast.makeText(context, context.getString(R.string.melody_import_success), Toast.LENGTH_SHORT).show()
@@ -99,18 +121,25 @@ fun MelodyScreen(
 
     fun folderDisplayName(folder: String): String {
         val resId = context.resources.getIdentifier("melody_folder_$folder", "string", context.packageName)
-        return if (resId != 0) context.getString(resId) else folder.replaceFirstChar { it.uppercase() }
+        return if (resId != 0) context.getString(resId)
+        else folder.replace('_', ' ').replaceFirstChar { it.uppercase() }
     }
 
     val melodies by viewModel.sortedMelodies.collectAsStateWithLifecycle()
     val importedMelodies = melodies.filter { !it.isBundled }
+    val looseImported = importedMelodies.filter { it.folder == MelodyRepository.IMPORTED_FOLDER }
+    val importedZipFolders = importedMelodies
+        .filter { it.folder != null && it.folder != MelodyRepository.IMPORTED_FOLDER }
+        .groupBy { it.folder!! }
     val bundledFolders = melodies.filter { it.isBundled && it.folder != null }.groupBy { it.folder!! }
     val looseBundled = melodies.filter { it.isBundled && it.folder == null }
 
-    val currentFolderSongs = when (currentFolder) {
-        null -> emptyList()
-        MelodyRepository.IMPORTED_FOLDER -> importedMelodies
-        else -> bundledFolders[currentFolder].orEmpty()
+    val inImportedFolder = currentFolder == MelodyRepository.IMPORTED_FOLDER
+    val currentFolderSongs = when {
+        currentZipFolder != null -> importedZipFolders[currentZipFolder].orEmpty()
+        inImportedFolder -> looseImported
+        currentFolder != null -> bundledFolders[currentFolder].orEmpty()
+        else -> emptyList()
     }
 
     val songCard: @Composable (MelodyRepository.MelodyInfo) -> Unit = { info ->
@@ -155,7 +184,11 @@ fun MelodyScreen(
                 title = { Text(stringResource(R.string.melody_title)) },
                 navigationIcon = {
                     IconButton(onClick = {
-                        if (currentFolder != null) currentFolder = null else onBack()
+                        when {
+                            currentZipFolder != null -> currentZipFolder = null
+                            currentFolder != null -> currentFolder = null
+                            else -> onBack()
+                        }
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
@@ -170,7 +203,11 @@ fun MelodyScreen(
                 .padding(16.dp)
         ) {
             Text(
-                text = if (currentFolder != null) folderDisplayName(currentFolder!!) else stringResource(R.string.melody_choose),
+                text = when {
+                    currentZipFolder != null -> folderDisplayName(currentZipFolder!!)
+                    currentFolder != null -> folderDisplayName(currentFolder!!)
+                    else -> stringResource(R.string.melody_choose)
+                },
                 style = MaterialTheme.typography.headlineMedium
             )
 
@@ -199,49 +236,59 @@ fun MelodyScreen(
                         }
                     }
                 }
-                currentFolderSongs.isNotEmpty() -> {
+                currentFolderSongs.isNotEmpty() || inImportedFolder -> {
                     LazyColumn(
                         modifier = Modifier.weight(1f, fill = false),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        if (currentZipFolder == null) {
+                            items(importedZipFolders.keys.sortedBy { folderDisplayName(it) }) { folder ->
+                                FolderCard(
+                                    name = folderDisplayName(folder),
+                                    count = importedZipFolders[folder]!!.size,
+                                    onClick = { currentZipFolder = folder },
+                                    onRemove = { viewModel.removeImportedFolder(folder) }
+                                )
+                            }
+                        }
                         items(currentFolderSongs) { info -> songCard(info) }
+                        if (currentZipFolder == null && currentFolderSongs.isEmpty() && importedZipFolders.isEmpty()) {
+                            item {
+                                Text(
+                                    text = context.getString(R.string.melody_no_imported),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    textAlign = TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.fillMaxWidth().padding(32.dp)
+                                )
+                            }
+                        }
                     }
 
-                    if (currentFolder == MelodyRepository.IMPORTED_FOLDER) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        ImportButton(onClick = {
-                            filePickerLauncher.launch(arrayOf("audio/midi", "audio/x-midi", "application/x-midi"))
-                        })
-                    }
-                }
-                else -> {
-                    Text(
-                        text = context.getString(R.string.melody_no_imported),
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(32.dp)
-                    )
                     Spacer(modifier = Modifier.height(16.dp))
-                    ImportButton(onClick = {
-                        filePickerLauncher.launch(arrayOf("audio/midi", "audio/x-midi", "application/x-midi"))
-                    })
+                    ImportButton(onClick = { filePickerLauncher.launch(IMPORT_MIME_TYPES) })
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FolderCard(
     name: String,
     count: Int,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onRemove: (() -> Unit)? = null
 ) {
+    var showMenu by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { if (onRemove != null) showMenu = true }
+            )
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -259,6 +306,26 @@ private fun FolderCard(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            if (onRemove != null) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(R.string.melody_remove_folder),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    onClick = {
+                        showMenu = false
+                        onRemove()
+                    }
+                )
+            }
         }
     }
 }

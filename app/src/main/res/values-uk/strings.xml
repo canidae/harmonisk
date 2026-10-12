@@ -107,10 +107,11 @@
     <!-- Melody screen -->
     <string name="melody_title">Грати мелодію</string>
     <string name="melody_choose">Виберіть мелодію</string>
-    <string name="melody_import_file">Імпортувати MIDI-файл</string>
+    <string name="melody_import_file">Імпортувати MIDI- або ZIP-файл</string>
     <string name="melody_stop_preview">Зупинити попередній перегляд</string>
     <string name="melody_preview">Попередній перегляд</string>
     <string name="melody_failed_load_midi">Не вдалося завантажити MIDI-файл</string>
+    <string name="melody_failed_load_zip">Не вдалося завантажити ZIP-файл</string>
     <string name="melody_failed_load_melody">Не вдалося завантажити мелодію</string>
     <string name="melody_difficulty">Складність: </string>
     <string name="melody_no_playthroughs">Ще немає проходжень</string>
@@ -170,7 +171,9 @@
     <string name="instrument_cello">Віолончель</string>
     <string name="melody_reset_score">Скинути рахунок</string>
     <string name="melody_import_success">MIDI імпортовано</string>
+    <string name="melody_import_zip_success">Пісні імпортовано з ZIP-файлу</string>
     <string name="melody_remove_song">Видалити пісню</string>
+    <string name="melody_remove_folder">Видалити теку</string>
     <string name="melody_no_imported">Ще немає імпортованих пісень.</string>
     <string name="melody_folder_imported">Імпортовані</string>
     <string name="melody_folder_traditional">Традиційні</string>

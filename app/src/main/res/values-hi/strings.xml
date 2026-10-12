@@ -107,10 +107,11 @@
     <!-- Melody screen -->
     <string name="melody_title">धुन बजाएं</string>
     <string name="melody_choose">एक धुन चुनें</string>
-    <string name="melody_import_file">MIDI फ़ाइल आयात करें</string>
+    <string name="melody_import_file">MIDI या ZIP फ़ाइल आयात करें</string>
     <string name="melody_stop_preview">पूर्वावलोकन रोकें</string>
     <string name="melody_preview">पूर्वावलोकन</string>
     <string name="melody_failed_load_midi">MIDI फ़ाइल लोड करने में विफल</string>
+    <string name="melody_failed_load_zip">ZIP फ़ाइल लोड करने में विफल</string>
     <string name="melody_failed_load_melody">धुन लोड करने में विफल</string>
     <string name="melody_difficulty">कठिनाई: </string>
     <string name="melody_no_playthroughs">अभी तक कोई प्लेथ्रू नहीं</string>
@@ -170,7 +171,9 @@
     <string name="instrument_cello">सेलो</string>
     <string name="melody_reset_score">स्कोर रीसेट करें</string>
     <string name="melody_import_success">MIDI आयात किया गया</string>
+    <string name="melody_import_zip_success">ZIP फ़ाइल से गाने आयात किए गए</string>
     <string name="melody_remove_song">गाना हटाएँ</string>
+    <string name="melody_remove_folder">फ़ोल्डर हटाएँ</string>
     <string name="melody_no_imported">अभी तक कोई आयातित गाना नहीं।</string>
     <string name="melody_folder_imported">आयातित</string>
     <string name="melody_folder_traditional">पारंपरिक</string>
