@@ -177,7 +177,6 @@
     <string name="melody_folder_imported">Importiert</string>
     <string name="melody_folder_traditional">Traditionell</string>
     <string name="melody_folder_exercises">Übungen</string>
-    <string name="melody_folder_kulturskolen">Kulturskolen</string>
     <string name="melody_level">St.%1$d</string>
     <string name="score_correct_notes">Richtige Töne</string>
 </resources>

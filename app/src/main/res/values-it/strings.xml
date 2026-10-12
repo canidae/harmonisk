@@ -175,7 +175,6 @@
     <string name="melody_folder_imported">Importati</string>
     <string name="melody_folder_traditional">Tradizionali</string>
     <string name="melody_folder_exercises">Esercizi</string>
-    <string name="melody_folder_kulturskolen">Kulturskolen</string>
     <string name="melody_level">Liv.%1$d</string>
     <string name="score_correct_notes">Note corrette</string>
 </resources>

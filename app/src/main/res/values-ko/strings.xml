@@ -175,7 +175,6 @@
     <string name="melody_folder_imported">가져온 곡</string>
     <string name="melody_folder_traditional">전통곡</string>
     <string name="melody_folder_exercises">연습</string>
-    <string name="melody_folder_kulturskolen">Kulturskolen</string>
     <string name="melody_level">Lv.%1$d</string>
     <string name="score_correct_notes">정확한 음</string>
 </resources>

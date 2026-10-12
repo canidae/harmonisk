@@ -23,7 +23,7 @@ class BundledSongsNotationTest {
 
     @Test
     fun `bundled songs exist to check`() {
-        assertTrue("expected bundled MIDI files in ${melodyRoot.absolutePath}", bundled().size >= 10)
+        assertTrue("expected bundled MIDI files in ${melodyRoot.absolutePath}", bundled().size >= 5)
     }
 
     @Test

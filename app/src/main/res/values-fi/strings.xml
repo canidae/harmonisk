@@ -175,7 +175,6 @@
     <string name="melody_folder_imported">Tuodut</string>
     <string name="melody_folder_traditional">Perinteiset</string>
     <string name="melody_folder_exercises">Harjoitukset</string>
-    <string name="melody_folder_kulturskolen">Kulturskolen</string>
     <string name="melody_level">Taso %1$d</string>
     <string name="score_correct_notes">Oikeat nuotit</string>
 </resources>

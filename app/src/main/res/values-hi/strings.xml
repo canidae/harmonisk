@@ -175,7 +175,6 @@
     <string name="melody_folder_imported">आयातित</string>
     <string name="melody_folder_traditional">पारंपरिक</string>
     <string name="melody_folder_exercises">अभ्यास</string>
-    <string name="melody_folder_kulturskolen">Kulturskolen</string>
     <string name="melody_level">स्तर %1$d</string>
     <string name="score_correct_notes">सही सुर</string>
 </resources>

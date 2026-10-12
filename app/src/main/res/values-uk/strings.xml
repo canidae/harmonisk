@@ -175,7 +175,6 @@
     <string name="melody_folder_imported">Імпортовані</string>
     <string name="melody_folder_traditional">Традиційні</string>
     <string name="melody_folder_exercises">Вправи</string>
-    <string name="melody_folder_kulturskolen">Kulturskolen</string>
     <string name="melody_level">Рів.%1$d</string>
     <string name="score_correct_notes">Правильні ноти</string>
 </resources>
