@@ -5,4 +5,4 @@
 - Do not add comments to the code.
 - Less and compact code is better than verbose code.
 - When implementing changes, clean up old redundant code.
-- After implementing changes, build, start and test. Then tell the user to test and ask them whether the change is correctly implemented. After this, commit.
+- After implementing changes, build, start and test. Finally, commit.

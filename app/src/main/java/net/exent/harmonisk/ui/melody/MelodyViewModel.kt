@@ -490,7 +490,7 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun setTranspose(semitones: Int) {
-        val clamped = semitones.coerceIn(-24, 24)
+        val clamped = semitones.coerceIn(-12, 12)
         if (originalMelodyTracks.isEmpty()) return
         val melodyTracks = originalMelodyTracks.map { it.transpose(clamped) }
         val activeIdx = _gameState.value.activeVoiceIndex.coerceAtMost(melodyTracks.lastIndex)
