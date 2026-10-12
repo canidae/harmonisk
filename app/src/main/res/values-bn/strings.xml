@@ -175,7 +175,6 @@
     <string name="melody_folder_imported">আমদানি করা</string>
     <string name="melody_folder_traditional">ঐতিহ্যবাহী</string>
     <string name="melody_folder_exercises">অনুশীলন</string>
-    <string name="melody_folder_kulturskolen">Kulturskolen</string>
     <string name="melody_level">স্তর %1$d</string>
     <string name="score_correct_notes">সঠিক সুর</string>
 </resources>

@@ -119,7 +119,6 @@
     <string name="melody_folder_imported">Importert</string>
     <string name="melody_folder_traditional">Tradisjonelle</string>
     <string name="melody_folder_exercises">Øvelser</string>
-    <string name="melody_folder_kulturskolen">Kulturskolen</string>
 
     <!-- Melody Play -->
     <string name="melody_play_midi_input">MIDI-inngang</string>

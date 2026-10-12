@@ -175,7 +175,6 @@
     <string name="melody_folder_imported">已导入</string>
     <string name="melody_folder_traditional">传统</string>
     <string name="melody_folder_exercises">练习</string>
-    <string name="melody_folder_kulturskolen">Kulturskolen</string>
     <string name="melody_level">等级%1$d</string>
     <string name="score_correct_notes">正确音符</string>
 </resources>
