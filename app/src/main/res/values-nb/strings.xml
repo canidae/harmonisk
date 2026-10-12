@@ -107,15 +107,15 @@
     <!-- Melody screen -->
     <string name="melody_title">Spill Melodi</string>
     <string name="melody_choose">Velg en melodi</string>
-    <string name="melody_import_file">Importer MIDI- eller ZIP-fil</string>
+    <string name="melody_import_file">Importer sangfil</string>
     <string name="melody_stop_preview">Stopp forhåndsvisning</string>
     <string name="melody_preview">Forhåndsvis</string>
-    <string name="melody_failed_load_midi">Kunne ikke laste MIDI-fil</string>
+    <string name="melody_failed_load_midi">Kunne ikke laste sangfil</string>
     <string name="melody_failed_load_zip">Kunne ikke laste ZIP-fil</string>
     <string name="melody_failed_load_melody">Kunne ikke laste melodi</string>
     <string name="melody_difficulty">Vanskelighetsgrad: </string>
     <string name="melody_no_playthroughs">Ingen gjennomspillinger ennå</string>
-    <string name="no_melodies_available">Ingen tilgjengelige melodier.\nImporter en MIDI-fil for å komme i gang.</string>
+    <string name="no_melodies_available">Ingen tilgjengelige melodier.\nImporter en sangfil for å komme i gang.</string>
     <string name="melody_no_imported">Ingen importerte sanger ennå.</string>
     <string name="melody_folder_imported">Importert</string>
     <string name="melody_folder_traditional">Tradisjonelle</string>
@@ -176,7 +176,7 @@
     <string name="instrument_violin">Fiolin</string>
     <string name="instrument_cello">Cello</string>
     <string name="melody_reset_score">Nullstill poengsum</string>
-    <string name="melody_import_success">MIDI importert</string>
+    <string name="melody_import_success">Sang importert</string>
     <string name="melody_import_zip_success">Sanger importert fra ZIP-filen</string>
     <string name="melody_remove_song">Fjern sang</string>
     <string name="melody_remove_folder">Fjern mappe</string>

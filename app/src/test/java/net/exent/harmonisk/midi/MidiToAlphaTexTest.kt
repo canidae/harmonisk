@@ -12,13 +12,15 @@ class MidiToAlphaTexTest {
         notes: List<NoteEvent>,
         tempos: List<TempoEvent> = listOf(TempoEvent(0, 500_000)),
         timeSignatures: List<TimeSignatureEvent> = listOf(TimeSignatureEvent(0, 4, 4)),
-        name: String = "Test"
+        name: String = "Test",
+        keySignature: KeySignature? = null
     ) = MelodyTrack(
         name = name,
         notes = notes,
         tempoChanges = tempos,
         timeSignatures = timeSignatures,
-        ticksPerQuarterNote = ppq
+        ticksPerQuarterNote = ppq,
+        keySignature = keySignature
     )
 
     private fun note(midi: Int, startTick: Long, durationTicks: Long) = NoteEvent(midi, 100, startTick, durationTicks)
@@ -256,5 +258,45 @@ class MidiToAlphaTexTest {
             )
         )
         assertEquals("\\tempo 120 \\instrument piano . \\ts 4 4 C4.8 r.8 D4.4 r.2 |", tex)
+    }
+
+    @Test
+    fun `the key signature is written into the score`() {
+        val tex = MidiToAlphaTex.generate(
+            track(listOf(note(62, 0, 1920)), keySignature = KeySignature(2, false))
+        )
+        assertEquals("\\tempo 120 \\instrument piano . \\ts 4 4 \\ks d D4.1 |", tex)
+    }
+
+    @Test
+    fun `a minor key signature carries the minor suffix`() {
+        val tex = MidiToAlphaTex.generate(
+            track(listOf(note(69, 0, 1920)), keySignature = KeySignature(0, true))
+        )
+        assertTrue(tex.contains("\\ks aminor"))
+    }
+
+    @Test
+    fun `flat keys spell notes with flats`() {
+        val tex = MidiToAlphaTex.generate(
+            track(
+                notes = listOf(note(63, 0, 480), note(70, 480, 480)),
+                keySignature = KeySignature(-3, false)
+            )
+        )
+        assertTrue(tex.contains("Eb4"))
+        assertTrue(tex.contains("Bb4"))
+        assertTrue(tex.contains("\\ks eb"))
+    }
+
+    @Test
+    fun `transposing a track moves its key signature`() {
+        val transposed = track(
+            listOf(note(60, 0, 1920)),
+            keySignature = KeySignature(0, false)
+        ).transpose(2)
+        val tex = MidiToAlphaTex.generate(transposed)
+        assertTrue(tex.contains("\\ks d"))
+        assertTrue(tex.contains("D4.1"))
     }
 }

@@ -107,15 +107,15 @@
     <!-- Melody screen -->
     <string name="melody_title">メロディを演奏</string>
     <string name="melody_choose">メロディを選択</string>
-    <string name="melody_import_file">MIDIまたはZIPファイルをインポート</string>
+    <string name="melody_import_file">曲ファイルをインポート</string>
     <string name="melody_stop_preview">プレビューを停止</string>
     <string name="melody_preview">プレビュー</string>
-    <string name="melody_failed_load_midi">MIDIファイルを読み込めませんでした</string>
+    <string name="melody_failed_load_midi">曲ファイルを読み込めませんでした</string>
     <string name="melody_failed_load_zip">ZIPファイルを読み込めませんでした</string>
     <string name="melody_failed_load_melody">メロディを読み込めませんでした</string>
     <string name="melody_difficulty">難易度：</string>
     <string name="melody_no_playthroughs">まだ演奏記録がありません</string>
-    <string name="no_melodies_available">利用可能なメロディがありません。\nMIDIファイルをインポートして始めてください。</string>
+    <string name="no_melodies_available">利用可能なメロディがありません。\n曲ファイルをインポートして始めてください。</string>
 
     <!-- Melody Play -->
     <string name="melody_play_midi_input">MIDI入力</string>
@@ -170,7 +170,7 @@
     <string name="instrument_violin">バイオリン</string>
     <string name="instrument_cello">チェロ</string>
     <string name="melody_reset_score">スコアをリセット</string>
-    <string name="melody_import_success">MIDIをインポートしました</string>
+    <string name="melody_import_success">曲をインポートしました</string>
     <string name="melody_import_zip_success">ZIPファイルから曲をインポートしました</string>
     <string name="melody_remove_song">曲を削除</string>
     <string name="melody_remove_folder">フォルダを削除</string>

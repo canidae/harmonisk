@@ -107,15 +107,15 @@
     <!-- Melody screen -->
     <string name="melody_title">اعزف لحناً</string>
     <string name="melody_choose">اختر لحناً</string>
-    <string name="melody_import_file">استيراد ملف MIDI أو ZIP</string>
+    <string name="melody_import_file">استيراد ملف أغنية</string>
     <string name="melody_stop_preview">إيقاف المعاينة</string>
     <string name="melody_preview">معاينة</string>
-    <string name="melody_failed_load_midi">فشل تحميل ملف MIDI</string>
+    <string name="melody_failed_load_midi">فشل تحميل ملف الأغنية</string>
     <string name="melody_failed_load_zip">فشل تحميل ملف ZIP</string>
     <string name="melody_failed_load_melody">فشل تحميل اللحن</string>
     <string name="melody_difficulty">الصعوبة: </string>
     <string name="melody_no_playthroughs">لا توجد مشاهدات بعد</string>
-    <string name="no_melodies_available">لا توجد ألحان مرفقة متاحة.\nاستورد ملف MIDI للبدء.</string>
+    <string name="no_melodies_available">لا توجد ألحان مرفقة متاحة.\nاستورد ملف أغنية للبدء.</string>
 
     <!-- Melody Play -->
     <string name="melody_play_midi_input">مدخل MIDI</string>
@@ -170,7 +170,7 @@
     <string name="instrument_violin">كمان</string>
     <string name="instrument_cello">تشيلو</string>
     <string name="melody_reset_score">إعادة تعيين النتيجة</string>
-    <string name="melody_import_success">تم استيراد MIDI</string>
+    <string name="melody_import_success">تم استيراد الأغنية</string>
     <string name="melody_import_zip_success">تم استيراد الأغاني من ملف ZIP</string>
     <string name="melody_remove_song">إزالة الأغنية</string>
     <string name="melody_remove_folder">إزالة المجلد</string>

@@ -25,7 +25,8 @@ class MidiParser {
             notes = allNotes,
             tempoChanges = if (allTempos.isEmpty()) listOf(TempoEvent(0, 500_000)) else allTempos,
             timeSignatures = allTimeSignatures,
-            ticksPerQuarterNote = header.timeDivision
+            ticksPerQuarterNote = header.timeDivision,
+            keySignature = tracks.firstNotNullOfOrNull { it.keySignature }
         )
     }
 
@@ -51,10 +52,11 @@ class MidiParser {
     ): List<MelodyTrack> {
         var pos = reader.firstTrackPosition
 
-        // First pass: read all tracks to collect global tempo/time-sig events
+        // First pass: read all tracks to collect global tempo/time-sig/key events
         val allTrackData = mutableListOf<MutableList<NoteEvent>>()
         val allTempos = mutableListOf<TempoEvent>()
         val allTimeSigs = mutableListOf<TimeSignatureEvent>()
+        val allKeys = mutableListOf<Pair<Long, KeySignature>>()
 
         for (trackIdx in 0 until header.numTracks) {
             if (pos + 8 > data.size) break
@@ -72,6 +74,9 @@ class MidiParser {
                 override fun onTimeSignature(tick: Long, numerator: Int, denominator: Int) {
                     allTimeSigs.add(TimeSignatureEvent(tick, numerator, denominator))
                 }
+                override fun onKeySignature(tick: Long, fifths: Int, isMinor: Boolean) {
+                    allKeys.add(tick to KeySignature(fifths, isMinor))
+                }
                 override fun onEndOfTrack(tick: Long, activeNotes: List<MidiTrackReader.ActiveNote>) {
                     for (an in activeNotes) {
                         notes.add(NoteEvent(an.note, an.velocity, an.startTick, tick - an.startTick))
@@ -85,11 +90,19 @@ class MidiParser {
         }
 
         val globalTempos = if (allTempos.isEmpty()) listOf(TempoEvent(0, 500_000)) else allTempos
+        val notatedKey = allKeys.minByOrNull { it.first }?.second
 
         // Second pass: build MelodyTrack with shared global tempo/time-sig map
         return allTrackData.mapIndexed { trackIdx, notes ->
             val trackName = if (header.numTracks > 1) "$name - Track ${trackIdx + 1}" else name
-            MelodyTrack(trackName, notes, globalTempos, allTimeSigs, header.timeDivision)
+            MelodyTrack(
+                name = trackName,
+                notes = notes,
+                tempoChanges = globalTempos,
+                timeSignatures = allTimeSigs,
+                ticksPerQuarterNote = header.timeDivision,
+                keySignature = notatedKey ?: KeyDetector.detect(notes)
+            )
         }
     }
 

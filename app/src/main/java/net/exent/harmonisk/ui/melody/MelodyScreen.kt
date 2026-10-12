@@ -46,13 +46,8 @@ import net.exent.harmonisk.ui.utils.formatScore
 import net.exent.harmonisk.ui.utils.scoreColor
 import kotlinx.coroutines.launch
 
-private val IMPORT_MIME_TYPES = arrayOf(
-    "audio/midi",
-    "audio/x-midi",
-    "application/x-midi",
-    "application/zip",
-    "application/x-zip-compressed"
-)
+/** The importer sniffs the file's content, so the picker accepts any file. */
+private val IMPORT_MIME_TYPES = arrayOf("*/*")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

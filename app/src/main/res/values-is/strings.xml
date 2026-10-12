@@ -107,15 +107,15 @@
     <!-- Melody screen -->
     <string name="melody_title">Spila lag</string>
     <string name="melody_choose">Veldu lag</string>
-    <string name="melody_import_file">Flytja inn MIDI eða ZIP skrá</string>
+    <string name="melody_import_file">Flytja inn lagskrá</string>
     <string name="melody_stop_preview">Stöðva forskoðun</string>
     <string name="melody_preview">Forskoða</string>
-    <string name="melody_failed_load_midi">Ekki tókst að hlaða MIDI skrá</string>
+    <string name="melody_failed_load_midi">Ekki tókst að hlaða lagskrá</string>
     <string name="melody_failed_load_zip">Ekki tókst að hlaða ZIP skrá</string>
     <string name="melody_failed_load_melody">Ekki tókst að hlaða lag</string>
     <string name="melody_difficulty">Erfiðleikastig: </string>
     <string name="melody_no_playthroughs">Engar spilanir ennþá</string>
-    <string name="no_melodies_available">Engin lög í boði.\nFlyttu inn MIDI skrá til að byrja.</string>
+    <string name="no_melodies_available">Engin lög í boði.\nFlyttu inn lagskrá til að byrja.</string>
 
     <!-- Melody Play -->
     <string name="melody_play_midi_input">MIDI inntak</string>
@@ -170,7 +170,7 @@
     <string name="instrument_violin">Fiðla</string>
     <string name="instrument_cello">Selló</string>
     <string name="melody_reset_score">Endurstilla stig</string>
-    <string name="melody_import_success">MIDI flutt inn</string>
+    <string name="melody_import_success">Lag flutt inn</string>
     <string name="melody_import_zip_success">Lög flutt inn úr ZIP skránni</string>
     <string name="melody_remove_song">Fjarlægja lag</string>
     <string name="melody_remove_folder">Fjarlægja möppu</string>

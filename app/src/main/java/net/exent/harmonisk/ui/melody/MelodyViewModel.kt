@@ -324,7 +324,8 @@ class MelodyViewModel @Inject constructor(
                     tempoChanges = track.tempoChanges,
                     timeSignatures = track.timeSignatures,
                     ticksPerQuarterNote = track.ticksPerQuarterNote,
-                    channel = channel
+                    channel = channel,
+                    keySignature = track.keySignature
                 )
             }
         }

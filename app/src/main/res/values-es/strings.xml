@@ -107,15 +107,15 @@
     <!-- Melody screen -->
     <string name="melody_title">Tocar una melodía</string>
     <string name="melody_choose">Elige una melodía</string>
-    <string name="melody_import_file">Importar archivo MIDI o ZIP</string>
+    <string name="melody_import_file">Importar archivo de canción</string>
     <string name="melody_stop_preview">Detener vista previa</string>
     <string name="melody_preview">Vista previa</string>
-    <string name="melody_failed_load_midi">Error al cargar el archivo MIDI</string>
+    <string name="melody_failed_load_midi">Error al cargar el archivo de canción</string>
     <string name="melody_failed_load_zip">Error al cargar el archivo ZIP</string>
     <string name="melody_failed_load_melody">Error al cargar la melodía</string>
     <string name="melody_difficulty">Dificultad: </string>
     <string name="melody_no_playthroughs">Aún sin reproducciones</string>
-    <string name="no_melodies_available">No hay melodías disponibles.\nImporta un archivo MIDI para empezar.</string>
+    <string name="no_melodies_available">No hay melodías disponibles.\nImporta un archivo de canción para empezar.</string>
 
     <!-- Melody Play -->
     <string name="melody_play_midi_input">Entrada MIDI</string>
@@ -170,7 +170,7 @@
     <string name="instrument_violin">Violín</string>
     <string name="instrument_cello">Violonchelo</string>
     <string name="melody_reset_score">Restablecer puntuación</string>
-    <string name="melody_import_success">MIDI importado</string>
+    <string name="melody_import_success">Canción importada</string>
     <string name="melody_import_zip_success">Canciones importadas desde el archivo ZIP</string>
     <string name="melody_remove_song">Eliminar canción</string>
     <string name="melody_remove_folder">Eliminar carpeta</string>

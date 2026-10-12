@@ -107,15 +107,15 @@
     <!-- Melody screen -->
     <string name="melody_title">Spela melodi</string>
     <string name="melody_choose">Välj en melodi</string>
-    <string name="melody_import_file">Importera MIDI- eller ZIP-fil</string>
+    <string name="melody_import_file">Importera låtfil</string>
     <string name="melody_stop_preview">Stoppa förhandsvisning</string>
     <string name="melody_preview">Förhandsvisa</string>
-    <string name="melody_failed_load_midi">Kunde inte ladda MIDI-fil</string>
+    <string name="melody_failed_load_midi">Kunde inte ladda låtfil</string>
     <string name="melody_failed_load_zip">Kunde inte ladda ZIP-fil</string>
     <string name="melody_failed_load_melody">Kunde inte ladda melodi</string>
     <string name="melody_difficulty">Svårighetsgrad: </string>
     <string name="melody_no_playthroughs">Inga genomspelningar än</string>
-    <string name="no_melodies_available">Inga tillgängliga melodier.\nImportera en MIDI-fil för att komma igång.</string>
+    <string name="no_melodies_available">Inga tillgängliga melodier.\nImportera en låtfil för att komma igång.</string>
 
     <!-- Melody Play -->
     <string name="melody_play_midi_input">MIDI-ingång</string>
@@ -170,7 +170,7 @@
     <string name="instrument_violin">Violin</string>
     <string name="instrument_cello">Cello</string>
     <string name="melody_reset_score">Återställ poäng</string>
-    <string name="melody_import_success">MIDI importerat</string>
+    <string name="melody_import_success">Låt importerad</string>
     <string name="melody_import_zip_success">Låtar importerade från ZIP-filen</string>
     <string name="melody_remove_song">Ta bort låt</string>
     <string name="melody_remove_folder">Ta bort mapp</string>

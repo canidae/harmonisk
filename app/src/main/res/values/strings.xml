@@ -122,17 +122,17 @@
     <!-- Melody screen -->
     <string name="melody_title">Play by Melody</string>
     <string name="melody_choose">Choose a Melody</string>
-    <string name="melody_import_file">Import MIDI or ZIP file</string>
+    <string name="melody_import_file">Import song file</string>
     <string name="melody_stop_preview">Stop preview</string>
     <string name="melody_preview">Preview melody</string>
-    <string name="melody_failed_load_midi">Failed to load MIDI file</string>
+    <string name="melody_failed_load_midi">Failed to load song file</string>
     <string name="melody_failed_load_zip">Failed to load zip file</string>
     <string name="melody_failed_load_melody">Failed to load melody</string>
     <string name="melody_difficulty">Difficulty: </string>
     <string name="melody_no_playthroughs">No playthroughs yet</string>
-    <string name="no_melodies_available">No bundled melodies available.\nImport a MIDI file to get started.</string>
+    <string name="no_melodies_available">No bundled melodies available.\nImport a song file to get started.</string>
     <string name="melody_reset_score">Reset score</string>
-    <string name="melody_import_success">MIDI imported</string>
+    <string name="melody_import_success">Song imported</string>
     <string name="melody_import_zip_success">Songs imported from the zip file</string>
     <string name="melody_remove_song">Remove song</string>
     <string name="melody_remove_folder">Remove folder</string>
