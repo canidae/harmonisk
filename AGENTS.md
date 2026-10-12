@@ -5,5 +5,6 @@
 - Do not add comments to the code.
 - Less and compact code is better than verbose code.
 - When implementing changes, clean up old redundant code.
+- Ensure localization is correct and complete for all supported languages.
 - Ensure README.md, THIRD_PARTY_LICENSES.md and PRIVACY_POLICY.md are correct.
-- After implementing changes, build, start and test. Finally, commit.
+- After implementing changes, build, start and test before committing.
