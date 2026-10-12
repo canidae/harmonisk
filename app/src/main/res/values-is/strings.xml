@@ -107,10 +107,11 @@
     <!-- Melody screen -->
     <string name="melody_title">Spila lag</string>
     <string name="melody_choose">Veldu lag</string>
-    <string name="melody_import_file">Flytja inn MIDI skrá</string>
+    <string name="melody_import_file">Flytja inn MIDI eða ZIP skrá</string>
     <string name="melody_stop_preview">Stöðva forskoðun</string>
     <string name="melody_preview">Forskoða</string>
     <string name="melody_failed_load_midi">Ekki tókst að hlaða MIDI skrá</string>
+    <string name="melody_failed_load_zip">Ekki tókst að hlaða ZIP skrá</string>
     <string name="melody_failed_load_melody">Ekki tókst að hlaða lag</string>
     <string name="melody_difficulty">Erfiðleikastig: </string>
     <string name="melody_no_playthroughs">Engar spilanir ennþá</string>
@@ -170,7 +171,9 @@
     <string name="instrument_cello">Selló</string>
     <string name="melody_reset_score">Endurstilla stig</string>
     <string name="melody_import_success">MIDI flutt inn</string>
+    <string name="melody_import_zip_success">Lög flutt inn úr ZIP skránni</string>
     <string name="melody_remove_song">Fjarlægja lag</string>
+    <string name="melody_remove_folder">Fjarlægja möppu</string>
     <string name="melody_no_imported">Engin innflutt lög ennþá.</string>
     <string name="melody_folder_imported">Innflutt</string>
     <string name="melody_folder_traditional">Hefðbundin</string>

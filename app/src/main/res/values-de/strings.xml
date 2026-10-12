@@ -107,10 +107,11 @@
     <!-- Melody screen -->
     <string name="melody_title">Nach Melodie</string>
     <string name="melody_choose">Wähle eine Melodie</string>
-    <string name="melody_import_file">MIDI-Datei importieren</string>
+    <string name="melody_import_file">MIDI- oder ZIP-Datei importieren</string>
     <string name="melody_stop_preview">Vorschau beenden</string>
     <string name="melody_preview">Vorschau</string>
     <string name="melody_failed_load_midi">MIDI-Datei konnte nicht geladen werden</string>
+    <string name="melody_failed_load_zip">ZIP-Datei konnte nicht geladen werden</string>
     <string name="melody_failed_load_melody">Melodie konnte nicht geladen werden</string>
     <string name="melody_difficulty">Schwierigkeit: </string>
     <string name="melody_no_playthroughs">Noch keine Durchläufe</string>
@@ -172,7 +173,9 @@
     <string name="instrument_cello">Cello</string>
     <string name="melody_reset_score">Punktzahl zurücksetzen</string>
     <string name="melody_import_success">MIDI importiert</string>
+    <string name="melody_import_zip_success">Songs aus der ZIP-Datei importiert</string>
     <string name="melody_remove_song">Song entfernen</string>
+    <string name="melody_remove_folder">Ordner entfernen</string>
     <string name="melody_no_imported">Noch keine importierten Songs.</string>
     <string name="melody_folder_imported">Importiert</string>
     <string name="melody_folder_traditional">Traditionell</string>

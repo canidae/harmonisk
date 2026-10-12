@@ -38,6 +38,13 @@ class ScoreHistoryRepository(
         val wrongNoteScore: Float = 100f
     )
 
+    /** Timestamp of the most recent playthrough of each melody, across instruments. */
+    val lastPlayed: Flow<Map<String, Long>> = store.flow.map { scores ->
+        scores.mapNotNull { (melodyId, entries) ->
+            entries.maxOfOrNull { it.timestamp }?.let { melodyId to it }
+        }.toMap()
+    }
+
     fun getScores(melodyId: String, instrument: String): Flow<List<ScoreEntry>> {
         return store.flow.map {
             (it[melodyId] ?: emptyList()).filter { entry -> entry.instrument == instrument }

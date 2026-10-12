@@ -7,9 +7,11 @@ import java.io.IOException
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import net.exent.harmonisk.midi.MelodyTrack
 import net.exent.harmonisk.midi.MidiParser
@@ -44,11 +46,19 @@ class MelodyRepository(
     @Serializable
     data class ImportedMelody(
         val name: String,
-        val uri: String
+        val uri: String,
+        val folder: String? = null
     )
 
     companion object {
         private const val MAX_CACHE_ENTRIES = 20
+
+        private val ZIP_MIME_TYPES = setOf(
+            "application/zip",
+            "application/x-zip",
+            "application/x-zip-compressed",
+            "multipart/x-zip"
+        )
 
         /** Folder key for user-imported melodies. */
         const val IMPORTED_FOLDER = "imported"
@@ -87,7 +97,7 @@ class MelodyRepository(
     /** Flow of user-imported melodies. */
     val importedMelodies: Flow<List<MelodyInfo>> = importedMelodyStore.flow.map { map ->
         map.map { (id, mel) ->
-            MelodyInfo(id, mel.name, false, folder = IMPORTED_FOLDER, uri = Uri.parse(mel.uri))
+            MelodyInfo(id, mel.name, false, folder = mel.folder ?: IMPORTED_FOLDER, uri = Uri.parse(mel.uri))
         }
     }
 
@@ -225,7 +235,39 @@ class MelodyRepository(
     suspend fun addImportedMelody(info: MelodyInfo) {
         val uriStr = info.uri?.toString() ?: return
         evictCached(info.id)
-        importedMelodyStore.set(info.id, ImportedMelody(info.name, uriStr))
+        importedMelodyStore.set(info.id, ImportedMelody(info.name, uriStr, info.folder))
+    }
+
+    /** True when [uri] points at a zip archive rather than a single MIDI file. */
+    fun isZip(uri: Uri): Boolean {
+        val mimeType = context.contentResolver.getType(uri)?.substringBefore(';') ?: ""
+        return mimeType in ZIP_MIME_TYPES || resolveDisplayName(uri).endsWith(".zip", true)
+    }
+
+    /**
+     * Flat-extract every MIDI file from a zip into a folder named after the zip.
+     * Returns the folder and the number of songs it holds, or null if nothing was extracted.
+     */
+    suspend fun importZip(uri: Uri): Pair<String, Int>? {
+        val folder = MelodyZipImporter.folderName(resolveDisplayName(uri))
+        val dir = MelodyZipImporter.directory(context.filesDir, folder)
+        val melodies = withContext(Dispatchers.IO) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { MelodyZipImporter.extract(it, dir) }
+            } catch (e: IOException) {
+                Log.e(TAG, "Failed to extract melodies from zip $uri", e)
+                null
+            }
+        } ?: return null
+        if (melodies.isEmpty()) return null
+
+        for (melody in melodies) {
+            val fileUri = Uri.fromFile(melody.file)
+            val id = uriMelodyId(fileUri)
+            evictCached(id)
+            importedMelodyStore.set(id, ImportedMelody(melody.name, fileUri.toString(), folder))
+        }
+        return folder to melodies.size
     }
 
     suspend fun getDifficulty(info: MelodyInfo): Float {
@@ -283,5 +325,17 @@ class MelodyRepository(
         val entry = importedMelodyStore.flow.first()[id]
         entry?.let { deleteLocalFile(Uri.parse(it.uri)) }
         importedMelodyStore.remove(id)
+    }
+
+    /** Remove every melody imported from a zip folder and delete its extracted files. Returns the removed ids. */
+    suspend fun removeImportedFolder(folder: String): List<String> {
+        val entries = importedMelodyStore.flow.first().filterValues { it.folder == folder }
+        for ((id, melody) in entries) {
+            evictCached(id)
+            deleteLocalFile(Uri.parse(melody.uri))
+            importedMelodyStore.remove(id)
+        }
+        MelodyZipImporter.directory(context.filesDir, folder).deleteRecursively()
+        return entries.keys.toList()
     }
 }

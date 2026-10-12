@@ -107,10 +107,11 @@
     <!-- Melody screen -->
     <string name="melody_title">সুর বাজান</string>
     <string name="melody_choose">একটি সুর চয়ন করুন</string>
-    <string name="melody_import_file">MIDI ফাইল আমদানি করুন</string>
+    <string name="melody_import_file">MIDI বা ZIP ফাইল আমদানি করুন</string>
     <string name="melody_stop_preview">পূর্বরূপ বন্ধ করুন</string>
     <string name="melody_preview">পূর্বরূপ</string>
     <string name="melody_failed_load_midi">MIDI ফাইল লোড করতে ব্যর্থ</string>
+    <string name="melody_failed_load_zip">ZIP ফাইল লোড করতে ব্যর্থ</string>
     <string name="melody_failed_load_melody">সুর লোড করতে ব্যর্থ</string>
     <string name="melody_difficulty">কঠিনতা: </string>
     <string name="melody_no_playthroughs">এখনও কোনো প্লেথ্রু নেই</string>
@@ -170,7 +171,9 @@
     <string name="instrument_cello">চেলো</string>
     <string name="melody_reset_score">স্কোর রিসেট করুন</string>
     <string name="melody_import_success">MIDI আমদানি হয়েছে</string>
+    <string name="melody_import_zip_success">ZIP ফাইল থেকে গান আমদানি হয়েছে</string>
     <string name="melody_remove_song">গান সরান</string>
+    <string name="melody_remove_folder">ফোল্ডার সরান</string>
     <string name="melody_no_imported">এখনও কোনো আমদানি করা গান নেই।</string>
     <string name="melody_folder_imported">আমদানি করা</string>
     <string name="melody_folder_traditional">ঐতিহ্যবাহী</string>
