@@ -13,3 +13,4 @@ app/.cxx/
 *.jks
 *.keystore
 keystore.properties
+/TODO.md
