@@ -1057,9 +1057,9 @@ class FreePlayViewModel @Inject constructor(
 
                 audioPositionMs += delta
 
-                // Fire due events the output delay early so notes are heard
+                // Fire due events the input and output delays early so notes are heard
                 // when the bar crosses the now line.
-                val outputOffsetMs = outputDelayMs.toLong()
+                val outputOffsetMs = (inputDelayMs + outputDelayMs).toLong()
                 while (eventIndex < events.size && events[eventIndex].timeMs - outputOffsetMs <= audioPositionMs) {
                     val ev = events[eventIndex++]
                     if (ev.trackOrigin == 9) {

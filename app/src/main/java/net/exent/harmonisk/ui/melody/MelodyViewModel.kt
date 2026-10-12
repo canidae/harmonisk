@@ -650,12 +650,14 @@ class MelodyViewModel @Inject constructor(
         previewClockJob = null
         if (track == null) return
         _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
-        _gameState.update { it.copy(previewTimeSeconds = startSeconds - leadInSeconds) }
+        _gameState.update { it.copy(previewTimeSeconds = startSeconds - leadInSeconds - outputDelayMs / 1000.0) }
         previewClockJob = viewModelScope.launch {
             val startTime = SystemClock.elapsedRealtime()
             while (isActive && melodyPlayer.isPlaying.value) {
                 val elapsed = (SystemClock.elapsedRealtime() - startTime) / 1000.0
-                _gameState.update { it.copy(previewTimeSeconds = startSeconds + elapsed - leadInSeconds) }
+                _gameState.update {
+                    it.copy(previewTimeSeconds = previewClockSeconds(startSeconds, leadInSeconds, elapsed, outputDelayMs))
+                }
                 delay(16)
             }
             if (isActive) finishPreview()
@@ -830,13 +832,13 @@ class MelodyViewModel @Inject constructor(
     }
 
     /**
-     * Where the game clock starts for a count-in of [leadInSeconds]. The app's own notes are
-     * scheduled early by the measured output delay so that they are heard on the beat, so the
-     * clock starts that much earlier as well: otherwise the count-in's first beat, which sits on the
-     * very first tick, is scheduled before the clock has started and is never heard.
+     * Where the game clock starts for a count-in of [leadInSeconds]. The app's own notes are handed
+     * over [audioLeadSeconds] ahead of the clock so that they are heard as their bars cross the now
+     * line, so the clock starts that much earlier as well: otherwise the count-in's first beat, which
+     * sits on the very first tick, is scheduled before the clock has started and is never heard.
      */
     private fun playbackStartTime(leadInSeconds: Double): Double =
-        -leadInSeconds - outputDelayMs / 1000.0
+        -leadInSeconds - audioLeadSeconds(inputDelayMs, outputDelayMs)
 
     fun pause() {
         pauseOffset = _gameState.value.currentTimeSeconds
@@ -1065,9 +1067,9 @@ class MelodyViewModel @Inject constructor(
                 // Driven even with nothing to play, so a voice left to the player is released rather
                 // than ringing on over the pause the game is listening for.
                 if (soundFontSynthesizer.isReady) {
-                    // Playback runs the output delay early so notes are heard
-                    // when the bar crosses the now line.
-                    melodyPlayer.updateGameTime(currentTime + outputDelayMs / 1000.0, playTracks)
+                    // The notes run ahead of the clock so they are heard as their bars cross the
+                    // now line, which they do one input delay before the song reaches them.
+                    melodyPlayer.updateGameTime(currentTime + audioLeadSeconds(inputDelayMs, outputDelayMs), playTracks)
                 }
 
                 delay(16)
