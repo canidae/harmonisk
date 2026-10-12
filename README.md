@@ -2,15 +2,28 @@
 
 An Android application for pitch detection and musical practice.
 
-## SoundFont Attribution
+## License
 
-This app uses the **GeneralUser GS** SoundFont by **S. Christian Collins**.
+Harmonisk is licensed under the [GNU Affero General Public License v3.0](LICENSE).
 
-- Website: https://schristiancollins.com/generaluser.php
-- License: Creative Commons (see website for details)
+## Attributions
 
-The GeneralUser GS SoundFont provides the instrument sounds used for melody
-playback and note previews.
+This app ships and uses the following third-party works:
+
+- **GeneralUser GS** SoundFont by **S. Christian Collins**, used for melody
+  playback and note previews. Licensed under the GeneralUser GS License v2.0
+  (see <https://schristiancollins.com/generaluser.php>).
+- **TinySoundFont** by Bernhard Schelling (based on SFZero by Steve Folta),
+  which synthesises the soundfont. Licensed under the MIT License.
+- **CREPE** by Jong Wook Kim et al. (2018), the pitch detection model. Licensed
+  under the MIT License (see <https://github.com/marl/crepe>).
+- **alphaTab** by Daniel Kuschny and contributors, used to render sheet music.
+  Licensed under the Mozilla Public License 2.0; the bundled Bravura font is
+  licensed under the SIL Open Font License 1.1, and the bundled Sonic Network
+  samples under the Apache License 2.0.
+
+The complete list of dependencies and bundled assets, with licenses, is in
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
 ## Building
 
