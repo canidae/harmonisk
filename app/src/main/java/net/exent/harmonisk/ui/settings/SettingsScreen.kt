@@ -5,7 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.ui.text.font.FontWeight
@@ -300,7 +300,7 @@ private fun HelpButton(helpText: String) {
     var showHelp by remember { mutableStateOf(false) }
 
     IconButton(onClick = { showHelp = true }) {
-        Icon(Icons.Outlined.HelpOutline, contentDescription = stringResource(R.string.settings_help))
+        Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = stringResource(R.string.settings_help))
     }
 
     if (showHelp) {

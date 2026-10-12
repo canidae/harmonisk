@@ -1,4 +1,4 @@
-@file:OptIn(kotlin.contracts.ExperimentalContracts::class)
+@file:OptIn(kotlin.contracts.ExperimentalContracts::class, kotlin.ExperimentalUnsignedTypes::class)
 
 package net.exent.harmonisk.midi
 
