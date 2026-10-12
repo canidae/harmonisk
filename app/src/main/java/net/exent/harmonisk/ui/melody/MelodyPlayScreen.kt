@@ -507,9 +507,9 @@ private fun MelodySettingsMenu(
             )
             Slider(
                 value = transposeSemitones.toFloat(),
-                onValueChange = { onTransposeChange(it.toInt()) },
-                valueRange = -24f..24f,
-                steps = 47,
+                onValueChange = { onTransposeChange(it.roundToInt()) },
+                valueRange = -12f..12f,
+                steps = 23,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
             if (showPlayVoices) {
