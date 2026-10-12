@@ -44,8 +44,8 @@ class SettingsRepository(
             freeplayBpm = prefs[FREEPLAY_BPM] ?: 120f,
             freeplayMinNoteDivision = prefs[FREEPLAY_MIN_NOTE_DIVISION] ?: 16,
             freeplaySnapEnabled = prefs[FREEPLAY_SNAP_ENABLED] ?: true,
-            freeplayMetronomeEnabled = prefs[FREEPLAY_METRONOME_ENABLED] ?: false,
-            melodyMetronomeEnabled = prefs[MELODY_METRONOME_ENABLED] ?: false,
+            freeplayMetronomeEnabled = prefs[FREEPLAY_METRONOME_ENABLED] ?: true,
+            melodyMetronomeEnabled = prefs[MELODY_METRONOME_ENABLED] ?: true,
             languageCode = prefs[LANGUAGE_CODE] ?: "system",
             instrumentName = prefs[INSTRUMENT_NAME] ?: Instrument.VIOLIN.name
         )
@@ -105,8 +105,8 @@ data class AppSettings(
     val freeplayBpm: Float = 120f,
     val freeplayMinNoteDivision: Int = 16,
     val freeplaySnapEnabled: Boolean = true,
-    val freeplayMetronomeEnabled: Boolean = false,
-    val melodyMetronomeEnabled: Boolean = false,
+    val freeplayMetronomeEnabled: Boolean = true,
+    val melodyMetronomeEnabled: Boolean = true,
     val languageCode: String = "system",
     val instrumentName: String = Instrument.VIOLIN.name
 )

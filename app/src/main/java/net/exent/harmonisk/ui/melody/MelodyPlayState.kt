@@ -36,7 +36,7 @@ data class MelodyGameState(
     /** Song time of a running melody preview, or null when nothing is being previewed. */
     val previewTimeSeconds: Double? = null,
     // Metronome
-    val metronomeEnabled: Boolean = false,
+    val metronomeEnabled: Boolean = true,
     val metronomeTrack: MelodyTrack? = null,
     val currentLevel: Int = 1,
     val melodyName: String? = null,
