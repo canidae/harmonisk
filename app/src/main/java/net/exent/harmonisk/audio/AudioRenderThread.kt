@@ -6,6 +6,7 @@ import android.media.AudioTrack
 
 class AudioRenderThread(
     private val threadName: String,
+    private val sampleRate: Int,
     private val contentType: Int,
     private val bufferFrames: Int,
     private val render: (ShortArray) -> Unit
@@ -21,12 +22,37 @@ class AudioRenderThread(
         if (audioTrack != null) return
 
         val minBufferSize = AudioTrack.getMinBufferSize(
-            AudioConstants.SAMPLE_RATE,
+            sampleRate,
             AudioFormat.CHANNEL_OUT_MONO,
             AudioFormat.ENCODING_PCM_16BIT
         )
+        // getMinBufferSize reports a doubled minimum for mono; a quarter of it is the fast mixer's
+        // minimum, which is what keeps the track off the resampling path and out of a deep buffer.
+        val fastTrackBufferBytes = minBufferSize / 4 / BYTES_PER_FRAME * BYTES_PER_FRAME
+        val track = createTrack(maxOf(bufferFrames * BYTES_PER_FRAME, fastTrackBufferBytes))
+            ?: createTrack(minBufferSize)
+            ?: return
 
-        val track = AudioTrack.Builder()
+        audioTrack = track
+        val buffer = ShortArray(bufferFrames)
+        render(buffer)
+        track.write(buffer, 0, buffer.size)
+        track.play()
+        running = true
+
+        renderThread = Thread({
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
+            while (running) {
+                render(buffer)
+                try {
+                    track.write(buffer, 0, buffer.size)
+                } catch (_: Exception) {}
+            }
+        }, threadName).apply { start() }
+    }
+
+    private fun createTrack(bufferSizeInBytes: Int): AudioTrack? = try {
+        AudioTrack.Builder()
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -35,30 +61,17 @@ class AudioRenderThread(
             )
             .setAudioFormat(
                 AudioFormat.Builder()
-                    .setSampleRate(AudioConstants.SAMPLE_RATE)
+                    .setSampleRate(sampleRate)
                     .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                     .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                     .build()
             )
-            .setBufferSizeInBytes(maxOf(bufferFrames * 2, minBufferSize))
+            .setBufferSizeInBytes(bufferSizeInBytes)
             .setTransferMode(AudioTrack.MODE_STREAM)
             .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
             .build()
-
-        audioTrack = track
-        track.play()
-        running = true
-
-        renderThread = Thread({
-            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
-            val buffer = ShortArray(bufferFrames)
-            while (running) {
-                render(buffer)
-                try {
-                    track.write(buffer, 0, buffer.size)
-                } catch (_: Exception) {}
-            }
-        }, threadName).apply { start() }
+    } catch (_: Exception) {
+        null
     }
 
     fun close() {
@@ -72,5 +85,9 @@ class AudioRenderThread(
             audioTrack?.release()
         } catch (_: Exception) {}
         audioTrack = null
+    }
+
+    private companion object {
+        const val BYTES_PER_FRAME = 2
     }
 }

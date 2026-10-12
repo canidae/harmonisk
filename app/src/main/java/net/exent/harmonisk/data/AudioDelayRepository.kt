@@ -18,7 +18,8 @@ class AudioDelayRepository(
     private val audioDeviceMonitor: AudioDeviceMonitor
 ) {
     companion object {
-        const val DEFAULT_OUTPUT_DELAY_MS = 250
+        /** What the reference device calibrates to, until this device has been calibrated. */
+        const val DEFAULT_OUTPUT_DELAY_MS = 150
 
         /** Window (64 ms) + onset debounce (23 ms) + typical capture and inference latency. */
         const val DEFAULT_INPUT_DELAY_MS = 125
@@ -33,7 +34,7 @@ class AudioDelayRepository(
 
     private val store = JsonPreferenceStore<String, DelayProfile>(
         dataStore = context.audioDelayStore,
-        keyName = "delay_profiles_json_v4"
+        keyName = "delay_profiles_json_v5"
     )
 
     val activeOutputDelay: Flow<Int> = combine(

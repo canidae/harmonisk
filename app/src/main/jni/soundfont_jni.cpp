@@ -75,7 +75,7 @@ static std::vector<SynthCommand> drain_queue(SynthHandle* h) {
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeLoad(
-    JNIEnv* env, jclass /*clazz*/, jstring path)
+    JNIEnv* env, jclass /*clazz*/, jstring path, jint sampleRate)
 {
     const char* pathStr = env->GetStringUTFChars(path, nullptr);
     LOGI("Loading SoundFont from: %s", pathStr);
@@ -87,7 +87,9 @@ Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeLoad(
         return 0;
     }
 
-    tsf_set_output(synth, TSF_MONO, 44100, 0.0f);
+    const int outSampleRate = sampleRate >= 8000 ? sampleRate : 44100;
+    LOGI("Rendering at %d Hz", outSampleRate);
+    tsf_set_output(synth, TSF_MONO, (float)outSampleRate, 0.0f);
     if (!tsf_set_max_voices(synth, 64)) {
         LOGE("Failed to set max voices");
     }

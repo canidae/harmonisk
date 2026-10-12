@@ -102,6 +102,28 @@ enum class NoteResultState {
 fun nowLineLeadSeconds(phase: PlayPhase, inputDelayMs: Int): Double =
     if (phase == PlayPhase.READY) 0.0 else inputDelayMs / 1000.0
 
+/**
+ * How far ahead of the game clock the app's own notes are handed to the synthesizer.
+ *
+ * A note is only heard one output delay after it is played, and its bar reaches the now line one
+ * input delay before the song reaches the note. Handing it over that much of both ahead of the clock
+ * puts the sound at the moment its bar crosses the line, which is also where the player's own sound
+ * is taken to be.
+ */
+fun audioLeadSeconds(inputDelayMs: Int, outputDelayMs: Int): Double =
+    (inputDelayMs + outputDelayMs) / 1000.0
+
+/**
+ * The canvas time a preview stands at. A preview plays at the song's own pace, one output delay
+ * ahead of what is heard, so the canvas runs that much behind the notes it schedules.
+ */
+fun previewClockSeconds(
+    startSeconds: Double,
+    leadInSeconds: Double,
+    elapsedSeconds: Double,
+    outputDelayMs: Int
+): Double = startSeconds + elapsedSeconds - leadInSeconds - outputDelayMs / 1000.0
+
 /** Level and score of the last take, as shown next to the song title. */
 fun levelAndScoreText(level: Int, latestScore: String?): String =
     if (latestScore == null) "Lv.$level" else "Lv.$level  Score: $latestScore"

@@ -2,6 +2,7 @@ package net.exent.harmonisk.audio
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.util.Log
 import net.exent.harmonisk.BuildConfig
 import net.exent.harmonisk.music.Instrument
@@ -16,6 +17,7 @@ class SoundFontSynthesizer(
         private const val TAG = "SoundFontSynthesizer"
         private const val SF2_ASSET = "GeneralUser-GS.sf2"
         private const val BUFFER_FRAMES = 512
+        private const val DEFAULT_OUTPUT_SAMPLE_RATE = 44100
         const val DRUM_CHANNEL = 9
 
         init {
@@ -23,7 +25,7 @@ class SoundFontSynthesizer(
         }
 
         @JvmStatic
-        private external fun nativeLoad(path: String): Long
+        private external fun nativeLoad(path: String, sampleRate: Int): Long
         @JvmStatic
         private external fun nativeUnload(handle: Long)
         @JvmStatic
@@ -65,8 +67,21 @@ class SoundFontSynthesizer(
     private var currentBank: Int = Instrument.VIOLIN.midiBank
     private var currentProgram: Int = Instrument.VIOLIN.midiProgram
 
+    /**
+     * The mixer both the synth and the track must agree on. Rendering at the device's own rate is
+     * what lets the track onto the fast mixer; a mismatch sends it through the resampling path and
+     * costs a couple of hundred milliseconds.
+     */
+    private val outputSampleRate: Int =
+        (context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager)
+            ?.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)
+            ?.toIntOrNull()
+            ?.takeIf { it >= 8000 }
+            ?: DEFAULT_OUTPUT_SAMPLE_RATE
+
     private val renderThread = AudioRenderThread(
         threadName = "SoundFontRenderThread",
+        sampleRate = outputSampleRate,
         contentType = AudioAttributes.CONTENT_TYPE_MUSIC,
         bufferFrames = BUFFER_FRAMES,
         render = ::renderBuffer
@@ -82,14 +97,20 @@ class SoundFontSynthesizer(
             return
         }
         Log.d(TAG, "Loading SoundFont from: ${sf2File.absolutePath} (${sf2File.length()} bytes)")
-        val handle = nativeLoad(sf2File.absolutePath)
+        val handle = nativeLoad(sf2File.absolutePath, outputSampleRate)
         if (handle == 0L) {
             Log.e(TAG, "Failed to load SoundFont")
             return
         }
         nativeHandle = handle
         renderThread.open()
-        Log.i(TAG, "SoundFont synthesizer opened, isReady=$isReady")
+        if (!renderThread.running) {
+            Log.e(TAG, "Failed to open the audio output")
+            nativeUnload(handle)
+            nativeHandle = 0L
+            return
+        }
+        Log.i(TAG, "SoundFont synthesizer opened at $outputSampleRate Hz, isReady=$isReady")
     }
 
     private fun extractSf2(): File? {
