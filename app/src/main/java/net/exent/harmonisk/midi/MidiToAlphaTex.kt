@@ -17,6 +17,16 @@ import kotlin.math.roundToInt
 object MidiToAlphaTex {
 
     private val NOTE_NAMES = arrayOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+    private val FLAT_NOTE_NAMES = arrayOf("C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B")
+
+    /** alphaTab's key signature names by fifths, -7..7; minor keys carry the "minor" suffix. */
+    private val MAJOR_KEY_NAMES = arrayOf(
+        "cb", "gb", "db", "ab", "eb", "bb", "f", "c", "g", "d", "a", "e", "b", "f#", "c#"
+    )
+    private val MINOR_KEY_NAMES = arrayOf(
+        "abminor", "ebminor", "bbminor", "fminor", "cminor", "gminor", "dminor",
+        "aminor", "eminor", "bminor", "f#minor", "c#minor", "g#minor", "d#minor", "a#minor"
+    )
 
     /** Standard durations in sixteenth-note units; [align] restricts where a piece may start (bar-relative grid position). */
     private data class DurationPiece(val gridLength: Long, val value: Int, val dots: Int, val align: Long)
@@ -58,10 +68,16 @@ object MidiToAlphaTex {
         val timeSignature: TimeSignatureEvent
     )
 
-    fun noteName(midiNumber: Int): String {
+    fun noteName(midiNumber: Int, flats: Boolean = false): String {
         val index = ((midiNumber % 12) + 12) % 12
         val octave = midiNumber / 12 - 1
-        return "${NOTE_NAMES[index]}$octave"
+        return "${if (flats) FLAT_NOTE_NAMES[index] else NOTE_NAMES[index]}$octave"
+    }
+
+    /** The key's alphaTab name, e.g. "d" for D major or "f#minor". */
+    private fun keyName(key: KeySignature): String {
+        val names = if (key.isMinor) MINOR_KEY_NAMES else MAJOR_KEY_NAMES
+        return names[key.fifths.coerceIn(-7, 7) + 7]
     }
 
     fun generate(track: MelodyTrack): String {
@@ -69,6 +85,8 @@ object MidiToAlphaTex {
         val grid = (ppq / 4).toLong()
         fun tickToGrid(tick: Long) = (tick + grid / 2) / grid
 
+        val key = track.keySignature
+        val flats = key?.usesFlats == true
         val notes = normalizeGaps(quantizeNotes(track, grid, ::tickToGrid))
         val bars = buildBars(track, ppq, ::tickToGrid, notes.maxOfOrNull { it.end } ?: 0L)
 
@@ -82,6 +100,7 @@ object MidiToAlphaTex {
         tokens.add(".")
         val ts0 = track.timeSignatureAt(0)
         tokens.add("\\ts ${ts0.numerator} ${ts0.denominator}")
+        key?.let { tokens.add("\\ks ${keyName(it)}") }
         val maxNote = track.notes.maxOfOrNull { it.noteNumber }
         if (maxNote != null && maxNote < 60) tokens.add("\\clef bass")
 
@@ -128,7 +147,7 @@ object MidiToAlphaTex {
                 if (active.isNotEmpty()) {
                     val chordNotes = active
                         .sortedBy { it.noteNumber }
-                        .map { ChordNote(noteName(it.noteNumber), tied = pos > it.start) }
+                        .map { ChordNote(noteName(it.noteNumber, flats), tied = pos > it.start) }
                     tokens.addAll(chordTokens(chordNotes, pos - bar.startGrid, segLength, firstPieceBeatProps = beatProps))
                 } else {
                     tokens.addAll(restTokens(segLength, firstPieceBeatProps = beatProps))

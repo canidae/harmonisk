@@ -107,15 +107,15 @@
     <!-- Melody screen -->
     <string name="melody_title">按旋律演奏</string>
     <string name="melody_choose">选择旋律</string>
-    <string name="melody_import_file">导入 MIDI 或 ZIP 文件</string>
+    <string name="melody_import_file">导入歌曲文件</string>
     <string name="melody_stop_preview">停止预览</string>
     <string name="melody_preview">预览旋律</string>
-    <string name="melody_failed_load_midi">无法加载 MIDI 文件</string>
+    <string name="melody_failed_load_midi">无法加载歌曲文件</string>
     <string name="melody_failed_load_zip">无法加载 ZIP 文件</string>
     <string name="melody_failed_load_melody">无法加载旋律</string>
     <string name="melody_difficulty">难度：</string>
     <string name="melody_no_playthroughs">尚无演奏记录</string>
-    <string name="no_melodies_available">没有可用的内置旋律。\n导入 MIDI 文件以开始。</string>
+    <string name="no_melodies_available">没有可用的内置旋律。\n导入歌曲文件以开始。</string>
 
     <!-- Melody Play -->
     <string name="melody_play_midi_input">MIDI 输入</string>
@@ -170,7 +170,7 @@
     <string name="instrument_violin">小提琴</string>
     <string name="instrument_cello">大提琴</string>
     <string name="melody_reset_score">重置分数</string>
-    <string name="melody_import_success">MIDI 已导入</string>
+    <string name="melody_import_success">歌曲已导入</string>
     <string name="melody_import_zip_success">已从 ZIP 文件导入歌曲</string>
     <string name="melody_remove_song">移除歌曲</string>
     <string name="melody_remove_folder">删除文件夹</string>

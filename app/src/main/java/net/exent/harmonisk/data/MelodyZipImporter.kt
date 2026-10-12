@@ -7,7 +7,7 @@ import java.util.zip.ZipInputStream
 
 object MelodyZipImporter {
     private const val IMPORTED_DIR = "imported"
-    private val MELODY_EXTENSIONS = listOf(".mid", ".midi")
+    private val MELODY_EXTENSIONS = listOf(".mid", ".midi", ".xml", ".musicxml", ".abc")
 
     data class ExtractedMelody(val name: String, val file: File)
 

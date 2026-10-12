@@ -16,6 +16,9 @@ internal class MidiTrackReader(private val data: ByteArray) {
         fun onTempoEvent(tick: Long, usPerBeat: Long)
         fun onTimeSignature(tick: Long, numerator: Int, denominator: Int)
         fun onEndOfTrack(tick: Long, activeNotes: List<ActiveNote>)
+
+        /** Key signature meta (0xFF 0x59): [fifths] is signed, positive for sharps. */
+        fun onKeySignature(tick: Long, fifths: Int, isMinor: Boolean) {}
     }
 
     data class ActiveNote(val note: Int, val velocity: Int, val startTick: Long)
@@ -117,6 +120,11 @@ internal class MidiTrackReader(private val data: ByteArray) {
                             val denomPower = data[p + 1].toInt() and 0xFF
                             val denominator = 1 shl denomPower
                             callback.onTimeSignature(tick, numerator, denominator)
+                        }
+                        0x59 -> {
+                            val fifths = data[p].toInt()
+                            val isMinor = data[p + 1].toInt() != 0
+                            callback.onKeySignature(tick, fifths, isMinor)
                         }
                         0x2F -> {
                             val toClose = activeNotes.map { (n, pair) ->

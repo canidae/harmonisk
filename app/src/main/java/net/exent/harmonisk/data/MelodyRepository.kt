@@ -13,8 +13,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import net.exent.harmonisk.midi.MelodyFileFormat
+import net.exent.harmonisk.midi.MelodyFileParser
 import net.exent.harmonisk.midi.MelodyTrack
-import net.exent.harmonisk.midi.MidiParser
 import net.exent.harmonisk.music.DifficultyCalculator
 
 private val Context.importedStore: DataStore<Preferences> by preferencesDataStore(
@@ -30,7 +31,6 @@ class MelodyRepository(
     private val context: Context,
     private val difficultyRepository: DifficultyRepository
 ) {
-    private val parser = MidiParser()
     private val cache = object : LinkedHashMap<String, MelodyTrack>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: Map.Entry<String, MelodyTrack>) = size > MAX_CACHE_ENTRIES
     }
@@ -65,6 +65,9 @@ class MelodyRepository(
 
         /** Asset directory holding bundled melodies, one subdirectory per folder. */
         const val MELODY_ASSETS_DIR = "melodies"
+
+        /** File name suffixes that identify a melody rather than belong to its title. */
+        private val MELODY_NAME_SUFFIXES = listOf(".mid", ".midi", ".xml", ".musicxml", ".abc")
     }
 
     data class MelodyInfo(
@@ -83,7 +86,7 @@ class MelodyRepository(
         for (folder in folders) {
             val folderPrefix = "$MELODY_ASSETS_DIR/$folder"
             val files = context.assets.list(folderPrefix).orEmpty()
-                .filter { it.endsWith(".mid") || it.endsWith(".midi") }
+                .filter { name -> MELODY_NAME_SUFFIXES.any { name.endsWith(it, true) } }
                 .sorted()
             for (file in files) {
                 val assetPath = "$folderPrefix/$file"
@@ -117,12 +120,12 @@ class MelodyRepository(
             when {
                 info.assetPath != null -> {
                     context.assets.open(info.assetPath).use { stream ->
-                        parser.parse(stream, info.name)
+                        MelodyFileParser.parse(stream, info.name)
                     }
                 }
                 info.uri != null -> {
                     context.contentResolver.openInputStream(info.uri)?.use { stream ->
-                        parser.parse(stream, info.name)
+                        MelodyFileParser.parse(stream, info.name)
                     }
                 }
                 else -> null
@@ -148,12 +151,12 @@ class MelodyRepository(
             when {
                 info.assetPath != null -> {
                     context.assets.open(info.assetPath).use { stream ->
-                        parser.parseMultiTrack(stream, info.name)
+                        MelodyFileParser.parseMultiTrack(stream, info.name)
                     }
                 }
                 info.uri != null -> {
                     context.contentResolver.openInputStream(info.uri)?.use { stream ->
-                        parser.parseMultiTrack(stream, info.name)
+                        MelodyFileParser.parseMultiTrack(stream, info.name)
                     } ?: emptyList()
                 }
                 else -> emptyList()
@@ -185,27 +188,21 @@ class MelodyRepository(
         } catch (_: Exception) {
             null
         }?.let { raw ->
-            raw.removeSuffix(".mid")
-                .removeSuffix(".midi")
-                .removeSuffix(".MID")
-                .removeSuffix(".MIDI")
-                .replace('_', ' ')
-                .trim()
-                .ifEmpty { null }
+            stripMelodyExtension(raw).replace('_', ' ').trim().ifEmpty { null }
         } ?: run {
             // Fallback: decode last path segment
-            val rawPath = uri.lastPathSegment ?: return "Imported MIDI"
-            android.net.Uri.decode(rawPath)
-                .substringAfterLast('/')
-                .removeSuffix(".mid")
-                .removeSuffix(".midi")
-                .removeSuffix(".MID")
-                .removeSuffix(".MIDI")
+            val rawPath = uri.lastPathSegment ?: return "Imported song"
+            stripMelodyExtension(android.net.Uri.decode(rawPath).substringAfterLast('/'))
                 .replace('_', ' ')
                 .trim()
-                .ifEmpty { "Imported MIDI" }
+                .ifEmpty { "Imported song" }
         }
     }
+
+    private fun stripMelodyExtension(name: String): String =
+        MELODY_NAME_SUFFIXES.firstOrNull { name.endsWith(it, true) }
+            ?.let { name.dropLast(it.length) }
+            ?: name
 
     /**
      * Load a multi-track MIDI file from a URI. Returns one [MelodyTrack] per original MIDI track.
@@ -214,7 +211,7 @@ class MelodyRepository(
     fun loadMultiTrackFromUri(uri: Uri, name: String): List<MelodyTrack> {
         return try {
             context.contentResolver.openInputStream(uri)?.use { stream ->
-                parser.parseMultiTrack(stream, name)
+                MelodyFileParser.parseMultiTrack(stream, name)
             } ?: emptyList()
         } catch (e: SecurityException) {
             Log.e(TAG, "Failed to load multi-track MIDI from URI: $uri", e)
@@ -293,15 +290,15 @@ class MelodyRepository(
         if (!melodiesDir.exists()) melodiesDir.mkdirs()
 
         val safeName = displayName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
-        val filename = "${safeName}_${uri.hashCode().toLong() and 0xFFFFFFFFL}.mid"
-        val targetFile = java.io.File(melodiesDir, filename)
-
         return try {
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                targetFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            }
+            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                ?: return null
+            val extension = MelodyFileFormat.detect(bytes).extension
+            val targetFile = java.io.File(
+                melodiesDir,
+                "${safeName}_${uri.hashCode().toLong() and 0xFFFFFFFFL}.$extension"
+            )
+            targetFile.outputStream().use { it.write(bytes) }
             Uri.fromFile(targetFile)
         } catch (e: IOException) {
             Log.e(TAG, "Failed to copy URI $uri to local file", e)
