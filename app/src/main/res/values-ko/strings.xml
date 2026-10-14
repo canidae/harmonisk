@@ -108,6 +108,11 @@
     <string name="melody_title">멜로디 연주</string>
     <string name="melody_choose">멜로디 선택</string>
     <string name="melody_import_file">곡 파일 가져오기</string>
+    <string name="melody_import_url">URL에서 가져오기</string>
+    <string name="melody_import_url_hint">곡 또는 ZIP 파일의 https:// 링크를 붙여넣으세요</string>
+    <string name="melody_import_url_confirm">가져오기</string>
+    <string name="melody_import_downloading">다운로드 중…</string>
+    <string name="melody_failed_load_url">곡을 다운로드하지 못했습니다</string>
     <string name="melody_stop_preview">미리보기 중지</string>
     <string name="melody_preview">미리보기</string>
     <string name="melody_failed_load_midi">곡 파일을 불러오지 못했습니다</string>

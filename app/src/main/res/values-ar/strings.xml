@@ -108,6 +108,11 @@
     <string name="melody_title">اعزف لحناً</string>
     <string name="melody_choose">اختر لحناً</string>
     <string name="melody_import_file">استيراد ملف أغنية</string>
+    <string name="melody_import_url">استيراد من رابط URL</string>
+    <string name="melody_import_url_hint">الصق رابط https:// لأغنية أو ملف ZIP</string>
+    <string name="melody_import_url_confirm">استيراد</string>
+    <string name="melody_import_downloading">جارٍ التنزيل…</string>
+    <string name="melody_failed_load_url">فشل تنزيل الأغنية</string>
     <string name="melody_stop_preview">إيقاف المعاينة</string>
     <string name="melody_preview">معاينة</string>
     <string name="melody_failed_load_midi">فشل تحميل ملف الأغنية</string>

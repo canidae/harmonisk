@@ -108,6 +108,11 @@
     <string name="melody_title">メロディを演奏</string>
     <string name="melody_choose">メロディを選択</string>
     <string name="melody_import_file">曲ファイルをインポート</string>
+    <string name="melody_import_url">URLからインポート</string>
+    <string name="melody_import_url_hint">曲またはZIPファイルのhttps://リンクを貼り付けてください</string>
+    <string name="melody_import_url_confirm">インポート</string>
+    <string name="melody_import_downloading">ダウンロード中…</string>
+    <string name="melody_failed_load_url">曲をダウンロードできませんでした</string>
     <string name="melody_stop_preview">プレビューを停止</string>
     <string name="melody_preview">プレビュー</string>
     <string name="melody_failed_load_midi">曲ファイルを読み込めませんでした</string>

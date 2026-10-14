@@ -3,7 +3,9 @@ package net.exent.harmonisk.data
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import java.io.ByteArrayInputStream
 import java.io.IOException
+import java.io.InputStream
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
@@ -78,6 +80,12 @@ class MelodyRepository(
         val uri: Uri? = null,
         val assetPath: String? = null
     )
+
+    /** Outcome of importing from a URL: one song, or a zip's worth of them. */
+    sealed interface UrlImportResult {
+        data class Song(val name: String) : UrlImportResult
+        data class Zip(val folder: String, val count: Int) : UrlImportResult
+    }
 
     /** Bundled melodies from the assets/melodies directory tree. */
     fun getBundledMelodies(): List<MelodyInfo> {
@@ -246,16 +254,43 @@ class MelodyRepository(
      * Returns the folder and the number of songs it holds, or null if nothing was extracted.
      */
     suspend fun importZip(uri: Uri): Pair<String, Int>? {
-        val folder = MelodyZipImporter.folderName(resolveDisplayName(uri))
-        val dir = MelodyZipImporter.directory(context.filesDir, folder)
-        val melodies = withContext(Dispatchers.IO) {
+        val displayName = resolveDisplayName(uri)
+        return withContext(Dispatchers.IO) {
             try {
-                context.contentResolver.openInputStream(uri)?.use { MelodyZipImporter.extract(it, dir) }
+                context.contentResolver.openInputStream(uri)?.use { extractZip(displayName, it) }
             } catch (e: IOException) {
                 Log.e(TAG, "Failed to extract melodies from zip $uri", e)
                 null
             }
-        } ?: return null
+        }
+    }
+
+    /** Download a melody or a zip of melodies from an https URL and persist it. */
+    suspend fun importFromUrl(url: String): UrlImportResult? = withContext(Dispatchers.IO) {
+        try {
+            val download = MelodyUrlImporter.download(url)
+            if (MelodyUrlImporter.isZip(download.bytes)) {
+                extractZip(MelodyZipImporter.folderName(download.name), ByteArrayInputStream(download.bytes))
+                    ?.let { UrlImportResult.Zip(it.first, it.second) }
+            } else if (MelodyFileParser.parseMultiTrack(ByteArrayInputStream(download.bytes), download.name).isEmpty()) {
+                null
+            } else {
+                val fileUri = writeMelodyFile(url.hashCode(), download.name, download.bytes)
+                val info = MelodyInfo(uriMelodyId(fileUri), download.name, false, folder = IMPORTED_FOLDER, uri = fileUri)
+                addImportedMelody(info)
+                UrlImportResult.Song(download.name)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to import melody from $url", e)
+            null
+        }
+    }
+
+    /** Extract every melody in [input] into a folder named after [displayName] and register them. */
+    private suspend fun extractZip(displayName: String, input: InputStream): Pair<String, Int>? {
+        val folder = MelodyZipImporter.folderName(displayName)
+        val dir = MelodyZipImporter.directory(context.filesDir, folder)
+        val melodies = MelodyZipImporter.extract(input, dir)
         if (melodies.isEmpty()) return null
 
         for (melody in melodies) {
@@ -285,28 +320,25 @@ class MelodyRepository(
      * Copy a content URI to a local file so it's available offline.
      * Returns the local file URI, or null if copying fails.
      */
-    fun copyUriToLocal(uri: Uri, displayName: String): Uri? {
+    fun copyUriToLocal(uri: Uri, displayName: String): Uri? = try {
+        context.contentResolver.openInputStream(uri)?.use { writeMelodyFile(uri.hashCode(), displayName, it.readBytes()) }
+    } catch (e: IOException) {
+        Log.e(TAG, "Failed to copy URI $uri to local file", e)
+        null
+    } catch (e: SecurityException) {
+        Log.e(TAG, "Failed to copy URI $uri to local file", e)
+        null
+    }
+
+    /** Write [bytes] into the local melody directory, keyed by [seed] so a re-import replaces its file. */
+    private fun writeMelodyFile(seed: Int, displayName: String, bytes: ByteArray): Uri {
         val melodiesDir = java.io.File(context.filesDir, "melodies")
         if (!melodiesDir.exists()) melodiesDir.mkdirs()
-
         val safeName = displayName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
-        return try {
-            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                ?: return null
-            val extension = MelodyFileFormat.detect(bytes).extension
-            val targetFile = java.io.File(
-                melodiesDir,
-                "${safeName}_${uri.hashCode().toLong() and 0xFFFFFFFFL}.$extension"
-            )
-            targetFile.outputStream().use { it.write(bytes) }
-            Uri.fromFile(targetFile)
-        } catch (e: IOException) {
-            Log.e(TAG, "Failed to copy URI $uri to local file", e)
-            null
-        } catch (e: SecurityException) {
-            Log.e(TAG, "Failed to copy URI $uri to local file", e)
-            null
-        }
+        val extension = MelodyFileFormat.detect(bytes).extension
+        val targetFile = java.io.File(melodiesDir, "${safeName}_${seed.toLong() and 0xFFFFFFFFL}.$extension")
+        targetFile.writeBytes(bytes)
+        return Uri.fromFile(targetFile)
     }
 
     private fun deleteLocalFile(uri: Uri) {

@@ -108,6 +108,11 @@
     <string name="melody_title">সুর বাজান</string>
     <string name="melody_choose">একটি সুর চয়ন করুন</string>
     <string name="melody_import_file">গানের ফাইল আমদানি করুন</string>
+    <string name="melody_import_url">URL থেকে আমদানি করুন</string>
+    <string name="melody_import_url_hint">একটি গান বা ZIP ফাইলের https:// লিঙ্ক পেস্ট করুন</string>
+    <string name="melody_import_url_confirm">আমদানি</string>
+    <string name="melody_import_downloading">ডাউনলোড হচ্ছে…</string>
+    <string name="melody_failed_load_url">গান ডাউনলোড করতে ব্যর্থ</string>
     <string name="melody_stop_preview">পূর্বরূপ বন্ধ করুন</string>
     <string name="melody_preview">পূর্বরূপ</string>
     <string name="melody_failed_load_midi">গানের ফাইল লোড করতে ব্যর্থ</string>

@@ -108,6 +108,11 @@
     <string name="melody_title">Spila lag</string>
     <string name="melody_choose">Veldu lag</string>
     <string name="melody_import_file">Flytja inn lagskrá</string>
+    <string name="melody_import_url">Flytja inn frá URL</string>
+    <string name="melody_import_url_hint">Límdu https:// hlekk á lag eða ZIP skrá</string>
+    <string name="melody_import_url_confirm">Flytja inn</string>
+    <string name="melody_import_downloading">Hleður niður…</string>
+    <string name="melody_failed_load_url">Ekki tókst að hlaða niður lagi</string>
     <string name="melody_stop_preview">Stöðva forskoðun</string>
     <string name="melody_preview">Forskoða</string>
     <string name="melody_failed_load_midi">Ekki tókst að hlaða lagskrá</string>
