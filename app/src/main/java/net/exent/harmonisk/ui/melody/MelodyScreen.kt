@@ -134,6 +134,7 @@ fun MelodyScreen(
     val looseBundled = melodies.filter { it.isBundled && it.folder == null }
 
     val inImportedFolder = currentFolder == MelodyRepository.IMPORTED_FOLDER
+    val browsingImported = inImportedFolder && currentZipFolder == null
     val currentFolderSongs = when {
         currentZipFolder != null -> importedZipFolders[currentZipFolder].orEmpty()
         inImportedFolder -> looseImported
@@ -240,7 +241,7 @@ fun MelodyScreen(
                         modifier = Modifier.weight(1f, fill = false),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (currentZipFolder == null) {
+                        if (browsingImported) {
                             items(importedZipFolders.keys.sortedBy { folderDisplayName(it) }) { folder ->
                                 FolderCard(
                                     name = folderDisplayName(folder),
@@ -251,7 +252,7 @@ fun MelodyScreen(
                             }
                         }
                         items(currentFolderSongs) { info -> songCard(info) }
-                        if (currentZipFolder == null && currentFolderSongs.isEmpty() && importedZipFolders.isEmpty()) {
+                        if (browsingImported && currentFolderSongs.isEmpty() && importedZipFolders.isEmpty()) {
                             item {
                                 Text(
                                     text = context.getString(R.string.melody_no_imported),
@@ -264,14 +265,16 @@ fun MelodyScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-                    ImportButton(Icons.Default.Add, R.string.melody_import_file) {
-                        filePickerLauncher.launch(IMPORT_MIME_TYPES)
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    ImportButton(Icons.Default.Link, R.string.melody_import_url) {
-                        urlText = ""
-                        showUrlDialog = true
+                    if (browsingImported) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        ImportButton(Icons.Default.Add, R.string.melody_import_file) {
+                            filePickerLauncher.launch(IMPORT_MIME_TYPES)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ImportButton(Icons.Default.Link, R.string.melody_import_url) {
+                            urlText = ""
+                            showUrlDialog = true
+                        }
                     }
                 }
             }
