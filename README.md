@@ -75,3 +75,5 @@ Build the signed App Bundle for Google Play:
 
 The bundle is written to `app/build/outputs/bundle/release/app-release.aab`. The upload keystore and `keystore.properties` are not tracked by git, so back them up somewhere safe; losing them means you can no longer update the app under this key.
 
+Release builds run R8 (shrinking, obfuscation and optimization) with resource shrinking enabled; debug builds stay unminified. Release stack traces are therefore obfuscated: the build writes `app/build/outputs/mapping/release/mapping.txt`, Play deobfuscates crashes automatically from the copy embedded in the bundle, and Android Studio or `retrace` can use the local file.
+
