@@ -37,8 +37,7 @@ the ones the app uses directly.
 | kotlinx.coroutines | 1.11.0 | Apache-2.0 | |
 | kotlinx.serialization | 1.11.0 | Apache-2.0 | |
 | Dagger / Hilt | 2.59.2 | Apache-2.0 | |
-| TensorFlow Lite | 2.17.0 | Apache-2.0 | |
-| LiteRT | 1.0.1 | Apache-2.0 | runtime behind TensorFlow Lite |
+| LiteRT (TensorFlow Lite) | 1.4.2 | Apache-2.0 | CREPE pitch detection runtime |
 | Okio | 3.9.1 | Apache-2.0 | |
 | JSR-305 (`com.google.code.findbugs:jsr305`) | 3.0.2 | Apache-2.0 | annotations only |
 | JSpecify | 1.0.0 | Apache-2.0 | annotations only |

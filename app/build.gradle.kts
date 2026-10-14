@@ -126,8 +126,8 @@ dependencies {
     // Core
     implementation("androidx.core:core-ktx:1.19.0")
 
-    // TensorFlow Lite — CREPE pitch detection model
-    implementation("org.tensorflow:tensorflow-lite:2.17.0")
+    // LiteRT (TensorFlow Lite) — CREPE pitch detection model
+    implementation("com.google.ai.edge.litert:litert:1.4.2")
 
     // Celebration — Konfetti particle physics
     implementation("nl.dionsegijn:konfetti-compose:2.0.5")
