@@ -108,6 +108,11 @@
     <string name="melody_title">按旋律演奏</string>
     <string name="melody_choose">选择旋律</string>
     <string name="melody_import_file">导入歌曲文件</string>
+    <string name="melody_import_url">从 URL 导入</string>
+    <string name="melody_import_url_hint">粘贴歌曲或 ZIP 文件的 https:// 链接</string>
+    <string name="melody_import_url_confirm">导入</string>
+    <string name="melody_import_downloading">正在下载…</string>
+    <string name="melody_failed_load_url">无法下载歌曲</string>
     <string name="melody_stop_preview">停止预览</string>
     <string name="melody_preview">预览旋律</string>
     <string name="melody_failed_load_midi">无法加载歌曲文件</string>

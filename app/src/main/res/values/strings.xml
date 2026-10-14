@@ -123,6 +123,11 @@
     <string name="melody_title">Play by Melody</string>
     <string name="melody_choose">Choose a Melody</string>
     <string name="melody_import_file">Import song file</string>
+    <string name="melody_import_url">Import from URL</string>
+    <string name="melody_import_url_hint">Paste an https:// link to a song or zip file</string>
+    <string name="melody_import_url_confirm">Import</string>
+    <string name="melody_import_downloading">Downloading…</string>
+    <string name="melody_failed_load_url">Failed to download song</string>
     <string name="melody_stop_preview">Stop preview</string>
     <string name="melody_preview">Preview melody</string>
     <string name="melody_failed_load_midi">Failed to load song file</string>

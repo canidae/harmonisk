@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -33,6 +34,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +69,8 @@ fun MelodyScreen(
     // folders again instead of the songs that were being chosen from.
     var currentFolder by rememberSaveable { mutableStateOf<String?>(null) }
     var currentZipFolder by rememberSaveable { mutableStateOf<String?>(null) }
+    var showUrlDialog by remember { mutableStateOf(false) }
+    var urlText by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         viewModel.initSynthesizer()
@@ -261,10 +265,87 @@ fun MelodyScreen(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    ImportButton(onClick = { filePickerLauncher.launch(IMPORT_MIME_TYPES) })
+                    ImportButton(Icons.Default.Add, R.string.melody_import_file) {
+                        filePickerLauncher.launch(IMPORT_MIME_TYPES)
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ImportButton(Icons.Default.Link, R.string.melody_import_url) {
+                        urlText = ""
+                        showUrlDialog = true
+                    }
                 }
             }
         }
+    }
+
+    if (showUrlDialog) {
+        var importing by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { if (!importing) showUrlDialog = false },
+            title = { Text(stringResource(R.string.melody_import_url)) },
+            text = {
+                Column {
+                    Text(
+                        text = stringResource(R.string.melody_import_url_hint),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = urlText,
+                        onValueChange = { urlText = it },
+                        singleLine = true,
+                        enabled = !importing,
+                        placeholder = { Text("https://…") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (importing) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(stringResource(R.string.melody_import_downloading))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = urlText.isNotBlank() && !importing,
+                    onClick = {
+                        val url = urlText.trim()
+                        importing = true
+                        scope.launch {
+                            when (val result = viewModel.importFromUrl(url)) {
+                                null -> Toast.makeText(
+                                    context,
+                                    context.getString(R.string.melody_failed_load_url),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                is MelodyRepository.UrlImportResult.Song -> {
+                                    currentFolder = MelodyRepository.IMPORTED_FOLDER
+                                    currentZipFolder = null
+                                    Toast.makeText(context, context.getString(R.string.melody_import_success), Toast.LENGTH_SHORT).show()
+                                }
+                                is MelodyRepository.UrlImportResult.Zip -> {
+                                    currentFolder = MelodyRepository.IMPORTED_FOLDER
+                                    currentZipFolder = result.folder
+                                    Toast.makeText(context, context.getString(R.string.melody_import_zip_success), Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            importing = false
+                            showUrlDialog = false
+                        }
+                    }
+                ) {
+                    Text(stringResource(R.string.melody_import_url_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(enabled = !importing, onClick = { showUrlDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 }
 
@@ -326,14 +407,14 @@ private fun FolderCard(
 }
 
 @Composable
-private fun ImportButton(onClick: () -> Unit) {
+private fun ImportButton(icon: ImageVector, labelRes: Int, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Icon(Icons.Default.Add, contentDescription = null)
+        Icon(icon, contentDescription = null)
         Spacer(modifier = Modifier.width(8.dp))
-        Text(stringResource(R.string.melody_import_file))
+        Text(stringResource(labelRes))
     }
 }
 

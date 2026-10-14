@@ -108,6 +108,11 @@
     <string name="melody_title">Tocar una melodía</string>
     <string name="melody_choose">Elige una melodía</string>
     <string name="melody_import_file">Importar archivo de canción</string>
+    <string name="melody_import_url">Importar desde URL</string>
+    <string name="melody_import_url_hint">Pega un enlace https:// a una canción o archivo ZIP</string>
+    <string name="melody_import_url_confirm">Importar</string>
+    <string name="melody_import_downloading">Descargando…</string>
+    <string name="melody_failed_load_url">Error al descargar la canción</string>
     <string name="melody_stop_preview">Detener vista previa</string>
     <string name="melody_preview">Vista previa</string>
     <string name="melody_failed_load_midi">Error al cargar el archivo de canción</string>

@@ -108,6 +108,11 @@
     <string name="melody_title">धुन बजाएं</string>
     <string name="melody_choose">एक धुन चुनें</string>
     <string name="melody_import_file">गाने की फ़ाइल आयात करें</string>
+    <string name="melody_import_url">URL से आयात करें</string>
+    <string name="melody_import_url_hint">किसी गाने या ZIP फ़ाइल का https:// लिंक पेस्ट करें</string>
+    <string name="melody_import_url_confirm">आयात करें</string>
+    <string name="melody_import_downloading">डाउनलोड हो रहा है…</string>
+    <string name="melody_failed_load_url">गाना डाउनलोड करने में विफल</string>
     <string name="melody_stop_preview">पूर्वावलोकन रोकें</string>
     <string name="melody_preview">पूर्वावलोकन</string>
     <string name="melody_failed_load_midi">गाने की फ़ाइल लोड करने में विफल</string>

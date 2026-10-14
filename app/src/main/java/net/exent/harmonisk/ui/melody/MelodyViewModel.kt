@@ -364,6 +364,9 @@ class MelodyViewModel @Inject constructor(
     /** Import every MIDI file in a zip; returns the folder it was extracted into and its song count. */
     suspend fun importZip(uri: android.net.Uri): Pair<String, Int>? = melodyRepository.importZip(uri)
 
+    /** Download a song, or a zip of songs, from an https URL. */
+    suspend fun importFromUrl(url: String): MelodyRepository.UrlImportResult? = melodyRepository.importFromUrl(url)
+
     fun loadMelodyFromUri(uri: android.net.Uri): Boolean {
         val name = melodyRepository.resolveDisplayName(uri)
         val tracks = melodyRepository.loadMultiTrackFromUri(uri, name)

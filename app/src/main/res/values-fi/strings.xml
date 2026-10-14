@@ -108,6 +108,11 @@
     <string name="melody_title">Soita melodia</string>
     <string name="melody_choose">Valitse melodia</string>
     <string name="melody_import_file">Tuo kappale-tiedosto</string>
+    <string name="melody_import_url">Tuo URL-osoitteesta</string>
+    <string name="melody_import_url_hint">Liitä kappaleen tai ZIP-tiedoston https://-linkki</string>
+    <string name="melody_import_url_confirm">Tuo</string>
+    <string name="melody_import_downloading">Ladataan…</string>
+    <string name="melody_failed_load_url">Kappaleen lataus epäonnistui</string>
     <string name="melody_stop_preview">Pysäytä esikatselu</string>
     <string name="melody_preview">Esikatsele</string>
     <string name="melody_failed_load_midi">Kappale-tiedoston lataus epäonnistui</string>

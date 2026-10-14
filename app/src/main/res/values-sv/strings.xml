@@ -108,6 +108,11 @@
     <string name="melody_title">Spela melodi</string>
     <string name="melody_choose">Välj en melodi</string>
     <string name="melody_import_file">Importera låtfil</string>
+    <string name="melody_import_url">Importera från URL</string>
+    <string name="melody_import_url_hint">Klistra in en https://-länk till en låt eller ZIP-fil</string>
+    <string name="melody_import_url_confirm">Importera</string>
+    <string name="melody_import_downloading">Laddar ner…</string>
+    <string name="melody_failed_load_url">Kunde inte ladda ner låt</string>
     <string name="melody_stop_preview">Stoppa förhandsvisning</string>
     <string name="melody_preview">Förhandsvisa</string>
     <string name="melody_failed_load_midi">Kunde inte ladda låtfil</string>

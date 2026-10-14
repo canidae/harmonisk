@@ -108,6 +108,11 @@
     <string name="melody_title">Грати мелодію</string>
     <string name="melody_choose">Виберіть мелодію</string>
     <string name="melody_import_file">Імпортувати файл пісні</string>
+    <string name="melody_import_url">Імпортувати з URL</string>
+    <string name="melody_import_url_hint">Вставте посилання https:// на пісню або ZIP-файл</string>
+    <string name="melody_import_url_confirm">Імпортувати</string>
+    <string name="melody_import_downloading">Завантаження…</string>
+    <string name="melody_failed_load_url">Не вдалося завантажити пісню</string>
     <string name="melody_stop_preview">Зупинити попередній перегляд</string>
     <string name="melody_preview">Попередній перегляд</string>
     <string name="melody_failed_load_midi">Не вдалося завантажити файл пісні</string>
