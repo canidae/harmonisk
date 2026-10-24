@@ -119,7 +119,6 @@ private fun PortraitContent(
         ModeCard(
             emoji = "🎵",
             title = stringResource(R.string.home_free_play_title),
-            description = stringResource(R.string.home_free_play_desc),
             onClick = onNavigateToFreePlay
         )
 
@@ -128,7 +127,6 @@ private fun PortraitContent(
         ModeCard(
             emoji = "🎼",
             title = stringResource(R.string.home_melody_title),
-            description = stringResource(R.string.home_melody_desc),
             onClick = onNavigateToMelody
         )
 
@@ -137,7 +135,6 @@ private fun PortraitContent(
         ModeCard(
             emoji = "🎸",
             title = stringResource(R.string.home_tuner_title),
-            description = stringResource(R.string.home_tuner_desc),
             onClick = onNavigateToTuner
         )
     }
@@ -160,7 +157,6 @@ private fun LandscapeContent(
             isLandscape = true,
             emoji = "🎵",
             title = stringResource(R.string.home_free_play_title),
-            description = stringResource(R.string.home_free_play_desc_short),
             onClick = onNavigateToFreePlay
         )
         ModeCard(
@@ -168,7 +164,6 @@ private fun LandscapeContent(
             isLandscape = true,
             emoji = "🎼",
             title = stringResource(R.string.home_melody_title),
-            description = stringResource(R.string.home_melody_desc_short),
             onClick = onNavigateToMelody
         )
         ModeCard(
@@ -176,7 +171,6 @@ private fun LandscapeContent(
             isLandscape = true,
             emoji = "🎸",
             title = stringResource(R.string.home_tuner_title),
-            description = stringResource(R.string.home_tuner_desc_short),
             onClick = onNavigateToTuner
         )
     }
@@ -186,7 +180,6 @@ private fun LandscapeContent(
 private fun ModeCard(
     emoji: String,
     title: String,
-    description: String,
     onClick: () -> Unit,
     isLandscape: Boolean = false,
     modifier: Modifier = Modifier
@@ -210,12 +203,6 @@ private fun ModeCard(
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center
                 )
-                Text(
-                    description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
             }
         }
     } else {
@@ -234,14 +221,7 @@ private fun ModeCard(
                     style = MaterialTheme.typography.headlineLarge
                 )
                 Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(title, style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        description,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(title, style = MaterialTheme.typography.titleLarge)
             }
         }
     }

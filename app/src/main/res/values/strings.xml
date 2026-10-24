@@ -15,14 +15,8 @@
     <string name="home_title">Harmonisk</string>
     <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">Free Play</string>
-    <string name="home_free_play_desc">Play freely and record a song</string>
-    <string name="home_free_play_desc_short">Pitch feedback</string>
-    <string name="home_melody_title">Play by Melody</string>
-    <string name="home_melody_desc">Follow along with a MIDI melody</string>
-    <string name="home_melody_desc_short">Follow a melody</string>
+    <string name="home_melody_title">Learn a Melody</string>
     <string name="home_tuner_title">Tune Instrument</string>
-    <string name="home_tuner_desc">See your pitch and tune up</string>
-    <string name="home_tuner_desc_short">Tune up</string>
     <string name="dev_mode_enabled">Developer mode enabled</string>
     <string name="dev_mode_disabled">Developer mode disabled</string>
 
@@ -120,7 +114,7 @@
     <string name="tuner_reference">Reference: %1$.0f Hz</string>
 
     <!-- Melody screen -->
-    <string name="melody_title">Play by Melody</string>
+    <string name="melody_title">Learn a Melody</string>
     <string name="melody_choose">Choose a Melody</string>
     <string name="melody_import_file">Import song file</string>
     <string name="melody_import_url">Import from URL</string>

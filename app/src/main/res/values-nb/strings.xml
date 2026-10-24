@@ -15,14 +15,8 @@
     <string name="home_title">Harmonisk</string>
     <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">Fritt spill</string>
-    <string name="home_free_play_desc">Spill fritt og ta opp en sang</string>
-    <string name="home_free_play_desc_short">Tonehøyde</string>
-    <string name="home_melody_title">Spill melodi</string>
-    <string name="home_melody_desc">Følg en MIDI-melodi</string>
-    <string name="home_melody_desc_short">Følg en melodi</string>
+    <string name="home_melody_title">Lær en melodi</string>
     <string name="home_tuner_title">Stem instrumentet</string>
-    <string name="home_tuner_desc">Se tonehøyden og stem opp</string>
-    <string name="home_tuner_desc_short">Stem opp</string>
     <string name="dev_mode_enabled">Utviklermodus slått på</string>
     <string name="dev_mode_disabled">Utviklermodus slått av</string>
 
@@ -120,7 +114,7 @@
     <string name="tuner_reference">Referanse: %1$.0f Hz</string>
 
     <!-- Melody screen -->
-    <string name="melody_title">Spill melodi</string>
+    <string name="melody_title">Lær en melodi</string>
     <string name="melody_choose">Velg en melodi</string>
     <string name="melody_import_file">Importer sangfil</string>
     <string name="melody_import_url">Importer fra URL</string>

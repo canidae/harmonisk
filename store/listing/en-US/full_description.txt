@@ -2,7 +2,7 @@ Harmonisk is a music practice companion that listens while you play. It gives yo
 
 Harmonisk is currently in beta. Features and bundled content may still change, and you may run into rough edges — your feedback is very welcome.
 
-PLAY BY MELODY
+LEARN A MELODY
 Follow along with a melody shown as real sheet music and scrolling note bars. Every attempt is scored on pitch accuracy, note duration and correct notes, while five difficulty levels gradually take you from a relaxed pace to full tempo. Play with the microphone or a MIDI instrument, and transpose any melody to a key that suits you.
 
 FREE PLAY
