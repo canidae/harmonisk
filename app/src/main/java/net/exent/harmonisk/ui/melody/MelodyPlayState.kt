@@ -124,10 +124,6 @@ fun previewClockSeconds(
     outputDelayMs: Int
 ): Double = startSeconds + elapsedSeconds - leadInSeconds - outputDelayMs / 1000.0
 
-/** Level and score of the last take, as shown next to the song title. */
-fun levelAndScoreText(level: Int, latestScore: String?): String =
-    if (latestScore == null) "Lv.$level" else "Lv.$level  Score: $latestScore"
-
 /**
  * The voices the app may sound while the player is being scored.
  *

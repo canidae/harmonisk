@@ -146,7 +146,10 @@ fun MelodyPlayScreen(
                     // Song title, level and latest score
                     gameState.melodyName?.let { name ->
                         Spacer(Modifier.width(6.dp))
-                        val latestScore = scoreHistory.lastOrNull()?.let { formatScore(it.overallScore) }
+                        val levelLabel = stringResource(R.string.melody_level, gameState.currentLevel)
+                        val latestScore = scoreHistory.lastOrNull()?.let {
+                            stringResource(R.string.melody_score, formatScore(it.overallScore))
+                        }
                         Column {
                             Text(
                                 text = name,
@@ -156,7 +159,7 @@ fun MelodyPlayScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = levelAndScoreText(gameState.currentLevel, latestScore),
+                                text = latestScore?.let { "$levelLabel  $it" } ?: levelLabel,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(alpha = 0.7f)
                             )
@@ -518,7 +521,7 @@ private fun MelodySettingsMenu(
                 HorizontalDivider()
                 // Accompaniment mode selector
                 DropdownMenuItem(
-                    text = { Text("Play voices:") },
+                    text = { Text(stringResource(R.string.melody_play_voices)) },
                     onClick = {}
                 )
                 Row(
@@ -526,11 +529,11 @@ private fun MelodySettingsMenu(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     listOf(
-                        AccompanimentMode.ALL to "All",
-                        AccompanimentMode.EXCEPT to "Except",
-                        AccompanimentMode.SELECTED_ONLY to "Selected",
-                        AccompanimentMode.NONE to "None"
-                    ).forEach { (mode, label) ->
+                        AccompanimentMode.ALL to R.string.accompaniment_all,
+                        AccompanimentMode.EXCEPT to R.string.accompaniment_except,
+                        AccompanimentMode.SELECTED_ONLY to R.string.accompaniment_selected,
+                        AccompanimentMode.NONE to R.string.freeplay_none
+                    ).forEach { (mode, labelRes) ->
                         val isSelected = accompanimentMode == mode
                         val bg = if (isSelected) MaterialTheme.colorScheme.primary else Color.DarkGray.copy(alpha = 0.3f)
                         val fg = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.7f)
@@ -543,7 +546,7 @@ private fun MelodySettingsMenu(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = label,
+                                text = stringResource(labelRes),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = fg,
                                 modifier = Modifier.padding(horizontal = 10.dp)

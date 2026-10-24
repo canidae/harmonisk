@@ -20,6 +20,6 @@ MADE FOR PRACTISING
 • Practice history and progress graphs for every melody
 • Audio input and output delay calibration for your device
 • Works offline: no account, no ads and no tracking
-• 18 languages: English, Norwegian, Swedish, Danish, Finnish, Icelandic, German, French, Spanish, Italian, Portuguese, Ukrainian, Chinese, Japanese, Korean, Hindi, Bengali and Arabic
+• English and Norwegian (Bokmål)
 
 Harmonisk is an independent project. If something does not work as expected, or you have an idea for a feature, please get in touch.
