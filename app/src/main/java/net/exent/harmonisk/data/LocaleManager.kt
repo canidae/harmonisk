@@ -15,12 +15,8 @@ object LocaleManager {
         Language(NORWEGIAN, "Norsk")
     )
 
-    fun createLocaleContext(base: Context, languageCode: String): Context {
-        val locale = resolveLocale(languageCode)
-        val config = Configuration(base.resources.configuration)
-        config.setLocale(locale)
-        return base.createConfigurationContext(config)
-    }
+    fun createLocaleContext(base: Context, languageCode: String): Context =
+        base.createConfigurationContext(Configuration().apply { setLocale(resolveLocale(languageCode)) })
 
     fun resolveLocale(languageCode: String): Locale =
         if (languageCode in supportedLanguages.map { it.code } && languageCode != SYSTEM) {

@@ -212,6 +212,35 @@ fun MelodyScreen(
     }
 
     Scaffold(
+        bottomBar = {
+            if (browsingImported) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ImportButton(Modifier.weight(1f).fillMaxHeight(), Icons.Default.Add, R.string.melody_import_file) {
+                        filePickerLauncher.launch(IMPORT_MIME_TYPES)
+                    }
+                    ImportButton(Modifier.weight(1f).fillMaxHeight(), Icons.Default.Link, R.string.melody_import_url) {
+                        urlText = ""
+                        showUrlDialog = true
+                    }
+                    ImportButton(Modifier.weight(1f).fillMaxHeight(), Icons.Default.QrCodeScanner, R.string.melody_import_qr) {
+                        qrScanLauncher.launch(
+                            ScanOptions().apply {
+                                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                                setPrompt(context.getString(R.string.melody_import_qr_prompt))
+                                setBeepEnabled(false)
+                            }
+                        )
+                    }
+                }
+            }
+        },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.melody_title)) },
@@ -295,28 +324,6 @@ fun MelodyScreen(
                                     modifier = Modifier.fillMaxWidth().padding(32.dp)
                                 )
                             }
-                        }
-                    }
-
-                    if (browsingImported) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        ImportButton(Icons.Default.Add, R.string.melody_import_file) {
-                            filePickerLauncher.launch(IMPORT_MIME_TYPES)
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        ImportButton(Icons.Default.Link, R.string.melody_import_url) {
-                            urlText = ""
-                            showUrlDialog = true
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        ImportButton(Icons.Default.QrCodeScanner, R.string.melody_import_qr) {
-                            qrScanLauncher.launch(
-                                ScanOptions().apply {
-                                    setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                                    setPrompt(context.getString(R.string.melody_import_qr_prompt))
-                                    setBeepEnabled(false)
-                                }
-                            )
                         }
                     }
                 }
@@ -448,14 +455,27 @@ private fun FolderCard(
 }
 
 @Composable
-private fun ImportButton(icon: ImageVector, labelRes: Int, onClick: () -> Unit) {
+private fun ImportButton(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    labelRes: Int,
+    onClick: () -> Unit
+) {
     OutlinedButton(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier,
+        shape = MaterialTheme.shapes.medium,
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 10.dp)
     ) {
-        Icon(icon, contentDescription = null)
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(stringResource(labelRes))
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(labelRes),
+                style = MaterialTheme.typography.labelSmall,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 
