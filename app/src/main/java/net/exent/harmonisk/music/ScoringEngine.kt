@@ -5,7 +5,7 @@ import kotlin.math.min
 import kotlin.math.max
 
 /**
- * Scoring engine for the Play by Melody mode.
+ * Scoring engine for the Learn a Melody mode.
  * Uses a 5-tier accuracy system with weighted pitch and duration scores.
  */
 class ScoringEngine {
