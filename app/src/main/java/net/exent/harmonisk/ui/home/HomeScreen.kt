@@ -185,15 +185,11 @@ private fun ModeCard(
     modifier: Modifier = Modifier
 ) {
     if (isLandscape) {
-        Card(
-            onClick = onClick,
-            modifier = modifier.fillMaxHeight()
-        ) {
+        Card(onClick = onClick, modifier = modifier) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
+                    .fillMaxWidth()
+                    .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(emoji, style = MaterialTheme.typography.headlineMedium)

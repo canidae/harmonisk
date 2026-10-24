@@ -120,7 +120,7 @@
     <string name="melody_import_url">Importer fra URL</string>
     <string name="melody_import_url_hint">Lim inn en https://-lenke til en sang eller zip-fil</string>
     <string name="melody_import_url_confirm">Importer</string>
-    <string name="melody_import_qr">Skann QR-kode</string>
+    <string name="melody_import_qr">Importer fra QR-kode</string>
     <string name="melody_import_qr_prompt">Skann en URL til en sang eller zip-fil</string>
     <string name="melody_import_downloading">Laster ned…</string>
     <string name="melody_failed_load_url">Kunne ikke laste ned sangen</string>

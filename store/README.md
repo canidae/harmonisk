@@ -25,12 +25,13 @@ Six phone screenshots, in the order they should appear in the listing:
 5. `05-practice-session.png` — a melody being played, with timing colours
 6. `06-tuner.png` — the tuner gauge
 
-Specs: 1080x1920 (9:16), 24-bit PNG without alpha, 44-88 KB each. Play accepts
-2-8 phone screenshots, minimum 320 px, maximum 3840 px, and no side longer than
-twice the other. These were captured on a Pixel 7 Pro running app version
-`2026.10.11` (versionCode `26101101`), except `01-home.png`, which was recaptured
-after the home screen dropped its card descriptions. The former language-picker
-screenshot was dropped when the app went down to two languages.
+Specs: 1080x1920 (9:16), 24-bit PNG without alpha, under 100 KB each. Play
+accepts 2-8 phone screenshots, minimum 320 px, maximum 3840 px, and no side
+longer than twice the other. These were captured on a Pixel 7 Pro running app
+version `2026.10.11` (versionCode `26101101`), except `01-home.png`,
+`03-melody-list.png` and `06-tuner.png`, which were recaptured after the home and
+mode renaming. The former language-picker screenshot was dropped when the app
+went down to two languages.
 
 To regenerate them, build and install a debug APK, then capture at 9:16:
 
