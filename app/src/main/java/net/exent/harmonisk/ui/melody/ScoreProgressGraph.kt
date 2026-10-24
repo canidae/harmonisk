@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +37,7 @@ fun ScoreProgressGraph(
     val levelLineColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f)
 
     val density = LocalDensity.current
+    val context = LocalContext.current
     val labelSize = if (compact) 9.sp else 11.sp
     val labelHeight = with(density) { labelSize.toDp() }
     val bottomPadding = if (compact) 16.dp else 24.dp
@@ -116,7 +118,7 @@ fun ScoreProgressGraph(
                     val t = if (scores.size == 1) 1f else i.toFloat() / (scores.size - 1)
                     val nearRight = t > 0.75f
                     drawContext.canvas.nativeCanvas.drawText(
-                        "Lv.${scores[i].level}",
+                        context.getString(R.string.melody_level, scores[i].level),
                         if (nearRight) x - 3f else x + 3f,
                         chartTop + with(density) { labelSize.toPx() },
                         android.graphics.Paint().apply {

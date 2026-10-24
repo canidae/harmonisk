@@ -161,9 +161,14 @@
     <string name="melody_play_go_back">Go Back</string>
     <string name="melody_play_level">Level: %1$d</string>
     <string name="melody_level">Lv.%1$d</string>
+    <string name="melody_score">Score: %1$s</string>
     <string name="melody_play_transpose_0">Transpose: 0</string>
     <string name="melody_play_transpose_plus">Transpose: +%1$d</string>
     <string name="melody_play_transpose">Transpose: %1$d</string>
+    <string name="melody_play_voices">Play voices:</string>
+    <string name="accompaniment_all">All</string>
+    <string name="accompaniment_except">Except</string>
+    <string name="accompaniment_selected">Selected</string>
 
     <!-- Score results -->
     <string name="score_dismiss">Dismiss</string>
