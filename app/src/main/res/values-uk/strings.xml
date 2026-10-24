@@ -111,6 +111,8 @@
     <string name="melody_import_url">Імпортувати з URL</string>
     <string name="melody_import_url_hint">Вставте посилання https:// на пісню або ZIP-файл</string>
     <string name="melody_import_url_confirm">Імпортувати</string>
+    <string name="melody_import_qr">Сканувати QR-код</string>
+    <string name="melody_import_qr_prompt">Скануйте URL-адресу пісні або ZIP-файлу</string>
     <string name="melody_import_downloading">Завантаження…</string>
     <string name="melody_failed_load_url">Не вдалося завантажити пісню</string>
     <string name="melody_stop_preview">Зупинити попередній перегляд</string>
@@ -153,6 +155,7 @@
     <string name="score_note_duration">Точність тривалості</string>
     <string name="score_song_duration">Тривалість пісні</string>
     <string name="score_progress">Прогрес</string>
+    <string name="score_personal_best">Особистий рекорд</string>
 
     <!-- Note divisions -->
     <string name="note_quarter">\u2669 Чверть</string>

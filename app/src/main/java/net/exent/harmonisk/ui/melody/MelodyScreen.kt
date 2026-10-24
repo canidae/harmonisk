@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -39,9 +40,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import net.exent.harmonisk.R
 import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.ui.utils.formatScore
@@ -71,6 +75,7 @@ fun MelodyScreen(
     var currentZipFolder by rememberSaveable { mutableStateOf<String?>(null) }
     var showUrlDialog by remember { mutableStateOf(false) }
     var urlText by rememberSaveable { mutableStateOf("") }
+    var importingUrl by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.initSynthesizer()
@@ -93,6 +98,34 @@ fun MelodyScreen(
     }
 
     val scope = rememberCoroutineScope()
+    fun importUrl(url: String) {
+        if (importingUrl != null) return
+        importingUrl = url
+        scope.launch {
+            when (val result = viewModel.importFromUrl(url)) {
+                null -> Toast.makeText(
+                    context,
+                    context.getString(R.string.melody_failed_load_url),
+                    Toast.LENGTH_SHORT
+                ).show()
+                is MelodyRepository.UrlImportResult.Song -> {
+                    currentFolder = MelodyRepository.IMPORTED_FOLDER
+                    currentZipFolder = null
+                    Toast.makeText(context, context.getString(R.string.melody_import_success), Toast.LENGTH_SHORT).show()
+                }
+                is MelodyRepository.UrlImportResult.Zip -> {
+                    currentFolder = MelodyRepository.IMPORTED_FOLDER
+                    currentZipFolder = result.folder
+                    Toast.makeText(context, context.getString(R.string.melody_import_zip_success), Toast.LENGTH_SHORT).show()
+                }
+            }
+            importingUrl = null
+        }
+    }
+
+    val qrScanLauncher = rememberLauncherForActivityResult(contract = ScanContract()) { result ->
+        result.contents?.trim()?.takeIf { it.isNotEmpty() }?.let { importUrl(it) }
+    }
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -275,6 +308,16 @@ fun MelodyScreen(
                             urlText = ""
                             showUrlDialog = true
                         }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ImportButton(Icons.Default.QrCodeScanner, R.string.melody_import_qr) {
+                            qrScanLauncher.launch(
+                                ScanOptions().apply {
+                                    setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                                    setPrompt(context.getString(R.string.melody_import_qr_prompt))
+                                    setBeepEnabled(false)
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -282,9 +325,8 @@ fun MelodyScreen(
     }
 
     if (showUrlDialog) {
-        var importing by remember { mutableStateOf(false) }
         AlertDialog(
-            onDismissRequest = { if (!importing) showUrlDialog = false },
+            onDismissRequest = { showUrlDialog = false },
             title = { Text(stringResource(R.string.melody_import_url)) },
             text = {
                 Column {
@@ -297,57 +339,53 @@ fun MelodyScreen(
                         value = urlText,
                         onValueChange = { urlText = it },
                         singleLine = true,
-                        enabled = !importing,
                         placeholder = { Text("https://…") },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    if (importing) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(stringResource(R.string.melody_import_downloading))
-                        }
-                    }
                 }
             },
             confirmButton = {
                 TextButton(
-                    enabled = urlText.isNotBlank() && !importing,
+                    enabled = urlText.isNotBlank(),
                     onClick = {
                         val url = urlText.trim()
-                        importing = true
-                        scope.launch {
-                            when (val result = viewModel.importFromUrl(url)) {
-                                null -> Toast.makeText(
-                                    context,
-                                    context.getString(R.string.melody_failed_load_url),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                is MelodyRepository.UrlImportResult.Song -> {
-                                    currentFolder = MelodyRepository.IMPORTED_FOLDER
-                                    currentZipFolder = null
-                                    Toast.makeText(context, context.getString(R.string.melody_import_success), Toast.LENGTH_SHORT).show()
-                                }
-                                is MelodyRepository.UrlImportResult.Zip -> {
-                                    currentFolder = MelodyRepository.IMPORTED_FOLDER
-                                    currentZipFolder = result.folder
-                                    Toast.makeText(context, context.getString(R.string.melody_import_zip_success), Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                            importing = false
-                            showUrlDialog = false
-                        }
+                        showUrlDialog = false
+                        importUrl(url)
                     }
                 ) {
                     Text(stringResource(R.string.melody_import_url_confirm))
                 }
             },
             dismissButton = {
-                TextButton(enabled = !importing, onClick = { showUrlDialog = false }) {
+                TextButton(onClick = { showUrlDialog = false }) {
                     Text(stringResource(R.string.cancel))
                 }
             }
+        )
+    }
+
+    importingUrl?.let { url ->
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(stringResource(R.string.melody_import_url)) },
+            text = {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(stringResource(R.string.melody_import_downloading))
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = url,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            },
+            confirmButton = {}
         )
     }
 }

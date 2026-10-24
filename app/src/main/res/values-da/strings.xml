@@ -111,6 +111,8 @@
     <string name="melody_import_url">Importer fra URL</string>
     <string name="melody_import_url_hint">Indsæt et https://-link til en sang eller ZIP-fil</string>
     <string name="melody_import_url_confirm">Importer</string>
+    <string name="melody_import_qr">Scan QR-kode</string>
+    <string name="melody_import_qr_prompt">Scan en URL til en sang eller zip-fil</string>
     <string name="melody_import_downloading">Downloader…</string>
     <string name="melody_failed_load_url">Kunne ikke downloade sang</string>
     <string name="melody_stop_preview">Stop forhåndsvisning</string>
@@ -153,6 +155,7 @@
     <string name="score_note_duration">Varighedsnøjagtighed</string>
     <string name="score_song_duration">Sangens varighed</string>
     <string name="score_progress">Fremskridt</string>
+    <string name="score_personal_best">Personlig rekord</string>
 
     <!-- Note divisions -->
     <string name="note_quarter">\u2669 Fjerdedel</string>

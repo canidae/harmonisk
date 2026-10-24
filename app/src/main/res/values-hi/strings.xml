@@ -111,6 +111,8 @@
     <string name="melody_import_url">URL से आयात करें</string>
     <string name="melody_import_url_hint">किसी गाने या ZIP फ़ाइल का https:// लिंक पेस्ट करें</string>
     <string name="melody_import_url_confirm">आयात करें</string>
+    <string name="melody_import_qr">QR कोड स्कैन करें</string>
+    <string name="melody_import_qr_prompt">गाने या ZIP फ़ाइल का URL स्कैन करें</string>
     <string name="melody_import_downloading">डाउनलोड हो रहा है…</string>
     <string name="melody_failed_load_url">गाना डाउनलोड करने में विफल</string>
     <string name="melody_stop_preview">पूर्वावलोकन रोकें</string>
@@ -153,6 +155,7 @@
     <string name="score_note_duration">अवधि सटीकता</string>
     <string name="score_song_duration">गाने की अवधि</string>
     <string name="score_progress">प्रगति</string>
+    <string name="score_personal_best">व्यक्तिगत सर्वश्रेष्ठ</string>
 
     <!-- Note divisions -->
     <string name="note_quarter">\u2669 चौथाई</string>

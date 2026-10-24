@@ -137,6 +137,8 @@ dependencies {
     // Celebration — Konfetti particle physics
     implementation("nl.dionsegijn:konfetti-compose:2.0.5")
 
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+
     // Sheet music rendering
     implementation("net.alphatab:alphaTab:1.6.1")
     // Force 16 KB aligned alphaSkia, otherwise libalphaskiajni.so has p_align 4096

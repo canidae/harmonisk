@@ -111,6 +111,8 @@
     <string name="melody_import_url">URLからインポート</string>
     <string name="melody_import_url_hint">曲またはZIPファイルのhttps://リンクを貼り付けてください</string>
     <string name="melody_import_url_confirm">インポート</string>
+    <string name="melody_import_qr">QRコードをスキャン</string>
+    <string name="melody_import_qr_prompt">曲またはZIPファイルのURLをスキャン</string>
     <string name="melody_import_downloading">ダウンロード中…</string>
     <string name="melody_failed_load_url">曲をダウンロードできませんでした</string>
     <string name="melody_stop_preview">プレビューを停止</string>
@@ -153,6 +155,7 @@
     <string name="score_note_duration">長さ精度</string>
     <string name="score_song_duration">曲の長さ</string>
     <string name="score_progress">進捗</string>
+    <string name="score_personal_best">自己ベスト</string>
 
     <!-- Note divisions -->
     <string name="note_quarter">\u2669 四分音符</string>

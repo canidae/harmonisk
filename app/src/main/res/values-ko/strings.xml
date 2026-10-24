@@ -111,6 +111,8 @@
     <string name="melody_import_url">URL에서 가져오기</string>
     <string name="melody_import_url_hint">곡 또는 ZIP 파일의 https:// 링크를 붙여넣으세요</string>
     <string name="melody_import_url_confirm">가져오기</string>
+    <string name="melody_import_qr">QR 코드 스캔</string>
+    <string name="melody_import_qr_prompt">노래 또는 ZIP 파일 URL 스캔</string>
     <string name="melody_import_downloading">다운로드 중…</string>
     <string name="melody_failed_load_url">곡을 다운로드하지 못했습니다</string>
     <string name="melody_stop_preview">미리보기 중지</string>
@@ -153,6 +155,7 @@
     <string name="score_note_duration">길이 정확도</string>
     <string name="score_song_duration">곡 길이</string>
     <string name="score_progress">진행률</string>
+    <string name="score_personal_best">개인 최고 기록</string>
 
     <!-- Note divisions -->
     <string name="note_quarter">\u2669 4분음표</string>

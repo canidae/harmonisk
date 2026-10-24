@@ -70,6 +70,7 @@ fun MelodyPlayScreen(
     val scoreHistory by viewModel.currentScoreHistory.collectAsStateWithLifecycle()
     val canAdvance by viewModel.canAdvanceLevel.collectAsStateWithLifecycle()
     val celebrationLevel by viewModel.celebrationLevel.collectAsStateWithLifecycle()
+    val personalBest by viewModel.personalBestCombinedScore.collectAsStateWithLifecycle()
     val currentInstrument by viewModel.currentInstrument.collectAsStateWithLifecycle()
     val devModeEnabled by viewModel.devModeEnabled.collectAsStateWithLifecycle()
     val violinMode = currentInstrument == Instrument.VIOLIN
@@ -445,7 +446,8 @@ fun MelodyPlayScreen(
                 showResultsModal = false
                 viewModel.startPlaying()
             },
-            celebrationLevel = celebrationLevel
+            celebrationLevel = celebrationLevel,
+            personalBest = personalBest
         )
     }
 }

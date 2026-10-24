@@ -111,6 +111,8 @@
     <string name="melody_import_url">URL থেকে আমদানি করুন</string>
     <string name="melody_import_url_hint">একটি গান বা ZIP ফাইলের https:// লিঙ্ক পেস্ট করুন</string>
     <string name="melody_import_url_confirm">আমদানি</string>
+    <string name="melody_import_qr">QR কোড স্ক্যান করুন</string>
+    <string name="melody_import_qr_prompt">একটি গান বা ZIP URL স্ক্যান করুন</string>
     <string name="melody_import_downloading">ডাউনলোড হচ্ছে…</string>
     <string name="melody_failed_load_url">গান ডাউনলোড করতে ব্যর্থ</string>
     <string name="melody_stop_preview">পূর্বরূপ বন্ধ করুন</string>
@@ -153,6 +155,7 @@
     <string name="score_note_duration">সময় নির্ভুলতা</string>
     <string name="score_song_duration">গানের দৈর্ঘ্য</string>
     <string name="score_progress">অগ্রগতি</string>
+    <string name="score_personal_best">ব্যক্তিগত সেরা</string>
 
     <!-- Note divisions -->
     <string name="note_quarter">\u2669 চতুর্থাংশ</string>

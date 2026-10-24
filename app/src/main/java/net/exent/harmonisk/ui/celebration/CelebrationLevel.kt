@@ -11,7 +11,7 @@ enum class CelebrationLevel(
     val fireworksBursts: Int,
 ) {
     NONE(0, 1.0f, 0, emptyList(), 0, 0),
-    BASE(50, 1.05f, 0, listOf(Size(6), Size(10)), 0, 0),
+    BASE(1, 1.02f, 20, listOf(Size(4), Size(8)), 0, 0),
     MODERATE(100, 1.1f, 50, listOf(Size(8), Size(14)), 5, 0),
     STRONG(200, 1.1f, 150, listOf(Size(10), Size(18)), 10, 0),
     INTENSE(300, 1.1f, 200, listOf(Size(12), Size(22)), 15, 1),

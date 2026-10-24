@@ -81,6 +81,9 @@ class MelodyViewModel @Inject constructor(
     private val _currentScoreHistory = MutableStateFlow<List<ScoreHistoryRepository.ScoreEntry>>(emptyList())
     val currentScoreHistory: StateFlow<List<ScoreHistoryRepository.ScoreEntry>> = _currentScoreHistory.asStateFlow()
 
+    private val _personalBestCombinedScore = MutableStateFlow<Float?>(null)
+    val personalBestCombinedScore: StateFlow<Float?> = _personalBestCombinedScore.asStateFlow()
+
     private val _allMelodyCombinedScores = MutableStateFlow<Map<String, Float>>(emptyMap())
     val allMelodyCombinedScores: StateFlow<Map<String, Float>> = _allMelodyCombinedScores.asStateFlow()
 
@@ -109,6 +112,8 @@ class MelodyViewModel @Inject constructor(
 
     private var playbackJob: Job? = null
     private var pitchJob: Job? = null
+    private var melodySettingsJob: Job? = null
+    private var scoreHistoryJob: Job? = null
     private var previewClockJob: Job? = null
     private var previewSavedOffset: Double? = null
     private var playbackStartTime = 0L
@@ -437,7 +442,11 @@ class MelodyViewModel @Inject constructor(
     )
 
     private fun loadMelodySettingsAndHistory(melodyId: String, instrument: String = _currentInstrument.value) {
-        viewModelScope.launch {
+        melodySettingsJob?.cancel()
+        scoreHistoryJob?.cancel()
+        _currentScoreHistory.value = emptyList()
+        _personalBestCombinedScore.value = null
+        melodySettingsJob = viewModelScope.launch {
             melodySettingsRepository.getSettings(melodyId, instrument).first().let { saved ->
                 val level = saved.level.coerceIn(1, 5)
                 val (wm, hnb) = levelToSettings(level)
@@ -467,7 +476,7 @@ class MelodyViewModel @Inject constructor(
                 }
             }
         }
-        viewModelScope.launch {
+        scoreHistoryJob = viewModelScope.launch {
             scoreHistoryRepository.getScores(melodyId, instrument).collect { scores ->
                 _currentScoreHistory.value = scores
             }
@@ -1425,6 +1434,7 @@ class MelodyViewModel @Inject constructor(
                 existing.map { it.level to it.overallScore } + (currentLevel to adjustedScore)
             )
             val scoreImproved = combinedScore > previousBestCombinedScore
+            _personalBestCombinedScore.value = maxOf(previousBestCombinedScore, combinedScore)
             _celebrationLevel.value = if (scoreImproved) CelebrationLevel.fromScore(combinedScore)
             else CelebrationLevel.NONE
 

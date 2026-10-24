@@ -111,6 +111,8 @@
     <string name="melody_import_url">Importar de URL</string>
     <string name="melody_import_url_hint">Cole um link https:// para uma música ou ficheiro ZIP</string>
     <string name="melody_import_url_confirm">Importar</string>
+    <string name="melody_import_qr">Digitalizar código QR</string>
+    <string name="melody_import_qr_prompt">Digitalize o URL de uma música ou ficheiro zip</string>
     <string name="melody_import_downloading">A transferir…</string>
     <string name="melody_failed_load_url">Falha ao transferir a música</string>
     <string name="melody_stop_preview">Parar pré-visualização</string>
@@ -153,6 +155,7 @@
     <string name="score_note_duration">Precisão da duração</string>
     <string name="score_song_duration">Duração da música</string>
     <string name="score_progress">Progresso</string>
+    <string name="score_personal_best">Melhor resultado pessoal</string>
 
     <!-- Note divisions -->
     <string name="note_quarter">\u2669 Semínima</string>
