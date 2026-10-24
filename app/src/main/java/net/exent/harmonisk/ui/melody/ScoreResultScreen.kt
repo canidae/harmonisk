@@ -34,7 +34,8 @@ fun ScoreResultModal(
     canAdvance: Boolean = false,
     onRetry: () -> Unit = {},
     onAdvance: () -> Unit = {},
-    celebrationLevel: CelebrationLevel = CelebrationLevel.NONE
+    celebrationLevel: CelebrationLevel = CelebrationLevel.NONE,
+    personalBest: Float? = null
 ) {
     val animatedScore by animateFloatAsState(
         targetValue = melodyScore.overallScore,
@@ -92,7 +93,7 @@ fun ScoreResultModal(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        ScoreSummaryPanel(score = melodyScore, currentLevel = currentLevel)
+                        ScoreSummaryPanel(score = melodyScore, currentLevel = currentLevel, personalBest = personalBest)
 
                         if (scoreHistory.size >= 1) {
                             Spacer(modifier = Modifier.height(12.dp))

@@ -405,4 +405,25 @@ class ScoringEngineTest {
         assertEquals(100f, ScoringEngine.combineScores(100f, 1f, 0f, 2), 0.01f)
         assertEquals(100f, ScoringEngine.combineScores(100f, 0f, 100f, 4), 0.01f)
     }
+
+    @Test
+    fun `combined score accumulates the best run of each level`() {
+        val scores = (1..5).map { it to 50f }
+        assertEquals(250f, ScoringEngine.computeCombinedScore(scores), 0.01f)
+    }
+
+    @Test
+    fun `a run that does not beat the best at its level leaves the combined score unchanged`() {
+        val best = listOf(1 to 90f, 2 to 80f, 3 to 70f, 4 to 60f, 5 to 50f)
+        val previous = ScoringEngine.computeCombinedScore(best)
+        assertEquals(350f, previous, 0.01f)
+        assertEquals(previous, ScoringEngine.computeCombinedScore(best + (1 to 50f)), 0.01f)
+    }
+
+    @Test
+    fun `a run that beats the best at its level raises the combined score`() {
+        val best = listOf(1 to 90f, 2 to 80f, 3 to 70f, 4 to 60f, 5 to 50f)
+        val previous = ScoringEngine.computeCombinedScore(best)
+        assertTrue(ScoringEngine.computeCombinedScore(best + (1 to 100f)) > previous)
+    }
 }

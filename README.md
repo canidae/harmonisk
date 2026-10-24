@@ -21,6 +21,9 @@ This app ships and uses the following third-party works:
   Licensed under the Mozilla Public License 2.0; the bundled Bravura font is
   licensed under the SIL Open Font License 1.1, and the bundled Sonic Network
   samples under the Apache License 2.0.
+- **ZXing** and **zxing-android-embedded**, used to scan QR codes for song
+  imports. Licensed under the Apache License 2.0
+  (see <https://github.com/zxing/zxing>).
 
 The complete list of dependencies and bundled assets, with licenses, is in
 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).

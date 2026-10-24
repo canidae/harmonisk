@@ -11,7 +11,10 @@ sealed class CelebrationPayload {
 
 fun CelebrationLevel.toPayloads(): List<CelebrationPayload> = when (this) {
     CelebrationLevel.NONE -> emptyList()
-    CelebrationLevel.BASE -> listOf(CelebrationPayload.Pulsing(pulseScale))
+    CelebrationLevel.BASE -> listOf(
+        CelebrationPayload.Pulsing(pulseScale),
+        CelebrationPayload.Confetti(confettiCount)
+    )
     CelebrationLevel.MODERATE -> listOf(
         CelebrationPayload.Pulsing(pulseScale),
         CelebrationPayload.Confetti(confettiCount),

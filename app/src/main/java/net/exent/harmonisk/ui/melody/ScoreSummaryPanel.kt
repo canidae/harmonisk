@@ -12,13 +12,15 @@ import net.exent.harmonisk.R
 import net.exent.harmonisk.music.MelodyScore
 import net.exent.harmonisk.music.ScoreBreakdown
 import net.exent.harmonisk.music.toBreakdown
+import net.exent.harmonisk.ui.utils.formatScore
 import net.exent.harmonisk.ui.utils.scoreColor
 
 @Composable
 fun ScoreSummaryPanel(
     score: MelodyScore,
     currentLevel: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    personalBest: Float? = null
 ) {
     val breakdown = score.toBreakdown()
 
@@ -32,6 +34,26 @@ fun ScoreSummaryPanel(
         }
         if (currentLevel >= 3) {
             BreakdownRow(stringResource(R.string.score_correct_notes), score.wrongNoteScore)
+        }
+        if (personalBest != null) {
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = stringResource(R.string.score_personal_best),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = formatScore(personalBest),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = scoreColor(personalBest / 5f)
+                )
+            }
         }
     }
 }

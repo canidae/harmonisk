@@ -46,6 +46,8 @@ the ones the app uses directly.
 | JetBrains annotations | 23.0.0 | Apache-2.0 | |
 | alphaTab | 1.6.1 | MPL-2.0 | sheet music rendering; see bundled assets below |
 | alphaSkia | 3.5.147 | BSD-3-Clause | native rendering backend for alphaTab |
+| ZXing core | 3.4.1 | Apache-2.0 | QR decoding |
+| zxing-android-embedded | 4.3.0 | Apache-2.0 | camera scanner used for QR imports |
 
 alphaTab is MPL-2.0, a file-level copyleft: the library is used unmodified, and
 if it is ever patched, the patched alphaTab files have to stay available under
