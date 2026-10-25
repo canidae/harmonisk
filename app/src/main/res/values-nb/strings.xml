@@ -23,9 +23,9 @@
 
     <!-- Permissions -->
     <string name="permission_title">Mikrofontilgang kreves</string>
-    <string name="permission_permanently_denied">Mikrofontilgangen ble avvist permanent. Du må aktivere den i enhetsinnstillingene.</string>
-    <string name="permission_rationale">Harmonisk trenger mikrofontilgang for å oppdage tonene du spiller. Gi tillatelse.</string>
-    <string name="permission_description">Harmonisk trenger tilgang til mikrofonen for å lytte til instrumentet ditt og oppdage tonehøyde i sanntid.</string>
+    <string name="permission_permanently_denied">Mikrofontilgangen ble avvist permanent. Du må aktivere det i enhetsinnstillingene.</string>
+    <string name="permission_rationale">Harmonisk trenger mikrofontilgang for å høre tonene du spiller.</string>
+    <string name="permission_description">Harmonisk trenger tilgang til mikrofonen for å lytte til instrumentet ditt og gjenkjenne toner.</string>
     <string name="permission_open_settings">Åpne innstillinger</string>
     <string name="permission_grant">Gi tillatelse</string>
 
@@ -39,16 +39,16 @@
     <string name="settings_output_name">Utgang</string>
     <string name="settings_input_name">Inngang</string>
     <string name="settings_delay_value">%1$s-forsinkelse: %2$d ms</string>
-    <string name="settings_delay_help">Det tar et øyeblikk før telefonen gjør en tone om til lyd, så du hører tonen litt etter at appen spilte den. Utgangsforsinkelsen sier hvor langt det øyeblikket er. Øk den hvis lyden når deg for sent, og senk den hvis lyden når deg for tidlig.\n\nDet tar også et øyeblikk å lytte til en tone og finne tonehøyden, så appen registrerer tonen litt etter at du spilte den. Inngangsforsinkelsen sier hvor langt det øyeblikket er. Øk den hvis tonene dine blir vurdert for sent, og senk den hvis de blir vurdert for tidlig.</string>
+    <string name="settings_delay_help">Det tar litt tid for telefonen å spille av en lyd, så du hører tonen litt etter at appen spilte den. Utgangsforsinkelsen er for å veie opp for dette. Øk forsinkelsen hvis du hører lyden for sent, og reduser den hvis du hører lyden for tidlig.\n\nDet tar også litt tid for telefonen å oppdage at en tone blir spilt, så appen registrerer tonen litt etter at du spilte den. Inngangsforsinkelsen er for å veie opp for dette. Øk forsinkelsen hvis appen ikke oppdager tonen så fort du spiller den, og reduser den inntil det ikke er et problem.</string>
     <string name="settings_devices">%1$s / %2$s</string>
     <string name="settings_auto_calibrate">Auto</string>
     <string name="settings_calibrating_stop">Stopp</string>
-    <string name="settings_no_detection">Mikrofonen kan ikke oppdage noen toner</string>
+    <string name="settings_no_detection">Mikrofonen hører ingen toner</string>
     <string name="settings_calibrating">Kalibrerer … %1$d/5 toner oppdaget</string>
     <string name="settings_input_delay_min">0</string>
     <string name="settings_input_delay_max">500</string>
     <string name="settings_reset_dialog_title">Tilbakestille til standardinnstillingene?</string>
-    <string name="settings_reset_dialog_body">Alle innstillinger blir tilbakestilt til standardverdiene, inkludert:\n\n\u2022 Stillhetsterskel\n\u2022 Hastighet, tempo, taktart og notefesting i Fritt spill\n\u2022 Tempo, slag per takt og aksent i Metronom</string>
+    <string name="settings_reset_dialog_body">Alle innstillinger blir tilbakestilt til standardverdiene, inkludert:\n\n\u2022 Mikrofonfølsomhet\n\u2022 Hastighet, tempo, taktart og notefesting i Fritt spill\n\u2022 Tempo, slag per takt og betoning i Metronom</string>
     <string name="settings_reset">Tilbakestill</string>
     <string name="settings_reset_to_defaults">Tilbakestill til standardinnstillingene</string>
     <string name="settings_language">Språk</string>
@@ -98,14 +98,14 @@
     <string name="freeplay_loop">Løkke</string>
     <string name="freeplay_voice">Stemme %1$d</string>
     <string name="freeplay_add_voice">+ Legg til stemme</string>
-    <string name="freeplay_split_note">Del noten</string>
+    <string name="freeplay_split_note">Del opp noten</string>
     <string name="freeplay_delete_note">Slett noten</string>
     <string name="freeplay_play">Spill</string>
     <string name="freeplay_record">Spill inn</string>
-    <string name="freeplay_piano_both">Øvre og nedre klaviatur</string>
-    <string name="freeplay_piano_upper">Bare øvre klaviatur</string>
-    <string name="freeplay_piano_lower">Bare nedre klaviatur</string>
-    <string name="freeplay_piano_none">Ingen klaviatur</string>
+    <string name="freeplay_piano_both">Vis piano oppe og nede</string>
+    <string name="freeplay_piano_upper">Vis piano kun oppe</string>
+    <string name="freeplay_piano_lower">Vis piano kun nede</string>
+    <string name="freeplay_piano_none">Ikke vis piano</string>
     <string name="freeplay_end_bar_mismatch">Sluttakten må være en annen enn startakten</string>
     <string name="freeplay_start_bar_exceeds_end">Startakten må komme før sluttakten</string>
 
@@ -118,7 +118,7 @@
     <string name="metronome_sound_on">Lyd på</string>
     <string name="metronome_sound_off">Lyd av</string>
     <string name="metronome_beats_per_bar">Slag per takt</string>
-    <string name="metronome_accent_hint">Trykk på et slag for å gi det aksent</string>
+    <string name="metronome_accent_hint">Velg hvilket slag som skal betones</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Stem instrumentet</string>
@@ -185,7 +185,7 @@
     <string name="score_level">Nivå %1$d</string>
     <string name="retry">Prøv igjen</string>
     <string name="next_level">Nivå %d</string>
-    <string name="level_2_change">På nivå 2 teller treffsikkerheten på tonehøyde med i poengsummen</string>
+    <string name="level_2_change">På nivå 2 teller treffsikkerheten på tonen med i poengsummen</string>
     <string name="level_3_change">På nivå 3 gir feil noter trekk i poengsummen</string>
     <string name="level_4_change">På nivå 4 venter ikke spillet på at du spiller noten</string>
     <string name="level_5_change">På nivå 5 vises ikke notestolpene</string>
@@ -202,6 +202,6 @@
     <string name="note_quarter">\u2669 Fjerdedel</string>
     <string name="note_eighth">\u266A Åttendedel</string>
     <string name="note_sixteenth">\u266C Sekstendedel</string>
-    <string name="note_thirty_second">Trettitoendel</string>
+    <string name="note_thirty_second">Trettitoendedel</string>
 
 </resources>
