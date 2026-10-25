@@ -214,9 +214,5 @@ class ViolinAlgorithm {
          */
         fun fingerOffsetDeviation(midi: Int, string: ViolinString, finger: Int): Int? =
             defaultFingerOffset(finger)?.let { semitoneOffset(midi, string) - it }
-
-        /** The nearest string for a note that has no valid first-position fingering. */
-        fun nearestString(midi: Int): ViolinString =
-            ViolinString.entries.minByOrNull { abs(midi - OPEN_MIDI.getValue(it)) } ?: ViolinString.G
     }
 }
