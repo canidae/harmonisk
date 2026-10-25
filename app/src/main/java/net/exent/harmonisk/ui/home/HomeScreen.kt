@@ -32,6 +32,7 @@ private const val DEV_MODE_HOLD_MS = 7_000L
 fun HomeScreen(
     onNavigateToFreePlay: () -> Unit,
     onNavigateToMelody: () -> Unit,
+    onNavigateToMetronome: () -> Unit,
     onNavigateToTuner: () -> Unit,
     onNavigateToSettings: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
@@ -61,6 +62,7 @@ fun HomeScreen(
                     .padding(horizontal = 24.dp, vertical = 12.dp),
                 onNavigateToFreePlay = onNavigateToFreePlay,
                 onNavigateToMelody = onNavigateToMelody,
+                onNavigateToMetronome = onNavigateToMetronome,
                 onNavigateToTuner = onNavigateToTuner
             )
         } else {
@@ -71,6 +73,7 @@ fun HomeScreen(
                     .padding(24.dp),
                 onNavigateToFreePlay = onNavigateToFreePlay,
                 onNavigateToMelody = onNavigateToMelody,
+                onNavigateToMetronome = onNavigateToMetronome,
                 onNavigateToTuner = onNavigateToTuner,
                 onToggleDevMode = {
                     val enabled = viewModel.toggleDevMode()
@@ -90,6 +93,7 @@ private fun PortraitContent(
     modifier: Modifier,
     onNavigateToFreePlay: () -> Unit,
     onNavigateToMelody: () -> Unit,
+    onNavigateToMetronome: () -> Unit,
     onNavigateToTuner: () -> Unit,
     onToggleDevMode: () -> Unit
 ) {
@@ -133,6 +137,14 @@ private fun PortraitContent(
         Spacer(modifier = Modifier.height(12.dp))
 
         ModeCard(
+            emoji = "⏱️",
+            title = stringResource(R.string.home_metronome_title),
+            onClick = onNavigateToMetronome
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        ModeCard(
             emoji = "🎸",
             title = stringResource(R.string.home_tuner_title),
             onClick = onNavigateToTuner
@@ -145,6 +157,7 @@ private fun LandscapeContent(
     modifier: Modifier,
     onNavigateToFreePlay: () -> Unit,
     onNavigateToMelody: () -> Unit,
+    onNavigateToMetronome: () -> Unit,
     onNavigateToTuner: () -> Unit
 ) {
     Row(
@@ -165,6 +178,13 @@ private fun LandscapeContent(
             emoji = "🎼",
             title = stringResource(R.string.home_melody_title),
             onClick = onNavigateToMelody
+        )
+        ModeCard(
+            modifier = Modifier.weight(1f),
+            isLandscape = true,
+            emoji = "⏱️",
+            title = stringResource(R.string.home_metronome_title),
+            onClick = onNavigateToMetronome
         )
         ModeCard(
             modifier = Modifier.weight(1f),

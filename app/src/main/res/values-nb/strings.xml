@@ -16,6 +16,7 @@
     <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">Fritt spill</string>
     <string name="home_melody_title">Lær en melodi</string>
+    <string name="home_metronome_title">Metronom</string>
     <string name="home_tuner_title">Stem instrumentet</string>
     <string name="dev_mode_enabled">Utviklermodus slått på</string>
     <string name="dev_mode_disabled">Utviklermodus slått av</string>
@@ -47,7 +48,7 @@
     <string name="settings_input_delay_min">0</string>
     <string name="settings_input_delay_max">500</string>
     <string name="settings_reset_dialog_title">Tilbakestille til standardinnstillingene?</string>
-    <string name="settings_reset_dialog_body">Alle innstillinger blir tilbakestilt til standardverdiene, inkludert:\n\n\u2022 Stillhetsterskel\n\u2022 Hastighet, tempo, taktart og notefesting i Fritt spill</string>
+    <string name="settings_reset_dialog_body">Alle innstillinger blir tilbakestilt til standardverdiene, inkludert:\n\n\u2022 Stillhetsterskel\n\u2022 Hastighet, tempo, taktart og notefesting i Fritt spill\n\u2022 Tempo, slag per takt og aksent i Metronom</string>
     <string name="settings_reset">Tilbakestill</string>
     <string name="settings_reset_to_defaults">Tilbakestill til standardinnstillingene</string>
     <string name="settings_language">Språk</string>
@@ -107,6 +108,17 @@
     <string name="freeplay_piano_none">Ingen klaviatur</string>
     <string name="freeplay_end_bar_mismatch">Sluttakten må være en annen enn startakten</string>
     <string name="freeplay_start_bar_exceeds_end">Startakten må komme før sluttakten</string>
+
+    <!-- Metronome -->
+    <string name="metronome_title">Metronom</string>
+    <string name="metronome_start">Start</string>
+    <string name="metronome_stop">Stopp</string>
+    <string name="metronome_faster">Raskere</string>
+    <string name="metronome_slower">Saktere</string>
+    <string name="metronome_sound_on">Lyd på</string>
+    <string name="metronome_sound_off">Lyd av</string>
+    <string name="metronome_beats_per_bar">Slag per takt</string>
+    <string name="metronome_accent_hint">Trykk på et slag for å gi det aksent</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Stem instrumentet</string>

@@ -12,6 +12,7 @@ import net.exent.harmonisk.ui.home.HomeScreen
 import net.exent.harmonisk.ui.melody.MelodyPlayScreen
 import net.exent.harmonisk.ui.melody.MelodyScreen
 import net.exent.harmonisk.ui.melody.MelodyViewModel
+import net.exent.harmonisk.ui.metronome.MetronomeScreen
 import net.exent.harmonisk.ui.settings.SettingsScreen
 import net.exent.harmonisk.ui.tuner.TunerScreen
 
@@ -27,6 +28,7 @@ fun NavGraph() {
             HomeScreen(
                 onNavigateToFreePlay = { navController.navigate(NavRoutes.FREEPLAY) },
                 onNavigateToMelody = { navController.navigate(NavRoutes.MELODY_GRAPH) },
+                onNavigateToMetronome = { navController.navigate(NavRoutes.METRONOME) },
                 onNavigateToTuner = { navController.navigate(NavRoutes.TUNER) },
                 onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS) }
             )
@@ -57,6 +59,9 @@ fun NavGraph() {
                     viewModel = viewModel
                 )
             }
+        }
+        composable(NavRoutes.METRONOME) {
+            MetronomeScreen(onBack = { navController.popBackStack() })
         }
         composable(NavRoutes.TUNER) {
             TunerScreen(onBack = { navController.popBackStack() })

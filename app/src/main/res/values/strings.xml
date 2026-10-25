@@ -16,6 +16,7 @@
     <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">Free play</string>
     <string name="home_melody_title">Learn a melody</string>
+    <string name="home_metronome_title">Metronome</string>
     <string name="home_tuner_title">Tune instrument</string>
     <string name="dev_mode_enabled">Developer mode enabled</string>
     <string name="dev_mode_disabled">Developer mode disabled</string>
@@ -47,7 +48,7 @@
     <string name="settings_input_delay_min">0</string>
     <string name="settings_input_delay_max">500</string>
     <string name="settings_reset_dialog_title">Reset to defaults?</string>
-    <string name="settings_reset_dialog_body">All settings will be returned to their default values, including:\n\n\u2022 Silence threshold\n\u2022 Free play speed, tempo, time signature, note snapping</string>
+    <string name="settings_reset_dialog_body">All settings will be returned to their default values, including:\n\n\u2022 Silence threshold\n\u2022 Free play speed, tempo, time signature, note snapping\n\u2022 Metronome tempo, beats per bar and accent</string>
     <string name="settings_reset">Reset</string>
     <string name="settings_reset_to_defaults">Reset to defaults</string>
     <string name="settings_language">Language</string>
@@ -107,6 +108,17 @@
     <string name="freeplay_piano_none">No piano keyboards</string>
     <string name="freeplay_end_bar_mismatch">End bar must differ from start bar</string>
     <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+
+    <!-- Metronome -->
+    <string name="metronome_title">Metronome</string>
+    <string name="metronome_start">Start</string>
+    <string name="metronome_stop">Stop</string>
+    <string name="metronome_faster">Faster</string>
+    <string name="metronome_slower">Slower</string>
+    <string name="metronome_sound_on">Sound on</string>
+    <string name="metronome_sound_off">Sound off</string>
+    <string name="metronome_beats_per_bar">Beats per bar</string>
+    <string name="metronome_accent_hint">Tap a beat to accent it</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Tune instrument</string>

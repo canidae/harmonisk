@@ -24,6 +24,10 @@ class SettingsRepository(
         private val FREEPLAY_SNAP_ENABLED = booleanPreferencesKey("freeplay_snap_enabled")
         private val FREEPLAY_METRONOME_ENABLED = booleanPreferencesKey("freeplay_metronome_enabled")
         private val MELODY_METRONOME_ENABLED = booleanPreferencesKey("melody_metronome_enabled")
+        private val METRONOME_BPM = intPreferencesKey("metronome_bpm")
+        private val METRONOME_BEATS_PER_BAR = intPreferencesKey("metronome_beats_per_bar")
+        private val METRONOME_ACCENT_BEAT = intPreferencesKey("metronome_accent_beat")
+        private val METRONOME_SOUND_ENABLED = booleanPreferencesKey("metronome_sound_enabled")
         private val LANGUAGE_CODE = stringPreferencesKey("language_code")
         private val INSTRUMENT_NAME = stringPreferencesKey("instrument_name")
         private val CONCERT_PITCH = floatPreferencesKey("concert_pitch_a4")
@@ -48,6 +52,10 @@ class SettingsRepository(
             freeplaySnapEnabled = prefs[FREEPLAY_SNAP_ENABLED] ?: true,
             freeplayMetronomeEnabled = prefs[FREEPLAY_METRONOME_ENABLED] ?: true,
             melodyMetronomeEnabled = prefs[MELODY_METRONOME_ENABLED] ?: true,
+            metronomeBpm = prefs[METRONOME_BPM] ?: 100,
+            metronomeBeatsPerBar = prefs[METRONOME_BEATS_PER_BAR] ?: 4,
+            metronomeAccentBeat = prefs[METRONOME_ACCENT_BEAT] ?: 0,
+            metronomeSoundEnabled = prefs[METRONOME_SOUND_ENABLED] ?: true,
             languageCode = prefs[LANGUAGE_CODE] ?: "system",
             instrumentName = prefs[INSTRUMENT_NAME] ?: Instrument.VIOLIN.name,
             concertPitchA4 = prefs[CONCERT_PITCH] ?: NoteUtils.DEFAULT_CONCERT_PITCH
@@ -86,6 +94,22 @@ class SettingsRepository(
         context.dataStore.edit { it[MELODY_METRONOME_ENABLED] = enabled }
     }
 
+    suspend fun updateMetronomeBpm(bpm: Int) {
+        context.dataStore.edit { it[METRONOME_BPM] = bpm }
+    }
+
+    suspend fun updateMetronomeBeatsPerBar(beats: Int) {
+        context.dataStore.edit { it[METRONOME_BEATS_PER_BAR] = beats }
+    }
+
+    suspend fun updateMetronomeAccentBeat(beat: Int) {
+        context.dataStore.edit { it[METRONOME_ACCENT_BEAT] = beat }
+    }
+
+    suspend fun updateMetronomeSoundEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[METRONOME_SOUND_ENABLED] = enabled }
+    }
+
     suspend fun updateInstrument(name: String) {
         context.dataStore.edit { it[INSTRUMENT_NAME] = name }
     }
@@ -114,6 +138,10 @@ data class AppSettings(
     val freeplaySnapEnabled: Boolean = true,
     val freeplayMetronomeEnabled: Boolean = true,
     val melodyMetronomeEnabled: Boolean = true,
+    val metronomeBpm: Int = 100,
+    val metronomeBeatsPerBar: Int = 4,
+    val metronomeAccentBeat: Int = 0,
+    val metronomeSoundEnabled: Boolean = true,
     val languageCode: String = "system",
     val instrumentName: String = Instrument.VIOLIN.name,
     val concertPitchA4: Float = NoteUtils.DEFAULT_CONCERT_PITCH
