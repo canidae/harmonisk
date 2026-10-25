@@ -1,5 +1,6 @@
 package net.exent.harmonisk.music
 
+import net.exent.harmonisk.midi.KeySignature
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -49,12 +50,36 @@ class ViolinAlgorithmTest {
 
     @Test
     fun `chromatic notes map to low and high finger variants`() {
-        // C4 = 3rd finger on G, C#4 = high 3rd finger on G
+        // C4 = 3rd finger on G, C#4 = high 3rd finger on G in a sharp key
         assertEquals(ViolinPosition(ViolinString.G, 3), algorithm.findRecommendedPosition(60, null))
-        assertEquals(ViolinPosition(ViolinString.G, 3), algorithm.findRecommendedPosition(61, null))
+        assertEquals(ViolinPosition(ViolinString.G, 3), algorithm.findRecommendedPosition(61, null, KeySignature(2, false)))
         // F natural = low 2nd on D, F# = normal 2nd on D
         assertEquals(ViolinPosition(ViolinString.D, 2), algorithm.findRecommendedPosition(65, null))
         assertEquals(ViolinPosition(ViolinString.D, 2), algorithm.findRecommendedPosition(66, null))
+    }
+
+    @Test
+    fun `flat spellings below the next open string use the low fourth finger`() {
+        val ebMajor = KeySignature(-3, false)
+        assertEquals(ViolinPosition(ViolinString.G, 4), algorithm.findRecommendedPosition(61, null, ebMajor)) // Db
+        assertEquals(ViolinPosition(ViolinString.D, 4), algorithm.findRecommendedPosition(68, null, ebMajor)) // Ab
+        assertEquals(ViolinPosition(ViolinString.A, 4), algorithm.findRecommendedPosition(75, null, ebMajor)) // Eb
+        assertEquals(ViolinPosition(ViolinString.E, 4), algorithm.findRecommendedPosition(82, null, ebMajor)) // Bb
+        assertEquals(-1, ViolinAlgorithm.fingerOffsetDeviation(68, ViolinString.D, 4)) // low placement
+    }
+
+    @Test
+    fun `sharp spellings below the next open string keep the high third finger`() {
+        assertEquals(ViolinPosition(ViolinString.G, 3), algorithm.findRecommendedPosition(61, null, KeySignature(2, false))) // C# in D major
+        assertEquals(ViolinPosition(ViolinString.D, 3), algorithm.findRecommendedPosition(68, null, KeySignature(2, false))) // G# in D major
+        assertEquals(ViolinPosition(ViolinString.A, 3), algorithm.findRecommendedPosition(75, null, KeySignature(4, false))) // D# in E major
+        assertEquals(ViolinPosition(ViolinString.E, 3), algorithm.findRecommendedPosition(82, null, KeySignature(5, false))) // A# in B major
+    }
+
+    @Test
+    fun `without a key signature the low fourth finger is preferred`() {
+        assertEquals(ViolinPosition(ViolinString.A, 4), algorithm.findRecommendedPosition(75, null))
+        assertEquals(ViolinPosition(ViolinString.D, 4), algorithm.findRecommendedPosition(68, null))
     }
 
     @Test

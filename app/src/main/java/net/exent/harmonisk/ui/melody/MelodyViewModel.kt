@@ -537,7 +537,10 @@ class MelodyViewModel @Inject constructor(
         val track = _gameState.value.melodyTrack
         val isViolin = Instrument.fromName(_currentInstrument.value) == Instrument.VIOLIN
         val positions = if (isViolin && track != null) {
-            violinAlgorithm.recommendPositions(track.notes.map { it.noteNumber })
+            violinAlgorithm.recommendPositions(
+                track.notes.map { it.noteNumber },
+                track.keySignature
+            )
         } else {
             emptyList()
         }
