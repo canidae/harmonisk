@@ -111,7 +111,11 @@
     <!-- Tuner -->
     <string name="tuner_title">Tune instrument</string>
     <string name="tuner_frequency">%1$.1f Hz</string>
-    <string name="tuner_reference">Reference: %1$.0f Hz</string>
+    <string name="tuner_in_tune">In tune</string>
+    <string name="tuner_reference_pitch">Reference pitch</string>
+    <string name="tuner_reference_pitch_value">%1$d Hz</string>
+    <string name="tuner_preset_baroque">Baroque</string>
+    <string name="tuner_preset_default">Default</string>
 
     <!-- Melody screen -->
     <string name="melody_title">Learn a melody</string>

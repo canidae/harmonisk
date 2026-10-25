@@ -160,6 +160,26 @@ class PitchStabilizerTest {
     }
 
     @Test
+    fun `sub deadband changes do not move the needle`() {
+        val stabilizer = PitchStabilizer()
+        feed(stabilizer, 100) { 0.0 to 0.95f }
+
+        val out = feed(stabilizer, 50) {
+            PitchStabilizer.OUTPUT_DEADBAND_SEMITONES * CENTS_PER_SEMITONE * 0.8 to 0.95f
+        }
+
+        assertEquals("micro-jitter must be suppressed", 0.0, out.last(), 0.001)
+    }
+
+    @Test
+    fun `slow drift is still followed`() {
+        val stabilizer = PitchStabilizer()
+        val out = feed(stabilizer, 500) { i -> i * 0.01 to 0.95f }
+
+        assertTrue("slow drift stuck at ${"%.2f".format(out.last())}ct", out.last() > 4.0)
+    }
+
+    @Test
     fun `reset returns the filter to a clean state`() {
         val stabilizer = PitchStabilizer()
         feed(stabilizer, 100) { 500.0 to 0.95f }

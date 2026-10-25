@@ -18,6 +18,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import net.exent.harmonisk.music.NoteUtils
+import net.exent.harmonisk.ui.theme.Green80
+import net.exent.harmonisk.ui.theme.Orange80
 import net.exent.harmonisk.ui.utils.centsColor
 import kotlin.math.min
 
@@ -29,7 +32,8 @@ fun PitchGauge(
     octave: Int,
     isSilent: Boolean,
     modifier: Modifier = Modifier,
-    maxCents: Float = 50f
+    maxCents: Float = 50f,
+    inTuneCents: Float = NoteUtils.IN_TUNE_CENTS
 ) {
     val clampedCents = centsOff.coerceIn(-maxCents, maxCents)
     // Fine smoothing lives in PitchStabilizer; this tween only interpolates between frames, so
@@ -66,12 +70,23 @@ fun PitchGauge(
 
             val indicatorSweep = 60f
             drawArc(
-                color = gaugeColor.copy(alpha = 0.4f),
+                color = Orange80.copy(alpha = 0.45f),
                 startAngle = 180f + 90f - indicatorSweep / 2,
                 sweepAngle = indicatorSweep, useCenter = false,
                 topLeft = Offset(arcLeft, arcTop),
                 size = Size(arcWidth, arcHeight),
                 style = Stroke(width = 12f, cap = StrokeCap.Round)
+            )
+
+            // The in-tune window: marking it on the arc shows how close the needle must be.
+            val inTuneSweep = (inTuneCents / maxCents) * 90f
+            drawArc(
+                color = Green80,
+                startAngle = 180f + 90f - inTuneSweep,
+                sweepAngle = inTuneSweep * 2f, useCenter = false,
+                topLeft = Offset(arcLeft, arcTop),
+                size = Size(arcWidth, arcHeight),
+                style = Stroke(width = 16f, cap = StrokeCap.Round)
             )
 
             val needleAngle = 180f + normalizedPosition * 180f

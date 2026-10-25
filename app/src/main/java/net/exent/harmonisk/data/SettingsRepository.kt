@@ -8,6 +8,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import net.exent.harmonisk.music.Instrument
+import net.exent.harmonisk.music.NoteUtils
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -25,6 +26,7 @@ class SettingsRepository(
         private val MELODY_METRONOME_ENABLED = booleanPreferencesKey("melody_metronome_enabled")
         private val LANGUAGE_CODE = stringPreferencesKey("language_code")
         private val INSTRUMENT_NAME = stringPreferencesKey("instrument_name")
+        private val CONCERT_PITCH = floatPreferencesKey("concert_pitch_a4")
 
         private const val PREFS_NAME = "locale_prefs"
         private const val KEY_LANGUAGE = "language_code"
@@ -47,7 +49,8 @@ class SettingsRepository(
             freeplayMetronomeEnabled = prefs[FREEPLAY_METRONOME_ENABLED] ?: true,
             melodyMetronomeEnabled = prefs[MELODY_METRONOME_ENABLED] ?: true,
             languageCode = prefs[LANGUAGE_CODE] ?: "system",
-            instrumentName = prefs[INSTRUMENT_NAME] ?: Instrument.VIOLIN.name
+            instrumentName = prefs[INSTRUMENT_NAME] ?: Instrument.VIOLIN.name,
+            concertPitchA4 = prefs[CONCERT_PITCH] ?: NoteUtils.DEFAULT_CONCERT_PITCH
         )
     }
 
@@ -87,6 +90,10 @@ class SettingsRepository(
         context.dataStore.edit { it[INSTRUMENT_NAME] = name }
     }
 
+    suspend fun updateConcertPitch(frequency: Float) {
+        context.dataStore.edit { it[CONCERT_PITCH] = frequency }
+    }
+
     suspend fun updateLanguageCode(code: String) {
         context.dataStore.edit { it[LANGUAGE_CODE] = code }
         sharedPrefs.edit().putString(KEY_LANGUAGE, code).apply()
@@ -108,5 +115,6 @@ data class AppSettings(
     val freeplayMetronomeEnabled: Boolean = true,
     val melodyMetronomeEnabled: Boolean = true,
     val languageCode: String = "system",
-    val instrumentName: String = Instrument.VIOLIN.name
+    val instrumentName: String = Instrument.VIOLIN.name,
+    val concertPitchA4: Float = NoteUtils.DEFAULT_CONCERT_PITCH
 )

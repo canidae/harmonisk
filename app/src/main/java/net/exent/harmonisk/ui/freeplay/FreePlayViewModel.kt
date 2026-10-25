@@ -105,11 +105,14 @@ class FreePlayViewModel @Inject constructor(
     private var outputDelayMs: Int = 0
     private var replayGeneration = 0
     private var isPausedByGesture = false
+    private var referenceA4: Float = NoteUtils.DEFAULT_CONCERT_PITCH
 
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
+                referenceA4 = settings.concertPitchA4
+                pitchProcessor.setReferenceA4(settings.concertPitchA4)
             }
         }
         viewModelScope.launch {
@@ -823,7 +826,7 @@ class FreePlayViewModel @Inject constructor(
         honingActive = false
         if (honingFreqs.isEmpty()) return
         val avgFreq = honingFreqs.average().toFloat()
-        val noteInfo = noteUtils.frequencyToNote(avgFreq)
+        val noteInfo = noteUtils.frequencyToNote(avgFreq, referenceA4)
         val confirmedMidi = noteInfo.midiNumber
         currentNoteMidi = confirmedMidi
         currentNoteStartMs = snapToGrid(honingStartSongMs)
