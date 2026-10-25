@@ -346,9 +346,8 @@ class MelodyViewModel @Inject constructor(
 
     fun loadMelody(info: MelodyRepository.MelodyInfo): Boolean {
         stopPreview()
-        val tracks = melodyRepository.loadMultiTrack(info)
-        if (tracks.isNotEmpty()) {
-            val melodyTracks = assignChannels(tracks.filter { it.notes.isNotEmpty() })
+        val melodyTracks = assignChannels(melodyRepository.loadMultiTrack(info).filter { it.notes.isNotEmpty() })
+        if (melodyTracks.isNotEmpty()) {
             originalMelodyTracks = melodyTracks
             currentMelodyId = info.id
             val melodyName = info.name
@@ -378,9 +377,10 @@ class MelodyViewModel @Inject constructor(
 
     fun loadMelodyFromUri(uri: android.net.Uri): Boolean {
         val name = melodyRepository.resolveDisplayName(uri)
-        val tracks = melodyRepository.loadMultiTrackFromUri(uri, name)
-        if (tracks.isNotEmpty()) {
-            val melodyTracks = assignChannels(tracks.filter { it.notes.isNotEmpty() })
+        val melodyTracks = assignChannels(
+            melodyRepository.loadMultiTrackFromUri(uri, name).filter { it.notes.isNotEmpty() }
+        )
+        if (melodyTracks.isNotEmpty()) {
             originalMelodyTracks = melodyTracks
             currentMelodyId = melodyRepository.uriMelodyId(uri)
             val melodyName = name
