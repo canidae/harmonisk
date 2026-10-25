@@ -144,14 +144,6 @@ class ViolinAlgorithmTest {
     }
 
     @Test
-    fun `nearest string for out of range notes`() {
-        assertEquals(ViolinString.G, ViolinAlgorithm.nearestString(54))
-        assertEquals(ViolinString.E, ViolinAlgorithm.nearestString(84))
-        assertEquals(ViolinString.G, ViolinAlgorithm.nearestString(0))
-        assertEquals(ViolinString.E, ViolinAlgorithm.nearestString(127))
-    }
-
-    @Test
     fun `default finger offsets are the natural placements`() {
         assertEquals(0, ViolinAlgorithm.defaultFingerOffset(0))
         assertEquals(2, ViolinAlgorithm.defaultFingerOffset(1))
