@@ -150,11 +150,15 @@ class MelodyViewModel @Inject constructor(
     private var inputDelayMs: Int = 0
     // Audio output delay, playback is scheduled this much early so it is heard on the beat
     private var outputDelayMs: Int = 0
+    // Concert pitch the player is tuned to, used as the reference for every expected note
+    private var referenceA4: Float = NoteUtils.DEFAULT_CONCERT_PITCH
 
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
+                referenceA4 = settings.concertPitchA4
+                pitchProcessor.setReferenceA4(settings.concertPitchA4)
             }
         }
         viewModelScope.launch {
@@ -1092,7 +1096,7 @@ class MelodyViewModel @Inject constructor(
     private fun pitchResultFromMidi(midiNote: Int): PitchResult {
         val resolution = noteUtils.resolveMidiNote(midiNote)
         return PitchResult(
-            frequency = NoteUtils.midiToFrequency(midiNote),
+            frequency = NoteUtils.midiToFrequency(midiNote, referenceA4),
             noteName = resolution.noteName,
             octave = resolution.octave,
             centsOff = 0f,
@@ -1199,7 +1203,7 @@ class MelodyViewModel @Inject constructor(
         val primaryIdx = currentChordIndices.first()
         val expectedNote = track.notes[primaryIdx]
         val centsOff = expectedNotes.minOf { note ->
-            abs(noteUtils.frequencyToCents(result.frequency, NoteUtils.midiToFrequency(note.noteNumber)))
+            abs(noteUtils.frequencyToCents(result.frequency, NoteUtils.midiToFrequency(note.noteNumber, referenceA4)))
         }
 
         if (result.isValid) {
@@ -1273,7 +1277,7 @@ class MelodyViewModel @Inject constructor(
             val noteDurationSeconds = track.noteDurationSeconds(note)
             if (noteDurationSeconds <= 0.0) return@update current
             val noteStartSeconds = track.noteStartSeconds(note)
-            val expectedFreq = NoteUtils.midiToFrequency(note.noteNumber)
+            val expectedFreq = NoteUtils.midiToFrequency(note.noteNumber, referenceA4)
             if (abs(noteUtils.frequencyToCents(current.pitchResult.frequency, expectedFreq)) > 50f) {
                 return@update current
             }

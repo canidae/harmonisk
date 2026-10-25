@@ -38,6 +38,9 @@ class TunerViewModel @Inject constructor(
          */
         const val HYSTERESIS_CENTS = 15f
 
+        /** Extra leeway before the in-tune indicator turns off again, in cents. */
+        private const val IN_TUNE_HYSTERESIS_CENTS = 1f
+
         /**
          * Fallback frame interval used for the very first frame, before a real interval has
          * been measured. Matches the 512-sample capture hop at 44100 Hz.
@@ -60,12 +63,34 @@ class TunerViewModel @Inject constructor(
     // Hysteresis: the MIDI note number currently committed to for display (-1 = none)
     private var displayedMidi: Int = -1
 
+    private var referenceA4 = NoteUtils.DEFAULT_CONCERT_PITCH
+
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
+                applyConcertPitch(settings.concertPitchA4)
             }
         }
+    }
+
+    fun setConcertPitch(frequency: Float) {
+        applyConcertPitch(frequency.coerceIn(NoteUtils.MIN_CONCERT_PITCH, NoteUtils.MAX_CONCERT_PITCH))
+    }
+
+    fun commitConcertPitch() {
+        viewModelScope.launch { settingsRepository.updateConcertPitch(referenceA4) }
+    }
+
+    private fun applyConcertPitch(frequency: Float) {
+        val changed = frequency != referenceA4
+        referenceA4 = frequency
+        pitchProcessor.setReferenceA4(frequency)
+        if (!changed) return
+        stabilizer.reset()
+        lastFrameNanos = 0L
+        displayedMidi = -1
+        _state.update { it.copy(concertPitchA4 = frequency) }
     }
 
     fun startListening() {
@@ -89,10 +114,10 @@ class TunerViewModel @Inject constructor(
             else ((now - lastFrameNanos) / 1e9).coerceIn(0.0, 0.25)
             lastFrameNanos = now
 
-            val rawSemitones = 12.0 * log2(result.frequency / NoteUtils.DEFAULT_A4_FREQ.toDouble())
+            val rawSemitones = 12.0 * log2(result.frequency / referenceA4.toDouble())
             val smoothedSemitones = stabilizer.accept(rawSemitones, result.confidence, dt)
-            val smoothedFreq = (NoteUtils.DEFAULT_A4_FREQ * 2.0.pow(smoothedSemitones / 12.0)).toFloat()
-            val rawNoteInfo = noteUtils.frequencyToNote(smoothedFreq)
+            val smoothedFreq = (referenceA4 * 2.0.pow(smoothedSemitones / 12.0)).toFloat()
+            val rawNoteInfo = noteUtils.frequencyToNote(smoothedFreq, referenceA4)
 
             // Hysteresis: only switch displayed note name when the smoothed pitch has moved
             // clearly past the semitone boundary (> 50 + HYSTERESIS_CENTS from current centre).
@@ -104,7 +129,7 @@ class TunerViewModel @Inject constructor(
                 }
                 rawNoteInfo.midiNumber == displayedMidi -> rawNoteInfo
                 else -> {
-                    val displayedCenter = NoteUtils.midiToFrequency(displayedMidi)
+                    val displayedCenter = NoteUtils.midiToFrequency(displayedMidi, referenceA4)
                     val centsFromDisplayed = noteUtils.frequencyToCents(smoothedFreq, displayedCenter)
                     if (abs(centsFromDisplayed) > 50f + HYSTERESIS_CENTS) {
                         // Crossed decisively into the adjacent semitone — switch.
@@ -113,7 +138,7 @@ class TunerViewModel @Inject constructor(
                     } else {
                         // Still within the hysteresis band — keep the current note name but
                         // show the actual cents offset relative to the displayed note centre.
-                        noteUtils.frequencyToNote(displayedCenter)
+                        noteUtils.frequencyToNote(displayedCenter, referenceA4)
                             .copy(centsOff = centsFromDisplayed)
                     }
                 }
@@ -128,9 +153,12 @@ class TunerViewModel @Inject constructor(
             )
 
             _state.update {
+                val isInTune = abs(noteInfo.centsOff) <=
+                    NoteUtils.IN_TUNE_CENTS + if (it.isInTune) IN_TUNE_HYSTERESIS_CENTS else 0f
                 it.copy(
                     displayedResult = displayResult,
-                    smoothedCentsOff = noteInfo.centsOff
+                    smoothedCentsOff = noteInfo.centsOff,
+                    isInTune = isInTune
                 )
             }
         } else {
@@ -146,7 +174,8 @@ class TunerViewModel @Inject constructor(
                     _state.update {
                         it.copy(
                             displayedResult = PitchResult.SILENT,
-                            smoothedCentsOff = 0f
+                            smoothedCentsOff = 0f,
+                            isInTune = false
                         )
                     }
                 }

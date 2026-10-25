@@ -32,13 +32,16 @@ class PitchStabilizer {
 
     companion object {
         /** Number of recent estimates the median gate looks at. */
-        const val MEDIAN_WINDOW = 5
+        const val MEDIAN_WINDOW = 7
 
         /**
          * Smoothing time constant in seconds. The needle covers 95% of a step in ~3x this;
-         * 110 ms keeps a held note readable while staying well inside useful tuning latency.
+         * 200 ms keeps a held note readable while staying well inside useful tuning latency.
          */
-        const val TIME_CONSTANT_S = 0.11
+        const val TIME_CONSTANT_S = 0.20
+
+        /** Changes smaller than this are not shown, so a steady note's needle stops jittering. */
+        const val OUTPUT_DEADBAND_SEMITONES = 0.005
 
         /** Confidence at or below which an estimate moves the needle at [MIN_WEIGHT]. */
         private const val CONFIDENCE_FLOOR = 0.55f
@@ -66,6 +69,7 @@ class PitchStabilizer {
     private var windowNext = 0
 
     private var smoothed = 0.0
+    private var shown = 0.0
     private var started = false
 
     private var deviatingFrames = 0
@@ -85,8 +89,9 @@ class PitchStabilizer {
 
         if (!started) {
             smoothed = median
+            shown = median
             started = true
-            return smoothed
+            return shown
         }
 
         val delta = median - smoothed
@@ -101,14 +106,16 @@ class PitchStabilizer {
         if (deviatingFrames >= SNAP_FRAMES) {
             // A new pitch, not noise: follow it immediately.
             smoothed = median
+            shown = median
             deviatingFrames = 0
-            return smoothed
+            return shown
         }
 
         val dt = dtSeconds.coerceIn(MIN_DT_S, MAX_DT_S)
         val alpha = (1.0 - exp(-dt / TIME_CONSTANT_S)) * confidenceWeight(confidence)
         smoothed += alpha * delta
-        return smoothed
+        if (abs(smoothed - shown) >= OUTPUT_DEADBAND_SEMITONES) shown = smoothed
+        return shown
     }
 
     /** Forget all history, so the next estimate is adopted as-is. */
@@ -116,6 +123,7 @@ class PitchStabilizer {
         windowSize = 0
         windowNext = 0
         smoothed = 0.0
+        shown = 0.0
         started = false
         deviatingFrames = 0
         deviationSign = 0

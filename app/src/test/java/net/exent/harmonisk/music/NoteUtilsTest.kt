@@ -108,6 +108,30 @@ class NoteUtilsTest {
     }
 
     @Test
+    fun `default concert pitch is 442 Hz`() {
+        assertEquals(442f, NoteUtils.DEFAULT_CONCERT_PITCH, 0.01f)
+        assertEquals(442f, NoteUtils.midiToFrequency(69, NoteUtils.DEFAULT_CONCERT_PITCH), 0.01f)
+    }
+
+    @Test
+    fun `A4 at 442 Hz under 442 Hz reference is in tune`() {
+        val info = noteUtils.frequencyToNote(442f, refA4 = 442f)
+        assertEquals("A", info.name)
+        assertEquals(4, info.octave)
+        assertEquals(69, info.midiNumber)
+        assertEquals(0f, info.centsOff, 1f)
+    }
+
+    @Test
+    fun `A4 at 440 Hz under 442 Hz reference is flat`() {
+        val info = noteUtils.frequencyToNote(440f, refA4 = 442f)
+        assertEquals("A", info.name)
+        assertEquals(4, info.octave)
+        assertTrue("Expected flat, got ${info.centsOff} cents", info.centsOff < 0f)
+        assertEquals(-7.85f, info.centsOff, 0.5f)
+    }
+
+    @Test
     fun `frequencyToCents calculates correctly`() {
         // One semitone up = 100 cents
         val cents = noteUtils.frequencyToCents(466.16f, 440f) // A#4 vs A4

@@ -111,7 +111,11 @@
     <!-- Tuner -->
     <string name="tuner_title">Stem instrumentet</string>
     <string name="tuner_frequency">%1$.1f Hz</string>
-    <string name="tuner_reference">Referanse: %1$.0f Hz</string>
+    <string name="tuner_in_tune">Rent</string>
+    <string name="tuner_reference_pitch">Referansetone</string>
+    <string name="tuner_reference_pitch_value">%1$d Hz</string>
+    <string name="tuner_preset_baroque">Barokk</string>
+    <string name="tuner_preset_default">Standard</string>
 
     <!-- Melody screen -->
     <string name="melody_title">Lær en melodi</string>
