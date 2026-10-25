@@ -1,5 +1,6 @@
 package net.exent.harmonisk.music
 
+import net.exent.harmonisk.midi.KeySignature
 import kotlin.math.abs
 
 enum class ViolinString {
@@ -16,15 +17,37 @@ data class ViolinPosition(
  *
  * Finger placement (semitone offsets above a string's open pitch) follows the
  * standard first-position spacing, including the low and high variants of each
- * finger: finger 1 = +1/+2, finger 2 = +3/+4, finger 3 = +5/+6, finger 4 = +7.
+ * finger: finger 1 = +1/+2, finger 2 = +3/+4, finger 3 = +5/+6, finger 4 = +6/+7.
  * Every semitone in the first-position range is therefore playable. Notes
  * outside first position (below G3 or above B5) have no valid position and
  * return null.
+ *
+ * The note a semitone below an open string is reachable both with a high third
+ * finger and a low fourth finger. It is fingered high third when the key spells
+ * it as a sharp (C#, G#, D#, A#) and low fourth when it spells it as a flat
+ * (Db, Ab, Eb, Bb), which is the fingering the key signature asks for.
  */
 class ViolinAlgorithm {
 
-    private fun getAllValidPositions(targetMidi: Int): List<ViolinPosition> =
-        POSITION_MAP[targetMidi] ?: emptyList()
+    private fun getAllValidPositions(targetMidi: Int, key: KeySignature?): List<ViolinPosition> {
+        val positions = POSITION_MAP[targetMidi] ?: return emptyList()
+        if (!isFlatSpelled(targetMidi, key)) return positions
+        return positions.map { position ->
+            if (position.finger == 3 && semitoneOffset(targetMidi, position.string) == 6) {
+                ViolinPosition(position.string, 4)
+            } else {
+                position
+            }
+        }
+    }
+
+    /** True when the key spells [midi] as a flat, so the low fourth finger is the natural choice. */
+    private fun isFlatSpelled(midi: Int, key: KeySignature?): Boolean {
+        if (key == null) return true
+        if (KeySignature.keyAlteration(midi - 1, key.fifths) > 0) return false
+        if (KeySignature.keyAlteration(midi + 1, key.fifths) < 0) return true
+        return key.usesFlats
+    }
 
     private fun calculateDistance(posA: ViolinPosition, posB: ViolinPosition?): Int {
         if (posB == null) return 0
@@ -38,9 +61,10 @@ class ViolinAlgorithm {
 
     fun findRecommendedPosition(
         targetMidi: Int,
-        previousPosition: ViolinPosition?
+        previousPosition: ViolinPosition?,
+        key: KeySignature? = null
     ): ViolinPosition? {
-        val candidates = getAllValidPositions(targetMidi)
+        val candidates = getAllValidPositions(targetMidi, key)
 
         if (candidates.isEmpty()) return null // Note cannot be played in first position
 
@@ -80,10 +104,10 @@ class ViolinAlgorithm {
      * total transition cost plus per-note open-string/pinky biases).
      * Out-of-range notes (no valid first-position fingering) map to null.
      */
-    fun recommendPositions(notes: List<Int>): List<ViolinPosition?> {
+    fun recommendPositions(notes: List<Int>, key: KeySignature? = null): List<ViolinPosition?> {
         if (notes.isEmpty()) return emptyList()
 
-        val candidateLists = notes.map { getAllValidPositions(it) }
+        val candidateLists = notes.map { getAllValidPositions(it, key) }
         val result = arrayOfNulls<ViolinPosition>(notes.size)
         val playableIndices = notes.indices.filter { candidateLists[it].isNotEmpty() }
         if (playableIndices.isEmpty()) return result.toList()
