@@ -134,7 +134,7 @@
     <string name="melody_choose">Choose a melody</string>
     <string name="melody_import_file">Import song file</string>
     <string name="melody_import_url">Import from URL</string>
-    <string name="melody_import_url_hint">Paste an https:// link to a song or zip file</string>
+    <string name="melody_import_url_hint">Paste an https:// link to a song or zip file, e.g. a shared Google Drive link</string>
     <string name="melody_import_url_confirm">Import</string>
     <string name="melody_import_qr">Import from QR code</string>
     <string name="melody_import_qr_prompt">Scan a song or zip URL</string>

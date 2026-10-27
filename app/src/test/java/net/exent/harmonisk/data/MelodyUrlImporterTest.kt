@@ -43,6 +43,31 @@ class MelodyUrlImporterTest {
     }
 
     @Test
+    fun `google drive share links become direct downloads`() {
+        val direct = "https://drive.usercontent.google.com/download?id=1KyBNswCV1gYgAvOkz5aP99G7UlU5dBs9&export=download"
+        assertEquals(direct, MelodyUrlImporter.directUrl("https://drive.google.com/file/d/1KyBNswCV1gYgAvOkz5aP99G7UlU5dBs9/view?usp=drive_link"))
+        assertEquals(direct, MelodyUrlImporter.directUrl("  https://drive.google.com/drive/u/0/file/d/1KyBNswCV1gYgAvOkz5aP99G7UlU5dBs9/view  "))
+        assertEquals(direct, MelodyUrlImporter.directUrl("https://drive.google.com/open?id=1KyBNswCV1gYgAvOkz5aP99G7UlU5dBs9"))
+        assertEquals(direct, MelodyUrlImporter.directUrl("https://drive.google.com/uc?export=download&id=1KyBNswCV1gYgAvOkz5aP99G7UlU5dBs9"))
+    }
+
+    @Test
+    fun `other links are left alone`() {
+        assertEquals(
+            "https://example.com/song.mid",
+            MelodyUrlImporter.directUrl("https://example.com/song.mid")
+        )
+        assertEquals(
+            "https://example.com/download?id=1KyBNswCV1gYgAvOkz5aP99G7UlU5dBs9",
+            MelodyUrlImporter.directUrl("https://example.com/download?id=1KyBNswCV1gYgAvOkz5aP99G7UlU5dBs9")
+        )
+        assertEquals(
+            "https://drive.google.com/drive/folders/1KyBNswCV1gYgAvOkz5aP99G7UlU5dBs9",
+            MelodyUrlImporter.directUrl("https://drive.google.com/drive/folders/1KyBNswCV1gYgAvOkz5aP99G7UlU5dBs9")
+        )
+    }
+
+    @Test
     fun `zip archives are recognised by their magic bytes`() {
         assertTrue(MelodyUrlImporter.isZip(byteArrayOf(0x50, 0x4B, 0x03, 0x04, 0, 0)))
         assertTrue(MelodyUrlImporter.isZip(byteArrayOf(0x50, 0x4B, 0x05, 0x06)))

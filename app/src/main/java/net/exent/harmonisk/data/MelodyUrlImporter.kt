@@ -15,9 +15,13 @@ object MelodyUrlImporter {
     private const val CONNECT_TIMEOUT_MS = 15_000
     private const val READ_TIMEOUT_MS = 30_000
     private const val USER_AGENT = "Harmonisk"
+    private const val DRIVE_DOWNLOAD = "https://drive.usercontent.google.com/download?id="
 
     private val MELODY_EXTENSIONS = listOf(".mid", ".midi", ".xml", ".musicxml", ".abc")
     private val HEADER_FILENAME = Regex("""filename\*?=(?:UTF-8'')?"?([^";]+)""", RegexOption.IGNORE_CASE)
+    private val DRIVE_PATH_ID = Regex("""drive\.google\.com/(?:drive/(?:u/\d+/)?)?file/d/([A-Za-z0-9_-]{10,})""")
+    private val DRIVE_QUERY_ID = Regex("""[?&]id=([A-Za-z0-9_-]{10,})""")
+    private val CONFIRM_TOKEN = Regex("""[?&]confirm=([0-9A-Za-z_-]+)""")
 
     data class Download(val name: String, val bytes: ByteArray)
 
@@ -29,23 +33,42 @@ object MelodyUrlImporter {
         bytes.size >= 4 && bytes[0] == 'P'.code.toByte() && bytes[1] == 'K'.code.toByte() &&
             bytes[2].toInt() in intArrayOf(3, 5, 7)
 
+    /** Rewrite a Google Drive share link to its direct download, leaving other links untouched. */
+    fun directUrl(url: String): String {
+        val trimmed = url.trim()
+        if (!trimmed.contains("drive.google.com/")) return trimmed
+        val id = DRIVE_PATH_ID.find(trimmed)?.groupValues?.get(1)
+            ?: DRIVE_QUERY_ID.find(trimmed)?.groupValues?.get(1)
+            ?: return trimmed
+        return "$DRIVE_DOWNLOAD$id&export=download"
+    }
+
     /** Fetch [url], following redirects, and name the result after its header hint or the URL path. */
     fun download(url: String): Download {
         require(isSupported(url)) { "Only https:// URLs are supported" }
-        val connection = URL(url.trim()).openConnection() as HttpURLConnection
-        return try {
-            connection.instanceFollowRedirects = true
-            connection.connectTimeout = CONNECT_TIMEOUT_MS
-            connection.readTimeout = READ_TIMEOUT_MS
-            connection.setRequestProperty("User-Agent", USER_AGENT)
-            if (connection.responseCode !in 200..299) throw IOException("HTTP ${connection.responseCode}")
-            Download(
-                displayName(url, connection.getHeaderField("Content-Disposition")),
-                connection.inputStream.use { readCapped(it) }
-            )
-        } finally {
-            connection.disconnect()
+        var target = directUrl(url)
+        repeat(2) {
+            val connection = URL(target).openConnection() as HttpURLConnection
+            val finalUrl: String
+            try {
+                connection.instanceFollowRedirects = true
+                connection.connectTimeout = CONNECT_TIMEOUT_MS
+                connection.readTimeout = READ_TIMEOUT_MS
+                connection.setRequestProperty("User-Agent", USER_AGENT)
+                if (connection.responseCode !in 200..299) throw IOException("HTTP ${connection.responseCode}")
+                finalUrl = connection.url.toString()
+                val body = connection.inputStream.use { readCapped(it) }
+                if (connection.contentType?.startsWith("text/html", true) != true) {
+                    return Download(displayName(finalUrl, connection.getHeaderField("Content-Disposition")), body)
+                }
+                val confirm = CONFIRM_TOKEN.find(String(body, Charsets.UTF_8))?.groupValues?.get(1)
+                    ?: throw IOException("Server returned a web page instead of a file")
+                target = "$finalUrl&confirm=$confirm"
+            } finally {
+                connection.disconnect()
+            }
         }
+        throw IOException("Server returned a web page instead of a file")
     }
 
     /** Derive the display name from the Content-Disposition header, falling back to the URL path. */
