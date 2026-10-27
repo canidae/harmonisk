@@ -20,6 +20,7 @@ class MelodySettingsRepository(
         val waitMode: Boolean = true,
         val autoTranspose: Boolean = true,
         val transposeSemitones: Int = 0,
+        val preferOpenStrings: Boolean = true,
         val fallSpeedPxPerSec: Float = 75f,
         val level: Int = 1,
         val activeVoiceIndex: Int = 0,

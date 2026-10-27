@@ -29,16 +29,21 @@ data class ViolinPosition(
  */
 class ViolinAlgorithm {
 
-    private fun getAllValidPositions(targetMidi: Int, key: KeySignature?): List<ViolinPosition> {
+    private fun getAllValidPositions(
+        targetMidi: Int,
+        key: KeySignature?,
+        preferOpenStrings: Boolean
+    ): List<ViolinPosition> {
         val positions = POSITION_MAP[targetMidi] ?: return emptyList()
-        if (!isFlatSpelled(targetMidi, key)) return positions
-        return positions.map { position ->
+        val spelled = if (!isFlatSpelled(targetMidi, key)) positions else positions.map { position ->
             if (position.finger == 3 && semitoneOffset(targetMidi, position.string) == 6) {
                 ViolinPosition(position.string, 4)
             } else {
                 position
             }
         }
+        if (targetMidi !in OPEN_STRING_MIDI) return spelled
+        return spelled.filter { if (preferOpenStrings) it.finger == 0 else it.finger == 4 }
     }
 
     /** True when the key spells [midi] as a flat, so the low fourth finger is the natural choice. */
@@ -62,9 +67,10 @@ class ViolinAlgorithm {
     fun findRecommendedPosition(
         targetMidi: Int,
         previousPosition: ViolinPosition?,
-        key: KeySignature? = null
+        key: KeySignature? = null,
+        preferOpenStrings: Boolean = true
     ): ViolinPosition? {
-        val candidates = getAllValidPositions(targetMidi, key)
+        val candidates = getAllValidPositions(targetMidi, key, preferOpenStrings)
 
         if (candidates.isEmpty()) return null // Note cannot be played in first position
 
@@ -104,10 +110,14 @@ class ViolinAlgorithm {
      * total transition cost plus per-note open-string/pinky biases).
      * Out-of-range notes (no valid first-position fingering) map to null.
      */
-    fun recommendPositions(notes: List<Int>, key: KeySignature? = null): List<ViolinPosition?> {
+    fun recommendPositions(
+        notes: List<Int>,
+        key: KeySignature? = null,
+        preferOpenStrings: Boolean = true
+    ): List<ViolinPosition?> {
         if (notes.isEmpty()) return emptyList()
 
-        val candidateLists = notes.map { getAllValidPositions(it, key) }
+        val candidateLists = notes.map { getAllValidPositions(it, key, preferOpenStrings) }
         val result = arrayOfNulls<ViolinPosition>(notes.size)
         val playableIndices = notes.indices.filter { candidateLists[it].isNotEmpty() }
         if (playableIndices.isEmpty()) return result.toList()
@@ -162,6 +172,8 @@ class ViolinAlgorithm {
             ViolinString.A to 69,
             ViolinString.E to 76
         )
+
+        private val OPEN_STRING_MIDI = setOf(62, 69, 76)
 
         // First-position playable range (inclusive)
         const val MIN_FIRST_POSITION_MIDI = 55 // G3

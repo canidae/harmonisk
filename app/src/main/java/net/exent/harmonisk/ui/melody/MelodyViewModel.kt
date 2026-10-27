@@ -471,7 +471,8 @@ class MelodyViewModel @Inject constructor(
                         currentLevel = level,
                         hideNoteBars = hnb,
                         activeVoiceIndex = saved.activeVoiceIndex,
-                        accompanimentMode = accompanimentMode
+                        accompanimentMode = accompanimentMode,
+                        preferOpenStrings = saved.preferOpenStrings
                     )
                 }
                 _viewState.update { it.copy(fallSpeedPxPerSec = migrateFallSpeed(saved.fallSpeedPxPerSec)) }
@@ -520,13 +521,26 @@ class MelodyViewModel @Inject constructor(
         applyTranspose(if (enabled) autoOffset() else manualTransposeSemitones, enabled)
     }
 
+    fun setPreferOpenStrings(preferOpenStrings: Boolean) {
+        if (_gameState.value.preferOpenStrings == preferOpenStrings) return
+        _gameState.update { it.copy(preferOpenStrings = preferOpenStrings) }
+        applyTranspose(
+            if (_gameState.value.autoTranspose) autoOffset() else manualTransposeSemitones,
+            _gameState.value.autoTranspose
+        )
+    }
+
     /** The shift that is easiest to finger on the active instrument, or 0 when none applies. */
     private fun autoOffset(): Int {
         if (Instrument.fromName(_currentInstrument.value) != Instrument.VIOLIN) return 0
         val track = originalMelodyTracks.getOrNull(_gameState.value.activeVoiceIndex)
             ?: originalMelodyTracks.firstOrNull()
             ?: return 0
-        return beginnerKey.violinOffset(track.notes, track.keySignature)
+        return beginnerKey.violinOffset(
+            track.notes,
+            track.keySignature,
+            _gameState.value.preferOpenStrings
+        )
     }
 
     private fun applyTranspose(semitones: Int, auto: Boolean) {
@@ -564,7 +578,8 @@ class MelodyViewModel @Inject constructor(
         val positions = if (isViolin && track != null) {
             violinAlgorithm.recommendPositions(
                 track.notes.map { it.noteNumber },
-                track.keySignature
+                track.keySignature,
+                _gameState.value.preferOpenStrings
             )
         } else {
             emptyList()
@@ -587,6 +602,7 @@ class MelodyViewModel @Inject constructor(
                 waitMode = g.waitMode,
                 autoTranspose = g.autoTranspose,
                 transposeSemitones = manualTransposeSemitones,
+                preferOpenStrings = g.preferOpenStrings,
                 fallSpeedPxPerSec = v.fallSpeedPxPerSec,
                 level = g.currentLevel,
                 activeVoiceIndex = g.activeVoiceIndex,

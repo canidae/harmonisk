@@ -253,6 +253,8 @@ fun MelodyPlayScreen(
                         autoTranspose = gameState.autoTranspose,
                         onAutoTransposeChange = { viewModel.setAutoTranspose(it) },
                         showAutoTranspose = violinMode,
+                        preferOpenStrings = gameState.preferOpenStrings,
+                        onPreferOpenStringsChange = { viewModel.setPreferOpenStrings(it) },
                         transposeSemitones = gameState.transposeSemitones,
                         onTransposeChange = { viewModel.setTranspose(it) },
                         accompanimentMode = gameState.accompanimentMode,
@@ -333,7 +335,8 @@ fun MelodyPlayScreen(
                                 detectedCentsOff = if (gameState.pitchResult.isValid) gameState.pitchResult.centsOff else null,
                                 hideNoteBars = gameState.hideNoteBars,
                                 violinMode = violinMode,
-                                violinPositions = viewState.violinPositions
+                                violinPositions = viewState.violinPositions,
+                                preferOpenStrings = gameState.preferOpenStrings
                             ),
                             pianoAtBottom = true,
                             viewMinMidi = viewState.viewMinMidi,
@@ -468,6 +471,8 @@ private fun MelodySettingsMenu(
     autoTranspose: Boolean,
     onAutoTransposeChange: (Boolean) -> Unit,
     showAutoTranspose: Boolean,
+    preferOpenStrings: Boolean,
+    onPreferOpenStringsChange: (Boolean) -> Unit,
     transposeSemitones: Int,
     onTransposeChange: (Int) -> Unit,
     accompanimentMode: AccompanimentMode,
@@ -505,6 +510,16 @@ private fun MelodySettingsMenu(
                 HorizontalDivider()
             }
             if (showAutoTranspose) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.melody_play_prefer_open_strings)) },
+                    trailingIcon = {
+                        Switch(
+                            checked = preferOpenStrings,
+                            onCheckedChange = onPreferOpenStringsChange
+                        )
+                    },
+                    onClick = { onPreferOpenStringsChange(!preferOpenStrings) }
+                )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.melody_play_auto_key)) },
                     trailingIcon = {

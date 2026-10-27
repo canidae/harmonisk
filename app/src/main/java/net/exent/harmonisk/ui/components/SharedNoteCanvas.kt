@@ -89,15 +89,12 @@ private const val LABEL_OUTLINE_DP = 1.25f
 // The digits are drawn at this share of the bar's width, which is what limits their size.
 private const val LABEL_SIZE_RATIO = 1.2f
 
-// Semitone slot columns per string block: the open string through the note a semitone below the
-// next open string, the highest placeable note on that string.
+// Semitone slot columns per string block. One block carries an extra slot: the E block when open
+// strings are preferred (it alone reaches B5), otherwise the G block (which then holds the fourth
+// finger D and the D block starts on D#).
 private const val VIOLIN_SLOTS_PER_STRING = 7
 private const val VIOLIN_BLOCK_COUNT = 4
-// The E string carries one slot more than the others: it alone reaches B5, the top of first
-// position, and the E block is the last one, so every block left edge stays a plain multiple.
-private const val VIOLIN_TOP_STRING_EXTRA_SLOTS = 1
-private const val VIOLIN_SLOT_COUNT =
-    VIOLIN_BLOCK_COUNT * VIOLIN_SLOTS_PER_STRING + VIOLIN_TOP_STRING_EXTRA_SLOTS
+private const val VIOLIN_SLOT_COUNT = VIOLIN_BLOCK_COUNT * VIOLIN_SLOTS_PER_STRING + 1
 // Narrow gap between two string blocks, so the four blocks read as separate strings.
 private const val VIOLIN_BLOCK_GAP_DP = 2.5f
 private val VIOLIN_BLOCK_GAP_COLOR = Color(0xFF05050C)
@@ -110,28 +107,43 @@ internal fun violinSlotWidth(canvasWidth: Float, gapPx: Float): Float =
     ((canvasWidth - gapPx * (VIOLIN_BLOCK_COUNT - 1)) / VIOLIN_SLOT_COUNT).coerceAtLeast(0f)
 
 /** Number of semitone slots in a string's block. */
-private fun violinSlotsInBlock(stringIndex: Int): Int =
-    if (stringIndex == VIOLIN_BLOCK_COUNT - 1) VIOLIN_SLOTS_PER_STRING + VIOLIN_TOP_STRING_EXTRA_SLOTS
+private fun violinSlotsInBlock(stringIndex: Int, preferOpenStrings: Boolean): Int =
+    if (stringIndex == if (preferOpenStrings) VIOLIN_BLOCK_COUNT - 1 else 0) VIOLIN_SLOTS_PER_STRING + 1
     else VIOLIN_SLOTS_PER_STRING
 
+/** Slot index a string's block starts at. */
+private fun violinBlockStartSlot(stringIndex: Int, preferOpenStrings: Boolean): Int =
+    if (preferOpenStrings) stringIndex * VIOLIN_SLOTS_PER_STRING
+    else if (stringIndex == 0) 0 else stringIndex * VIOLIN_SLOTS_PER_STRING + 1
+
 /** Left edge of a string's block of semitone slots. */
-internal fun violinBlockLeft(stringIndex: Int, canvasWidth: Float, gapPx: Float): Float {
+internal fun violinBlockLeft(
+    stringIndex: Int,
+    canvasWidth: Float,
+    gapPx: Float,
+    preferOpenStrings: Boolean = true
+): Float {
     val slotWidth = violinSlotWidth(canvasWidth, gapPx)
-    return stringIndex * (VIOLIN_SLOTS_PER_STRING * slotWidth + gapPx)
+    return violinBlockStartSlot(stringIndex, preferOpenStrings) * slotWidth + stringIndex * gapPx
 }
 
 /**
  * Horizontal centre of the column a pitch falls in.
  *
- * The board runs chromatically from the open G at the far left to A#5 at the far right, one slot
- * per semitone in four blocks of seven, so a pitch always lands in its own column. Pitches outside
- * the board stop at the outer columns.
+ * The board runs chromatically from the open G at the far left to B5 at the far right, one slot
+ * per semitone in four blocks. Pitches outside the board stop at the outer columns.
  */
-internal fun violinSlotCenterX(midi: Int, canvasWidth: Float, gapPx: Float): Float {
+internal fun violinSlotCenterX(
+    midi: Int,
+    canvasWidth: Float,
+    gapPx: Float,
+    preferOpenStrings: Boolean = true
+): Float {
     val slot = (midi - VIOLIN_LOWEST_MIDI).coerceIn(0, VIOLIN_SLOT_COUNT - 1)
-    val block = (slot / VIOLIN_SLOTS_PER_STRING).coerceAtMost(VIOLIN_BLOCK_COUNT - 1)
-    val withinBlock = slot - block * VIOLIN_SLOTS_PER_STRING
-    return violinBlockLeft(block, canvasWidth, gapPx) +
+    val block = (VIOLIN_BLOCK_COUNT - 1 downTo 0)
+        .first { slot >= violinBlockStartSlot(it, preferOpenStrings) }
+    val withinBlock = slot - violinBlockStartSlot(block, preferOpenStrings)
+    return violinBlockLeft(block, canvasWidth, gapPx, preferOpenStrings) +
         (withinBlock + 0.5f) * violinSlotWidth(canvasWidth, gapPx)
 }
 
@@ -183,7 +195,8 @@ sealed interface CanvasMode {
         val detectedCentsOff: Float?,
         val hideNoteBars: Boolean = false,
         val violinMode: Boolean = false,
-        val violinPositions: List<ViolinPosition?> = emptyList()
+        val violinPositions: List<ViolinPosition?> = emptyList(),
+        val preferOpenStrings: Boolean = true
     ) : CanvasMode
 }
 
@@ -381,7 +394,7 @@ fun SharedNoteCanvas(
                 if (violinMode) {
                     val labelAreaPx = VIOLIN_LABEL_AREA_DP * density
                     val nowLineY = size.height - labelAreaPx
-                    drawViolinBoard(density, fontScale, textMeasurer, nowLineY)
+                    drawViolinBoard(mode, density, fontScale, textMeasurer, nowLineY)
                     // Clip bars and notes to the playable area so they never
                     // obscure the string labels below the play line.
                     clipRect(left = 0f, top = 0f, right = width, bottom = nowLineY) {
@@ -821,6 +834,7 @@ private fun DrawScope.drawPitchIndicator(
 
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawViolinBoard(
+    mode: CanvasMode.Melody,
     density: Float,
     fontScale: Float,
     textMeasurer: TextMeasurer,
@@ -830,15 +844,16 @@ private fun DrawScope.drawViolinBoard(
     val height = size.height
     val gapPx = VIOLIN_BLOCK_GAP_DP * density
     val slotWidth = violinSlotWidth(width, gapPx)
+    val preferOpenStrings = mode.preferOpenStrings
 
-    // One block per string, of seven semitone slots, separated by a gap and alternating tint
+    // One block per string, separated by a gap and alternating tint
     for (i in 0 until VIOLIN_BLOCK_COUNT) {
-        val left = violinBlockLeft(i, width, gapPx)
+        val left = violinBlockLeft(i, width, gapPx, preferOpenStrings)
         if (i % 2 == 0) {
             drawRect(
                 color = Color(0x1AFFFFFF),
                 topLeft = Offset(left, 0f),
-                size = Size(slotWidth * violinSlotsInBlock(i), height)
+                size = Size(slotWidth * violinSlotsInBlock(i, preferOpenStrings), height)
             )
         }
         if (i > 0) {
@@ -864,7 +879,8 @@ private fun DrawScope.drawViolinBoard(
         fontWeight = FontWeight.Bold
     )
     for (i in VIOLIN_STRING_LABELS.indices) {
-        val centerX = violinBlockLeft(i, width, gapPx) + slotWidth * violinSlotsInBlock(i) / 2f
+        val centerX = violinBlockLeft(i, width, gapPx, preferOpenStrings) +
+            slotWidth * violinSlotsInBlock(i, preferOpenStrings) / 2f
         val textLayout = textMeasurer.measure(
             text = buildAnnotatedString { append(VIOLIN_STRING_LABELS[i]) },
             style = letterStyle
@@ -885,7 +901,8 @@ private fun DrawScope.drawViolinBoard(
         fontWeight = FontWeight.Bold
     )
     for (i in VIOLIN_STRING_LABELS.indices) {
-        val centerX = violinBlockLeft(i, width, gapPx) + slotWidth * violinSlotsInBlock(i) / 2f
+        val centerX = violinBlockLeft(i, width, gapPx, preferOpenStrings) +
+            slotWidth * violinSlotsInBlock(i, preferOpenStrings) / 2f
         val textLayout = textMeasurer.measure(
             text = buildAnnotatedString { append(VIOLIN_STRING_LABELS[i]) },
             style = labelStyle
@@ -1061,7 +1078,7 @@ private fun DrawScope.drawViolinMelodyNotes(
             barLen = minBarLen
         }
 
-        val centerX = violinSlotCenterX(note.noteNumber, width, gapPx)
+        val centerX = violinSlotCenterX(note.noteNumber, width, gapPx, mode.preferOpenStrings)
         val barLeft = centerX - barThickness / 2f
 
         val r = CORNER_RADIUS_DP * density
@@ -1176,7 +1193,7 @@ private fun DrawScope.drawViolinPitchIndicator(
 
     val gapPx = VIOLIN_BLOCK_GAP_DP * density
     val slotWidth = violinSlotWidth(size.width, gapPx)
-    val markerX = violinSlotCenterX(detectedMidi, size.width, gapPx)
+    val markerX = violinSlotCenterX(detectedMidi, size.width, gapPx, mode.preferOpenStrings)
 
     val indicatorColor = getIndicatorColor(detectedMidi, mode.detectedCentsOff, track, expectedIndex)
 
