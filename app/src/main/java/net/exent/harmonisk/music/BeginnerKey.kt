@@ -17,20 +17,21 @@ import kotlin.math.abs
  */
 class BeginnerKey(private val violinAlgorithm: ViolinAlgorithm) {
 
-    fun violinOffset(notes: List<NoteEvent>, key: KeySignature?): Int {
+    fun violinOffset(notes: List<NoteEvent>, key: KeySignature?, preferOpenStrings: Boolean = true): Int {
         if (notes.isEmpty()) return 0
         val writtenKey = key ?: KeyDetector.detect(notes)
         val pitches = notes.map { it.noteNumber }
         return (-MAX_SHIFT..MAX_SHIFT).minByOrNull { offset ->
-            cost(pitches, writtenKey, offset)
+            cost(pitches, writtenKey, offset, preferOpenStrings)
         } ?: 0
     }
 
-    private fun cost(pitches: List<Int>, key: KeySignature?, offset: Int): Double {
+    private fun cost(pitches: List<Int>, key: KeySignature?, offset: Int, preferOpenStrings: Boolean): Double {
         val transposedKey = key?.transpose(offset)
         val positions = violinAlgorithm.recommendPositions(
             pitches.map { it + offset },
-            transposedKey
+            transposedKey,
+            preferOpenStrings
         )
         var cost = abs(offset) * OFFSET_COST + keyBonus(transposedKey)
         positions.forEachIndexed { index, position ->

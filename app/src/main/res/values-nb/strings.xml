@@ -172,6 +172,7 @@
     <string name="melody_play_level">Nivå: %1$d</string>
     <string name="melody_level">Niv.%1$d</string>
     <string name="melody_score">Poeng: %1$s</string>
+    <string name="melody_play_prefer_open_strings">Foretrekk åpne strenger</string>
     <string name="melody_play_auto_key">Enkel toneart</string>
     <string name="melody_play_transpose_0">Transponering: 0</string>
     <string name="melody_play_transpose_plus">Transponering: +%1$d</string>

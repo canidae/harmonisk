@@ -110,6 +110,50 @@ class ViolinAlgorithmTest {
     }
 
     @Test
+    fun `preferring open strings forces every boundary note open`() {
+        val boundary = listOf(62 to ViolinString.D, 69 to ViolinString.A, 76 to ViolinString.E)
+        for ((midi, string) in boundary) {
+            assertEquals(
+                ViolinPosition(string, 0),
+                algorithm.findRecommendedPosition(midi, ViolinPosition(ViolinString.D, 4))
+            )
+        }
+        assertEquals(
+            listOf(ViolinPosition(ViolinString.D, 0), ViolinPosition(ViolinString.A, 0), ViolinPosition(ViolinString.E, 0)),
+            algorithm.recommendPositions(listOf(62, 69, 76))
+        )
+    }
+
+    @Test
+    fun `avoiding open strings puts every boundary note on the previous string`() {
+        val boundary = listOf(
+            62 to ViolinString.G,
+            69 to ViolinString.D,
+            76 to ViolinString.A
+        )
+        for ((midi, string) in boundary) {
+            assertEquals(
+                ViolinPosition(string, 4),
+                algorithm.findRecommendedPosition(midi, null, preferOpenStrings = false)
+            )
+        }
+        assertEquals(
+            listOf(ViolinPosition(ViolinString.G, 4), ViolinPosition(ViolinString.D, 4), ViolinPosition(ViolinString.A, 4)),
+            algorithm.recommendPositions(listOf(62, 69, 76), preferOpenStrings = false)
+        )
+    }
+
+    @Test
+    fun `every first position note resolves without open strings too`() {
+        for (midi in 55..83) {
+            assertNotNull(
+                "MIDI $midi should be playable in first position",
+                algorithm.findRecommendedPosition(midi, null, preferOpenStrings = false)
+            )
+        }
+    }
+
+    @Test
     fun `sequence keeps fingerings smooth and considers upcoming notes`() {
         val positions = algorithm.recommendPositions(listOf(69, 71, 73))
         // A4 open -> B4 1st -> C#5 2nd, all on the A string

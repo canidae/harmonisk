@@ -11,6 +11,7 @@ class ViolinBoardLayoutTest {
     private val boardWidth = 29 * 10f + 3 * gapPx
 
     private fun slotX(midi: Int): Float = violinSlotCenterX(midi, boardWidth, gapPx)
+    private fun closedSlotX(midi: Int): Float = violinSlotCenterX(midi, boardWidth, gapPx, preferOpenStrings = false)
 
     @Test
     fun eachOpenStringSitsInTheFirstSlotOfItsBlock() {
@@ -38,10 +39,30 @@ class ViolinBoardLayoutTest {
     }
 
     @Test
+    fun withoutOpenStringsTheGBlockCarriesTheExtraSlot() {
+        assertEquals(5f, closedSlotX(55), 0.01f)   // G3, still the first slot
+        assertEquals(75f, closedSlotX(62), 0.01f)  // D4 is the fourth finger on G, the G block's last slot
+        assertEquals(90f, closedSlotX(63), 0.01f)  // D#4 starts the D block
+        assertEquals(150f, closedSlotX(69), 0.01f) // A4 is the fourth finger on D, the D block's last slot
+        assertEquals(225f, closedSlotX(76), 0.01f) // E5 is the fourth finger on A, the A block's last slot
+        assertEquals(240f, closedSlotX(77), 0.01f) // F5 starts the E block
+    }
+
+    @Test
+    fun withoutOpenStringsTheBlocksSitAtTheirOffsetBoundaries() {
+        assertEquals(0f, violinBlockLeft(0, boardWidth, gapPx, preferOpenStrings = false), 0.01f)
+        assertEquals(85f, violinBlockLeft(1, boardWidth, gapPx, preferOpenStrings = false), 0.01f)
+        assertEquals(160f, violinBlockLeft(2, boardWidth, gapPx, preferOpenStrings = false), 0.01f)
+        assertEquals(235f, violinBlockLeft(3, boardWidth, gapPx, preferOpenStrings = false), 0.01f)
+    }
+
+    @Test
     fun pitchesBeyondTheBoardStopAtTheOuterColumns() {
         assertEquals(5f, slotX(54), 0.01f)
         assertEquals(5f, slotX(0), 0.01f)
         assertEquals(300f, slotX(84), 0.01f)
         assertEquals(300f, slotX(127), 0.01f)
+        assertEquals(5f, closedSlotX(54), 0.01f)
+        assertEquals(300f, closedSlotX(84), 0.01f)
     }
 }

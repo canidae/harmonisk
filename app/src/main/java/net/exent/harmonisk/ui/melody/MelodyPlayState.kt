@@ -27,6 +27,7 @@ data class MelodyGameState(
     val waitMode: Boolean = true,
     val autoTranspose: Boolean = true,
     val transposeSemitones: Int = 0,
+    val preferOpenStrings: Boolean = true,
     val melodyScore: MelodyScore? = null,
     val noteCentsHistory: Map<Int, List<Float>> = emptyMap(),
     val noteCentsPositions: Map<Int, List<Float>> = emptyMap(),
