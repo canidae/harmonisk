@@ -3,6 +3,8 @@ package net.exent.harmonisk.audio
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioManager
+import android.os.Handler
+import android.os.HandlerThread
 import android.util.Log
 import net.exent.harmonisk.BuildConfig
 import net.exent.harmonisk.music.Instrument
@@ -10,7 +12,8 @@ import java.io.File
 import java.io.IOException
 
 class SoundFontSynthesizer(
-    private val context: Context
+    private val context: Context,
+    private val audioDeviceMonitor: AudioDeviceMonitor
 ) : NotePlayer {
 
     companion object {
@@ -18,6 +21,9 @@ class SoundFontSynthesizer(
         private const val SF2_ASSET = "GeneralUser-GS.sf2"
         private const val BUFFER_FRAMES = 512
         private const val DEFAULT_OUTPUT_SAMPLE_RATE = 44100
+        private const val REBUILD_DELAY_MS = 150L
+        private const val REBUILD_RETRY_MS = 300L
+        private const val REBUILD_MAX_ATTEMPTS = 3
         const val DRUM_CHANNEL = 9
 
         init {
@@ -86,6 +92,37 @@ class SoundFontSynthesizer(
         bufferFrames = BUFFER_FRAMES,
         render = ::renderBuffer
     )
+
+    private val deviceHandler =
+        Handler(HandlerThread("AudioDeviceWatcher").apply { start() }.looper)
+
+    private var rebuildAttempts = 0
+
+    private val rebuildOutput = object : Runnable {
+        override fun run() {
+            if (nativeHandle == 0L) return
+            val wasRunning = renderThread.running
+            Log.i(TAG, "Audio output changed, reopening the audio track")
+            renderThread.reopen()
+            if (wasRunning && !renderThread.running && rebuildAttempts++ < REBUILD_MAX_ATTEMPTS) {
+                deviceHandler.postDelayed(this, REBUILD_RETRY_MS)
+            } else {
+                rebuildAttempts = 0
+            }
+        }
+    }
+
+    private val outputDeviceListener: (AudioOutputDevice) -> Unit = { scheduleOutputRebuild() }
+
+    init {
+        audioDeviceMonitor.addOutputDeviceListener(outputDeviceListener)
+    }
+
+    private fun scheduleOutputRebuild() {
+        rebuildAttempts = 0
+        deviceHandler.removeCallbacks(rebuildOutput)
+        deviceHandler.postDelayed(rebuildOutput, REBUILD_DELAY_MS)
+    }
 
     override val isReady: Boolean get() = nativeHandle != 0L && renderThread.running
 

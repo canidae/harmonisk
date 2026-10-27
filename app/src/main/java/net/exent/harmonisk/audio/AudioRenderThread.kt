@@ -3,6 +3,7 @@ package net.exent.harmonisk.audio
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import java.util.concurrent.atomic.AtomicBoolean
 
 class AudioRenderThread(
     private val threadName: String,
@@ -17,7 +18,9 @@ class AudioRenderThread(
 
     private var audioTrack: AudioTrack? = null
     private var renderThread: Thread? = null
+    private var gate: AtomicBoolean? = null
 
+    @Synchronized
     fun open() {
         if (audioTrack != null) return
 
@@ -34,6 +37,8 @@ class AudioRenderThread(
             ?: return
 
         audioTrack = track
+        val sessionGate = AtomicBoolean(true)
+        gate = sessionGate
         val buffer = ShortArray(bufferFrames)
         render(buffer)
         track.write(buffer, 0, buffer.size)
@@ -42,13 +47,20 @@ class AudioRenderThread(
 
         renderThread = Thread({
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
-            while (running) {
+            while (sessionGate.get()) {
                 render(buffer)
                 try {
                     track.write(buffer, 0, buffer.size)
                 } catch (_: Exception) {}
             }
         }, threadName).apply { start() }
+    }
+
+    @Synchronized
+    fun reopen() {
+        if (!running) return
+        close()
+        open()
     }
 
     private fun createTrack(bufferSizeInBytes: Int): AudioTrack? = try {
@@ -74,14 +86,19 @@ class AudioRenderThread(
         null
     }
 
+    @Synchronized
     fun close() {
         running = false
+        gate?.set(false)
+        gate = null
+        try {
+            audioTrack?.stop()
+        } catch (_: Exception) {}
         try {
             renderThread?.join(500)
         } catch (_: InterruptedException) {}
         renderThread = null
         try {
-            audioTrack?.stop()
             audioTrack?.release()
         } catch (_: Exception) {}
         audioTrack = null
