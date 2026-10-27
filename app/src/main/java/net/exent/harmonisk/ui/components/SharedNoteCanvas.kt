@@ -67,6 +67,9 @@ private const val VIOLIN_REFERENCE_WIDTH_DP = 411f
 const val VIOLIN_LABEL_AREA_DP = 36f
 // Nominal dp size of the violin string labels.
 private const val VIOLIN_LABEL_FONT_DP = 20f
+// The now line and the dividers between string blocks share one weight.
+private const val VIOLIN_LINE_ALPHA = 0.55f
+private const val VIOLIN_LINE_WIDTH_DP = 2f
 private val FINGER_COLORS = mapOf(
     0 to Color(0xFF2196F3), // open string (blue)
     1 to Color(0xFF4CAF50), // index
@@ -226,7 +229,9 @@ fun SharedNoteCanvas(
     modifier: Modifier = Modifier
 ) {
     val textMeasurer = rememberTextMeasurer()
-    val density = LocalDensity.current.density
+    val localDensity = LocalDensity.current
+    val density = localDensity.density
+    val fontScale = localDensity.fontScale
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
     // Emit note rects for edit-mode hit testing (FreePlay only)
@@ -376,7 +381,7 @@ fun SharedNoteCanvas(
                 if (violinMode) {
                     val labelAreaPx = VIOLIN_LABEL_AREA_DP * density
                     val nowLineY = size.height - labelAreaPx
-                    drawViolinBoard(density, textMeasurer)
+                    drawViolinBoard(density, fontScale, textMeasurer, nowLineY)
                     // Clip bars and notes to the playable area so they never
                     // obscure the string labels below the play line.
                     clipRect(left = 0f, top = 0f, right = width, bottom = nowLineY) {
@@ -384,10 +389,10 @@ fun SharedNoteCanvas(
                         drawViolinMelodyNotes(mode, density, textMeasurer, nowLineY)
                     }
                     drawLine(
-                        color = Color.White.copy(alpha = 0.55f),
+                        color = Color.White.copy(alpha = VIOLIN_LINE_ALPHA),
                         start = Offset(0f, nowLineY),
                         end = Offset(size.width, nowLineY),
-                        strokeWidth = 2f * density
+                        strokeWidth = VIOLIN_LINE_WIDTH_DP * density
                     )
                     drawViolinPitchIndicator(mode, density, nowLineY)
                 } else {
@@ -817,7 +822,9 @@ private fun DrawScope.drawPitchIndicator(
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawViolinBoard(
     density: Float,
-    textMeasurer: TextMeasurer
+    fontScale: Float,
+    textMeasurer: TextMeasurer,
+    nowLineY: Float
 ) {
     val width = size.width
     val height = size.height
@@ -840,7 +847,35 @@ private fun DrawScope.drawViolinBoard(
                 topLeft = Offset(left - gapPx, 0f),
                 size = Size(gapPx, height)
             )
+            drawLine(
+                color = Color.White.copy(alpha = VIOLIN_LINE_ALPHA),
+                start = Offset(left - gapPx / 2f, 0f),
+                end = Offset(left - gapPx / 2f, height),
+                strokeWidth = VIOLIN_LINE_WIDTH_DP * density
+            )
         }
+    }
+
+    // A big dim string letter behind the notes, centred over the playable area of its block
+    val letterPx = minOf(slotWidth * VIOLIN_SLOTS_PER_STRING, nowLineY / 3f)
+    val letterStyle = TextStyle(
+        color = Color.White.copy(alpha = 0.10f),
+        fontSize = (letterPx / (density * fontScale)).sp,
+        fontWeight = FontWeight.Bold
+    )
+    for (i in VIOLIN_STRING_LABELS.indices) {
+        val centerX = violinBlockLeft(i, width, gapPx) + slotWidth * violinSlotsInBlock(i) / 2f
+        val textLayout = textMeasurer.measure(
+            text = buildAnnotatedString { append(VIOLIN_STRING_LABELS[i]) },
+            style = letterStyle
+        )
+        drawText(
+            textLayout,
+            topLeft = Offset(
+                centerX - textLayout.size.width / 2f,
+                nowLineY / 2f - textLayout.size.height / 2f
+            )
+        )
     }
 
     // String labels at the bottom edge of each block, on a dark pill for readability
