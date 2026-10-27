@@ -9,6 +9,7 @@ import android.os.Looper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Monitors the active audio output device and emits changes.
@@ -26,14 +27,25 @@ class AudioDeviceMonitor(context: Context) {
     private val _currentInputDevice = MutableStateFlow(resolveActiveInputDevice())
     val currentInputDevice: StateFlow<AudioInputDevice> = _currentInputDevice.asStateFlow()
 
+    private val outputListeners = CopyOnWriteArrayList<(AudioOutputDevice) -> Unit>()
+
     private val callback = object : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) = refreshDevices()
         override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) = refreshDevices()
     }
 
+    fun addOutputDeviceListener(listener: (AudioOutputDevice) -> Unit) {
+        outputListeners.add(listener)
+    }
+
     private fun refreshDevices() {
-        _currentDevice.value = resolveActiveOutputDevice()
+        val previousOutput = _currentDevice.value
+        val output = resolveActiveOutputDevice()
+        _currentDevice.value = output
         _currentInputDevice.value = resolveActiveInputDevice()
+        if (output.deviceKey != previousOutput.deviceKey) {
+            outputListeners.forEach { it(output) }
+        }
     }
 
     init {

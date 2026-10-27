@@ -89,8 +89,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideSoundFontSynthesizer(
-        @ApplicationContext context: Context
-    ): SoundFontSynthesizer = SoundFontSynthesizer(context)
+        @ApplicationContext context: Context,
+        audioDeviceMonitor: AudioDeviceMonitor
+    ): SoundFontSynthesizer = SoundFontSynthesizer(context, audioDeviceMonitor)
 
     @Provides
     @Singleton
