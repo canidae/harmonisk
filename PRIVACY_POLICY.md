@@ -27,7 +27,7 @@ Harmonisk does not store user data on external servers.
 
 If the App saves settings, preferences, or similar information, that information is stored **only locally on your device** and is never transmitted to us or to any third party. You can remove locally stored information by clearing the App’s data or uninstalling the App.
 
-You can import a song from a web address that you enter yourself. The App then downloads that file **directly from the address you provide**; the address and the downloaded file are not sent to us or to any third party, and the file is stored only on your device. We have no access to the address or its contents.
+You can import a song from a web address that you enter yourself. The App then downloads that file **directly from the address you provide** (a sharing link, such as a Google Drive link, is resolved to that service’s direct download address); the address and the downloaded file are not sent to us or to any third party, and the file is stored only on your device. We have no access to the address or its contents.
 
 You can also scan a QR code to import a song. The camera image is read **on your device** only to extract the address it contains; the image is not stored, saved, or transmitted to us or to any third party.
 
