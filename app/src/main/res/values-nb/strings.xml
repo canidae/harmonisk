@@ -123,7 +123,7 @@
     <!-- Tuner -->
     <string name="tuner_title">Stem instrumentet</string>
     <string name="tuner_frequency">%1$.1f Hz</string>
-    <string name="tuner_in_tune">Rent</string>
+    <string name="tuner_in_tune">Stemt</string>
     <string name="tuner_reference_pitch">Referansetone</string>
     <string name="tuner_reference_pitch_value">%1$d Hz</string>
     <string name="tuner_preset_baroque">Barokk</string>
