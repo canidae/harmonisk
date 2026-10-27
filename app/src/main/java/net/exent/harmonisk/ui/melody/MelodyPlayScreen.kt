@@ -250,6 +250,9 @@ fun MelodyPlayScreen(
                         onOpen = { showConfigMenu = true },
                         currentLevel = gameState.currentLevel,
                         onLevelChange = { viewModel.setLevel(it) },
+                        autoTranspose = gameState.autoTranspose,
+                        onAutoTransposeChange = { viewModel.setAutoTranspose(it) },
+                        showAutoTranspose = violinMode,
                         transposeSemitones = gameState.transposeSemitones,
                         onTransposeChange = { viewModel.setTranspose(it) },
                         accompanimentMode = gameState.accompanimentMode,
@@ -462,6 +465,9 @@ private fun MelodySettingsMenu(
     onOpen: () -> Unit,
     currentLevel: Int,
     onLevelChange: (Int) -> Unit,
+    autoTranspose: Boolean,
+    onAutoTransposeChange: (Boolean) -> Unit,
+    showAutoTranspose: Boolean,
     transposeSemitones: Int,
     onTransposeChange: (Int) -> Unit,
     accompanimentMode: AccompanimentMode,
@@ -497,6 +503,18 @@ private fun MelodySettingsMenu(
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 HorizontalDivider()
+            }
+            if (showAutoTranspose) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.melody_play_auto_key)) },
+                    trailingIcon = {
+                        Switch(
+                            checked = autoTranspose,
+                            onCheckedChange = onAutoTransposeChange
+                        )
+                    },
+                    onClick = { onAutoTransposeChange(!autoTranspose) }
+                )
             }
             DropdownMenuItem(
                 text = {

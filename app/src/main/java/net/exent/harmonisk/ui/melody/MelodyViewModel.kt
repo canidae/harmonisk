@@ -53,6 +53,7 @@ class MelodyViewModel @Inject constructor(
     private val midiOutputSender: MidiOutputSender,
     private val scoreHistoryRepository: ScoreHistoryRepository,
     private val violinAlgorithm: ViolinAlgorithm,
+    private val beginnerKey: BeginnerKey,
     private val devModeState: DevModeState
 ) : ViewModel() {
 
@@ -136,6 +137,9 @@ class MelodyViewModel @Inject constructor(
 
     private var originalMelodyTracks: List<MelodyTrack> = emptyList()
     private var currentMelodyId: String? = null
+    // The transpose the user picked, kept apart from the automatic key so switching
+    // "Easy key" off returns to it (0 when the user never picked one).
+    private var manualTransposeSemitones = 0
 
     private val _currentInstrument = MutableStateFlow(Instrument.VIOLIN.name)
     private val currentInstrumentFlow: StateFlow<String> = _currentInstrument.asStateFlow()
@@ -355,6 +359,7 @@ class MelodyViewModel @Inject constructor(
             val primary = melodyTracks.first()
             val metronomeTrack = generateMetronomeTrack(primary)
             val (viewMin, viewMax) = viewRangeFor(primary)
+            manualTransposeSemitones = 0
             _gameState.update { it.withLoadedMelody(primary, melodyTracks, metronomeTrack, melodyName) }
             _viewState.update {
                 it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax, songTimeOffsetSeconds = 0.0)
@@ -388,6 +393,7 @@ class MelodyViewModel @Inject constructor(
             val primary = melodyTracks.first()
             val metronomeTrack = generateMetronomeTrack(primary)
             val (viewMin, viewMax) = viewRangeFor(primary)
+            manualTransposeSemitones = 0
             _gameState.update { it.withLoadedMelody(primary, melodyTracks, metronomeTrack, melodyName) }
             _viewState.update {
                 it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax, songTimeOffsetSeconds = 0.0)
@@ -475,9 +481,9 @@ class MelodyViewModel @Inject constructor(
                     val idx = saved.activeVoiceIndex.coerceIn(0, tracks.lastIndex)
                     setActiveVoice(idx)
                 }
-                if (saved.transposeSemitones != 0) {
-                    setTranspose(saved.transposeSemitones)
-                }
+                manualTransposeSemitones = saved.transposeSemitones
+                val auto = saved.autoTranspose && Instrument.fromName(instrument) == Instrument.VIOLIN
+                applyTranspose(if (auto) autoOffset() else saved.transposeSemitones, auto)
             }
         }
         scoreHistoryJob = viewModelScope.launch {
@@ -506,6 +512,24 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun setTranspose(semitones: Int) {
+        manualTransposeSemitones = semitones.coerceIn(-12, 12)
+        applyTranspose(manualTransposeSemitones, auto = false)
+    }
+
+    fun setAutoTranspose(enabled: Boolean) {
+        applyTranspose(if (enabled) autoOffset() else manualTransposeSemitones, enabled)
+    }
+
+    /** The shift that is easiest to finger on the active instrument, or 0 when none applies. */
+    private fun autoOffset(): Int {
+        if (Instrument.fromName(_currentInstrument.value) != Instrument.VIOLIN) return 0
+        val track = originalMelodyTracks.getOrNull(_gameState.value.activeVoiceIndex)
+            ?: originalMelodyTracks.firstOrNull()
+            ?: return 0
+        return beginnerKey.violinOffset(track.notes, track.keySignature)
+    }
+
+    private fun applyTranspose(semitones: Int, auto: Boolean) {
         val clamped = semitones.coerceIn(-12, 12)
         if (originalMelodyTracks.isEmpty()) return
         val melodyTracks = originalMelodyTracks.map { it.transpose(clamped) }
@@ -516,7 +540,8 @@ class MelodyViewModel @Inject constructor(
             it.copy(
                 melodyTrack = primary,
                 melodyTracks = melodyTracks,
-                transposeSemitones = clamped
+                transposeSemitones = clamped,
+                autoTranspose = auto
             )
         }
         _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
@@ -560,7 +585,8 @@ class MelodyViewModel @Inject constructor(
         viewModelScope.launch {
             melodySettingsRepository.saveSettings(id, instrument, MelodySettingsRepository.MelodySettings(
                 waitMode = g.waitMode,
-                transposeSemitones = g.transposeSemitones,
+                autoTranspose = g.autoTranspose,
+                transposeSemitones = manualTransposeSemitones,
                 fallSpeedPxPerSec = v.fallSpeedPxPerSec,
                 level = g.currentLevel,
                 activeVoiceIndex = g.activeVoiceIndex,
