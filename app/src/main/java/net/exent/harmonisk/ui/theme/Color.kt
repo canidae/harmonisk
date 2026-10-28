@@ -25,6 +25,11 @@ val Purple40 = Color(0xFF7C4DFF)
 val Teal80 = Color(0xFF80CBC4)
 val Teal40 = Color(0xFF00897B)
 
+val BrandPurple = Color(0xFF8B5CF6)
+val BrandBlue = Color(0xFF5B5BE0)
+val BrandTeal = Color(0xFF0E9F92)
+val BrandGradient = listOf(BrandPurple, BrandBlue, BrandTeal)
+
 // Shared UI accent colors
 val MidiPurple = Color(0xFF7E57C2)
 val AmberAccent = Color(0xFFFFB74D)

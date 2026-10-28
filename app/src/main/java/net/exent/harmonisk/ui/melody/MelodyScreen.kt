@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Link
@@ -48,6 +48,9 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import net.exent.harmonisk.R
 import net.exent.harmonisk.data.MelodyRepository
+import net.exent.harmonisk.ui.components.BrandTopBar
+import net.exent.harmonisk.ui.components.brandBackground
+import net.exent.harmonisk.ui.theme.BrandPurple
 import net.exent.harmonisk.ui.utils.formatScore
 import net.exent.harmonisk.ui.utils.scoreColor
 import kotlinx.coroutines.launch
@@ -212,6 +215,10 @@ fun MelodyScreen(
     }
 
     Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .brandBackground(),
+        containerColor = Color.Transparent,
         bottomBar = {
             if (browsingImported) {
                 Row(
@@ -242,17 +249,18 @@ fun MelodyScreen(
             }
         },
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.melody_title)) },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        when {
-                            currentZipFolder != null -> currentZipFolder = null
-                            currentFolder != null -> currentFolder = null
-                            else -> onBack()
-                        }
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
+            BrandTopBar(
+                title = stringResource(R.string.melody_title),
+                subtitle = when {
+                    currentZipFolder != null -> folderDisplayName(currentZipFolder!!)
+                    currentFolder != null -> folderDisplayName(currentFolder!!)
+                    else -> stringResource(R.string.melody_choose)
+                },
+                onBack = {
+                    when {
+                        currentZipFolder != null -> currentZipFolder = null
+                        currentFolder != null -> currentFolder = null
+                        else -> onBack()
                     }
                 }
             )
@@ -262,19 +270,8 @@ fun MelodyScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            Text(
-                text = when {
-                    currentZipFolder != null -> folderDisplayName(currentZipFolder!!)
-                    currentFolder != null -> folderDisplayName(currentFolder!!)
-                    else -> stringResource(R.string.melody_choose)
-                },
-                style = MaterialTheme.typography.headlineMedium
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             when {
                 currentFolder == null -> {
                     LazyColumn(
@@ -412,24 +409,40 @@ private fun FolderCard(
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = { if (onRemove != null) showMenu = true }
-            )
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("📂", style = MaterialTheme.typography.headlineMedium)
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("📂", style = MaterialTheme.typography.headlineSmall)
+            }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = name,
                 style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f)
             )
-            Text(
-                text = count.toString(),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Surface(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                contentColor = MaterialTheme.colorScheme.primary,
+                shape = CircleShape
+            ) {
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
         }
 
         DropdownMenu(
@@ -495,7 +508,9 @@ private fun MelodyCard(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Column {
             Row(
@@ -508,7 +523,14 @@ private fun MelodyCard(
                     .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(if (info.isBundled) "🎵" else "🎶", style = MaterialTheme.typography.headlineMedium)
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(BrandPurple.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(if (info.isBundled) "🎵" else "🎶", style = MaterialTheme.typography.headlineSmall)
+                }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(info.name, style = MaterialTheme.typography.titleMedium)

@@ -5,16 +5,18 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import net.exent.harmonisk.R
 import androidx.compose.ui.text.font.FontWeight
@@ -23,9 +25,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.harmonisk.music.NoteUtils
+import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.components.PitchGauge
 import net.exent.harmonisk.ui.components.RequireMicPermission
 import net.exent.harmonisk.ui.components.KeepScreenOn
+import net.exent.harmonisk.ui.components.brandBackground
 import net.exent.harmonisk.ui.theme.TunerGreen
 import kotlin.math.roundToInt
 
@@ -40,14 +44,14 @@ fun TunerScreen(
     KeepScreenOn()
 
     Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .brandBackground(),
+        containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.tuner_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
-                    }
-                }
+            BrandTopBar(
+                title = stringResource(R.string.tuner_title),
+                onBack = onBack
             )
         }
     ) { padding ->
@@ -64,13 +68,19 @@ fun TunerScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
+                    .navigationBarsPadding()
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .background(
+                            Brush.radialGradient(
+                                listOf(TunerGreen.copy(alpha = 0.12f), Color.Transparent)
+                            )
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     PitchGauge(
@@ -102,52 +112,60 @@ fun TunerScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = stringResource(R.string.tuner_reference_pitch),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.align(Alignment.CenterStart)
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.tuner_reference_pitch_value,
-                                state.concertPitchA4.roundToInt()
-                            ),
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                        Row(
-                            modifier = Modifier.align(Alignment.CenterEnd),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            PresetButton(
-                                label = stringResource(R.string.tuner_preset_baroque),
-                                selected = state.concertPitchA4.roundToInt() == BAROQUE_PITCH,
-                                onClick = {
-                                    viewModel.setConcertPitch(BAROQUE_PITCH.toFloat())
-                                    viewModel.commitConcertPitch()
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = stringResource(R.string.tuner_reference_pitch),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.align(Alignment.CenterStart)
+                                )
+                                Text(
+                                    text = stringResource(
+                                        R.string.tuner_reference_pitch_value,
+                                        state.concertPitchA4.roundToInt()
+                                    ),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                                Row(
+                                    modifier = Modifier.align(Alignment.CenterEnd),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    PresetButton(
+                                        label = stringResource(R.string.tuner_preset_baroque),
+                                        selected = state.concertPitchA4.roundToInt() == BAROQUE_PITCH,
+                                        onClick = {
+                                            viewModel.setConcertPitch(BAROQUE_PITCH.toFloat())
+                                            viewModel.commitConcertPitch()
+                                        }
+                                    )
+                                    PresetButton(
+                                        label = stringResource(R.string.tuner_preset_default),
+                                        selected = state.concertPitchA4.roundToInt() == DEFAULT_PITCH,
+                                        onClick = {
+                                            viewModel.setConcertPitch(NoteUtils.DEFAULT_CONCERT_PITCH)
+                                            viewModel.commitConcertPitch()
+                                        }
+                                    )
                                 }
-                            )
-                            PresetButton(
-                                label = stringResource(R.string.tuner_preset_default),
-                                selected = state.concertPitchA4.roundToInt() == DEFAULT_PITCH,
-                                onClick = {
-                                    viewModel.setConcertPitch(NoteUtils.DEFAULT_CONCERT_PITCH)
-                                    viewModel.commitConcertPitch()
-                                }
+                            }
+
+                            Slider(
+                                value = state.concertPitchA4,
+                                onValueChange = viewModel::setConcertPitch,
+                                onValueChangeFinished = viewModel::commitConcertPitch,
+                                valueRange = NoteUtils.MIN_CONCERT_PITCH..NoteUtils.MAX_CONCERT_PITCH,
+                                steps = (NoteUtils.MAX_CONCERT_PITCH - NoteUtils.MIN_CONCERT_PITCH).toInt() - 1,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
-
-                    Slider(
-                        value = state.concertPitchA4,
-                        onValueChange = viewModel::setConcertPitch,
-                        onValueChangeFinished = viewModel::commitConcertPitch,
-                        valueRange = NoteUtils.MIN_CONCERT_PITCH..NoteUtils.MAX_CONCERT_PITCH,
-                        steps = (NoteUtils.MAX_CONCERT_PITCH - NoteUtils.MIN_CONCERT_PITCH).toInt() - 1,
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             }
         }
