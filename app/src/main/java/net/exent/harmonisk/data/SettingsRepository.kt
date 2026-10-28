@@ -28,6 +28,7 @@ class SettingsRepository(
         private val METRONOME_BEATS_PER_BAR = intPreferencesKey("metronome_beats_per_bar")
         private val METRONOME_ACCENT_BEAT = intPreferencesKey("metronome_accent_beat")
         private val METRONOME_SOUND_ENABLED = booleanPreferencesKey("metronome_sound_enabled")
+        private val METRONOME_MUTED_BEATS = stringSetPreferencesKey("metronome_muted_beats")
         private val LANGUAGE_CODE = stringPreferencesKey("language_code")
         private val INSTRUMENT_NAME = stringPreferencesKey("instrument_name")
         private val CONCERT_PITCH = floatPreferencesKey("concert_pitch_a4")
@@ -56,6 +57,7 @@ class SettingsRepository(
             metronomeBeatsPerBar = prefs[METRONOME_BEATS_PER_BAR] ?: 4,
             metronomeAccentBeat = prefs[METRONOME_ACCENT_BEAT] ?: 0,
             metronomeSoundEnabled = prefs[METRONOME_SOUND_ENABLED] ?: true,
+            metronomeMutedBeats = prefs[METRONOME_MUTED_BEATS].orEmpty().mapNotNull(String::toIntOrNull).toSet(),
             languageCode = prefs[LANGUAGE_CODE] ?: "system",
             instrumentName = prefs[INSTRUMENT_NAME] ?: Instrument.VIOLIN.name,
             concertPitchA4 = prefs[CONCERT_PITCH] ?: NoteUtils.DEFAULT_CONCERT_PITCH
@@ -110,6 +112,10 @@ class SettingsRepository(
         context.dataStore.edit { it[METRONOME_SOUND_ENABLED] = enabled }
     }
 
+    suspend fun updateMetronomeMutedBeats(beats: Set<Int>) {
+        context.dataStore.edit { it[METRONOME_MUTED_BEATS] = beats.map(Int::toString).toSet() }
+    }
+
     suspend fun updateInstrument(name: String) {
         context.dataStore.edit { it[INSTRUMENT_NAME] = name }
     }
@@ -142,6 +148,7 @@ data class AppSettings(
     val metronomeBeatsPerBar: Int = 4,
     val metronomeAccentBeat: Int = 0,
     val metronomeSoundEnabled: Boolean = true,
+    val metronomeMutedBeats: Set<Int> = emptySet(),
     val languageCode: String = "system",
     val instrumentName: String = Instrument.VIOLIN.name,
     val concertPitchA4: Float = NoteUtils.DEFAULT_CONCERT_PITCH

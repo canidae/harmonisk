@@ -118,7 +118,10 @@
     <string name="metronome_sound_on">Sound on</string>
     <string name="metronome_sound_off">Sound off</string>
     <string name="metronome_beats_per_bar">Beats per bar</string>
-    <string name="metronome_accent_hint">Tap a beat to accent it</string>
+    <string name="metronome_accent_hint">Tap a beat to accent it, hold to silence it</string>
+    <string name="metronome_accent_beat">Accent beat</string>
+    <string name="metronome_silence_beat">Silence beat</string>
+    <string name="metronome_beat_silenced">Silenced</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Tune instrument</string>

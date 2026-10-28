@@ -8,6 +8,7 @@ data class MetronomeState(
     val bpm: Int = 100,
     val beatsPerBar: Int = 4,
     val accentBeat: Int = 0,
+    val mutedBeats: Set<Int> = emptySet(),
     val soundEnabled: Boolean = true,
     val isRunning: Boolean = false,
     val currentBeat: Int = 0,
