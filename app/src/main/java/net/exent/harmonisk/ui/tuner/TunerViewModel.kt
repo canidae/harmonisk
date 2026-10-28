@@ -39,7 +39,7 @@ class TunerViewModel @Inject constructor(
         const val HYSTERESIS_CENTS = 15f
 
         /** Extra leeway before the in-tune indicator turns off again, in cents. */
-        private const val IN_TUNE_HYSTERESIS_CENTS = 1f
+        private const val IN_TUNE_HYSTERESIS_CENTS = 2f
 
         /**
          * Fallback frame interval used for the very first frame, before a real interval has

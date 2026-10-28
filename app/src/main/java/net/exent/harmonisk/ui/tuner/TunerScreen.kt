@@ -1,8 +1,15 @@
 package net.exent.harmonisk.ui.tuner
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,7 +26,7 @@ import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.ui.components.PitchGauge
 import net.exent.harmonisk.ui.components.RequireMicPermission
 import net.exent.harmonisk.ui.components.KeepScreenOn
-import net.exent.harmonisk.ui.theme.Green80
+import net.exent.harmonisk.ui.theme.TunerGreen
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,6 +78,7 @@ fun TunerScreen(
                         noteName = state.displayedResult.noteName,
                         octave = state.displayedResult.octave,
                         isSilent = !state.displayedResult.isValid,
+                        isInTune = state.isInTune,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -79,17 +87,10 @@ fun TunerScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(
-                        modifier = Modifier.height(32.dp),
+                        modifier = Modifier.height(44.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (state.isInTune) {
-                            Text(
-                                text = stringResource(R.string.tuner_in_tune),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Green80,
-                                textAlign = TextAlign.Center
-                            )
-                        }
+                        InTuneBadge(visible = state.isInTune)
                     }
 
                     Text(
@@ -148,6 +149,38 @@ fun TunerScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InTuneBadge(visible: Boolean) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + scaleIn(initialScale = 0.85f),
+        exit = fadeOut() + scaleOut(targetScale = 0.9f)
+    ) {
+        Surface(
+            color = TunerGreen.copy(alpha = 0.16f),
+            contentColor = TunerGreen,
+            shape = RoundedCornerShape(50)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = stringResource(R.string.tuner_in_tune),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

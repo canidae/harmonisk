@@ -17,7 +17,7 @@
     <string name="home_free_play_title">Fritt spill</string>
     <string name="home_melody_title">Lær en melodi</string>
     <string name="home_metronome_title">Metronom</string>
-    <string name="home_tuner_title">Stem instrumentet</string>
+    <string name="home_tuner_title">Stem instrument</string>
     <string name="dev_mode_enabled">Utviklermodus slått på</string>
     <string name="dev_mode_disabled">Utviklermodus slått av</string>
 
@@ -121,7 +121,7 @@
     <string name="metronome_accent_hint">Velg hvilket slag som skal betones</string>
 
     <!-- Tuner -->
-    <string name="tuner_title">Stem instrumentet</string>
+    <string name="tuner_title">Stem instrument</string>
     <string name="tuner_frequency">%1$.1f Hz</string>
     <string name="tuner_in_tune">Stemt</string>
     <string name="tuner_reference_pitch">Referansetone</string>
