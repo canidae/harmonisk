@@ -36,12 +36,12 @@ class PitchStabilizer {
 
         /**
          * Smoothing time constant in seconds. The needle covers 95% of a step in ~3x this;
-         * 200 ms keeps a held note readable while staying well inside useful tuning latency.
+         * 320 ms damps bow noise and vibrato without making a peg turn feel laggy.
          */
-        const val TIME_CONSTANT_S = 0.20
+        const val TIME_CONSTANT_S = 0.32
 
         /** Changes smaller than this are not shown, so a steady note's needle stops jittering. */
-        const val OUTPUT_DEADBAND_SEMITONES = 0.005
+        const val OUTPUT_DEADBAND_SEMITONES = 0.010
 
         /** Confidence at or below which an estimate moves the needle at [MIN_WEIGHT]. */
         private const val CONFIDENCE_FLOOR = 0.55f

@@ -31,6 +31,8 @@ val AmberAccent = Color(0xFFFFB74D)
 val PlayGreen = Color(0xFF66BB6A)
 val DeleteRed = Color(0xFFEF5350)
 val MetronomeBlue = Color(0xFF90CAF9)
+val TunerGreen = Color(0xFF69F0AE)
+val TunerAmber = Color(0xFFFFC107)
 val DarkBg = Color(0xFF1A1A2E)
 
 // Backgrounds

@@ -16,12 +16,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import net.exent.harmonisk.music.NoteUtils
-import net.exent.harmonisk.ui.theme.Green80
-import net.exent.harmonisk.ui.theme.Orange80
+import net.exent.harmonisk.ui.theme.TunerAmber
+import net.exent.harmonisk.ui.theme.TunerGreen
+import net.exent.harmonisk.ui.theme.Yellow80
 import net.exent.harmonisk.ui.utils.centsColor
+import kotlin.math.abs
 import kotlin.math.min
 
 /** Semi-circular pitch gauge showing cents offset from -50 to +50. */
@@ -31,6 +32,7 @@ fun PitchGauge(
     noteName: String,
     octave: Int,
     isSilent: Boolean,
+    isInTune: Boolean = false,
     modifier: Modifier = Modifier,
     maxCents: Float = 50f,
     inTuneCents: Float = NoteUtils.IN_TUNE_CENTS
@@ -45,9 +47,34 @@ fun PitchGauge(
     )
 
     val gaugeColor by animateColorAsState(
-        targetValue = centsColor(centsOff),
+        targetValue = when {
+            isSilent -> Color.Gray.copy(alpha = 0.5f)
+            isInTune -> TunerGreen
+            abs(centsOff) <= NoteUtils.PERFECT_CENTS -> Yellow80
+            else -> centsColor(centsOff)
+        },
         animationSpec = tween(durationMillis = 200),
         label = "gauge_color"
+    )
+    val noteColor by animateColorAsState(
+        targetValue = if (isInTune) TunerGreen else MaterialTheme.colorScheme.onSurface,
+        animationSpec = tween(durationMillis = 200),
+        label = "note_color"
+    )
+    val glowAlpha by animateFloatAsState(
+        targetValue = if (isInTune) 0.30f else 0f,
+        animationSpec = tween(durationMillis = 250),
+        label = "gauge_glow"
+    )
+    val bandAlpha by animateFloatAsState(
+        targetValue = if (isInTune) 0.2f else 0.9f,
+        animationSpec = tween(durationMillis = 250),
+        label = "gauge_band"
+    )
+    val pivotRadius by animateFloatAsState(
+        targetValue = if (isInTune) 10f else 7f,
+        animationSpec = tween(durationMillis = 200),
+        label = "gauge_pivot"
     )
 
     Column(
@@ -60,6 +87,16 @@ fun PitchGauge(
             val arcLeft = (size.width - arcWidth) / 2
             val arcTop = size.height * 0.1f
 
+            if (glowAlpha > 0f) {
+                drawArc(
+                    color = TunerGreen.copy(alpha = glowAlpha),
+                    startAngle = 180f, sweepAngle = 180f, useCenter = false,
+                    topLeft = Offset(arcLeft, arcTop),
+                    size = Size(arcWidth, arcHeight),
+                    style = Stroke(width = 26f, cap = StrokeCap.Round)
+                )
+            }
+
             drawArc(
                 color = Color.Gray.copy(alpha = 0.3f),
                 startAngle = 180f, sweepAngle = 180f, useCenter = false,
@@ -70,7 +107,7 @@ fun PitchGauge(
 
             val indicatorSweep = 60f
             drawArc(
-                color = Orange80.copy(alpha = 0.45f),
+                color = TunerAmber.copy(alpha = bandAlpha),
                 startAngle = 180f + 90f - indicatorSweep / 2,
                 sweepAngle = indicatorSweep, useCenter = false,
                 topLeft = Offset(arcLeft, arcTop),
@@ -81,7 +118,7 @@ fun PitchGauge(
             // The in-tune window: marking it on the arc shows how close the needle must be.
             val inTuneSweep = (inTuneCents / maxCents) * 90f
             drawArc(
-                color = Green80,
+                color = TunerGreen,
                 startAngle = 180f + 90f - inTuneSweep,
                 sweepAngle = inTuneSweep * 2f, useCenter = false,
                 topLeft = Offset(arcLeft, arcTop),
@@ -105,7 +142,7 @@ fun PitchGauge(
                 strokeWidth = 4f,
                 cap = StrokeCap.Round
             )
-            drawCircle(color = gaugeColor, radius = 8f, center = Offset(centerX, centerY))
+            drawCircle(color = gaugeColor, radius = pivotRadius, center = Offset(centerX, centerY))
         }
 
         Box(
@@ -123,12 +160,12 @@ fun PitchGauge(
                     Text(
                         text = noteName,
                         style = MaterialTheme.typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = noteColor
                     )
                     Text(
                         text = "$octave",
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        color = noteColor.copy(alpha = 0.7f)
                     )
                 }
             }

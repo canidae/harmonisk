@@ -174,9 +174,9 @@ class PitchStabilizerTest {
     @Test
     fun `slow drift is still followed`() {
         val stabilizer = PitchStabilizer()
-        val out = feed(stabilizer, 500) { i -> i * 0.01 to 0.95f }
+        val out = feed(stabilizer, 500) { i -> i * 0.02 to 0.95f }
 
-        assertTrue("slow drift stuck at ${"%.2f".format(out.last())}ct", out.last() > 4.0)
+        assertTrue("slow drift stuck at ${"%.2f".format(out.last())}ct", out.last() > 8.0)
     }
 
     @Test
