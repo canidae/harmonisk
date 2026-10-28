@@ -118,7 +118,10 @@
     <string name="metronome_sound_on">Lyd på</string>
     <string name="metronome_sound_off">Lyd av</string>
     <string name="metronome_beats_per_bar">Slag per takt</string>
-    <string name="metronome_accent_hint">Velg hvilket slag som skal betones</string>
+    <string name="metronome_accent_hint">Trykk på et slag for å betone det, hold for å dempe det</string>
+    <string name="metronome_accent_beat">Betone slag</string>
+    <string name="metronome_silence_beat">Dempe slag</string>
+    <string name="metronome_beat_silenced">Dempet</string>
 
     <!-- Tuner -->
     <string name="tuner_title">Stem instrument</string>

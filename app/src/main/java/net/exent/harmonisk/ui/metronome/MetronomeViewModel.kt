@@ -39,6 +39,7 @@ class MetronomeViewModel @Inject constructor(
                     bpm = settings.metronomeBpm.coerceIn(METRONOME_MIN_BPM, METRONOME_MAX_BPM),
                     beatsPerBar = beats,
                     accentBeat = settings.metronomeAccentBeat.coerceIn(0, beats - 1),
+                    mutedBeats = settings.metronomeMutedBeats.filter { it < beats }.toSet(),
                     soundEnabled = settings.metronomeSoundEnabled
                 )
             }
@@ -62,14 +63,25 @@ class MetronomeViewModel @Inject constructor(
 
     fun setBeatsPerBar(beats: Int) {
         val clamped = beats.coerceIn(1, METRONOME_MAX_BEATS)
+        val previous = _state.value.mutedBeats
+        val muted = previous.filter { it < clamped }.toSet()
         _state.update {
             it.copy(
                 beatsPerBar = clamped,
                 accentBeat = it.accentBeat.coerceAtMost(clamped - 1),
-                currentBeat = it.currentBeat.coerceAtMost(clamped - 1)
+                currentBeat = it.currentBeat.coerceAtMost(clamped - 1),
+                mutedBeats = muted
             )
         }
         persist { settingsRepository.updateMetronomeBeatsPerBar(clamped) }
+        if (muted != previous) persist { settingsRepository.updateMetronomeMutedBeats(muted) }
+    }
+
+    fun toggleMutedBeat(beat: Int) {
+        val muted = _state.value.mutedBeats
+        val updated = if (beat in muted) muted - beat else muted + beat
+        _state.update { it.copy(mutedBeats = updated) }
+        persist { settingsRepository.updateMetronomeMutedBeats(updated) }
     }
 
     fun setAccentBeat(beat: Int) {
@@ -100,7 +112,7 @@ class MetronomeViewModel @Inject constructor(
                 val beat = (beatIndex % current.beatsPerBar).toInt()
                 val accented = beat == current.accentBeat.coerceIn(0, current.beatsPerBar - 1)
                 _state.update { it.copy(currentBeat = beat, pulse = it.pulse + 1) }
-                click(accented)
+                if (beat !in current.mutedBeats) click(accented)
                 beatIndex++
                 nextNanos += (60_000_000_000.0 / current.bpm).toLong()
                 val remainingMs = (nextNanos - System.nanoTime()) / 1_000_000

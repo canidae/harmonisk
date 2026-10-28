@@ -6,6 +6,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -21,10 +22,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -54,7 +59,7 @@ fun MetronomeScreen(
     KeepScreenOn()
 
     LaunchedEffect(state.pulse) {
-        if (state.pulse == 0L) return@LaunchedEffect
+        if (state.pulse == 0L || state.currentBeat in state.mutedBeats) return@LaunchedEffect
         pulse.snapTo(1f)
         pulse.animateTo(0f, tween(durationMillis = 220, easing = LinearEasing))
     }
@@ -101,6 +106,7 @@ fun MetronomeScreen(
                     pulse = pulse,
                     compact = true,
                     onAccentChange = viewModel::setAccentBeat,
+                    onMuteToggle = viewModel::toggleMutedBeat,
                     modifier = Modifier.weight(1f)
                 )
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
@@ -116,6 +122,7 @@ fun MetronomeScreen(
                     pulse = pulse,
                     compact = false,
                     onAccentChange = viewModel::setAccentBeat,
+                    onMuteToggle = viewModel::toggleMutedBeat,
                     modifier = Modifier.weight(1f)
                 )
                 TempoControls(state, viewModel)
@@ -132,10 +139,13 @@ private fun BeatDisplay(
     pulse: Animatable<Float, *>,
     compact: Boolean,
     onAccentChange: (Int) -> Unit,
+    onMuteToggle: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val accented = state.isRunning && state.currentBeat == state.accentBeat
+    val muted = state.isRunning && state.currentBeat in state.mutedBeats
     val color = if (accented) AmberAccent else MetronomeBlue
+    val alpha = if (muted) 0.45f else 1f
 
     Column(
         modifier = modifier,
@@ -149,25 +159,25 @@ private fun BeatDisplay(
             Canvas(Modifier.fillMaxSize()) {
                 val radius = size.minDimension / 2f
                 val strength = pulse.value
-                drawCircle(color = color.copy(alpha = 0.05f + 0.10f * strength), radius = radius)
+                drawCircle(color = color.copy(alpha = (0.05f + 0.10f * strength) * alpha), radius = radius)
                 drawCircle(
-                    color = color.copy(alpha = 0.30f * strength),
+                    color = color.copy(alpha = 0.30f * strength * alpha),
                     radius = radius * (0.78f + 0.22f * strength),
                     style = Stroke(width = 2.dp.toPx())
                 )
-                drawCircle(color = color.copy(alpha = 0.10f + 0.30f * strength), radius = radius * 0.66f)
+                drawCircle(color = color.copy(alpha = (0.10f + 0.30f * strength) * alpha), radius = radius * 0.66f)
             }
             Text(
                 text = "${state.currentBeat + 1}",
                 style = if (compact) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displayLarge,
                 fontWeight = FontWeight.Bold,
-                color = color
+                color = color.copy(alpha = alpha)
             )
         }
 
         Spacer(Modifier.height(if (compact) 12.dp else 24.dp))
 
-        BeatDots(state, compact = compact, onAccentChange = onAccentChange)
+        BeatDots(state, compact = compact, onAccentChange = onAccentChange, onMuteToggle = onMuteToggle)
 
         Spacer(Modifier.height(6.dp))
 
@@ -184,7 +194,8 @@ private fun BeatDisplay(
 private fun BeatDots(
     state: MetronomeState,
     compact: Boolean,
-    onAccentChange: (Int) -> Unit
+    onAccentChange: (Int) -> Unit,
+    onMuteToggle: (Int) -> Unit
 ) {
     BoxWithConstraints(
         modifier = Modifier.fillMaxWidth(),
@@ -204,7 +215,8 @@ private fun BeatDots(
                     beat = beat,
                     state = state,
                     dotSize = dotSize,
-                    onClick = { onAccentChange(beat) }
+                    onClick = { onAccentChange(beat) },
+                    onLongClick = { onMuteToggle(beat) }
                 )
             }
         }
@@ -216,30 +228,57 @@ private fun BeatDot(
     beat: Int,
     state: MetronomeState,
     dotSize: Dp,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
-    val isAccent = beat == state.accentBeat
-    val isCurrent = state.isRunning && beat == state.currentBeat
+    val isMuted = beat in state.mutedBeats
+    val isAccent = beat == state.accentBeat && !isMuted
+    val isCurrent = state.isRunning && beat == state.currentBeat && !isMuted
     val container = when {
         isCurrent && isAccent -> AmberAccent
         isCurrent -> MetronomeBlue
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
     val content = when {
+        isMuted -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
         isCurrent -> Color.Black
         isAccent -> AmberAccent
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
+    val slash = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+    val silenced = stringResource(R.string.metronome_beat_silenced)
 
     Surface(
-        onClick = onClick,
         modifier = Modifier.size(dotSize),
         shape = CircleShape,
         color = container,
         border = if (isAccent) BorderStroke(2.dp, AmberAccent) else null
     ) {
-        Box(contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .semantics { if (isMuted) stateDescription = silenced }
+                .combinedClickable(
+                    onClickLabel = stringResource(R.string.metronome_accent_beat),
+                    onLongClickLabel = stringResource(R.string.metronome_silence_beat),
+                    onClick = onClick,
+                    onLongClick = onLongClick
+                ),
+            contentAlignment = Alignment.Center
+        ) {
             Text(text = "${beat + 1}", fontSize = 11.sp, color = content, fontWeight = FontWeight.Medium)
+            if (isMuted) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val inset = size.minDimension * 0.24f
+                    drawLine(
+                        color = slash,
+                        start = Offset(inset, size.height - inset),
+                        end = Offset(size.width - inset, inset),
+                        strokeWidth = 1.5.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+                }
+            }
         }
     }
 }
