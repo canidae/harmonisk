@@ -9,8 +9,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
@@ -40,7 +40,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.harmonisk.R
+import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.components.KeepScreenOn
+import net.exent.harmonisk.ui.components.brandBackground
 import net.exent.harmonisk.ui.theme.AmberAccent
 import net.exent.harmonisk.ui.theme.MetronomeBlue
 import net.exent.harmonisk.ui.theme.PlayGreen
@@ -68,14 +70,14 @@ fun MetronomeScreen(
     DisposableEffect(Unit) { onDispose { viewModel.stop() } }
 
     Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .brandBackground(),
+        containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.metronome_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
-                    }
-                },
+            BrandTopBar(
+                title = stringResource(R.string.metronome_title),
+                onBack = onBack,
                 actions = {
                     IconButton(onClick = { viewModel.toggleSound() }) {
                         Icon(
@@ -83,7 +85,7 @@ fun MetronomeScreen(
                             contentDescription = stringResource(
                                 if (state.soundEnabled) R.string.metronome_sound_on else R.string.metronome_sound_off
                             ),
-                            tint = if (state.soundEnabled) MetronomeBlue else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (state.soundEnabled) MetronomeBlue else Color.White.copy(alpha = 0.55f)
                         )
                     }
                 }
@@ -93,6 +95,7 @@ fun MetronomeScreen(
         val modifier = Modifier
             .fillMaxSize()
             .padding(padding)
+            .navigationBarsPadding()
             .padding(horizontal = 24.dp, vertical = 12.dp)
 
         if (isLandscape) {
@@ -109,11 +112,7 @@ fun MetronomeScreen(
                     onMuteToggle = viewModel::toggleMutedBeat,
                     modifier = Modifier.weight(1f)
                 )
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                    TempoControls(state, viewModel)
-                    Spacer(Modifier.height(16.dp))
-                    RunButton(state, viewModel)
-                }
+                ControlPanel(state, viewModel, Modifier.weight(1f))
             }
         } else {
             Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -125,10 +124,27 @@ fun MetronomeScreen(
                     onMuteToggle = viewModel::toggleMutedBeat,
                     modifier = Modifier.weight(1f)
                 )
-                TempoControls(state, viewModel)
-                Spacer(Modifier.height(16.dp))
-                RunButton(state, viewModel)
+                ControlPanel(state, viewModel)
             }
+        }
+    }
+}
+
+@Composable
+private fun ControlPanel(
+    state: MetronomeState,
+    viewModel: MetronomeViewModel,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            TempoControls(state, viewModel)
+            Spacer(Modifier.height(16.dp))
+            RunButton(state, viewModel)
         }
     }
 }

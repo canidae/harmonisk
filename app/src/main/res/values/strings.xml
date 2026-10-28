@@ -12,8 +12,6 @@
     <string name="edit">Edit</string>
 
     <!-- Home screen -->
-    <string name="home_title">Harmonisk</string>
-    <string name="home_heading">🎵 Harmonisk</string>
     <string name="home_free_play_title">Free play</string>
     <string name="home_melody_title">Learn a melody</string>
     <string name="home_metronome_title">Metronome</string>

@@ -1,13 +1,18 @@
 package net.exent.harmonisk.ui.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material3.*
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +27,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import android.content.pm.PackageManager
 import net.exent.harmonisk.R
 import net.exent.harmonisk.data.LocaleManager
+import net.exent.harmonisk.ui.components.BrandTopBar
+import net.exent.harmonisk.ui.components.brandBackground
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,14 +49,14 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .brandBackground(),
+        containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
-                    }
-                }
+            BrandTopBar(
+                title = stringResource(R.string.settings_title),
+                onBack = onBack
             )
         }
     ) { padding ->
@@ -77,53 +84,47 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .navigationBarsPadding()
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Language
-            SettingSection(title = stringResource(R.string.settings_language)) {
+            SettingSection(
+                title = stringResource(R.string.settings_language),
+                icon = Icons.Filled.Language
+            ) {
                 var expanded by remember { mutableStateOf(false) }
                 val languages = remember { LocaleManager.supportedLanguages }
                 val selected = languages.find { it.code == settings.languageCode } ?: languages.first()
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.Language,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Box(modifier = Modifier.weight(1f)) {
-                        OutlinedButton(
-                            onClick = { expanded = true },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(text = selected.displayName)
-                        }
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false },
-                            modifier = Modifier.fillMaxWidth(0.8f)
-                        ) {
-                            languages.forEach { lang ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = lang.displayName,
-                                            fontWeight = if (lang.code == selected.code) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    },
-                                    onClick = {
-                                        expanded = false
-                                        if (lang.code != selected.code) {
-                                            viewModel.updateLanguageCode(lang.code, context as android.app.Activity)
-                                        }
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { expanded = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = selected.displayName)
+                    }
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.fillMaxWidth(0.8f)
+                    ) {
+                        languages.forEach { lang ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = lang.displayName,
+                                        fontWeight = if (lang.code == selected.code) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                onClick = {
+                                    expanded = false
+                                    if (lang.code != selected.code) {
+                                        viewModel.updateLanguageCode(lang.code, context as android.app.Activity)
                                     }
-                                )
-                            }
+                                }
+                            )
                         }
                     }
                 }
@@ -131,7 +132,10 @@ fun SettingsScreen(
 
             // Microphone sensitivity, the negated silence threshold: -20 dB at the left,
             // -60 dB at the right, so moving right detects fainter sounds.
-            SettingSection(title = stringResource(R.string.settings_mic_sensitivity)) {
+            SettingSection(
+                title = stringResource(R.string.settings_mic_sensitivity),
+                icon = Icons.Filled.Mic
+            ) {
                 Slider(
                     value = -settings.silenceThresholdDb,
                     onValueChange = { viewModel.updateSilenceThreshold(-it) },
@@ -161,6 +165,7 @@ fun SettingsScreen(
             // Audio delay calibration
             SettingSection(
                 title = stringResource(R.string.settings_delay_title),
+                icon = Icons.Filled.Timer,
                 helpText = stringResource(R.string.settings_delay_help)
             ) {
                 val device by viewModel.currentDevice.collectAsState()
@@ -272,26 +277,50 @@ private fun DelaySlider(
 @Composable
 private fun SettingSection(
     title: String,
+    icon: ImageVector,
     helpText: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.weight(1f)
-            )
-            if (helpText != null) {
-                HelpButton(helpText)
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                            RoundedCornerShape(12.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                if (helpText != null) {
+                    HelpButton(helpText)
+                }
             }
+            content()
         }
-        content()
     }
 }
 

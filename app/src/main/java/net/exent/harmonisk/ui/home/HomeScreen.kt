@@ -2,32 +2,55 @@ package net.exent.harmonisk.ui.home
 
 import android.content.res.Configuration
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import net.exent.harmonisk.R
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import net.exent.harmonisk.data.DevModeState
 import kotlinx.coroutines.withTimeoutOrNull
+import net.exent.harmonisk.R
+import net.exent.harmonisk.data.DevModeState
+import net.exent.harmonisk.ui.components.AppLogo
+import net.exent.harmonisk.ui.components.BrandTopBar
+import net.exent.harmonisk.ui.components.brandBackground
+import net.exent.harmonisk.ui.theme.BrandBlue
+import net.exent.harmonisk.ui.theme.BrandPurple
+import net.exent.harmonisk.ui.theme.BrandTeal
+import net.exent.harmonisk.ui.theme.PlayGreen
 import javax.inject.Inject
 
-/** How long the home heading must be held down to toggle developer mode. */
 private const val DEV_MODE_HOLD_MS = 7_000L
 
-@OptIn(ExperimentalMaterial3Api::class)
+private data class ModeItem(
+    val emoji: String,
+    val title: String,
+    val accent: Color,
+    val onClick: () -> Unit
+)
+
 @Composable
 fun HomeScreen(
     onNavigateToFreePlay: () -> Unit,
@@ -40,15 +63,59 @@ fun HomeScreen(
     val context = LocalContext.current
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val snackbarHostState = remember { SnackbarHostState() }
+    val modes = listOf(
+        ModeItem(
+            emoji = "🎵",
+            title = stringResource(R.string.home_free_play_title),
+            accent = BrandPurple,
+            onClick = onNavigateToFreePlay
+        ),
+        ModeItem(
+            emoji = "🎼",
+            title = stringResource(R.string.home_melody_title),
+            accent = BrandTeal,
+            onClick = onNavigateToMelody
+        ),
+        ModeItem(
+            emoji = "⏱️",
+            title = stringResource(R.string.home_metronome_title),
+            accent = BrandBlue,
+            onClick = onNavigateToMetronome
+        ),
+        ModeItem(
+            emoji = "🎸",
+            title = stringResource(R.string.home_tuner_title),
+            accent = PlayGreen,
+            onClick = onNavigateToTuner
+        )
+    )
+    val toggleDevMode = {
+        val enabled = viewModel.toggleDevMode()
+        Toast.makeText(
+            context,
+            context.getString(if (enabled) R.string.dev_mode_enabled else R.string.dev_mode_disabled),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
 
     Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .brandBackground(),
+        containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.home_title)) },
+            BrandTopBar(
+                title = stringResource(R.string.app_name),
+                leading = { AppLogo() },
+                titleModifier = Modifier.devModeToggle(toggleDevMode),
                 actions = {
                     IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.settings)
+                        )
                     }
                 }
             )
@@ -59,30 +126,17 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                onNavigateToFreePlay = onNavigateToFreePlay,
-                onNavigateToMelody = onNavigateToMelody,
-                onNavigateToMetronome = onNavigateToMetronome,
-                onNavigateToTuner = onNavigateToTuner
+                    .navigationBarsPadding(),
+                modes = modes
             )
         } else {
             PortraitContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(24.dp),
-                onNavigateToFreePlay = onNavigateToFreePlay,
-                onNavigateToMelody = onNavigateToMelody,
-                onNavigateToMetronome = onNavigateToMetronome,
-                onNavigateToTuner = onNavigateToTuner,
-                onToggleDevMode = {
-                    val enabled = viewModel.toggleDevMode()
-                    Toast.makeText(
-                        context,
-                        context.getString(if (enabled) R.string.dev_mode_enabled else R.string.dev_mode_disabled),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding(),
+                modes = modes
             )
         }
     }
@@ -91,156 +145,110 @@ fun HomeScreen(
 @Composable
 private fun PortraitContent(
     modifier: Modifier,
-    onNavigateToFreePlay: () -> Unit,
-    onNavigateToMelody: () -> Unit,
-    onNavigateToMetronome: () -> Unit,
-    onNavigateToTuner: () -> Unit,
-    onToggleDevMode: () -> Unit
+    modes: List<ModeItem>
 ) {
     Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            text = stringResource(R.string.home_heading),
-            style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        // Only a press held for the full duration toggles developer mode.
-                        if (withTimeoutOrNull(DEV_MODE_HOLD_MS) { tryAwaitRelease() } == null) {
-                            onToggleDevMode()
-                        }
-                    }
-                )
-            }
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        ModeCard(
-            emoji = "🎵",
-            title = stringResource(R.string.home_free_play_title),
-            onClick = onNavigateToFreePlay
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        ModeCard(
-            emoji = "🎼",
-            title = stringResource(R.string.home_melody_title),
-            onClick = onNavigateToMelody
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        ModeCard(
-            emoji = "⏱️",
-            title = stringResource(R.string.home_metronome_title),
-            onClick = onNavigateToMetronome
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        ModeCard(
-            emoji = "🎸",
-            title = stringResource(R.string.home_tuner_title),
-            onClick = onNavigateToTuner
-        )
+        modes.forEach { ModeCard(mode = it) }
     }
 }
 
 @Composable
 private fun LandscapeContent(
     modifier: Modifier,
-    onNavigateToFreePlay: () -> Unit,
-    onNavigateToMelody: () -> Unit,
-    onNavigateToMetronome: () -> Unit,
-    onNavigateToTuner: () -> Unit
+    modes: List<ModeItem>
 ) {
     Row(
-        modifier = modifier,
+        modifier = modifier.padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        ModeCard(
-            modifier = Modifier.weight(1f),
-            isLandscape = true,
-            emoji = "🎵",
-            title = stringResource(R.string.home_free_play_title),
-            onClick = onNavigateToFreePlay
-        )
-        ModeCard(
-            modifier = Modifier.weight(1f),
-            isLandscape = true,
-            emoji = "🎼",
-            title = stringResource(R.string.home_melody_title),
-            onClick = onNavigateToMelody
-        )
-        ModeCard(
-            modifier = Modifier.weight(1f),
-            isLandscape = true,
-            emoji = "⏱️",
-            title = stringResource(R.string.home_metronome_title),
-            onClick = onNavigateToMetronome
-        )
-        ModeCard(
-            modifier = Modifier.weight(1f),
-            isLandscape = true,
-            emoji = "🎸",
-            title = stringResource(R.string.home_tuner_title),
-            onClick = onNavigateToTuner
-        )
+        modes.forEach { mode ->
+            ModeCard(mode = mode, compact = true, modifier = Modifier.weight(1f))
+        }
     }
 }
 
 @Composable
 private fun ModeCard(
-    emoji: String,
-    title: String,
-    onClick: () -> Unit,
-    isLandscape: Boolean = false,
+    mode: ModeItem,
+    compact: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    if (isLandscape) {
-        Card(onClick = onClick, modifier = modifier) {
+    Card(
+        onClick = mode.onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(if (compact) 24.dp else 28.dp)
+    ) {
+        if (compact) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(emoji, style = MaterialTheme.typography.headlineMedium)
-                Spacer(modifier = Modifier.height(8.dp))
+                ModeIcon(mode, size = 44.dp, fontSize = 22.sp)
+                Spacer(Modifier.height(10.dp))
                 Text(
-                    title,
+                    text = mode.title,
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
             }
-        }
-    } else {
-        Card(
-            onClick = onClick,
-            modifier = modifier.fillMaxWidth()
-        ) {
+        } else {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(18.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                ModeIcon(mode, size = 52.dp, fontSize = 26.sp)
+                Spacer(Modifier.width(16.dp))
                 Text(
-                    text = emoji,
-                    style = MaterialTheme.typography.headlineLarge
+                    text = mode.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
                 )
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(title, style = MaterialTheme.typography.titleLarge)
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = mode.accent,
+                    modifier = Modifier.size(28.dp)
+                )
             }
         }
     }
+}
+
+@Composable
+private fun ModeIcon(mode: ModeItem, size: Dp, fontSize: TextUnit) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .background(
+                Brush.linearGradient(
+                    listOf(mode.accent, mode.accent.copy(alpha = 0.62f))
+                ),
+                RoundedCornerShape(size / 3)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(mode.emoji, fontSize = fontSize)
+    }
+}
+
+private fun Modifier.devModeToggle(onToggle: () -> Unit) = pointerInput(onToggle) {
+    detectTapGestures(
+        onPress = {
+            if (withTimeoutOrNull(DEV_MODE_HOLD_MS) { tryAwaitRelease() } == null) {
+                onToggle()
+            }
+        }
+    )
 }
 
 @HiltViewModel
@@ -248,6 +256,5 @@ class HomeViewModel @Inject constructor(
     private val devModeState: DevModeState
 ) : ViewModel() {
 
-    /** Toggle developer mode, returning whether it is now enabled. */
     fun toggleDevMode(): Boolean = devModeState.toggle()
 }

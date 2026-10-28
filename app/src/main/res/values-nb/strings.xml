@@ -12,9 +12,7 @@
     <string name="edit">Rediger</string>
 
     <!-- Home screen -->
-    <string name="home_title">Harmonisk</string>
-    <string name="home_heading">🎵 Harmonisk</string>
-    <string name="home_free_play_title">Fritt spill</string>
+    <string name="home_free_play_title">Spill fritt</string>
     <string name="home_melody_title">Lær en melodi</string>
     <string name="home_metronome_title">Metronom</string>
     <string name="home_tuner_title">Stem instrument</string>
@@ -76,7 +74,7 @@
     <string name="freeplay_piano">Piano: %1$s</string>
     <string name="freeplay_import_midi">Importer MIDI</string>
     <string name="freeplay_export_midi">Eksporter MIDI</string>
-    <string name="freeplay_help_title">Fritt spill \u2014 Hjelp</string>
+    <string name="freeplay_help_title">Spill fritt \u2014 Hjelp</string>
     <string name="freeplay_help_got_it">Skjønner</string>
     <string name="freeplay_help_note_editing">Noteredigering</string>
     <string name="freeplay_help_looping">Løkker</string>
