@@ -16,30 +16,42 @@ the beta paragraphs at the same time.
 
 ## Screenshots — `screenshots/phone/en-US/`
 
-Six phone screenshots, in the order they should appear in the listing:
+Four phone screenshots, in the order they should appear in the listing:
 
-1. `01-home.png` — the three modes
-2. `02-free-play.png` — Free Play with an imported MIDI melody
-3. `03-melody-list.png` — bundled melodies with difficulty
-4. `04-sheet-music.png` — a melody ready to play (sheet music + note bars)
-5. `05-practice-session.png` — a melody being played, with timing colours
-6. `06-tuner.png` — the tuner gauge
+1. `01-home.png` — the four modes
+2. `02-learn-a-melody.png` — Ode To Joy being played, with timing colours
+3. `03-metronome.png` — the metronome running with an accented beat
+4. `04-tuner.png` — the tuner showing an in-tune A4
 
-Specs: 1080x1920 (9:16), 24-bit PNG without alpha, under 100 KB each. Play
-accepts 2-8 phone screenshots, minimum 320 px, maximum 3840 px, and no side
-longer than twice the other. These were captured on a Pixel 7 Pro running app
-version `2026.10.11` (versionCode `26101101`), except `01-home.png`,
-`03-melody-list.png` and `06-tuner.png`, which were recaptured after the home and
-mode renaming. The former language-picker screenshot was dropped when the app
-went down to two languages.
+Specs: 1080x1920 (9:16), 24-bit PNG without alpha. Play accepts 2-8 phone
+screenshots, minimum 320 px, maximum 3840 px, no side longer than twice the
+other, and at most 8 MB per image. These were captured on a Pixel 7 Pro running
+app version `2026.10.30` in English, with the status bar set to 09:41 and 100%
+battery. The listing is English-only, so keep the app language set to English
+when recapturing.
 
-To regenerate them, build and install a debug APK, then capture at 9:16:
+To regenerate them, install a release APK, set the app language to English, then
+capture at 9:16:
 
 ```bash
 adb shell wm size 1080x1920
 adb exec-out screencap -p > shot.png
 adb shell wm size reset
 ```
+
+The status bar can be set up with Android demo mode:
+
+```bash
+adb shell settings put global sysui_demo_allowed 1
+adb shell am broadcast -a com.android.systemui.demo -e command enter
+adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 0941
+adb shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false
+adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi hide -e mobile hide
+adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false
+```
+
+Exit demo mode afterwards with `-e command exit` and
+`settings put global sysui_demo_allowed 0`.
 
 ## Graphics — `graphics/`
 
@@ -48,10 +60,12 @@ adb shell wm size reset
 | `app-icon-512.png` | App icon | 512x512, 32-bit PNG with alpha |
 | `feature-graphic-1024x500.png` | Feature graphic | 1024x500 PNG |
 
-Both are generated from the same artwork as the launcher icon
+Both derive from the same artwork as the launcher icon
 (`app/src/main/res/drawable/ic_launcher_background.xml` and
 `ic_launcher_foreground.xml`): a purple-to-teal gradient with white beamed
-eighth notes. Keep them in sync if the icon changes.
+eighth notes. The feature graphic also shows `02-learn-a-melody.png` in a phone
+mockup, so regenerate it when the practice screen changes. Keep the icon in sync
+if the launcher artwork changes.
 
 ## Still required by Google Play
 
