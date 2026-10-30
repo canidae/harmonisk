@@ -17,6 +17,7 @@
     <string name="home_metronome_title">Metronome</string>
     <string name="home_tuner_title">Tune instrument</string>
     <string name="dev_mode_enabled">Developer mode enabled</string>
+    <string name="home_version">Version %1$s</string>
     <string name="dev_mode_disabled">Developer mode disabled</string>
 
     <!-- Permissions -->
