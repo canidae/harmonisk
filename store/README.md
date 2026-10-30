@@ -10,9 +10,9 @@ Everything needed to fill in the Play Console listing for Harmonisk.
 | `short_description.txt` | Short description | 80 characters |
 | `full_description.txt` | Full description | 4000 characters |
 
-The app is **in beta**, and all three files say so. `title.txt` contains
-`Harmonisk (Beta)`; drop the `(Beta)` suffix once the app leaves beta and update
-the beta paragraphs at the same time.
+The app is **in beta**. `title.txt` contains `Harmonisk (Beta)`, and the full
+description has a beta notice. Drop the suffix and the notice once the app
+leaves beta.
 
 ## Screenshots — `screenshots/phone/en-US/`
 
