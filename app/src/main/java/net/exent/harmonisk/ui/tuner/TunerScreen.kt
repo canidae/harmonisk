@@ -106,6 +106,7 @@ fun TunerScreen(
                     Text(
                         text = stringResource(R.string.tuner_frequency, state.displayedResult.frequency),
                         style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.alpha(if (state.displayedResult.isValid) 1f else 0f)
                     )
