@@ -31,6 +31,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.withTimeoutOrNull
+import net.exent.harmonisk.BuildConfig
 import net.exent.harmonisk.R
 import net.exent.harmonisk.data.DevModeState
 import net.exent.harmonisk.ui.components.AppLogo
@@ -121,22 +122,36 @@ fun HomeScreen(
             )
         }
     ) { padding ->
-        if (isLandscape) {
-            LandscapeContent(
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .navigationBarsPadding()
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                if (isLandscape) {
+                    LandscapeContent(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        modes = modes
+                    )
+                } else {
+                    PortraitContent(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState()),
+                        modes = modes
+                    )
+                }
+            }
+            Text(
+                text = stringResource(R.string.home_version, BuildConfig.VERSION_NAME),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .navigationBarsPadding(),
-                modes = modes
-            )
-        } else {
-            PortraitContent(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .navigationBarsPadding(),
-                modes = modes
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
             )
         }
     }

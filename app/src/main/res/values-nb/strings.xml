@@ -17,6 +17,7 @@
     <string name="home_metronome_title">Metronom</string>
     <string name="home_tuner_title">Stem instrument</string>
     <string name="dev_mode_enabled">Utviklermodus slått på</string>
+    <string name="home_version">Versjon %1$s</string>
     <string name="dev_mode_disabled">Utviklermodus slått av</string>
 
     <!-- Permissions -->
