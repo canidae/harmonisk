@@ -29,11 +29,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import net.exent.harmonisk.BuildConfig
 import net.exent.harmonisk.R
+import net.exent.harmonisk.audio.SoundFontSynthesizer
 import net.exent.harmonisk.data.DevModeState
+import net.exent.harmonisk.data.SettingsRepository
+import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.ui.components.AppLogo
 import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.components.brandBackground
@@ -44,6 +55,7 @@ import net.exent.harmonisk.ui.theme.PlayGreen
 import javax.inject.Inject
 
 private const val DEV_MODE_HOLD_MS = 7_000L
+private val SELECTABLE_INSTRUMENTS = listOf(Instrument.VIOLIN, Instrument.VIOLA, Instrument.CELLO)
 
 private data class ModeItem(
     val emoji: String,
@@ -52,6 +64,7 @@ private data class ModeItem(
     val onClick: () -> Unit
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNavigateToFreePlay: () -> Unit,
@@ -64,6 +77,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val snackbarHostState = remember { SnackbarHostState() }
+    val selectedInstrument by viewModel.instrument.collectAsStateWithLifecycle()
     val modes = listOf(
         ModeItem(
             emoji = "🎵",
@@ -128,6 +142,14 @@ fun HomeScreen(
                 .padding(padding)
                 .navigationBarsPadding()
         ) {
+            InstrumentSelector(
+                selected = selectedInstrument,
+                onSelect = viewModel::setInstrument,
+                modifier = Modifier.padding(
+                    horizontal = 24.dp,
+                    vertical = if (isLandscape) 8.dp else 16.dp
+                )
+            )
             Box(modifier = Modifier.weight(1f)) {
                 if (isLandscape) {
                     LandscapeContent(
@@ -155,6 +177,32 @@ fun HomeScreen(
             )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InstrumentSelector(
+    selected: Instrument,
+    onSelect: (Instrument) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth()) {
+        SELECTABLE_INSTRUMENTS.forEachIndexed { index, instrument ->
+            SegmentedButton(
+                selected = instrument == selected,
+                onClick = { onSelect(instrument) },
+                shape = SegmentedButtonDefaults.itemShape(index, SELECTABLE_INSTRUMENTS.size)
+            ) {
+                Text(stringResource(instrument.labelRes()))
+            }
+        }
+    }
+}
+
+private fun Instrument.labelRes(): Int = when (this) {
+    Instrument.VIOLIN -> R.string.instrument_violin
+    Instrument.VIOLA -> R.string.instrument_viola
+    Instrument.CELLO -> R.string.instrument_cello
 }
 
 @Composable
@@ -268,8 +316,28 @@ private fun Modifier.devModeToggle(onToggle: () -> Unit) = pointerInput(onToggle
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val devModeState: DevModeState
+    private val devModeState: DevModeState,
+    private val settingsRepository: SettingsRepository,
+    private val soundFontSynthesizer: SoundFontSynthesizer
 ) : ViewModel() {
+
+    private val instrumentFlow = settingsRepository.settings
+        .map { Instrument.fromName(it.instrumentName) }
+
+    val instrument: StateFlow<Instrument> = instrumentFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Instrument.VIOLIN)
+
+    init {
+        viewModelScope.launch {
+            instrumentFlow
+                .distinctUntilChanged()
+                .collect { soundFontSynthesizer.setInstrument(it.midiBank, it.midiProgram) }
+        }
+    }
+
+    fun setInstrument(instrument: Instrument) {
+        viewModelScope.launch { settingsRepository.updateInstrument(instrument.name) }
+    }
 
     fun toggleDevMode(): Boolean = devModeState.toggle()
 }

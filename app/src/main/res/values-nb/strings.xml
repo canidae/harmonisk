@@ -51,11 +51,10 @@
     <string name="settings_reset">Tilbakestill</string>
     <string name="settings_reset_to_defaults">Tilbakestill til standardinnstillingene</string>
     <string name="settings_language">Språk</string>
-    <string name="settings_instrument">Instrument</string>
     <string name="settings_help">Hjelp</string>
     <string name="settings_help_got_it">Skjønner</string>
-    <string name="instrument_piano">Piano</string>
     <string name="instrument_violin">Fiolin</string>
+    <string name="instrument_viola">Bratsj</string>
     <string name="instrument_cello">Cello</string>
 
     <!-- Free Play -->

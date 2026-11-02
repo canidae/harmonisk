@@ -19,7 +19,7 @@ import net.exent.harmonisk.midi.MidiOutputSender
 import net.exent.harmonisk.music.BeginnerKey
 import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.music.ScoringEngine
-import net.exent.harmonisk.music.ViolinAlgorithm
+import net.exent.harmonisk.music.BowedAlgorithm
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -80,11 +80,11 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideViolinAlgorithm(): ViolinAlgorithm = ViolinAlgorithm()
+    fun provideBowedAlgorithm(): BowedAlgorithm = BowedAlgorithm()
 
     @Provides
     @Singleton
-    fun provideBeginnerKey(violinAlgorithm: ViolinAlgorithm): BeginnerKey = BeginnerKey(violinAlgorithm)
+    fun provideBeginnerKey(bowedAlgorithm: BowedAlgorithm): BeginnerKey = BeginnerKey(bowedAlgorithm)
 
     @Provides
     @Singleton

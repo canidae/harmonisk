@@ -4,7 +4,7 @@ import net.exent.harmonisk.midi.MelodyTrack
 import net.exent.harmonisk.music.MelodyScore
 import net.exent.harmonisk.music.NoteScore
 import net.exent.harmonisk.music.PitchResult
-import net.exent.harmonisk.music.ViolinPosition
+import net.exent.harmonisk.music.BowedPosition
 
 enum class AccompanimentMode { ALL, EXCEPT, SELECTED_ONLY, NONE }
 
@@ -61,8 +61,8 @@ data class MelodyViewState(
     val songTimeOffsetSeconds: Double = 0.0,
     val viewMinMidi: Float = 60f,
     val viewMaxMidi: Float = 72f,
-    /** Recommended violin fingerings per active melody note (null = not playable in first position). */
-    val violinPositions: List<ViolinPosition?> = emptyList()
+    /** Recommended fingerings per active melody note (null = not playable in first position). */
+    val bowedPositions: List<BowedPosition?> = emptyList()
 )
 
 /** MIDI device availability state. */
