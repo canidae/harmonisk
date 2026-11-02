@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import androidx.datastore.core.DataStore
@@ -15,8 +16,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import net.exent.harmonisk.midi.AbcParser
 import net.exent.harmonisk.midi.MelodyFileFormat
 import net.exent.harmonisk.midi.MelodyFileParser
+import net.exent.harmonisk.midi.MelodyFormat
 import net.exent.harmonisk.midi.MelodyTrack
 import net.exent.harmonisk.music.DifficultyCalculator
 
@@ -81,10 +84,9 @@ class MelodyRepository(
         val assetPath: String? = null
     )
 
-    /** Outcome of importing from a URL: one song, or a zip's worth of them. */
-    sealed interface UrlImportResult {
-        data class Song(val name: String) : UrlImportResult
-        data class Zip(val folder: String, val count: Int) : UrlImportResult
+    sealed interface ImportResult {
+        data class Song(val info: MelodyInfo) : ImportResult
+        data class Folder(val folder: String, val count: Int) : ImportResult
     }
 
     /** Bundled melodies from the assets/melodies directory tree. */
@@ -212,24 +214,6 @@ class MelodyRepository(
             ?.let { name.dropLast(it.length) }
             ?: name
 
-    /**
-     * Load a multi-track MIDI file from a URI. Returns one [MelodyTrack] per original MIDI track.
-     * Useful for MIDI files with separate instrument tracks.
-     */
-    fun loadMultiTrackFromUri(uri: Uri, name: String): List<MelodyTrack> {
-        return try {
-            context.contentResolver.openInputStream(uri)?.use { stream ->
-                MelodyFileParser.parseMultiTrack(stream, name)
-            } ?: emptyList()
-        } catch (e: SecurityException) {
-            Log.e(TAG, "Failed to load multi-track MIDI from URI: $uri", e)
-            emptyList()
-        } catch (e: IOException) {
-            Log.e(TAG, "Failed to load multi-track MIDI from URI: $uri", e)
-            emptyList()
-        }
-    }
-
     /** Drop cached parses so a re-imported file is never served from the previous copy. */
     private suspend fun evictCached(id: String) {
         cache.remove(id)
@@ -243,56 +227,117 @@ class MelodyRepository(
         importedMelodyStore.set(info.id, ImportedMelody(info.name, uriStr, info.folder))
     }
 
-    /** True when [uri] points at a zip archive rather than a single MIDI file. */
-    fun isZip(uri: Uri): Boolean {
-        val mimeType = context.contentResolver.getType(uri)?.substringBefore(';') ?: ""
-        return mimeType in ZIP_MIME_TYPES || resolveDisplayName(uri).endsWith(".zip", true)
-    }
-
-    /**
-     * Flat-extract every MIDI file from a zip into a folder named after the zip.
-     * Returns the folder and the number of songs it holds, or null if nothing was extracted.
-     */
-    suspend fun importZip(uri: Uri): Pair<String, Int>? {
-        val displayName = resolveDisplayName(uri)
-        return withContext(Dispatchers.IO) {
-            try {
-                context.contentResolver.openInputStream(uri)?.use { extractZip(displayName, it) }
-            } catch (e: IOException) {
-                Log.e(TAG, "Failed to extract melodies from zip $uri", e)
-                null
+    suspend fun importFile(uri: Uri): ImportResult? = withContext(Dispatchers.IO) {
+        try {
+            val displayName = resolveDisplayName(uri)
+            if (isZip(uri, displayName)) {
+                return@withContext context.contentResolver.openInputStream(uri)?.use {
+                    extractZip(displayName, it)
+                }?.let { ImportResult.Folder(it.first, it.second) }
             }
+            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@withContext null
+            importBytes(bytes, displayName, uri.hashCode(), uriMelodyId(uri))
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to import melody from $uri", e)
+            null
         }
     }
 
-    /** Download a melody or a zip of melodies from an https URL and persist it. */
-    suspend fun importFromUrl(url: String): UrlImportResult? = withContext(Dispatchers.IO) {
+    private fun isZip(uri: Uri, displayName: String): Boolean {
+        val mimeType = context.contentResolver.getType(uri)?.substringBefore(';') ?: ""
+        return mimeType in ZIP_MIME_TYPES || displayName.endsWith(".zip", true)
+    }
+
+    suspend fun importFromUrl(url: String): ImportResult? = withContext(Dispatchers.IO) {
         try {
             val download = MelodyUrlImporter.download(url)
-            if (MelodyUrlImporter.isZip(download.bytes)) {
-                extractZip(MelodyZipImporter.folderName(download.name), ByteArrayInputStream(download.bytes))
-                    ?.let { UrlImportResult.Zip(it.first, it.second) }
-            } else if (MelodyFileParser.parseMultiTrack(ByteArrayInputStream(download.bytes), download.name).isEmpty()) {
-                null
-            } else {
-                val fileUri = writeMelodyFile(url.hashCode(), download.name, download.bytes)
-                val info = MelodyInfo(uriMelodyId(fileUri), download.name, false, folder = IMPORTED_FOLDER, uri = fileUri)
-                addImportedMelody(info)
-                UrlImportResult.Song(download.name)
-            }
+            importBytes(download.bytes, download.name, url.hashCode(), null)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import melody from $url", e)
             null
         }
     }
 
-    /** Extract every melody in [input] into a folder named after [displayName] and register them. */
-    private suspend fun extractZip(displayName: String, input: InputStream): Pair<String, Int>? {
-        val folder = MelodyZipImporter.folderName(displayName)
-        val dir = MelodyZipImporter.directory(context.filesDir, folder)
-        val melodies = MelodyZipImporter.extract(input, dir)
-        if (melodies.isEmpty()) return null
+    private suspend fun importBytes(
+        bytes: ByteArray,
+        displayName: String,
+        seed: Int,
+        id: String?
+    ): ImportResult? {
+        if (MelodyUrlImporter.isZip(bytes)) {
+            return extractZip(displayName, ByteArrayInputStream(bytes))
+                ?.let { ImportResult.Folder(it.first, it.second) }
+        }
+        val songs = if (MelodyFileFormat.detect(bytes) == MelodyFormat.ABC) {
+            splitPlayableSongs(String(bytes, Charsets.UTF_8), displayName)
+        } else {
+            emptyList()
+        }
+        if (songs.size > 1) {
+            return extractAbc(displayName, songs)?.let { ImportResult.Folder(it.first, it.second) }
+        }
+        if (MelodyFileParser.parseMultiTrack(ByteArrayInputStream(bytes), displayName).isEmpty()) return null
+        val fileUri = writeMelodyFile(seed, displayName, bytes)
+        val info = MelodyInfo(id ?: uriMelodyId(fileUri), displayName, false, folder = IMPORTED_FOLDER, uri = fileUri)
+        addImportedMelody(info)
+        return ImportResult.Song(info)
+    }
 
+    private suspend fun extractZip(displayName: String, input: InputStream): Pair<String, Int>? {
+        val folder = MelodyFolderImporter.folderName(displayName)
+        val dir = MelodyFolderImporter.directory(context.filesDir, folder)
+        val melodies = MelodyFolderImporter.extract(input, dir).flatMap { melody ->
+            if (melody.file.extension.equals("abc", true)) splitAbcFile(melody, dir) else listOf(melody)
+        }
+        return registerFolder(folder, melodies)
+    }
+
+    private suspend fun extractAbc(displayName: String, songs: List<AbcParser.Song>): Pair<String, Int>? {
+        val folder = MelodyFolderImporter.folderName(displayName)
+        val dir = MelodyFolderImporter.directory(context.filesDir, folder)
+        return registerFolder(folder, writeAbcSongs(dir, songs))
+    }
+
+    private fun splitPlayableSongs(text: String, fallbackName: String): List<AbcParser.Song> =
+        AbcParser.splitSongs(text, fallbackName).filter { song ->
+            AbcParser.parse(song.text, song.title).any { it.notes.isNotEmpty() }
+        }
+
+    private fun splitAbcFile(
+        melody: MelodyFolderImporter.ExtractedMelody,
+        dir: File
+    ): List<MelodyFolderImporter.ExtractedMelody> {
+        val songs = splitPlayableSongs(melody.file.readText(), melody.name)
+        if (songs.size < 2) return listOf(melody)
+        melody.file.delete()
+        return writeAbcSongs(dir, songs)
+    }
+
+    private fun writeAbcSongs(
+        dir: File,
+        songs: List<AbcParser.Song>
+    ): List<MelodyFolderImporter.ExtractedMelody> {
+        dir.mkdirs()
+        val used = mutableSetOf<String>()
+        return songs.map { song ->
+            val base = MelodyFolderImporter.safeFileName(song.title)
+            var fileName = "$base.abc"
+            var suffix = 2
+            while (!used.add(fileName.lowercase())) {
+                fileName = "${base}_$suffix.abc"
+                suffix++
+            }
+            val file = File(dir, fileName)
+            file.writeText(song.text)
+            MelodyFolderImporter.ExtractedMelody(song.title, file)
+        }
+    }
+
+    private suspend fun registerFolder(
+        folder: String,
+        melodies: List<MelodyFolderImporter.ExtractedMelody>
+    ): Pair<String, Int>? {
+        if (melodies.isEmpty()) return null
         for (melody in melodies) {
             val fileUri = Uri.fromFile(melody.file)
             val id = uriMelodyId(fileUri)
@@ -314,20 +359,6 @@ class MelodyRepository(
             DifficultyRepository.DifficultyData(difficulty, DifficultyCalculator.ALGORITHM_VERSION)
         )
         return difficulty
-    }
-
-    /**
-     * Copy a content URI to a local file so it's available offline.
-     * Returns the local file URI, or null if copying fails.
-     */
-    fun copyUriToLocal(uri: Uri, displayName: String): Uri? = try {
-        context.contentResolver.openInputStream(uri)?.use { writeMelodyFile(uri.hashCode(), displayName, it.readBytes()) }
-    } catch (e: IOException) {
-        Log.e(TAG, "Failed to copy URI $uri to local file", e)
-        null
-    } catch (e: SecurityException) {
-        Log.e(TAG, "Failed to copy URI $uri to local file", e)
-        null
     }
 
     /** Write [bytes] into the local melody directory, keyed by [seed] so a re-import replaces its file. */
@@ -356,7 +387,7 @@ class MelodyRepository(
         importedMelodyStore.remove(id)
     }
 
-    /** Remove every melody imported from a zip folder and delete its extracted files. Returns the removed ids. */
+    /** Remove every melody imported into [folder] and delete its extracted files. Returns the removed ids. */
     suspend fun removeImportedFolder(folder: String): List<String> {
         val entries = importedMelodyStore.flow.first().filterValues { it.folder == folder }
         for ((id, melody) in entries) {
@@ -364,7 +395,7 @@ class MelodyRepository(
             deleteLocalFile(Uri.parse(melody.uri))
             importedMelodyStore.remove(id)
         }
-        MelodyZipImporter.directory(context.filesDir, folder).deleteRecursively()
+        MelodyFolderImporter.directory(context.filesDir, folder).deleteRecursively()
         return entries.keys.toList()
     }
 }
