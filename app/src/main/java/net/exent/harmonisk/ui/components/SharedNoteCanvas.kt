@@ -31,9 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import net.exent.harmonisk.midi.MelodyTrack
-import net.exent.harmonisk.music.ViolinAlgorithm
-import net.exent.harmonisk.music.ViolinPosition
-import net.exent.harmonisk.music.ViolinString
+import net.exent.harmonisk.music.BowedAlgorithm
+import net.exent.harmonisk.music.BowedPosition
+import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.ui.freeplay.PianoVisibility
 import net.exent.harmonisk.ui.freeplay.PlayedNote
 import net.exent.harmonisk.ui.melody.NoteResultState
@@ -58,18 +58,17 @@ private const val BAR_GAP_PX = 2f
 private const val INDICATOR_HEIGHT_PX = 8f
 private const val CORNER_RADIUS_DP = 4f
 
-// Violin fingering board
-private val VIOLIN_STRING_LABELS = listOf("G", "D", "A", "E")
+// Bowed fingering board
 // Reference portrait canvas width (dp) the horizontal time scale is normalized to
-private const val VIOLIN_REFERENCE_WIDTH_DP = 411f
-// Height of the bottom band reserved for the violin string labels; notes are
+private const val BOWED_REFERENCE_WIDTH_DP = 411f
+// Height of the bottom band reserved for the string labels; notes are
 // "played" when they reach the play line just above this band.
-const val VIOLIN_LABEL_AREA_DP = 36f
-// Nominal dp size of the violin string labels.
-private const val VIOLIN_LABEL_FONT_DP = 20f
+const val BOWED_LABEL_AREA_DP = 36f
+// Nominal dp size of the string labels.
+private const val BOWED_LABEL_FONT_DP = 20f
 // The now line and the dividers between string blocks share one weight.
-private const val VIOLIN_LINE_ALPHA = 0.55f
-private const val VIOLIN_LINE_WIDTH_DP = 2f
+private const val BOWED_LINE_ALPHA = 0.55f
+private const val BOWED_LINE_WIDTH_DP = 2f
 private val FINGER_COLORS = mapOf(
     0 to Color(0xFF2196F3), // open string (blue)
     1 to Color(0xFF4CAF50), // index
@@ -89,68 +88,66 @@ private const val LABEL_OUTLINE_DP = 1.25f
 // The digits are drawn at this share of the bar's width, which is what limits their size.
 private const val LABEL_SIZE_RATIO = 1.2f
 
-// Semitone slot columns per string block. One block carries an extra slot: the E block when open
-// strings are preferred (it alone reaches B5), otherwise the G block (which then holds the fourth
-// finger D and the D block starts on D#).
-private const val VIOLIN_SLOTS_PER_STRING = 7
-private const val VIOLIN_BLOCK_COUNT = 4
-private const val VIOLIN_SLOT_COUNT = VIOLIN_BLOCK_COUNT * VIOLIN_SLOTS_PER_STRING + 1
+// Semitone slot columns per string block. One block carries an extra slot: the highest string when
+// open strings are preferred, otherwise the lowest string (which then holds the fourth finger note
+// and the next block starts one semitone later).
+private const val BOWED_SLOTS_PER_STRING = 7
+private const val BOWED_BLOCK_COUNT = 4
+private const val BOWED_SLOT_COUNT = BOWED_BLOCK_COUNT * BOWED_SLOTS_PER_STRING + 1
 // Narrow gap between two string blocks, so the four blocks read as separate strings.
-private const val VIOLIN_BLOCK_GAP_DP = 2.5f
-private val VIOLIN_BLOCK_GAP_COLOR = Color(0xFF05050C)
-// The lowest and highest pitches that have a slot: G3 through B5.
-private const val VIOLIN_LOWEST_MIDI = 55
-private const val VIOLIN_HIGHEST_MIDI = VIOLIN_LOWEST_MIDI + VIOLIN_SLOT_COUNT - 1
-
+private const val BOWED_BLOCK_GAP_DP = 2.5f
+private val BOWED_BLOCK_GAP_COLOR = Color(0xFF05050C)
 /** Width of one semitone slot, allowing for the gaps between the string blocks. */
-internal fun violinSlotWidth(canvasWidth: Float, gapPx: Float): Float =
-    ((canvasWidth - gapPx * (VIOLIN_BLOCK_COUNT - 1)) / VIOLIN_SLOT_COUNT).coerceAtLeast(0f)
+internal fun bowedSlotWidth(canvasWidth: Float, gapPx: Float): Float =
+    ((canvasWidth - gapPx * (BOWED_BLOCK_COUNT - 1)) / BOWED_SLOT_COUNT).coerceAtLeast(0f)
 
 /** Number of semitone slots in a string's block. */
-private fun violinSlotsInBlock(stringIndex: Int, preferOpenStrings: Boolean): Int =
-    if (stringIndex == if (preferOpenStrings) VIOLIN_BLOCK_COUNT - 1 else 0) VIOLIN_SLOTS_PER_STRING + 1
-    else VIOLIN_SLOTS_PER_STRING
+private fun bowedSlotsInBlock(stringIndex: Int, preferOpenStrings: Boolean): Int =
+    if (stringIndex == if (preferOpenStrings) BOWED_BLOCK_COUNT - 1 else 0) BOWED_SLOTS_PER_STRING + 1
+    else BOWED_SLOTS_PER_STRING
 
 /** Slot index a string's block starts at. */
-private fun violinBlockStartSlot(stringIndex: Int, preferOpenStrings: Boolean): Int =
-    if (preferOpenStrings) stringIndex * VIOLIN_SLOTS_PER_STRING
-    else if (stringIndex == 0) 0 else stringIndex * VIOLIN_SLOTS_PER_STRING + 1
+private fun bowedBlockStartSlot(stringIndex: Int, preferOpenStrings: Boolean): Int =
+    if (preferOpenStrings) stringIndex * BOWED_SLOTS_PER_STRING
+    else if (stringIndex == 0) 0 else stringIndex * BOWED_SLOTS_PER_STRING + 1
 
 /** Left edge of a string's block of semitone slots. */
-internal fun violinBlockLeft(
+internal fun bowedBlockLeft(
     stringIndex: Int,
     canvasWidth: Float,
     gapPx: Float,
     preferOpenStrings: Boolean = true
 ): Float {
-    val slotWidth = violinSlotWidth(canvasWidth, gapPx)
-    return violinBlockStartSlot(stringIndex, preferOpenStrings) * slotWidth + stringIndex * gapPx
+    val slotWidth = bowedSlotWidth(canvasWidth, gapPx)
+    return bowedBlockStartSlot(stringIndex, preferOpenStrings) * slotWidth + stringIndex * gapPx
 }
 
 /**
  * Horizontal centre of the column a pitch falls in.
  *
- * The board runs chromatically from the open G at the far left to B5 at the far right, one slot
- * per semitone in four blocks. Pitches outside the board stop at the outer columns.
+ * The board runs chromatically from the instrument's lowest open string at the far left to its
+ * highest first-position note at the far right, one slot per semitone in four blocks. Pitches
+ * outside the board stop at the outer columns.
  */
-internal fun violinSlotCenterX(
+internal fun bowedSlotCenterX(
     midi: Int,
     canvasWidth: Float,
     gapPx: Float,
+    lowestMidi: Int,
     preferOpenStrings: Boolean = true
 ): Float {
-    val slot = (midi - VIOLIN_LOWEST_MIDI).coerceIn(0, VIOLIN_SLOT_COUNT - 1)
-    val block = (VIOLIN_BLOCK_COUNT - 1 downTo 0)
-        .first { slot >= violinBlockStartSlot(it, preferOpenStrings) }
-    val withinBlock = slot - violinBlockStartSlot(block, preferOpenStrings)
-    return violinBlockLeft(block, canvasWidth, gapPx, preferOpenStrings) +
-        (withinBlock + 0.5f) * violinSlotWidth(canvasWidth, gapPx)
+    val slot = (midi - lowestMidi).coerceIn(0, BOWED_SLOT_COUNT - 1)
+    val block = (BOWED_BLOCK_COUNT - 1 downTo 0)
+        .first { slot >= bowedBlockStartSlot(it, preferOpenStrings) }
+    val withinBlock = slot - bowedBlockStartSlot(block, preferOpenStrings)
+    return bowedBlockLeft(block, canvasWidth, gapPx, preferOpenStrings) +
+        (withinBlock + 0.5f) * bowedSlotWidth(canvasWidth, gapPx)
 }
 
-/** Time scale for the violin board, normalized to the canvas span so the
+/** Time scale for the bowed board, normalized to the canvas span so the
  *  visible time window stays consistent across portrait and landscape. */
-private fun violinPixelsPerSecond(fallSpeedPxPerSec: Float, canvasSpan: Float): Float =
-    fallSpeedPxPerSec * canvasSpan / VIOLIN_REFERENCE_WIDTH_DP
+private fun bowedPixelsPerSecond(fallSpeedPxPerSec: Float, canvasSpan: Float): Float =
+    fallSpeedPxPerSec * canvasSpan / BOWED_REFERENCE_WIDTH_DP
 
 val VOICE_COLORS = listOf(
     Color(0xFF4FC3F7), // Teal/light blue
@@ -194,8 +191,8 @@ sealed interface CanvasMode {
         val detectedMidiNote: Int?,
         val detectedCentsOff: Float?,
         val hideNoteBars: Boolean = false,
-        val violinMode: Boolean = false,
-        val violinPositions: List<ViolinPosition?> = emptyList(),
+        val instrument: Instrument = Instrument.VIOLIN,
+        val bowedPositions: List<BowedPosition?> = emptyList(),
         val preferOpenStrings: Boolean = true
     ) : CanvasMode
 }
@@ -283,7 +280,7 @@ fun SharedNoteCanvas(
         val pianoVisibility = if (mode is CanvasMode.FreePlay) mode.pianoVisibility else PianoVisibility.BOTH
         val showTopPiano = pianoVisibility == PianoVisibility.BOTH || pianoVisibility == PianoVisibility.UPPER_ONLY
         val showBottomPiano = pianoVisibility == PianoVisibility.BOTH || pianoVisibility == PianoVisibility.LOWER_ONLY
-        val violinMode = mode is CanvasMode.Melody && mode.violinMode
+        val bowedMode = mode is CanvasMode.Melody
 
         // Piano edge and far edge Y coordinates
         val pianoEdgeY: Float   // the "now" line or melody piano edge
@@ -329,7 +326,7 @@ fun SharedNoteCanvas(
         }
 
         // Draw black-key column backgrounds (clipped to playable area)
-        if (!violinMode) {
+        if (!bowedMode) {
             for (midi in minMidi..maxMidi) {
                 val key = layout[midi] ?: continue
                 if (key.isBlack && playableBottom > noteAreaTop) {
@@ -343,7 +340,7 @@ fun SharedNoteCanvas(
         }
 
         // Draw subtle grid lines at white key boundaries (clipped to playable area)
-        if (!violinMode && playableBottom > noteAreaTop) {
+        if (!bowedMode && playableBottom > noteAreaTop) {
             for (midi in minMidi..maxMidi) {
                 val key = layout[midi] ?: continue
                 if (!key.isBlack) {
@@ -391,23 +388,23 @@ fun SharedNoteCanvas(
                 }
             }
             is CanvasMode.Melody -> {
-                if (violinMode) {
-                    val labelAreaPx = VIOLIN_LABEL_AREA_DP * density
+                if (bowedMode) {
+                    val labelAreaPx = BOWED_LABEL_AREA_DP * density
                     val nowLineY = size.height - labelAreaPx
-                    drawViolinBoard(mode, density, fontScale, textMeasurer, nowLineY)
+                    drawBowedBoard(mode, density, fontScale, textMeasurer, nowLineY)
                     // Clip bars and notes to the playable area so they never
                     // obscure the string labels below the play line.
                     clipRect(left = 0f, top = 0f, right = width, bottom = nowLineY) {
-                        drawViolinBarLines(mode, density, textMeasurer, nowLineY)
-                        drawViolinMelodyNotes(mode, density, textMeasurer, nowLineY)
+                        drawBowedBarLines(mode, density, textMeasurer, nowLineY)
+                        drawBowedMelodyNotes(mode, density, textMeasurer, nowLineY)
                     }
                     drawLine(
-                        color = Color.White.copy(alpha = VIOLIN_LINE_ALPHA),
+                        color = Color.White.copy(alpha = BOWED_LINE_ALPHA),
                         start = Offset(0f, nowLineY),
                         end = Offset(size.width, nowLineY),
-                        strokeWidth = VIOLIN_LINE_WIDTH_DP * density
+                        strokeWidth = BOWED_LINE_WIDTH_DP * density
                     )
-                    drawViolinPitchIndicator(mode, density, nowLineY)
+                    drawBowedPitchIndicator(mode, density, nowLineY)
                 } else {
                     drawBarLines(mode, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density, textMeasurer, playableBottom)
                     drawMelodyNotes(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
@@ -830,10 +827,10 @@ private fun DrawScope.drawPitchIndicator(
 
 // endregion
 
-// region Violin board rendering
+// region Bowed board rendering
 
 @OptIn(ExperimentalTextApi::class)
-private fun DrawScope.drawViolinBoard(
+private fun DrawScope.drawBowedBoard(
     mode: CanvasMode.Melody,
     density: Float,
     fontScale: Float,
@@ -842,47 +839,48 @@ private fun DrawScope.drawViolinBoard(
 ) {
     val width = size.width
     val height = size.height
-    val gapPx = VIOLIN_BLOCK_GAP_DP * density
-    val slotWidth = violinSlotWidth(width, gapPx)
+    val gapPx = BOWED_BLOCK_GAP_DP * density
+    val slotWidth = bowedSlotWidth(width, gapPx)
     val preferOpenStrings = mode.preferOpenStrings
 
     // One block per string, separated by a gap and alternating tint
-    for (i in 0 until VIOLIN_BLOCK_COUNT) {
-        val left = violinBlockLeft(i, width, gapPx, preferOpenStrings)
+    for (i in 0 until BOWED_BLOCK_COUNT) {
+        val left = bowedBlockLeft(i, width, gapPx, preferOpenStrings)
         if (i % 2 == 0) {
             drawRect(
                 color = Color(0x1AFFFFFF),
                 topLeft = Offset(left, 0f),
-                size = Size(slotWidth * violinSlotsInBlock(i, preferOpenStrings), height)
+                size = Size(slotWidth * bowedSlotsInBlock(i, preferOpenStrings), height)
             )
         }
         if (i > 0) {
             drawRect(
-                color = VIOLIN_BLOCK_GAP_COLOR,
+                color = BOWED_BLOCK_GAP_COLOR,
                 topLeft = Offset(left - gapPx, 0f),
                 size = Size(gapPx, height)
             )
             drawLine(
-                color = Color.White.copy(alpha = VIOLIN_LINE_ALPHA),
+                color = Color.White.copy(alpha = BOWED_LINE_ALPHA),
                 start = Offset(left - gapPx / 2f, 0f),
                 end = Offset(left - gapPx / 2f, height),
-                strokeWidth = VIOLIN_LINE_WIDTH_DP * density
+                strokeWidth = BOWED_LINE_WIDTH_DP * density
             )
         }
     }
 
     // A big dim string letter behind the notes, centred over the playable area of its block
-    val letterPx = minOf(slotWidth * VIOLIN_SLOTS_PER_STRING, nowLineY / 3f)
+    val labels = mode.instrument.stringLabels
+    val letterPx = minOf(slotWidth * BOWED_SLOTS_PER_STRING, nowLineY / 3f)
     val letterStyle = TextStyle(
         color = Color.White.copy(alpha = 0.10f),
         fontSize = (letterPx / (density * fontScale)).sp,
         fontWeight = FontWeight.Bold
     )
-    for (i in VIOLIN_STRING_LABELS.indices) {
-        val centerX = violinBlockLeft(i, width, gapPx, preferOpenStrings) +
-            slotWidth * violinSlotsInBlock(i, preferOpenStrings) / 2f
+    for (i in labels.indices) {
+        val centerX = bowedBlockLeft(i, width, gapPx, preferOpenStrings) +
+            slotWidth * bowedSlotsInBlock(i, preferOpenStrings) / 2f
         val textLayout = textMeasurer.measure(
-            text = buildAnnotatedString { append(VIOLIN_STRING_LABELS[i]) },
+            text = buildAnnotatedString { append(labels[i]) },
             style = letterStyle
         )
         drawText(
@@ -897,14 +895,14 @@ private fun DrawScope.drawViolinBoard(
     // String labels at the bottom edge of each block, on a dark pill for readability
     val labelStyle = TextStyle(
         color = Color.White.copy(alpha = 0.9f),
-        fontSize = (VIOLIN_LABEL_FONT_DP * density / 2.75f).sp,
+        fontSize = (BOWED_LABEL_FONT_DP * density / 2.75f).sp,
         fontWeight = FontWeight.Bold
     )
-    for (i in VIOLIN_STRING_LABELS.indices) {
-        val centerX = violinBlockLeft(i, width, gapPx, preferOpenStrings) +
-            slotWidth * violinSlotsInBlock(i, preferOpenStrings) / 2f
+    for (i in labels.indices) {
+        val centerX = bowedBlockLeft(i, width, gapPx, preferOpenStrings) +
+            slotWidth * bowedSlotsInBlock(i, preferOpenStrings) / 2f
         val textLayout = textMeasurer.measure(
-            text = buildAnnotatedString { append(VIOLIN_STRING_LABELS[i]) },
+            text = buildAnnotatedString { append(labels[i]) },
             style = labelStyle
         )
         val pad = 4f * density
@@ -926,14 +924,14 @@ private fun DrawScope.drawViolinBoard(
 }
 
 @OptIn(ExperimentalTextApi::class)
-private fun DrawScope.drawViolinBarLines(
+private fun DrawScope.drawBowedBarLines(
     mode: CanvasMode.Melody,
     density: Float,
     textMeasurer: TextMeasurer,
     nowLineY: Float
 ) {
     val track = mode.melodyTrack
-    val pixelsPerSecond = violinPixelsPerSecond(mode.fallSpeedPxPerSec, nowLineY)
+    val pixelsPerSecond = bowedPixelsPerSecond(mode.fallSpeedPxPerSec, nowLineY)
     if (pixelsPerSecond <= 0f) return
 
     val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
@@ -1014,7 +1012,7 @@ private fun DrawScope.drawViolinBarLines(
 }
 
 @OptIn(ExperimentalTextApi::class)
-private fun DrawScope.drawViolinMelodyNotes(
+private fun DrawScope.drawBowedMelodyNotes(
     mode: CanvasMode.Melody,
     density: Float,
     textMeasurer: TextMeasurer,
@@ -1023,11 +1021,11 @@ private fun DrawScope.drawViolinMelodyNotes(
     if (mode.hideNoteBars) return
 
     val width = size.width
-    val pixelsPerSecond = violinPixelsPerSecond(mode.fallSpeedPxPerSec, nowLineY)
+    val pixelsPerSecond = bowedPixelsPerSecond(mode.fallSpeedPxPerSec, nowLineY)
     val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
-    val gapPx = VIOLIN_BLOCK_GAP_DP * density
-    val slotWidth = violinSlotWidth(width, gapPx)
-    val positions = mode.violinPositions
+    val gapPx = BOWED_BLOCK_GAP_DP * density
+    val slotWidth = bowedSlotWidth(width, gapPx)
+    val positions = mode.bowedPositions
     val minGapPx = 4f * density
     val barThickness = (slotWidth * 0.9f).coerceAtLeast(4f * density)
     // The digits sit in a white halo; measure them once for the whole pass
@@ -1063,8 +1061,9 @@ private fun DrawScope.drawViolinMelodyNotes(
 
         if (rawTopY > nowLineY || rawBottomY < 0f) return@forEachIndexed
 
+        val lowestMidi = mode.instrument.tuning.first()
         val pos = positions.getOrNull(index)
-            ?.takeIf { note.noteNumber in VIOLIN_LOWEST_MIDI..VIOLIN_HIGHEST_MIDI }
+            ?.takeIf { note.noteNumber in lowestMidi..mode.instrument.highestFirstPositionMidi }
 
         var barLen = rawBottomY - rawTopY
         if (barLen < 2f) return@forEachIndexed
@@ -1078,7 +1077,7 @@ private fun DrawScope.drawViolinMelodyNotes(
             barLen = minBarLen
         }
 
-        val centerX = violinSlotCenterX(note.noteNumber, width, gapPx, mode.preferOpenStrings)
+        val centerX = bowedSlotCenterX(note.noteNumber, width, gapPx, lowestMidi, mode.preferOpenStrings)
         val barLeft = centerX - barThickness / 2f
 
         val r = CORNER_RADIUS_DP * density
@@ -1088,7 +1087,12 @@ private fun DrawScope.drawViolinMelodyNotes(
         // stripes lean the way the finger moves: rising for a raised (sharp) placement, falling for
         // a lowered (flat) one.
         val deviation = if (pos == null) 0
-        else ViolinAlgorithm.fingerOffsetDeviation(note.noteNumber, pos.string, pos.finger) ?: 0
+        else BowedAlgorithm.fingerOffsetDeviation(
+            note.noteNumber,
+            mode.instrument.tuning[pos.stringIndex],
+            pos.finger,
+            mode.instrument
+        ) ?: 0
         val stripeColor = if (pos == null) null else when (deviation) {
             in 1..4 -> FINGER_COLORS[pos.finger + 1]
             in -4..-1 -> FINGER_COLORS[pos.finger - 1]
@@ -1181,7 +1185,7 @@ private fun DrawScope.drawViolinMelodyNotes(
     }
 }
 
-private fun DrawScope.drawViolinPitchIndicator(
+private fun DrawScope.drawBowedPitchIndicator(
     mode: CanvasMode.Melody,
     density: Float,
     nowLineY: Float
@@ -1191,9 +1195,15 @@ private fun DrawScope.drawViolinPitchIndicator(
     val expectedIndex = mode.currentNoteIndex
     if (expectedIndex !in track.notes.indices) return
 
-    val gapPx = VIOLIN_BLOCK_GAP_DP * density
-    val slotWidth = violinSlotWidth(size.width, gapPx)
-    val markerX = violinSlotCenterX(detectedMidi, size.width, gapPx, mode.preferOpenStrings)
+    val gapPx = BOWED_BLOCK_GAP_DP * density
+    val slotWidth = bowedSlotWidth(size.width, gapPx)
+    val markerX = bowedSlotCenterX(
+        detectedMidi,
+        size.width,
+        gapPx,
+        mode.instrument.tuning.first(),
+        mode.preferOpenStrings
+    )
 
     val indicatorColor = getIndicatorColor(detectedMidi, mode.detectedCentsOff, track, expectedIndex)
 
@@ -1235,7 +1245,7 @@ private fun DrawScope.drawVerticalPitchLine(
         val t = centsPositions[i].coerceIn(0f, 1f)
         val normalized = (centsHistory[i] / 50f).coerceIn(-1f, 1f)
         val x = centerX + normalized * maxDeviationPx
-        // Violin bars fall toward the play line: the note starts at the bar
+        // Bowed bars fall toward the play line: the note starts at the bar
         // bottom, so the pitch line grows upward from detection start.
         val y = barBottom - t * (barBottom - barTop)
         if (i == 0) {

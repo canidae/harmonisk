@@ -3,15 +3,16 @@ package net.exent.harmonisk.ui.components
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** The violin board is four blocks of semitone slots, one block per string. */
-class ViolinBoardLayoutTest {
+/** The bowed board is four blocks of semitone slots, one block per string. */
+class BowedBoardLayoutTest {
 
     // 29 slots of 10 px (the E string carries one more than the rest) and three 5 px gaps.
     private val gapPx = 5f
     private val boardWidth = 29 * 10f + 3 * gapPx
 
-    private fun slotX(midi: Int): Float = violinSlotCenterX(midi, boardWidth, gapPx)
-    private fun closedSlotX(midi: Int): Float = violinSlotCenterX(midi, boardWidth, gapPx, preferOpenStrings = false)
+    private fun slotX(midi: Int): Float = bowedSlotCenterX(midi, boardWidth, gapPx, 55)
+    private fun closedSlotX(midi: Int): Float =
+        bowedSlotCenterX(midi, boardWidth, gapPx, 55, preferOpenStrings = false)
 
     @Test
     fun eachOpenStringSitsInTheFirstSlotOfItsBlock() {
@@ -31,11 +32,19 @@ class ViolinBoardLayoutTest {
     }
 
     @Test
+    fun eachInstrumentStartsAtItsLowestOpenString() {
+        assertEquals(5f, bowedSlotCenterX(48, boardWidth, gapPx, 48), 0.01f)
+        assertEquals(80f, bowedSlotCenterX(55, boardWidth, gapPx, 48), 0.01f)
+        assertEquals(5f, bowedSlotCenterX(36, boardWidth, gapPx, 36), 0.01f)
+        assertEquals(80f, bowedSlotCenterX(43, boardWidth, gapPx, 36), 0.01f)
+    }
+
+    @Test
     fun theBlocksSitSevenSlotsApartAndTheFirstStartsAtTheEdge() {
-        assertEquals(0f, violinBlockLeft(0, boardWidth, gapPx), 0.01f)
-        assertEquals(75f, violinBlockLeft(1, boardWidth, gapPx), 0.01f)
-        assertEquals(225f, violinBlockLeft(3, boardWidth, gapPx), 0.01f)
-        assertEquals(10f, violinSlotWidth(boardWidth, gapPx), 0.01f)
+        assertEquals(0f, bowedBlockLeft(0, boardWidth, gapPx), 0.01f)
+        assertEquals(75f, bowedBlockLeft(1, boardWidth, gapPx), 0.01f)
+        assertEquals(225f, bowedBlockLeft(3, boardWidth, gapPx), 0.01f)
+        assertEquals(10f, bowedSlotWidth(boardWidth, gapPx), 0.01f)
     }
 
     @Test
@@ -50,10 +59,10 @@ class ViolinBoardLayoutTest {
 
     @Test
     fun withoutOpenStringsTheBlocksSitAtTheirOffsetBoundaries() {
-        assertEquals(0f, violinBlockLeft(0, boardWidth, gapPx, preferOpenStrings = false), 0.01f)
-        assertEquals(85f, violinBlockLeft(1, boardWidth, gapPx, preferOpenStrings = false), 0.01f)
-        assertEquals(160f, violinBlockLeft(2, boardWidth, gapPx, preferOpenStrings = false), 0.01f)
-        assertEquals(235f, violinBlockLeft(3, boardWidth, gapPx, preferOpenStrings = false), 0.01f)
+        assertEquals(0f, bowedBlockLeft(0, boardWidth, gapPx, preferOpenStrings = false), 0.01f)
+        assertEquals(85f, bowedBlockLeft(1, boardWidth, gapPx, preferOpenStrings = false), 0.01f)
+        assertEquals(160f, bowedBlockLeft(2, boardWidth, gapPx, preferOpenStrings = false), 0.01f)
+        assertEquals(235f, bowedBlockLeft(3, boardWidth, gapPx, preferOpenStrings = false), 0.01f)
     }
 
     @Test

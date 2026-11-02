@@ -8,41 +8,54 @@ import kotlin.math.abs
 /**
  * Chooses the transposition that is easiest for a beginner to finger in first position.
  *
- * Every shift from -6 to +6 semitones is scored through the violin fingering algorithm:
+ * Every shift from -6 to +6 semitones is scored through the bowed fingering algorithm:
  * a note on the default finger placement costs nothing, a low or high placement costs by
  * the semitones it deviates, the fourth finger costs a little, open strings earn a reward
  * and notes outside first position cost the most. Keys with two or three sharps (D and A
  * major and their relative minors) get a small bonus, because their scales sit under the
  * default finger placements. The shift closest to the written key wins a tie.
  */
-class BeginnerKey(private val violinAlgorithm: ViolinAlgorithm) {
+class BeginnerKey(private val bowedAlgorithm: BowedAlgorithm) {
 
-    fun violinOffset(notes: List<NoteEvent>, key: KeySignature?, preferOpenStrings: Boolean = true): Int {
+    fun offset(
+        notes: List<NoteEvent>,
+        key: KeySignature?,
+        instrument: Instrument,
+        preferOpenStrings: Boolean = true
+    ): Int {
         if (notes.isEmpty()) return 0
         val writtenKey = key ?: KeyDetector.detect(notes)
         val pitches = notes.map { it.noteNumber }
-        return (-MAX_SHIFT..MAX_SHIFT).minByOrNull { offset ->
-            cost(pitches, writtenKey, offset, preferOpenStrings)
+        return (-MAX_SHIFT..MAX_SHIFT).minByOrNull { shift ->
+            cost(pitches, writtenKey, shift, instrument, preferOpenStrings)
         } ?: 0
     }
 
-    private fun cost(pitches: List<Int>, key: KeySignature?, offset: Int, preferOpenStrings: Boolean): Double {
-        val transposedKey = key?.transpose(offset)
-        val positions = violinAlgorithm.recommendPositions(
-            pitches.map { it + offset },
+    private fun cost(
+        pitches: List<Int>,
+        key: KeySignature?,
+        shift: Int,
+        instrument: Instrument,
+        preferOpenStrings: Boolean
+    ): Double {
+        val transposedKey = key?.transpose(shift)
+        val positions = bowedAlgorithm.recommendPositions(
+            instrument,
+            pitches.map { it + shift },
             transposedKey,
             preferOpenStrings
         )
-        var cost = abs(offset) * OFFSET_COST + keyBonus(transposedKey)
+        var cost = abs(shift) * OFFSET_COST + keyBonus(transposedKey)
         positions.forEachIndexed { index, position ->
             if (position == null) {
                 cost += OUT_OF_RANGE_COST
                 return@forEachIndexed
             }
-            val deviation = ViolinAlgorithm.fingerOffsetDeviation(
-                pitches[index] + offset,
-                position.string,
-                position.finger
+            val deviation = BowedAlgorithm.fingerOffsetDeviation(
+                pitches[index] + shift,
+                instrument.tuning[position.stringIndex],
+                position.finger,
+                instrument
             ) ?: 0
             cost += abs(deviation) * DEVIATION_COST
             if (position.finger == 4) cost += FOURTH_FINGER_COST

@@ -51,11 +51,10 @@
     <string name="settings_reset">Reset</string>
     <string name="settings_reset_to_defaults">Reset to defaults</string>
     <string name="settings_language">Language</string>
-    <string name="settings_instrument">Instrument</string>
     <string name="settings_help">Help</string>
     <string name="settings_help_got_it">Got it</string>
-    <string name="instrument_piano">Piano</string>
     <string name="instrument_violin">Violin</string>
+    <string name="instrument_viola">Viola</string>
     <string name="instrument_cello">Cello</string>
 
     <!-- Free Play -->

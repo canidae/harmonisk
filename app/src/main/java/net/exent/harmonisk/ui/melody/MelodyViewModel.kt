@@ -52,7 +52,7 @@ class MelodyViewModel @Inject constructor(
     private val midiInputReceiver: MidiInputReceiver,
     private val midiOutputSender: MidiOutputSender,
     private val scoreHistoryRepository: ScoreHistoryRepository,
-    private val violinAlgorithm: ViolinAlgorithm,
+    private val bowedAlgorithm: BowedAlgorithm,
     private val beginnerKey: BeginnerKey,
     private val devModeState: DevModeState
 ) : ViewModel() {
@@ -180,7 +180,7 @@ class MelodyViewModel @Inject constructor(
                 if (newInstrument != prevInstrument && soundFontSynthesizer.isReady) {
                     soundFontSynthesizer.setInstrument(instrument.midiBank, instrument.midiProgram)
                 }
-                updateViolinPositions()
+                updateBowedPositions()
                 val melodyId = currentMelodyId
                 if (melodyId != null) {
                     loadMelodySettingsAndHistory(melodyId, newInstrument)
@@ -364,7 +364,7 @@ class MelodyViewModel @Inject constructor(
             _viewState.update {
                 it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax, songTimeOffsetSeconds = 0.0)
             }
-            updateViolinPositions()
+            updateBowedPositions()
             loadMelodySettingsAndHistory(info.id)
             return true
         }
@@ -437,7 +437,7 @@ class MelodyViewModel @Inject constructor(
                     setActiveVoice(idx)
                 }
                 manualTransposeSemitones = saved.transposeSemitones
-                val auto = saved.autoTranspose && Instrument.fromName(instrument) == Instrument.VIOLIN
+                val auto = saved.autoTranspose
                 applyTranspose(if (auto) autoOffset() else saved.transposeSemitones, auto)
             }
         }
@@ -484,15 +484,15 @@ class MelodyViewModel @Inject constructor(
         )
     }
 
-    /** The shift that is easiest to finger on the active instrument, or 0 when none applies. */
     private fun autoOffset(): Int {
-        if (Instrument.fromName(_currentInstrument.value) != Instrument.VIOLIN) return 0
+        val instrument = Instrument.fromName(_currentInstrument.value)
         val track = originalMelodyTracks.getOrNull(_gameState.value.activeVoiceIndex)
             ?: originalMelodyTracks.firstOrNull()
             ?: return 0
-        return beginnerKey.violinOffset(
+        return beginnerKey.offset(
             track.notes,
             track.keySignature,
+            instrument,
             _gameState.value.preferOpenStrings
         )
     }
@@ -513,7 +513,7 @@ class MelodyViewModel @Inject constructor(
             )
         }
         _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
-        updateViolinPositions()
+        updateBowedPositions()
         saveMelodySettings()
     }
 
@@ -525,12 +525,12 @@ class MelodyViewModel @Inject constructor(
         )
     }
 
-    /** Recompute recommended violin fingerings for the active melody (cleared for non-violin instruments). */
-    private fun updateViolinPositions() {
+    private fun updateBowedPositions() {
         val track = _gameState.value.melodyTrack
-        val isViolin = Instrument.fromName(_currentInstrument.value) == Instrument.VIOLIN
-        val positions = if (isViolin && track != null) {
-            violinAlgorithm.recommendPositions(
+        val instrument = Instrument.fromName(_currentInstrument.value)
+        val positions = if (track != null) {
+            bowedAlgorithm.recommendPositions(
+                instrument,
                 track.notes.map { it.noteNumber },
                 track.keySignature,
                 _gameState.value.preferOpenStrings
@@ -538,7 +538,7 @@ class MelodyViewModel @Inject constructor(
         } else {
             emptyList()
         }
-        _viewState.update { it.copy(violinPositions = positions) }
+        _viewState.update { it.copy(bowedPositions = positions) }
     }
 
     private fun migrateFallSpeed(saved: Float): Float {
@@ -708,7 +708,7 @@ class MelodyViewModel @Inject constructor(
             )
         }
         _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
-        updateViolinPositions()
+        updateBowedPositions()
         saveMelodySettings()
     }
 

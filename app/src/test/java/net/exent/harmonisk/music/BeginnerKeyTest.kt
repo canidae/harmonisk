@@ -6,10 +6,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The beginner key should transpose melodies into violin-friendly finger patterns. */
+/** The beginner key should transpose melodies into instrument-friendly finger patterns. */
 class BeginnerKeyTest {
 
-    private val beginnerKey = BeginnerKey(ViolinAlgorithm())
+    private val beginnerKey = BeginnerKey(BowedAlgorithm())
 
     private fun notes(vararg pitches: Int): List<NoteEvent> = pitches.mapIndexed { index, pitch ->
         NoteEvent(
@@ -20,12 +20,15 @@ class BeginnerKeyTest {
         )
     }
 
-    private fun offset(vararg pitches: Int, key: KeySignature?): Int =
-        beginnerKey.violinOffset(notes(*pitches), key)
+    private fun offset(
+        vararg pitches: Int,
+        key: KeySignature?,
+        instrument: Instrument = Instrument.VIOLIN
+    ): Int = beginnerKey.offset(notes(*pitches), key, instrument)
 
     @Test
     fun emptyMelodyStaysPut() {
-        assertEquals(0, beginnerKey.violinOffset(emptyList(), KeySignature(0, false)))
+        assertEquals(0, beginnerKey.offset(emptyList(), KeySignature(0, false), Instrument.VIOLIN))
     }
 
     @Test
@@ -69,6 +72,14 @@ class BeginnerKeyTest {
         val melody = intArrayOf(49, 51, 52, 54, 56, 57, 59, 61)
         val offset = offset(*melody, key = KeySignature(-3, false))
         assertEquals(6, offset)
+    }
+
+    @Test
+    fun eachInstrumentGetsAnOffsetWithinRange() {
+        val melody = intArrayOf(62, 64, 66, 67, 69, 71, 73, 74)
+        for (instrument in Instrument.entries) {
+            assertTrue(offset(*melody, key = KeySignature(2, false), instrument = instrument) in -6..6)
+        }
     }
 
     @Test

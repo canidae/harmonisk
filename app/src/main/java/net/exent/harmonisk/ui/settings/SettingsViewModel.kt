@@ -17,7 +17,6 @@ import net.exent.harmonisk.audio.SoundFontSynthesizer
 import net.exent.harmonisk.data.AppSettings
 import net.exent.harmonisk.data.AudioDelayRepository
 import net.exent.harmonisk.data.SettingsRepository
-import net.exent.harmonisk.music.Instrument
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.math.abs
@@ -82,14 +81,6 @@ class SettingsViewModel @Inject constructor(
 
     fun updateSilenceThreshold(db: Float) {
         viewModelScope.launch { settingsRepository.updateSilenceThreshold(db) }
-    }
-
-    fun updateInstrument(name: String) {
-        viewModelScope.launch {
-            val instrument = Instrument.fromName(name)
-            soundFontSynthesizer.setInstrument(instrument.midiBank, instrument.midiProgram)
-            settingsRepository.updateInstrument(name)
-        }
     }
 
     fun setInputDelay(ms: Int) {

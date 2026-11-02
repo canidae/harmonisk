@@ -39,14 +39,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.harmonisk.R
 import net.exent.harmonisk.midi.MidiToAlphaTex
-import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.ui.components.CanvasMode
 import net.exent.harmonisk.ui.components.VOICE_COLORS
 import net.exent.harmonisk.ui.components.KeepScreenOn
-import net.exent.harmonisk.ui.components.PIANO_HEIGHT_DP
 import net.exent.harmonisk.ui.components.RequireMicPermission
 import net.exent.harmonisk.ui.components.SharedNoteCanvas
-import net.exent.harmonisk.ui.components.VIOLIN_LABEL_AREA_DP
+import net.exent.harmonisk.ui.components.BOWED_LABEL_AREA_DP
 import net.exent.harmonisk.ui.OVERLAY_BG
 import net.exent.harmonisk.ui.OVERLAY_BUTTON_SIZE
 import net.exent.harmonisk.ui.OVERLAY_ICON_TINT
@@ -73,7 +71,6 @@ fun MelodyPlayScreen(
     val personalBest by viewModel.personalBestCombinedScore.collectAsStateWithLifecycle()
     val currentInstrument by viewModel.currentInstrument.collectAsStateWithLifecycle()
     val devModeEnabled by viewModel.devModeEnabled.collectAsStateWithLifecycle()
-    val violinMode = currentInstrument == Instrument.VIOLIN
     val density = LocalDensity.current
     val context = LocalContext.current
     var showResultsModal by remember { mutableStateOf(false) }
@@ -252,7 +249,7 @@ fun MelodyPlayScreen(
                         onLevelChange = { viewModel.setLevel(it) },
                         autoTranspose = gameState.autoTranspose,
                         onAutoTransposeChange = { viewModel.setAutoTranspose(it) },
-                        showAutoTranspose = violinMode,
+                        showAutoTranspose = true,
                         preferOpenStrings = gameState.preferOpenStrings,
                         onPreferOpenStringsChange = { viewModel.setPreferOpenStrings(it) },
                         transposeSemitones = gameState.transposeSemitones,
@@ -334,8 +331,8 @@ fun MelodyPlayScreen(
                                 detectedMidiNote = if (gameState.pitchResult.isValid) gameState.pitchResult.midiNoteNumber else null,
                                 detectedCentsOff = if (gameState.pitchResult.isValid) gameState.pitchResult.centsOff else null,
                                 hideNoteBars = gameState.hideNoteBars,
-                                violinMode = violinMode,
-                                violinPositions = viewState.violinPositions,
+                                instrument = currentInstrument,
+                                bowedPositions = viewState.bowedPositions,
                                 preferOpenStrings = gameState.preferOpenStrings
                             ),
                             pianoAtBottom = true,
@@ -368,7 +365,7 @@ fun MelodyPlayScreen(
                                 },
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
-                                    .padding(bottom = if (violinMode) VIOLIN_LABEL_AREA_DP.dp + 24.dp else PIANO_HEIGHT_DP.dp + 24.dp)
+                                    .padding(bottom = BOWED_LABEL_AREA_DP.dp + 24.dp)
                                     .size(72.dp)
                                     .background(PlayGreen.copy(alpha = 0.25f), CircleShape)
                                     .border(2.dp, PlayGreen.copy(alpha = 0.7f), CircleShape)
@@ -387,7 +384,7 @@ fun MelodyPlayScreen(
                         Column(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
-                                .padding(bottom = if (violinMode) VIOLIN_LABEL_AREA_DP.dp + 8.dp else PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
+                                .padding(bottom = BOWED_LABEL_AREA_DP.dp + 8.dp, end = 6.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {

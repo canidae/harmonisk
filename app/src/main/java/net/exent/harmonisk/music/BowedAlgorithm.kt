@@ -1,49 +1,37 @@
 package net.exent.harmonisk.music
 
 import net.exent.harmonisk.midi.KeySignature
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 
-enum class ViolinString {
-    G, D, A, E
-}
-
-data class ViolinPosition(
-    val string: ViolinString,
+data class BowedPosition(
+    val stringIndex: Int,
     val finger: Int // 0 = open string, 1-4 = fingers
 )
 
 /**
- * Recommends violin fingerings for a sequence of notes in first position.
- *
- * Finger placement (semitone offsets above a string's open pitch) follows the
- * standard first-position spacing, including the low and high variants of each
- * finger: finger 1 = +1/+2, finger 2 = +3/+4, finger 3 = +5/+6, finger 4 = +6/+7.
- * Every semitone in the first-position range is therefore playable. Notes
- * outside first position (below G3 or above B5) have no valid position and
- * return null.
- *
- * The note a semitone below an open string is reachable both with a high third
- * finger and a low fourth finger. It is fingered high third when the key spells
- * it as a sharp (C#, G#, D#, A#) and low fourth when it spells it as a flat
- * (Db, Ab, Eb, Bb), which is the fingering the key signature asks for.
+ * Recommends fingerings for a sequence of notes in first position, using the
+ * instrument's tuning and first-position finger spacing.
  */
-class ViolinAlgorithm {
+class BowedAlgorithm {
 
     private fun getAllValidPositions(
         targetMidi: Int,
+        instrument: Instrument,
         key: KeySignature?,
         preferOpenStrings: Boolean
-    ): List<ViolinPosition> {
-        val positions = POSITION_MAP[targetMidi] ?: return emptyList()
+    ): List<BowedPosition> {
+        val positions = positionMap(instrument)[targetMidi] ?: return emptyList()
         val spelled = if (!isFlatSpelled(targetMidi, key)) positions else positions.map { position ->
-            if (position.finger == 3 && semitoneOffset(targetMidi, position.string) == 6) {
-                ViolinPosition(position.string, 4)
+            if (position.finger == 3 && semitoneOffset(targetMidi, instrument.tuning[position.stringIndex]) == 6) {
+                BowedPosition(position.stringIndex, 4)
             } else {
                 position
             }
         }
-        if (targetMidi !in OPEN_STRING_MIDI) return spelled
-        return spelled.filter { if (preferOpenStrings) it.finger == 0 else it.finger == 4 }
+        if (targetMidi !in openStringMidis(instrument)) return spelled
+        if (preferOpenStrings) return spelled.filter { it.finger == 0 }
+        return spelled.filter { it.finger != 0 }.ifEmpty { spelled.filter { it.finger == 0 } }
     }
 
     /** True when the key spells [midi] as a flat, so the low fourth finger is the natural choice. */
@@ -54,45 +42,38 @@ class ViolinAlgorithm {
         return key.usesFlats
     }
 
-    private fun calculateDistance(posA: ViolinPosition, posB: ViolinPosition?): Int {
+    private fun calculateDistance(posA: BowedPosition, posB: BowedPosition?): Int {
         if (posB == null) return 0
 
-        val stringDiff = abs(posA.string.ordinal - posB.string.ordinal)
+        val stringDiff = abs(posA.stringIndex - posB.stringIndex)
         val fingerDiff = abs(posA.finger - posB.finger)
 
-        // String crossings cost more physically than moving fingers on the same string
         return (stringDiff * 3) + fingerDiff
     }
 
     fun findRecommendedPosition(
+        instrument: Instrument,
         targetMidi: Int,
-        previousPosition: ViolinPosition?,
+        previousPosition: BowedPosition?,
         key: KeySignature? = null,
         preferOpenStrings: Boolean = true
-    ): ViolinPosition? {
-        val candidates = getAllValidPositions(targetMidi, key, preferOpenStrings)
+    ): BowedPosition? {
+        val candidates = getAllValidPositions(targetMidi, instrument, key, preferOpenStrings)
 
-        if (candidates.isEmpty()) return null // Note cannot be played in first position
+        if (candidates.isEmpty()) return null
 
-        var bestCandidate: ViolinPosition? = null
+        var bestCandidate: BowedPosition? = null
         var lowestScore = Int.MAX_VALUE
 
         for (candidate in candidates) {
-            var score = 0
+            var score = calculateDistance(candidate, previousPosition)
 
-            // 1. Proximity Cost: How far is this from the last played position?
-            score += calculateDistance(candidate, previousPosition)
-
-            // 2. Beginner Bias: Heavily reward Open Strings (finger 0)
             if (candidate.finger == 0) {
                 score -= 5
-            }
-            // 3. Pinky Penalty: Slightly penalize 4th finger if alternatives exist
-            else if (candidate.finger == 4) {
+            } else if (candidate.finger == 4) {
                 score += 2
             }
 
-            // Track the lowest score (best option)
             if (score < lowestScore) {
                 lowestScore = score
                 bestCandidate = candidate
@@ -111,19 +92,21 @@ class ViolinAlgorithm {
      * Out-of-range notes (no valid first-position fingering) map to null.
      */
     fun recommendPositions(
+        instrument: Instrument,
         notes: List<Int>,
         key: KeySignature? = null,
         preferOpenStrings: Boolean = true
-    ): List<ViolinPosition?> {
+    ): List<BowedPosition?> {
         if (notes.isEmpty()) return emptyList()
 
-        val candidateLists = notes.map { getAllValidPositions(it, key, preferOpenStrings) }
-        val result = arrayOfNulls<ViolinPosition>(notes.size)
+        val candidateLists = notes.map {
+            getAllValidPositions(it, instrument, key, preferOpenStrings)
+        }
+        val result = arrayOfNulls<BowedPosition>(notes.size)
         val playableIndices = notes.indices.filter { candidateLists[it].isNotEmpty() }
         if (playableIndices.isEmpty()) return result.toList()
 
-        // DP row element: (candidate, totalCost, previous candidate row index)
-        data class Entry(val position: ViolinPosition, val totalCost: Int, val prevIndex: Int)
+        data class Entry(val position: BowedPosition, val totalCost: Int, val prevIndex: Int)
 
         var prevRow: List<Entry> = emptyList()
         val rows = mutableListOf<MutableList<Entry>>()
@@ -165,22 +148,7 @@ class ViolinAlgorithm {
     }
 
     companion object {
-        // Open string MIDI numbers: G3, D4, A4, E5
-        private val OPEN_MIDI = mapOf(
-            ViolinString.G to 55,
-            ViolinString.D to 62,
-            ViolinString.A to 69,
-            ViolinString.E to 76
-        )
-
-        private val OPEN_STRING_MIDI = setOf(62, 69, 76)
-
-        // First-position playable range (inclusive)
-        const val MIN_FIRST_POSITION_MIDI = 55 // G3
-        const val MAX_FIRST_POSITION_MIDI = 83 // B5
-
-        /** Finger -> semitone offset(s) above the open string (low and high variants). */
-        private val FINGER_OFFSETS = listOf(
+        private val VIOLIN_FINGER_OFFSETS = listOf(
             0 to listOf(0),
             1 to listOf(1, 2),
             2 to listOf(3, 4),
@@ -188,34 +156,56 @@ class ViolinAlgorithm {
             4 to listOf(7)
         )
 
-        private val POSITION_MAP: Map<Int, List<ViolinPosition>> = buildMap {
-            for (string in ViolinString.entries) {
-                val open = OPEN_MIDI.getValue(string)
-                for ((finger, offsets) in FINGER_OFFSETS) {
-                    for (offset in offsets) {
-                        val midi = open + offset
-                        if (midi in MIN_FIRST_POSITION_MIDI..MAX_FIRST_POSITION_MIDI) {
-                            merge(midi, listOf(ViolinPosition(string, finger))) { a, b -> a + b }
+        private val CELLO_FINGER_OFFSETS = listOf(
+            0 to listOf(0),
+            1 to listOf(1, 2),
+            2 to listOf(3),
+            3 to listOf(4),
+            4 to listOf(5)
+        )
+
+        private val POSITION_MAPS = ConcurrentHashMap<List<Int>, Map<Int, List<BowedPosition>>>()
+        private val OPEN_STRING_MIDIS = ConcurrentHashMap<List<Int>, Set<Int>>()
+
+        private fun positionMap(instrument: Instrument): Map<Int, List<BowedPosition>> =
+            POSITION_MAPS.getOrPut(instrument.tuning) {
+                val lowestMidi = instrument.tuning.first()
+                val highestMidi = instrument.highestFirstPositionMidi
+                val fingerOffsets = if (instrument == Instrument.CELLO) {
+                    CELLO_FINGER_OFFSETS
+                } else {
+                    VIOLIN_FINGER_OFFSETS
+                }
+                buildMap {
+                    instrument.tuning.forEachIndexed { stringIndex, open ->
+                        for ((finger, offsets) in fingerOffsets) {
+                            for (offset in offsets) {
+                                val midi = open + offset
+                                if (midi in lowestMidi..highestMidi) {
+                                    merge(midi, listOf(BowedPosition(stringIndex, finger))) { a, b -> a + b }
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
 
-        /** Semitone offset of a MIDI note above the given string's open pitch. */
-        fun semitoneOffset(midi: Int, string: ViolinString): Int = midi - OPEN_MIDI.getValue(string)
+        private fun openStringMidis(instrument: Instrument): Set<Int> =
+            OPEN_STRING_MIDIS.getOrPut(instrument.tuning) { instrument.tuning.drop(1).toSet() }
+
+        fun semitoneOffset(midi: Int, openMidi: Int): Int = midi - openMidi
 
         /**
          * The default (natural) first-position semitone offset for a finger:
          * the placement that sits right on the string line on the board.
          * Finger 3 low (+5) is the default C, while finger 3 high (+6) is C#.
          */
-        fun defaultFingerOffset(finger: Int): Int? = when (finger) {
+        fun defaultFingerOffset(instrument: Instrument, finger: Int): Int? = when (finger) {
             0 -> 0
             1 -> 2
-            2 -> 4
-            3 -> 5
-            4 -> 7
+            2 -> if (instrument == Instrument.CELLO) 3 else 4
+            3 -> if (instrument == Instrument.CELLO) 4 else 5
+            4 -> if (instrument == Instrument.CELLO) 5 else 7
             else -> null
         }
 
@@ -224,7 +214,11 @@ class ViolinAlgorithm {
          * the given string: negative = low (flat) placement, positive = high
          * (sharp) placement.
          */
-        fun fingerOffsetDeviation(midi: Int, string: ViolinString, finger: Int): Int? =
-            defaultFingerOffset(finger)?.let { semitoneOffset(midi, string) - it }
+        fun fingerOffsetDeviation(
+            midi: Int,
+            openMidi: Int,
+            finger: Int,
+            instrument: Instrument
+        ): Int? = defaultFingerOffset(instrument, finger)?.let { semitoneOffset(midi, openMidi) - it }
     }
 }
