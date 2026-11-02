@@ -21,11 +21,24 @@ object AbcParser {
         'C' to 0, 'D' to 2, 'E' to 4, 'F' to 5, 'G' to 7, 'A' to 9, 'B' to 11
     )
 
+    data class Song(val title: String, val text: String)
+
     fun parse(text: String, fallbackName: String): List<MelodyTrack> {
         val tunes = splitTunes(cleanLines(text))
         val tracks = mutableListOf<MelodyTrack>()
         for (tune in tunes) tracks.addAll(parseTune(tune, fallbackName))
         return tracks
+    }
+
+    fun splitSongs(text: String, fallbackName: String): List<Song> {
+        val fallback = fallbackName.ifBlank { "Song" }
+        return splitTunes(cleanLines(text)).mapIndexed { index, tune ->
+            val title = tune.firstNotNullOfOrNull { line ->
+                headerField(line)?.takeIf { it == 'T' }
+                    ?.let { line.substring(2).trim().ifBlank { null } }
+            }
+            Song(title ?: "$fallback ${index + 1}", tune.joinToString("\n"))
+        }
     }
 
     // ── Lines and tunes ────────────────────────────────────────────────────

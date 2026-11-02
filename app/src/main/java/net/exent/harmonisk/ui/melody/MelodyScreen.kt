@@ -75,7 +75,7 @@ fun MelodyScreen(
     // The folder the player was in has to outlive the trip into a song, or coming back lists the
     // folders again instead of the songs that were being chosen from.
     var currentFolder by rememberSaveable { mutableStateOf<String?>(null) }
-    var currentZipFolder by rememberSaveable { mutableStateOf<String?>(null) }
+    var currentSubfolder by rememberSaveable { mutableStateOf<String?>(null) }
     var showUrlDialog by remember { mutableStateOf(false) }
     var urlText by rememberSaveable { mutableStateOf("") }
     var importingUrl by remember { mutableStateOf<String?>(null) }
@@ -97,7 +97,7 @@ fun MelodyScreen(
     }
 
     BackHandler(enabled = currentFolder != null) {
-        if (currentZipFolder != null) currentZipFolder = null else currentFolder = null
+        if (currentSubfolder != null) currentSubfolder = null else currentFolder = null
     }
 
     val scope = rememberCoroutineScope()
@@ -111,15 +111,15 @@ fun MelodyScreen(
                     context.getString(R.string.melody_failed_load_url),
                     Toast.LENGTH_SHORT
                 ).show()
-                is MelodyRepository.UrlImportResult.Song -> {
+                is MelodyRepository.ImportResult.Song -> {
                     currentFolder = MelodyRepository.IMPORTED_FOLDER
-                    currentZipFolder = null
+                    currentSubfolder = null
                     Toast.makeText(context, context.getString(R.string.melody_import_success), Toast.LENGTH_SHORT).show()
                 }
-                is MelodyRepository.UrlImportResult.Zip -> {
+                is MelodyRepository.ImportResult.Folder -> {
                     currentFolder = MelodyRepository.IMPORTED_FOLDER
-                    currentZipFolder = result.folder
-                    Toast.makeText(context, context.getString(R.string.melody_import_zip_success), Toast.LENGTH_SHORT).show()
+                    currentSubfolder = result.folder
+                    Toast.makeText(context, context.getString(R.string.melody_import_folder_success), Toast.LENGTH_SHORT).show()
                 }
             }
             importingUrl = null
@@ -133,23 +133,24 @@ fun MelodyScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
-            if (viewModel.isZip(it)) {
-                scope.launch {
-                    val imported = viewModel.importZip(it)
-                    if (imported != null) {
-                        currentFolder = MelodyRepository.IMPORTED_FOLDER
-                        currentZipFolder = imported.first
-                        Toast.makeText(context, context.getString(R.string.melody_import_zip_success), Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, context.getString(R.string.melody_failed_load_zip), Toast.LENGTH_SHORT).show()
+            scope.launch {
+                when (val result = viewModel.importFile(it)) {
+                    is MelodyRepository.ImportResult.Song -> {
+                        viewModel.stopPreview()
+                        previewingMelody = null
+                        if (viewModel.loadMelody(result.info)) {
+                            Toast.makeText(context, context.getString(R.string.melody_import_success), Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.melody_failed_load_melody), Toast.LENGTH_SHORT).show()
+                        }
                     }
+                    is MelodyRepository.ImportResult.Folder -> {
+                        currentFolder = MelodyRepository.IMPORTED_FOLDER
+                        currentSubfolder = result.folder
+                        Toast.makeText(context, context.getString(R.string.melody_import_folder_success), Toast.LENGTH_SHORT).show()
+                    }
+                    null -> Toast.makeText(context, context.getString(R.string.melody_failed_load_midi), Toast.LENGTH_SHORT).show()
                 }
-            } else if (viewModel.loadMelodyFromUri(it)) {
-                viewModel.stopPreview()
-                previewingMelody = null
-                Toast.makeText(context, context.getString(R.string.melody_import_success), Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(context, context.getString(R.string.melody_failed_load_midi), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -163,16 +164,16 @@ fun MelodyScreen(
     val melodies by viewModel.sortedMelodies.collectAsStateWithLifecycle()
     val importedMelodies = melodies.filter { !it.isBundled }
     val looseImported = importedMelodies.filter { it.folder == MelodyRepository.IMPORTED_FOLDER }
-    val importedZipFolders = importedMelodies
+    val importedSubfolders = importedMelodies
         .filter { it.folder != null && it.folder != MelodyRepository.IMPORTED_FOLDER }
         .groupBy { it.folder!! }
     val bundledFolders = melodies.filter { it.isBundled && it.folder != null }.groupBy { it.folder!! }
     val looseBundled = melodies.filter { it.isBundled && it.folder == null }
 
     val inImportedFolder = currentFolder == MelodyRepository.IMPORTED_FOLDER
-    val browsingImported = inImportedFolder && currentZipFolder == null
+    val browsingImported = inImportedFolder && currentSubfolder == null
     val currentFolderSongs = when {
-        currentZipFolder != null -> importedZipFolders[currentZipFolder].orEmpty()
+        currentSubfolder != null -> importedSubfolders[currentSubfolder].orEmpty()
         inImportedFolder -> looseImported
         currentFolder != null -> bundledFolders[currentFolder].orEmpty()
         else -> emptyList()
@@ -252,13 +253,13 @@ fun MelodyScreen(
             BrandTopBar(
                 title = stringResource(R.string.melody_title),
                 subtitle = when {
-                    currentZipFolder != null -> folderDisplayName(currentZipFolder!!)
+                    currentSubfolder != null -> folderDisplayName(currentSubfolder!!)
                     currentFolder != null -> folderDisplayName(currentFolder!!)
                     else -> stringResource(R.string.melody_choose)
                 },
                 onBack = {
                     when {
-                        currentZipFolder != null -> currentZipFolder = null
+                        currentSubfolder != null -> currentSubfolder = null
                         currentFolder != null -> currentFolder = null
                         else -> onBack()
                     }
@@ -301,17 +302,17 @@ fun MelodyScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (browsingImported) {
-                            items(importedZipFolders.keys.sortedBy { folderDisplayName(it) }) { folder ->
+                            items(importedSubfolders.keys.sortedBy { folderDisplayName(it) }) { folder ->
                                 FolderCard(
                                     name = folderDisplayName(folder),
-                                    count = importedZipFolders[folder]!!.size,
-                                    onClick = { currentZipFolder = folder },
+                                    count = importedSubfolders[folder]!!.size,
+                                    onClick = { currentSubfolder = folder },
                                     onRemove = { viewModel.removeImportedFolder(folder) }
                                 )
                             }
                         }
                         items(currentFolderSongs) { info -> songCard(info) }
-                        if (browsingImported && currentFolderSongs.isEmpty() && importedZipFolders.isEmpty()) {
+                        if (browsingImported && currentFolderSongs.isEmpty() && importedSubfolders.isEmpty()) {
                             item {
                                 Text(
                                     text = context.getString(R.string.melody_no_imported),

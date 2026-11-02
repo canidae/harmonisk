@@ -371,55 +371,9 @@ class MelodyViewModel @Inject constructor(
         return false
     }
 
-    /** True when the picked file is a zip archive of MIDI files. */
-    fun isZip(uri: android.net.Uri): Boolean = melodyRepository.isZip(uri)
+    suspend fun importFile(uri: android.net.Uri): MelodyRepository.ImportResult? = melodyRepository.importFile(uri)
 
-    /** Import every MIDI file in a zip; returns the folder it was extracted into and its song count. */
-    suspend fun importZip(uri: android.net.Uri): Pair<String, Int>? = melodyRepository.importZip(uri)
-
-    /** Download a song, or a zip of songs, from an https URL. */
-    suspend fun importFromUrl(url: String): MelodyRepository.UrlImportResult? = melodyRepository.importFromUrl(url)
-
-    fun loadMelodyFromUri(uri: android.net.Uri): Boolean {
-        val name = melodyRepository.resolveDisplayName(uri)
-        val melodyTracks = assignChannels(
-            melodyRepository.loadMultiTrackFromUri(uri, name).filter { it.notes.isNotEmpty() }
-        )
-        if (melodyTracks.isNotEmpty()) {
-            originalMelodyTracks = melodyTracks
-            currentMelodyId = melodyRepository.uriMelodyId(uri)
-            val melodyName = name
-            currentChordIndices = emptyList()
-            val primary = melodyTracks.first()
-            val metronomeTrack = generateMetronomeTrack(primary)
-            val (viewMin, viewMax) = viewRangeFor(primary)
-            manualTransposeSemitones = 0
-            _gameState.update { it.withLoadedMelody(primary, melodyTracks, metronomeTrack, melodyName) }
-            _viewState.update {
-                it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax, songTimeOffsetSeconds = 0.0)
-            }
-            val id = currentMelodyId ?: return false
-            updateViolinPositions()
-            loadMelodySettingsAndHistory(id)
-
-            // Persist the imported melody and compute difficulty
-            viewModelScope.launch {
-                val localUri = melodyRepository.copyUriToLocal(uri, name)
-                val persistUri = localUri ?: uri
-                val info = MelodyRepository.MelodyInfo(
-                    id = currentMelodyId ?: return@launch,
-                    name = name,
-                    isBundled = false,
-                    folder = MelodyRepository.IMPORTED_FOLDER,
-                    uri = persistUri
-                )
-                melodyRepository.addImportedMelody(info)
-                melodyRepository.getDifficulty(info)
-            }
-            return true
-        }
-        return false
-    }
+    suspend fun importFromUrl(url: String): MelodyRepository.ImportResult? = melodyRepository.importFromUrl(url)
 
     /**
      * A freshly loaded song brings none of the last one with it: the canvas stands at the top of

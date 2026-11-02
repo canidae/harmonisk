@@ -9,7 +9,7 @@ import java.io.ByteArrayOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-class MelodyZipImporterTest {
+class MelodyFolderImporterTest {
 
     @get:Rule
     val temp = TemporaryFolder()
@@ -28,11 +28,11 @@ class MelodyZipImporterTest {
 
     @Test
     fun `only midi entries are melodies`() {
-        assertEquals("godnatt.mid", MelodyZipImporter.melodyFileName("folder/godnatt.mid"))
-        assertEquals("godnatt.MIDI", MelodyZipImporter.melodyFileName("godnatt.MIDI"))
-        assertNull(MelodyZipImporter.melodyFileName("readme.txt"))
-        assertNull(MelodyZipImporter.melodyFileName("sub/"))
-        assertNull(MelodyZipImporter.melodyFileName("midi"))
+        assertEquals("godnatt.mid", MelodyFolderImporter.melodyFileName("folder/godnatt.mid"))
+        assertEquals("godnatt.MIDI", MelodyFolderImporter.melodyFileName("godnatt.MIDI"))
+        assertNull(MelodyFolderImporter.melodyFileName("readme.txt"))
+        assertNull(MelodyFolderImporter.melodyFileName("sub/"))
+        assertNull(MelodyFolderImporter.melodyFileName("midi"))
     }
 
     @Test
@@ -44,7 +44,7 @@ class MelodyZipImporterTest {
             "lesmeg.txt" to byteArrayOf(6)
         )
 
-        val melodies = MelodyZipImporter.extract(zip.inputStream(), dir)
+        val melodies = MelodyFolderImporter.extract(zip.inputStream(), dir)
 
         assertEquals(listOf("kykkeliky", "kvirrevitt"), melodies.map { it.name })
         assertEquals(listOf("kvirrevitt.MIDI", "kykkeliky.mid"), dir.list()!!.sorted())
@@ -55,17 +55,25 @@ class MelodyZipImporterTest {
     fun `zip entries never escape the melody directory`() {
         val dir = temp.newFolder("kulturskolen")
 
-        MelodyZipImporter.extract(zipOf("../../tyven.mid" to byteArrayOf(1)).inputStream(), dir)
+        MelodyFolderImporter.extract(zipOf("../../tyven.mid" to byteArrayOf(1)).inputStream(), dir)
 
         assertEquals(listOf("tyven.mid"), dir.list()!!.sorted())
         assertEquals(listOf("kulturskolen"), dir.parentFile!!.list()!!.sorted())
     }
 
     @Test
-    fun `folder name comes from the zip file name`() {
-        assertEquals("kulturskolen", MelodyZipImporter.folderName("kulturskolen.zip"))
-        assertEquals("Norske_sanger", MelodyZipImporter.folderName("Norske sanger.ZIP"))
-        assertEquals("imported_zip", MelodyZipImporter.folderName("imported.zip"))
-        assertEquals("zip", MelodyZipImporter.folderName(".zip"))
+    fun `folder name comes from the source file name`() {
+        assertEquals("kulturskolen", MelodyFolderImporter.folderName("kulturskolen.zip"))
+        assertEquals("Norske_sanger", MelodyFolderImporter.folderName("Norske sanger.ZIP"))
+        assertEquals("imported_zip", MelodyFolderImporter.folderName("imported.zip"))
+        assertEquals("songs", MelodyFolderImporter.folderName(".zip"))
+        assertEquals("Kultuskolen-fiolin", MelodyFolderImporter.folderName("Kultuskolen-fiolin.abc"))
+        assertEquals("Sanger_2_0", MelodyFolderImporter.folderName("Sanger 2.0"))
+    }
+
+    @Test
+    fun `file names are sanitized without losing readable words`() {
+        assertEquals("Rock_n_roll_med_mellomspill", MelodyFolderImporter.safeFileName("Rock'n roll (med mellomspill)"))
+        assertEquals("songs", MelodyFolderImporter.safeFileName("!!!"))
     }
 }

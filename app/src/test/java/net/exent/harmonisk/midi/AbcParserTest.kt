@@ -222,4 +222,52 @@ class AbcParserTest {
         assertTrue(track.notes.all { it.durationTicks > 0 })
         assertTrue(track.durationSeconds > 20.0)
     }
+
+    @Test
+    fun `an ABC file with several tunes splits into separate songs`() {
+        val songs = AbcParser.splitSongs(
+            """
+            %abc
+            %%abc-creator Some Editor
+            X:1
+            T:Jeg kan spille fiolin
+            M:4/4
+            L:1/4
+            K:D
+            D D A A | D D A2 |
+            X:2
+            T:Kykkeliky
+            M:4/4
+            L:1/8
+            K:D
+            D2 DD A4 | A2 AA D4 |]
+            """.trimIndent(),
+            "Kultuskolen-fiolin"
+        )
+        assertEquals(listOf("Jeg kan spille fiolin", "Kykkeliky"), songs.map { it.title })
+        assertEquals("X:1", songs[0].text.lines().first())
+        assertEquals("X:2", songs[1].text.lines().first())
+        assertTrue(songs[0].text.contains("D D A A | D D A2 |"))
+        assertTrue(songs[1].text.contains("D2 DD A4 | A2 AA D4 |]"))
+    }
+
+    @Test
+    fun `a tune without a title gets a numbered fallback`() {
+        val songs = AbcParser.splitSongs(
+            """
+            X:1
+            M:4/4
+            L:1/4
+            K:D
+            D D A A |
+            X:2
+            M:4/4
+            L:1/4
+            K:D
+            A A D D |
+            """.trimIndent(),
+            "Kultuskolen-fiolin"
+        )
+        assertEquals(listOf("Kultuskolen-fiolin 1", "Kultuskolen-fiolin 2"), songs.map { it.title })
+    }
 }
