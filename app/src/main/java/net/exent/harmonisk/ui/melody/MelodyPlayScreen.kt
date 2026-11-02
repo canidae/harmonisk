@@ -44,7 +44,7 @@ import net.exent.harmonisk.ui.components.VOICE_COLORS
 import net.exent.harmonisk.ui.components.KeepScreenOn
 import net.exent.harmonisk.ui.components.RequireMicPermission
 import net.exent.harmonisk.ui.components.SharedNoteCanvas
-import net.exent.harmonisk.ui.components.BOWED_LABEL_AREA_DP
+import net.exent.harmonisk.ui.components.PIANO_HEIGHT_DP
 import net.exent.harmonisk.ui.OVERLAY_BG
 import net.exent.harmonisk.ui.OVERLAY_BUTTON_SIZE
 import net.exent.harmonisk.ui.OVERLAY_ICON_TINT
@@ -365,7 +365,7 @@ fun MelodyPlayScreen(
                                 },
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
-                                    .padding(bottom = BOWED_LABEL_AREA_DP.dp + 24.dp)
+                                    .padding(bottom = PIANO_HEIGHT_DP.dp + 24.dp)
                                     .size(72.dp)
                                     .background(PlayGreen.copy(alpha = 0.25f), CircleShape)
                                     .border(2.dp, PlayGreen.copy(alpha = 0.7f), CircleShape)
@@ -384,7 +384,7 @@ fun MelodyPlayScreen(
                         Column(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
-                                .padding(bottom = BOWED_LABEL_AREA_DP.dp + 8.dp, end = 6.dp),
+                                .padding(bottom = PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {

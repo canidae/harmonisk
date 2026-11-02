@@ -61,11 +61,6 @@ private const val CORNER_RADIUS_DP = 4f
 // Bowed fingering board
 // Reference portrait canvas width (dp) the horizontal time scale is normalized to
 private const val BOWED_REFERENCE_WIDTH_DP = 411f
-// Height of the bottom band reserved for the string labels; notes are
-// "played" when they reach the play line just above this band.
-const val BOWED_LABEL_AREA_DP = 36f
-// Nominal dp size of the string labels.
-private const val BOWED_LABEL_FONT_DP = 20f
 // The now line and the dividers between string blocks share one weight.
 private const val BOWED_LINE_ALPHA = 0.55f
 private const val BOWED_LINE_WIDTH_DP = 2f
@@ -77,6 +72,9 @@ private val FINGER_COLORS = mapOf(
     4 to Color(0xFFF44336)  // pinky
 )
 private val OUT_OF_RANGE_GREY = Color(0xFF9E9E9E)
+private val BLACK_KEY_INDICES = setOf(1, 3, 6, 8, 10)
+private const val WHITE_KEYS_PER_OCTAVE = 7f
+private const val BLACK_KEY_WIDTH_FRACTION = 0.6f
 // Unit directions the finger number is repeated in behind itself, giving it a halo so it reads on
 // every bar colour.
 private val LABEL_OUTLINE_DIRECTIONS = listOf(
@@ -389,11 +387,12 @@ fun SharedNoteCanvas(
             }
             is CanvasMode.Melody -> {
                 if (bowedMode) {
-                    val labelAreaPx = BOWED_LABEL_AREA_DP * density
-                    val nowLineY = size.height - labelAreaPx
+                    val keyboardAreaPx = PIANO_HEIGHT_DP * density
+                    val nowLineY = size.height - keyboardAreaPx
                     drawBowedBoard(mode, density, fontScale, textMeasurer, nowLineY)
+                    drawBowedKeyboard(mode, density, textMeasurer, nowLineY)
                     // Clip bars and notes to the playable area so they never
-                    // obscure the string labels below the play line.
+                    // obscure the keyboard below the play line.
                     clipRect(left = 0f, top = 0f, right = width, bottom = nowLineY) {
                         drawBowedBarLines(mode, density, textMeasurer, nowLineY)
                         drawBowedMelodyNotes(mode, density, textMeasurer, nowLineY)
@@ -891,36 +890,62 @@ private fun DrawScope.drawBowedBoard(
             )
         )
     }
+}
 
-    // String labels at the bottom edge of each block, on a dark pill for readability
-    val labelStyle = TextStyle(
-        color = Color.White.copy(alpha = 0.9f),
-        fontSize = (BOWED_LABEL_FONT_DP * density / 2.75f).sp,
-        fontWeight = FontWeight.Bold
-    )
-    for (i in labels.indices) {
-        val centerX = bowedBlockLeft(i, width, gapPx, preferOpenStrings) +
-            slotWidth * bowedSlotsInBlock(i, preferOpenStrings) / 2f
-        val textLayout = textMeasurer.measure(
-            text = buildAnnotatedString { append(labels[i]) },
-            style = labelStyle
-        )
-        val pad = 4f * density
-        val boxW = textLayout.size.width + pad * 2f
-        val boxH = textLayout.size.height + pad * 1.6f
-        val boxLeft = centerX - boxW / 2f
-        val boxTop = height - boxH - 2f * density
-        drawRoundRect(
-            color = CANVAS_BG.copy(alpha = 0.8f),
-            topLeft = Offset(boxLeft, boxTop),
-            size = Size(boxW, boxH),
-            cornerRadius = CornerRadius(3f * density, 3f * density)
-        )
-        drawText(
-            textLayout,
-            topLeft = Offset(boxLeft + (boxW - textLayout.size.width) / 2f, boxTop + pad)
-        )
+private fun bowedKeyboardLayout(
+    width: Float,
+    gapPx: Float,
+    lowestMidi: Int,
+    preferOpenStrings: Boolean
+): Map<Int, KeyLayout> {
+    val slotWidth = bowedSlotWidth(width, gapPx)
+    val centers = FloatArray(BOWED_SLOT_COUNT) {
+        bowedSlotCenterX(lowestMidi + it, width, gapPx, lowestMidi, preferOpenStrings)
     }
+    val black = BooleanArray(BOWED_SLOT_COUNT) { (lowestMidi + it) % 12 in BLACK_KEY_INDICES }
+    val whiteSlots = (0 until BOWED_SLOT_COUNT).filter { !black[it] }
+    val averageWhiteKeyWidth = slotWidth * 12f / WHITE_KEYS_PER_OCTAVE
+    val blackWidth = averageWhiteKeyWidth * BLACK_KEY_WIDTH_FRACTION
+
+    return buildMap {
+        whiteSlots.forEachIndexed { index, slot ->
+            val left = if (index == 0) centers[slot] - slotWidth / 2f
+            else (centers[whiteSlots[index - 1]] + centers[slot]) / 2f
+            val right = if (index == whiteSlots.lastIndex) width
+            else (centers[slot] + centers[whiteSlots[index + 1]]) / 2f
+            put(lowestMidi + slot, KeyLayout(x = left, width = right - left, isBlack = false))
+        }
+        for (slot in 0 until BOWED_SLOT_COUNT) {
+            if (!black[slot]) continue
+            put(
+                lowestMidi + slot,
+                KeyLayout(x = centers[slot] - blackWidth / 2f, width = blackWidth, isBlack = true)
+            )
+        }
+    }
+}
+
+private fun DrawScope.drawBowedKeyboard(
+    mode: CanvasMode.Melody,
+    density: Float,
+    textMeasurer: TextMeasurer,
+    nowLineY: Float
+) {
+    val gapPx = BOWED_BLOCK_GAP_DP * density
+    if (bowedSlotWidth(size.width, gapPx) <= 0f) return
+
+    val lowestMidi = mode.instrument.tuning.first()
+    val highestMidi = lowestMidi + BOWED_SLOT_COUNT - 1
+
+    drawPianoKeyboard(
+        textMeasurer = textMeasurer,
+        layout = bowedKeyboardLayout(size.width, gapPx, lowestMidi, mode.preferOpenStrings),
+        pianoHeight = size.height - nowLineY,
+        minMidi = lowestMidi,
+        maxMidi = highestMidi,
+        pianoAtBottom = true,
+        mirrored = false
+    )
 }
 
 @OptIn(ExperimentalTextApi::class)
