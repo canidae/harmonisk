@@ -103,7 +103,8 @@ fun DrawScope.drawPianoKeyboard(
     pianoHeight: Float,
     minMidi: Int,
     maxMidi: Int,
-    pianoAtBottom: Boolean = false
+    pianoAtBottom: Boolean = false,
+    mirrored: Boolean = pianoAtBottom
 ) {
     val blackKeyHeight = pianoHeight * BLACK_KEY_HEIGHT_FRACTION
     val cornerRadius = CornerRadius(4f * density, 4f * density)
@@ -178,7 +179,7 @@ fun DrawScope.drawPianoKeyboard(
         val key = layout[midi] ?: continue
         if (!key.isBlack) continue
 
-        val blackKeyTop = if (pianoAtBottom) pianoTop + pianoHeight - blackKeyHeight else pianoTop
+        val blackKeyTop = if (mirrored) pianoTop + pianoHeight - blackKeyHeight else pianoTop
 
         drawRoundRect(
             color = Color(0xFF1A1A1A),
