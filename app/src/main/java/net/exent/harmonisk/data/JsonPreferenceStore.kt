@@ -52,6 +52,14 @@ class JsonPreferenceStore<K, V>(
         }
     }
 
+    suspend fun removeWhere(predicate: (K) -> Boolean) {
+        dataStore.edit { prefs ->
+            val current = parse(prefs[preferencesKey]).toMutableMap()
+            current.keys.removeAll(predicate)
+            prefs[preferencesKey] = json.encodeToString(keySerializer, current)
+        }
+    }
+
     private fun parse(jsonStr: String?): Map<K, V> {
         if (jsonStr.isNullOrBlank()) return emptyMap()
         return try {

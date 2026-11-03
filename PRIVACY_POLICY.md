@@ -27,7 +27,7 @@ Because Harmonisk does not collect any information, we do not use, process, or d
 
 Harmonisk does not store user data on external servers.
 
-If the App saves profile names, settings, preferences, scores, or similar information, that information is stored **only locally on your device** and is never transmitted to us or to any third party. You can remove locally stored information by clearing the App’s data or uninstalling the App.
+If the App saves profile names, settings, preferences, scores, or similar information, that information is stored **only locally on your device** and is never transmitted to us or to any third party. You can delete a profile and all its settings and scores from the profile menu, or remove all locally stored information by clearing the App’s data or uninstalling the App.
 
 You can import a song from a web address that you enter yourself. The App then downloads that file **directly from the address you provide** (a sharing link, such as a Google Drive link, is resolved to that service’s direct download address); the address and the downloaded file are not sent to us or to any third party, and the file is stored only on your device. We have no access to the address or its contents.
 

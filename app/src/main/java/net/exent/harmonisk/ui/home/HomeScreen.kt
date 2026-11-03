@@ -43,7 +43,9 @@ import net.exent.harmonisk.BuildConfig
 import net.exent.harmonisk.R
 import net.exent.harmonisk.audio.SoundFontSynthesizer
 import net.exent.harmonisk.data.DevModeState
+import net.exent.harmonisk.data.MelodySettingsRepository
 import net.exent.harmonisk.data.ProfileRepository
+import net.exent.harmonisk.data.ScoreHistoryRepository
 import net.exent.harmonisk.data.SettingsRepository
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.ui.components.AppLogo
@@ -86,12 +88,18 @@ fun HomeScreen(
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val activeProfile by viewModel.activeProfile.collectAsStateWithLifecycle()
     val profile = activeProfile
+    var showProfileDialog by remember { mutableStateOf(false) }
+    var showCreateProfileDialog by remember { mutableStateOf(false) }
+    LaunchedEffect(profile) {
+        if (profile == null) {
+            showProfileDialog = false
+            showCreateProfileDialog = false
+        }
+    }
     if (profile == null) {
         ProfileSetupScreen(onCreate = viewModel::createProfile)
         return
     }
-    var showProfileDialog by remember { mutableStateOf(false) }
-    var showCreateProfileDialog by remember { mutableStateOf(false) }
     val modes = listOf(
         ModeItem(
             emoji = "🎵",
@@ -205,6 +213,7 @@ fun HomeScreen(
                 showProfileDialog = false
                 showCreateProfileDialog = true
             },
+            onDelete = viewModel::deleteProfile,
             onDismiss = { showProfileDialog = false }
         )
     }
@@ -357,6 +366,8 @@ class HomeViewModel @Inject constructor(
     private val devModeState: DevModeState,
     private val settingsRepository: SettingsRepository,
     private val profileRepository: ProfileRepository,
+    private val melodySettingsRepository: MelodySettingsRepository,
+    private val scoreHistoryRepository: ScoreHistoryRepository,
     private val soundFontSynthesizer: SoundFontSynthesizer
 ) : ViewModel() {
 
@@ -385,6 +396,15 @@ class HomeViewModel @Inject constructor(
 
     fun selectProfile(id: String) {
         profileRepository.selectProfile(id)
+    }
+
+    fun deleteProfile(id: String) {
+        viewModelScope.launch {
+            if (!profileRepository.deleteProfile(id)) return@launch
+            settingsRepository.deleteProfileData(id)
+            melodySettingsRepository.deleteProfileData(id)
+            scoreHistoryRepository.deleteProfileData(id)
+        }
     }
 
     fun toggleDevMode(): Boolean = devModeState.toggle()

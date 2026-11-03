@@ -8,6 +8,7 @@
     <string name="microphone">Microphone</string>
     <string name="speaker">speaker</string>
     <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
 
     <!-- Home screen -->
     <string name="home_free_play_title">Free play</string>
@@ -30,6 +31,9 @@
     <string name="profile_current">Current profile</string>
     <string name="profile_name_required">Enter a profile name</string>
     <string name="profile_name_taken">That profile name is already in use</string>
+    <string name="profile_delete">Delete profile</string>
+    <string name="profile_delete_title">Delete %1$s?</string>
+    <string name="profile_delete_body">All scores and settings for this profile will be permanently deleted. This cannot be undone.</string>
 
     <!-- Permissions -->
     <string name="permission_title">Microphone access required</string>
