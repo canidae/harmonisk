@@ -195,8 +195,8 @@
     <!-- Score results -->
     <string name="score_dismiss">Dismiss</string>
     <string name="score_level">Level %1$d</string>
-    <string name="retry">Retry</string>
-    <string name="next_level">Level %d</string>
+    <string name="level_reached">Level %1$d reached!</string>
+    <string name="retry_level">Retry level</string>
     <string name="level_2_change">On level 2 pitch accuracy will count toward your score</string>
     <string name="level_3_change">On level 3 playing wrong notes will penalize your score</string>
     <string name="level_4_change">On level 4 the game will not wait for you to play the note</string>

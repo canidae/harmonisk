@@ -37,6 +37,8 @@ import net.exent.harmonisk.BuildConfig
 import javax.inject.Inject
 import kotlin.math.abs
 
+data class MelodyScoreSummary(val level: Int, val score: Float?)
+
 @HiltViewModel
 class MelodyViewModel @Inject constructor(
     private val pitchProcessor: PitchProcessor,
@@ -82,17 +84,17 @@ class MelodyViewModel @Inject constructor(
     private val _currentScoreHistory = MutableStateFlow<List<ScoreHistoryRepository.ScoreEntry>>(emptyList())
     val currentScoreHistory: StateFlow<List<ScoreHistoryRepository.ScoreEntry>> = _currentScoreHistory.asStateFlow()
 
-    private val _personalBestCombinedScore = MutableStateFlow<Float?>(null)
-    val personalBestCombinedScore: StateFlow<Float?> = _personalBestCombinedScore.asStateFlow()
+    private val _personalBestScore = MutableStateFlow<Float?>(null)
+    val personalBestScore: StateFlow<Float?> = _personalBestScore.asStateFlow()
 
-    private val _allMelodyCombinedScores = MutableStateFlow<Map<String, Float>>(emptyMap())
-    val allMelodyCombinedScores: StateFlow<Map<String, Float>> = _allMelodyCombinedScores.asStateFlow()
+    private val _allMelodyScores = MutableStateFlow<Map<String, MelodyScoreSummary>>(emptyMap())
+    val allMelodyScores: StateFlow<Map<String, MelodyScoreSummary>> = _allMelodyScores.asStateFlow()
 
     private val lastPlayedAt: StateFlow<Map<String, Long>> = scoreHistoryRepository.lastPlayed
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     val sortedMelodies: StateFlow<List<MelodyRepository.MelodyInfo>> =
-        combine(availableMelodies, _allMelodyCombinedScores, lastPlayedAt) { melodies, _, lastPlayed ->
+        combine(availableMelodies, lastPlayedAt) { melodies, lastPlayed ->
             melodies.sortedWith(
                 compareByDescending<MelodyRepository.MelodyInfo> { lastPlayed[it.id] ?: Long.MIN_VALUE }
                     .thenBy { it.name }
@@ -101,12 +103,6 @@ class MelodyViewModel @Inject constructor(
 
     private val _allMelodyDifficulties = MutableStateFlow<Map<String, Float>>(emptyMap())
     val allMelodyDifficulties: StateFlow<Map<String, Float>> = _allMelodyDifficulties.asStateFlow()
-
-    private val _allMelodyLevels = MutableStateFlow<Map<String, Int>>(emptyMap())
-    val allMelodyLevels: StateFlow<Map<String, Int>> = _allMelodyLevels.asStateFlow()
-
-    private val _canAdvanceLevel = MutableStateFlow(false)
-    val canAdvanceLevel: StateFlow<Boolean> = _canAdvanceLevel.asStateFlow()
 
     private val _celebrationLevel = MutableStateFlow(CelebrationLevel.NONE)
     val celebrationLevel: StateFlow<CelebrationLevel> = _celebrationLevel.asStateFlow()
@@ -220,9 +216,8 @@ class MelodyViewModel @Inject constructor(
                 melodyPlayer.setNotePlayer(player)
             }
         }
-        loadAllMelodyCombinedScores()
+        loadAllMelodyScores()
         loadAllMelodyDifficulties()
-        loadAllMelodyLevels()
     }
 
     val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
@@ -247,7 +242,7 @@ class MelodyViewModel @Inject constructor(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun loadAllMelodyCombinedScores() {
+    private fun loadAllMelodyScores() {
         viewModelScope.launch {
             combine(availableMelodies, currentInstrumentFlow) { melodies, instrument ->
                 melodies to instrument
@@ -256,18 +251,24 @@ class MelodyViewModel @Inject constructor(
                     flowOf(emptyMap())
                 } else {
                     val flows = melodies.map { info ->
-                        scoreHistoryRepository.getScores(info.id, instrument).map { scores ->
-                            info.id to ScoringEngine.computeCombinedScore(
-                                scores.map { it.level to it.overallScore }
+                        combine(
+                            melodySettingsRepository.getSettings(info.id, instrument),
+                            scoreHistoryRepository.getScores(info.id, instrument)
+                        ) { settings, scores ->
+                            val level = settings.level.coerceIn(1, 5)
+                            val summary = if (scores.isEmpty()) null else MelodyScoreSummary(
+                                level = level,
+                                score = scores.filter { it.level == level }.maxOfOrNull { it.overallScore }
                             )
+                            info.id to summary
                         }
                     }
                     combine(flows) { pairs ->
-                        pairs.filter { it.second > 0f }.associate { it.first to it.second }
+                        pairs.mapNotNull { (id, summary) -> summary?.let { id to it } }.toMap()
                     }
                 }
             }.collect { result ->
-                _allMelodyCombinedScores.value = result
+                _allMelodyScores.value = result
             }
         }
     }
@@ -287,28 +288,6 @@ class MelodyViewModel @Inject constructor(
                 .collect { result ->
                     _allMelodyDifficulties.value = result
                 }
-        }
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun loadAllMelodyLevels() {
-        viewModelScope.launch {
-            combine(availableMelodies, currentInstrumentFlow) { melodies, instrument ->
-                melodies to instrument
-            }.flatMapLatest { (melodies, instrument) ->
-                if (melodies.isEmpty()) {
-                    flowOf(emptyMap())
-                } else {
-                    val flows = melodies.map { info ->
-                        melodySettingsRepository.getSettings(info.id, instrument).map { settings ->
-                            info.id to settings.level.coerceIn(1, 5)
-                        }
-                    }
-                    combine(flows) { pairs -> pairs.toMap() }
-                }
-            }.collect { result ->
-                _allMelodyLevels.value = result
-            }
         }
     }
 
@@ -399,6 +378,7 @@ class MelodyViewModel @Inject constructor(
         noteResults = emptyMap(),
         currentNoteIndex = -1,
         melodyScore = null,
+        newlyUnlockedLevel = null,
         noteCentsHistory = emptyMap(),
         noteCentsPositions = emptyMap(),
         notePlayProgress = emptyMap(),
@@ -410,10 +390,11 @@ class MelodyViewModel @Inject constructor(
         melodySettingsJob?.cancel()
         scoreHistoryJob?.cancel()
         _currentScoreHistory.value = emptyList()
-        _personalBestCombinedScore.value = null
+        _personalBestScore.value = null
         melodySettingsJob = viewModelScope.launch {
             melodySettingsRepository.getSettings(melodyId, instrument).first().let { saved ->
                 val level = saved.level.coerceIn(1, 5)
+                val unlocked = saved.unlockedLevel.coerceIn(level, 5)
                 val (wm, hnb) = levelToSettings(level)
                 val accompanimentMode = try {
                     AccompanimentMode.valueOf(saved.accompanimentMode)
@@ -424,6 +405,9 @@ class MelodyViewModel @Inject constructor(
                     it.copy(
                         waitMode = wm,
                         currentLevel = level,
+                        unlockedLevel = unlocked,
+                        playedLevel = level,
+                        newlyUnlockedLevel = null,
                         hideNoteBars = hnb,
                         activeVoiceIndex = saved.activeVoiceIndex,
                         accompanimentMode = accompanimentMode,
@@ -455,6 +439,7 @@ class MelodyViewModel @Inject constructor(
         _gameState.update {
             it.copy(
                 currentLevel = clamped,
+                unlockedLevel = maxOf(it.unlockedLevel, clamped),
                 waitMode = wm,
                 hideNoteBars = hnb
             )
@@ -462,9 +447,10 @@ class MelodyViewModel @Inject constructor(
         saveMelodySettings()
     }
 
-    fun advanceLevel() {
-        val current = _gameState.value.currentLevel
-        if (current < 5) setLevel(current + 1)
+    fun retryLevel(level: Int) {
+        if (level > _gameState.value.unlockedLevel) return
+        setLevel(level)
+        startPlaying()
     }
 
     fun setTranspose(semitones: Int) {
@@ -560,6 +546,7 @@ class MelodyViewModel @Inject constructor(
                 preferOpenStrings = g.preferOpenStrings,
                 fallSpeedPxPerSec = v.fallSpeedPxPerSec,
                 level = g.currentLevel,
+                unlockedLevel = g.unlockedLevel,
                 activeVoiceIndex = g.activeVoiceIndex,
                 accompanimentMode = g.accompanimentMode.name
             ))
@@ -822,14 +809,15 @@ class MelodyViewModel @Inject constructor(
                 noteCentsHistory = emptyMap(),
                 noteCentsPositions = emptyMap(),
                 noteFirstDetectionStart = emptyMap(),
-                countdownResumeTarget = 0.0
+                countdownResumeTarget = 0.0,
+                playedLevel = it.currentLevel,
+                newlyUnlockedLevel = null
             )
         }
         _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
 
         noteTracking.reset()
         currentChordIndices = emptyList()
-        _canAdvanceLevel.value = false
         currentNoteDetectedCorrectly = false
         waitStartWallMs = 0L
         waitMs = 0L
@@ -1413,8 +1401,11 @@ class MelodyViewModel @Inject constructor(
             wrongNoteCount = wrongNoteCount
         )
 
-        // Check advancement eligibility
-        _canAdvanceLevel.value = currentLevel < 5 && adjustedScore >= 90f
+        // Reaching the score on the highest unlocked level advances to the next one
+        val unlockedLevel = _gameState.value.unlockedLevel
+        val newUnlockedLevel = ScoringEngine.unlockedLevelAfterRun(currentLevel, unlockedLevel, adjustedScore)
+        val nextLevel = if (newUnlockedLevel > unlockedLevel) newUnlockedLevel else currentLevel
+        val (waitMode, hideNoteBars) = levelToSettings(nextLevel)
 
         // Scroll to beginning without changing zoom level
         val firstNoteStart = track.notes.firstOrNull()?.let { track.noteStartSeconds(it) } ?: 0.0
@@ -1423,23 +1414,29 @@ class MelodyViewModel @Inject constructor(
         _gameState.update {
             it.copy(
                 phase = PlayPhase.FINISHED,
-                melodyScore = adjustedMelodyScore
+                melodyScore = adjustedMelodyScore,
+                playedLevel = currentLevel,
+                currentLevel = nextLevel,
+                unlockedLevel = newUnlockedLevel,
+                newlyUnlockedLevel = newUnlockedLevel.takeIf { unlocked -> unlocked > unlockedLevel },
+                waitMode = waitMode,
+                hideNoteBars = hideNoteBars
             )
         }
+        saveMelodySettings()
         _viewState.update { it.copy(songTimeOffsetSeconds = firstNoteStart - currentTimeSeconds) }
 
         // Persist the score
         val melodyId = currentMelodyId
         if (melodyId != null) {
-            // Compute running cumulative combined score
             val existing = currentScoreHistory.value
-            val previousBestCombinedScore = existing.maxOfOrNull { it.combinedScore } ?: 0f
-            val combinedScore = ScoringEngine.computeCombinedScore(
-                existing.map { it.level to it.overallScore } + (currentLevel to adjustedScore)
+            val previousBestScore = ScoringEngine.bestScoreForLevel(
+                existing.map { it.level to it.overallScore },
+                currentLevel
             )
-            val scoreImproved = combinedScore > previousBestCombinedScore
-            _personalBestCombinedScore.value = maxOf(previousBestCombinedScore, combinedScore)
-            _celebrationLevel.value = if (scoreImproved) CelebrationLevel.fromScore(combinedScore)
+            val scoreImproved = adjustedScore > previousBestScore
+            _personalBestScore.value = maxOf(previousBestScore, adjustedScore)
+            _celebrationLevel.value = if (scoreImproved) CelebrationLevel.fromScore(adjustedScore)
             else CelebrationLevel.NONE
 
             viewModelScope.launch {
@@ -1451,7 +1448,6 @@ class MelodyViewModel @Inject constructor(
                 scoreHistoryRepository.saveScore(melodyId, ScoreHistoryRepository.ScoreEntry(
                     timestamp = System.currentTimeMillis(),
                     overallScore = adjustedScore,
-                    combinedScore = combinedScore,
                     totalNotes = adjustedMelodyScore.totalNotes,
                     notesHit = adjustedMelodyScore.notesHit,
                     perfectNotes = adjustedMelodyScore.perfectNotes,

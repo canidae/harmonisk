@@ -13,10 +13,15 @@ class CelebrationLevelTest {
     }
 
     @Test
-    fun `any score from one celebrates`() {
+    fun `celebration follows the score bands`() {
         assertEquals(CelebrationLevel.BASE, CelebrationLevel.fromScore(1f))
-        assertEquals(CelebrationLevel.BASE, CelebrationLevel.fromScore(99f))
-        assertEquals(CelebrationLevel.MODERATE, CelebrationLevel.fromScore(100f))
+        assertEquals(CelebrationLevel.BASE, CelebrationLevel.fromScore(29.9f))
+        assertEquals(CelebrationLevel.MODERATE, CelebrationLevel.fromScore(30f))
+        assertEquals(CelebrationLevel.STRONG, CelebrationLevel.fromScore(50f))
+        assertEquals(CelebrationLevel.INTENSE, CelebrationLevel.fromScore(65f))
+        assertEquals(CelebrationLevel.EXTREME, CelebrationLevel.fromScore(80f))
+        assertEquals(CelebrationLevel.ECSTATIC, CelebrationLevel.fromScore(95f))
+        assertEquals(CelebrationLevel.ECSTATIC, CelebrationLevel.fromScore(100f))
     }
 
     @Test

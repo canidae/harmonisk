@@ -195,8 +195,8 @@
     <!-- Score results -->
     <string name="score_dismiss">Lukk</string>
     <string name="score_level">Nivå %1$d</string>
-    <string name="retry">Prøv igjen</string>
-    <string name="next_level">Nivå %d</string>
+    <string name="level_reached">Nivå %1$d nådd!</string>
+    <string name="retry_level">Prøv nivå på nytt</string>
     <string name="level_2_change">På nivå 2 teller treffsikkerheten på tonen med i poengsummen</string>
     <string name="level_3_change">På nivå 3 gir feil noter trekk i poengsummen</string>
     <string name="level_4_change">På nivå 4 venter ikke spillet på at du spiller noten</string>

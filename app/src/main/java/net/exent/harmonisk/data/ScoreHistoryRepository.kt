@@ -28,7 +28,6 @@ class ScoreHistoryRepository(
     data class ScoreEntry(
         val timestamp: Long,
         val overallScore: Float,
-        val combinedScore: Float = 0f,
         val totalNotes: Int,
         val notesHit: Int,
         val perfectNotes: Int,

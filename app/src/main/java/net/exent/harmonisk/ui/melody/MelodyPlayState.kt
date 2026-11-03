@@ -41,6 +41,11 @@ data class MelodyGameState(
     val metronomeEnabled: Boolean = true,
     val metronomeTrack: MelodyTrack? = null,
     val currentLevel: Int = 1,
+    val unlockedLevel: Int = 1,
+    /** Level the latest finished run was played at. */
+    val playedLevel: Int = 1,
+    /** Level unlocked by the latest run, or null when it reached no new level. */
+    val newlyUnlockedLevel: Int? = null,
     val melodyName: String? = null,
     val hideNoteBars: Boolean = false
 ) {

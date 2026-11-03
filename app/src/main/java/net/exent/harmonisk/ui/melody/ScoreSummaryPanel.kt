@@ -47,7 +47,7 @@ fun ScoreSummaryPanel(
                     text = formatScore(personalBest),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
-                    color = scoreColor(personalBest / 5f)
+                    color = scoreColor(personalBest)
                 )
             }
         }

@@ -27,6 +27,7 @@ class MelodySettingsRepository(
         val preferOpenStrings: Boolean = true,
         val fallSpeedPxPerSec: Float = 75f,
         val level: Int = 1,
+        val unlockedLevel: Int = 1,
         val activeVoiceIndex: Int = 0,
         val accompanimentMode: String = "ALL"
     )
