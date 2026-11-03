@@ -21,7 +21,7 @@
 
     <!-- Profiles -->
     <string name="profile_setup_title">Opprett en profil</string>
-    <string name="profile_setup_body">Profiler holder innstillinger og poengsummer adskilt for hver spiller. Alle profiler har tilgang til alle sanger.</string>
+    <string name="profile_setup_body">Profiler holder innstillinger og poengsummer adskilt for hver spiller.</string>
     <string name="profile_name">Profilnavn</string>
     <string name="profile_name_counter">%1$d/%2$d</string>
     <string name="profile_create">Opprett profil</string>
