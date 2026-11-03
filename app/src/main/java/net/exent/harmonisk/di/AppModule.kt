@@ -11,6 +11,7 @@ import net.exent.harmonisk.data.AudioDelayRepository
 import net.exent.harmonisk.data.DifficultyRepository
 import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.data.MelodySettingsRepository
+import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.ScoreHistoryRepository
 import net.exent.harmonisk.data.SettingsRepository
 import net.exent.harmonisk.midi.MidiDeviceManager
@@ -57,9 +58,16 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideSettingsRepository(
+    fun provideProfileRepository(
         @ApplicationContext context: Context
-    ): SettingsRepository = SettingsRepository(context)
+    ): ProfileRepository = ProfileRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideSettingsRepository(
+        @ApplicationContext context: Context,
+        profileRepository: ProfileRepository
+    ): SettingsRepository = SettingsRepository(context, profileRepository)
 
     @Provides
     @Singleton
@@ -71,8 +79,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideMelodySettingsRepository(
-        @ApplicationContext context: Context
-    ): MelodySettingsRepository = MelodySettingsRepository(context)
+        @ApplicationContext context: Context,
+        profileRepository: ProfileRepository
+    ): MelodySettingsRepository = MelodySettingsRepository(context, profileRepository)
 
     @Provides
     @Singleton
@@ -133,8 +142,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideScoreHistoryRepository(
-        @ApplicationContext context: Context
-    ): ScoreHistoryRepository = ScoreHistoryRepository(context)
+        @ApplicationContext context: Context,
+        profileRepository: ProfileRepository
+    ): ScoreHistoryRepository = ScoreHistoryRepository(context, profileRepository)
 
     @Provides
     @Singleton

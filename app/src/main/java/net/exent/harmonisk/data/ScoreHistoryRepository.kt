@@ -4,7 +4,10 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 
@@ -13,7 +16,8 @@ private val Context.scoreHistoryStore: DataStore<Preferences> by preferencesData
 )
 
 class ScoreHistoryRepository(
-    context: Context
+    context: Context,
+    private val profileRepository: ProfileRepository
 ) {
     private val store = JsonPreferenceStore<String, List<ScoreEntry>>(
         dataStore = context.scoreHistoryStore,
@@ -39,20 +43,37 @@ class ScoreHistoryRepository(
     )
 
     /** Timestamp of the most recent playthrough of each melody, across instruments. */
-    val lastPlayed: Flow<Map<String, Long>> = store.flow.map { scores ->
-        scores.mapNotNull { (melodyId, entries) ->
-            entries.maxOfOrNull { it.timestamp }?.let { melodyId to it }
-        }.toMap()
-    }
-
-    fun getScores(melodyId: String, instrument: String): Flow<List<ScoreEntry>> {
-        return store.flow.map {
-            (it[melodyId] ?: emptyList()).filter { entry -> entry.instrument == instrument }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val lastPlayed: Flow<Map<String, Long>> = profileRepository.activeProfile.flatMapLatest { profile ->
+        if (profile == null) {
+            flowOf(emptyMap())
+        } else {
+            store.flow.map { scores ->
+                scores.mapNotNull { (key, entries) ->
+                    val melodyId = ProfileRepository.unscopedKey(profile.id, key) ?: return@mapNotNull null
+                    entries.maxOfOrNull { it.timestamp }?.let { melodyId to it }
+                }.toMap()
+            }
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun getScores(melodyId: String, instrument: String): Flow<List<ScoreEntry>> =
+        profileRepository.activeProfile.flatMapLatest { profile ->
+            if (profile == null) {
+                flowOf(emptyList())
+            } else {
+                store.flow.map { scores ->
+                    val key = ProfileRepository.scopedKey(profile.id, melodyId)
+                    (scores[key] ?: emptyList()).filter { entry -> entry.instrument == instrument }
+                }
+            }
+        }
+
     suspend fun saveScore(melodyId: String, entry: ScoreEntry) {
-        store.update(melodyId) { existing ->
+        val profileId = profileRepository.activeProfileId ?: return
+        val key = ProfileRepository.scopedKey(profileId, melodyId)
+        store.update(key) { existing ->
             val list = existing?.toMutableList() ?: mutableListOf()
             list.add(entry)
             list
@@ -60,12 +81,15 @@ class ScoreHistoryRepository(
     }
 
     suspend fun resetScores(melodyId: String, instrument: String) {
-        store.update(melodyId) { existing ->
+        val profileId = profileRepository.activeProfileId ?: return
+        store.update(ProfileRepository.scopedKey(profileId, melodyId)) { existing ->
             existing?.filter { it.instrument != instrument } ?: emptyList()
         }
     }
 
     suspend fun resetAllScores(melodyId: String) {
-        store.remove(melodyId)
+        profileRepository.profiles.value.forEach { profile ->
+            store.remove(ProfileRepository.scopedKey(profile.id, melodyId))
+        }
     }
 }

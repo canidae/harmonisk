@@ -43,11 +43,16 @@ import net.exent.harmonisk.BuildConfig
 import net.exent.harmonisk.R
 import net.exent.harmonisk.audio.SoundFontSynthesizer
 import net.exent.harmonisk.data.DevModeState
+import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.SettingsRepository
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.ui.components.AppLogo
 import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.components.brandBackground
+import net.exent.harmonisk.ui.profile.CreateProfileDialog
+import net.exent.harmonisk.ui.profile.ProfileButton
+import net.exent.harmonisk.ui.profile.ProfileDialog
+import net.exent.harmonisk.ui.profile.ProfileSetupScreen
 import net.exent.harmonisk.ui.theme.BrandBlue
 import net.exent.harmonisk.ui.theme.BrandPurple
 import net.exent.harmonisk.ui.theme.BrandTeal
@@ -78,6 +83,15 @@ fun HomeScreen(
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val snackbarHostState = remember { SnackbarHostState() }
     val selectedInstrument by viewModel.instrument.collectAsStateWithLifecycle()
+    val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val activeProfile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    val profile = activeProfile
+    if (profile == null) {
+        ProfileSetupScreen(onCreate = viewModel::createProfile)
+        return
+    }
+    var showProfileDialog by remember { mutableStateOf(false) }
+    var showCreateProfileDialog by remember { mutableStateOf(false) }
     val modes = listOf(
         ModeItem(
             emoji = "🎵",
@@ -126,6 +140,7 @@ fun HomeScreen(
                 leading = { AppLogo() },
                 titleModifier = Modifier.devModeToggle(toggleDevMode),
                 actions = {
+                    ProfileButton(name = profile.name, onClick = { showProfileDialog = true })
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
                             Icons.Default.Settings,
@@ -176,6 +191,29 @@ fun HomeScreen(
                     .padding(horizontal = 24.dp, vertical = 8.dp)
             )
         }
+    }
+
+    if (showProfileDialog) {
+        ProfileDialog(
+            profiles = profiles,
+            activeProfileId = profile.id,
+            onSelect = { id ->
+                viewModel.selectProfile(id)
+                showProfileDialog = false
+            },
+            onAdd = {
+                showProfileDialog = false
+                showCreateProfileDialog = true
+            },
+            onDismiss = { showProfileDialog = false }
+        )
+    }
+
+    if (showCreateProfileDialog) {
+        CreateProfileDialog(
+            onCreate = viewModel::createProfile,
+            onDismiss = { showCreateProfileDialog = false }
+        )
     }
 }
 
@@ -318,6 +356,7 @@ private fun Modifier.devModeToggle(onToggle: () -> Unit) = pointerInput(onToggle
 class HomeViewModel @Inject constructor(
     private val devModeState: DevModeState,
     private val settingsRepository: SettingsRepository,
+    private val profileRepository: ProfileRepository,
     private val soundFontSynthesizer: SoundFontSynthesizer
 ) : ViewModel() {
 
@@ -326,6 +365,9 @@ class HomeViewModel @Inject constructor(
 
     val instrument: StateFlow<Instrument> = instrumentFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Instrument.VIOLIN)
+
+    val profiles: StateFlow<List<ProfileRepository.Profile>> = profileRepository.profiles
+    val activeProfile: StateFlow<ProfileRepository.Profile?> = profileRepository.activeProfile
 
     init {
         viewModelScope.launch {
@@ -337,6 +379,12 @@ class HomeViewModel @Inject constructor(
 
     fun setInstrument(instrument: Instrument) {
         viewModelScope.launch { settingsRepository.updateInstrument(instrument.name) }
+    }
+
+    fun createProfile(name: String): Boolean = profileRepository.createProfile(name) != null
+
+    fun selectProfile(id: String) {
+        profileRepository.selectProfile(id)
     }
 
     fun toggleDevMode(): Boolean = devModeState.toggle()

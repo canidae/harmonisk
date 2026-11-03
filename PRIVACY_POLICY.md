@@ -1,12 +1,12 @@
 # Privacy Policy for Harmonisk
 
-**Last updated:** 2026-10-24
+**Last updated:** 2026-11-03
 
 This Privacy Policy describes how **Harmonisk** (“the App,” “we,” “us,” or “our”) handles information. The App is provided by **Vidar Wahlberg** (“Developer”).
 
 ## 1. Information We Collect
 
-Harmonisk does **not** collect, store, transmit, share, or sell any personal information or user data.
+Harmonisk does **not** collect, transmit, share, or sell any personal information or user data.
 
 We do not collect:
 
@@ -17,6 +17,8 @@ We do not collect:
 - Photos, contacts, files, microphone data, camera data, or other media
 - Any other personal or sensitive user information
 
+The App lets you create local profiles with a display name, settings, and scores. This information is stored only on your device and is never transmitted to us or to any third party (see Section 3).
+
 ## 2. How We Use Information
 
 Because Harmonisk does not collect any information, we do not use, process, or disclose user data for any purpose.
@@ -25,7 +27,7 @@ Because Harmonisk does not collect any information, we do not use, process, or d
 
 Harmonisk does not store user data on external servers.
 
-If the App saves settings, preferences, or similar information, that information is stored **only locally on your device** and is never transmitted to us or to any third party. You can remove locally stored information by clearing the App’s data or uninstalling the App.
+If the App saves profile names, settings, preferences, scores, or similar information, that information is stored **only locally on your device** and is never transmitted to us or to any third party. You can remove locally stored information by clearing the App’s data or uninstalling the App.
 
 You can import a song from a web address that you enter yourself. The App then downloads that file **directly from the address you provide** (a sharing link, such as a Google Drive link, is resolved to that service’s direct download address); the address and the downloaded file are not sent to us or to any third party, and the file is stored only on your device. We have no access to the address or its contents.
 
