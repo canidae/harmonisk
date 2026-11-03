@@ -4,7 +4,10 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 
@@ -13,7 +16,8 @@ private val Context.melodySettingsStore: DataStore<Preferences> by preferencesDa
 )
 
 class MelodySettingsRepository(
-    context: Context
+    context: Context,
+    private val profileRepository: ProfileRepository
 ) {
     @Serializable
     data class MelodySettings(
@@ -32,13 +36,21 @@ class MelodySettingsRepository(
         keyName = "melody_settings_json"
     )
 
-    fun getSettings(melodyId: String, instrument: String): Flow<MelodySettings> {
-        val key = "${melodyId}:${instrument}"
-        return store.flow.map { it[key] ?: MelodySettings() }
-    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun getSettings(melodyId: String, instrument: String): Flow<MelodySettings> =
+        profileRepository.activeProfile.flatMapLatest { profile ->
+            if (profile == null) {
+                flowOf(MelodySettings())
+            } else {
+                store.flow.map { it[key(profile.id, melodyId, instrument)] ?: MelodySettings() }
+            }
+        }
 
     suspend fun saveSettings(melodyId: String, instrument: String, settings: MelodySettings) {
-        val key = "${melodyId}:${instrument}"
-        store.set(key, settings)
+        val profileId = profileRepository.activeProfileId ?: return
+        store.set(key(profileId, melodyId, instrument), settings)
     }
+
+    private fun key(profileId: String, melodyId: String, instrument: String): String =
+        ProfileRepository.scopedKey(profileId, "$melodyId:$instrument")
 }

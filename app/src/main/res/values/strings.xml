@@ -18,6 +18,19 @@
     <string name="home_version">Version %1$s</string>
     <string name="dev_mode_disabled">Developer mode disabled</string>
 
+    <!-- Profiles -->
+    <string name="profile_setup_title">Create a profile</string>
+    <string name="profile_setup_body">Profiles keep each player\'s settings and scores separate. All profiles can use all songs.</string>
+    <string name="profile_name">Profile name</string>
+    <string name="profile_name_counter">%1$d/%2$d</string>
+    <string name="profile_create">Create profile</string>
+    <string name="profile_add">Add profile</string>
+    <string name="profile_add_title">New profile</string>
+    <string name="profile_switch_title">Profiles</string>
+    <string name="profile_current">Current profile</string>
+    <string name="profile_name_required">Enter a profile name</string>
+    <string name="profile_name_taken">That profile name is already in use</string>
+
     <!-- Permissions -->
     <string name="permission_title">Microphone access required</string>
     <string name="permission_permanently_denied">Microphone access was permanently denied. Please enable it in your device settings.</string>
@@ -45,7 +58,7 @@
     <string name="settings_input_delay_min">0</string>
     <string name="settings_input_delay_max">500</string>
     <string name="settings_reset_dialog_title">Reset to defaults?</string>
-    <string name="settings_reset_dialog_body">All settings will be returned to their default values, including:\n\n\u2022 Silence threshold\n\u2022 Free play speed, tempo, time signature, note snapping\n\u2022 Metronome tempo, beats per bar and accent</string>
+    <string name="settings_reset_dialog_body">All settings for the current profile will be returned to their default values, including:\n\n\u2022 Silence threshold\n\u2022 Free play speed, tempo, time signature, note snapping\n\u2022 Metronome tempo, beats per bar and accent</string>
     <string name="settings_reset">Reset</string>
     <string name="settings_reset_to_defaults">Reset to defaults</string>
     <string name="settings_language">Language</string>

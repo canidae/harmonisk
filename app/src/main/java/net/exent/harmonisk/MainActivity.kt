@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun attachBaseContext(newBase: Context) {
-        val languageCode = SettingsRepository(newBase).getLanguageCodeSync()
+        val languageCode = SettingsRepository.getLanguageCodeSync(newBase)
         super.attachBaseContext(LocaleManager.createLocaleContext(newBase, languageCode))
     }
 }

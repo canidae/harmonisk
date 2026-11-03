@@ -5,7 +5,11 @@ import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.core.content.edit
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.NoteUtils
@@ -13,125 +17,169 @@ import net.exent.harmonisk.music.NoteUtils
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 class SettingsRepository(
-    private val context: Context
+    private val context: Context,
+    private val profileRepository: ProfileRepository
 ) {
     companion object {
-        private val SILENCE_THRESHOLD_DB = floatPreferencesKey("silence_threshold_db")
-        private val FREEPLAY_FALL_SPEED = floatPreferencesKey("freeplay_fall_speed")
-        private val FREEPLAY_BEATS_PER_BAR = intPreferencesKey("freeplay_beats_per_bar")
-        private val FREEPLAY_BPM = floatPreferencesKey("freeplay_bpm")
-        private val FREEPLAY_MIN_NOTE_DIVISION = intPreferencesKey("freeplay_min_note_division")
-        private val FREEPLAY_SNAP_ENABLED = booleanPreferencesKey("freeplay_snap_enabled")
-        private val FREEPLAY_METRONOME_ENABLED = booleanPreferencesKey("freeplay_metronome_enabled")
-        private val MELODY_METRONOME_ENABLED = booleanPreferencesKey("melody_metronome_enabled")
-        private val METRONOME_BPM = intPreferencesKey("metronome_bpm")
-        private val METRONOME_BEATS_PER_BAR = intPreferencesKey("metronome_beats_per_bar")
-        private val METRONOME_ACCENT_BEAT = intPreferencesKey("metronome_accent_beat")
-        private val METRONOME_SOUND_ENABLED = booleanPreferencesKey("metronome_sound_enabled")
-        private val METRONOME_MUTED_BEATS = stringSetPreferencesKey("metronome_muted_beats")
-        private val LANGUAGE_CODE = stringPreferencesKey("language_code")
-        private val INSTRUMENT_NAME = stringPreferencesKey("instrument_name")
-        private val CONCERT_PITCH = floatPreferencesKey("concert_pitch_a4")
+        private const val SILENCE_THRESHOLD_DB = "silence_threshold_db"
+        private const val FREEPLAY_FALL_SPEED = "freeplay_fall_speed"
+        private const val FREEPLAY_BEATS_PER_BAR = "freeplay_beats_per_bar"
+        private const val FREEPLAY_BPM = "freeplay_bpm"
+        private const val FREEPLAY_MIN_NOTE_DIVISION = "freeplay_min_note_division"
+        private const val FREEPLAY_SNAP_ENABLED = "freeplay_snap_enabled"
+        private const val FREEPLAY_METRONOME_ENABLED = "freeplay_metronome_enabled"
+        private const val MELODY_METRONOME_ENABLED = "melody_metronome_enabled"
+        private const val METRONOME_BPM = "metronome_bpm"
+        private const val METRONOME_BEATS_PER_BAR = "metronome_beats_per_bar"
+        private const val METRONOME_ACCENT_BEAT = "metronome_accent_beat"
+        private const val METRONOME_SOUND_ENABLED = "metronome_sound_enabled"
+        private const val METRONOME_MUTED_BEATS = "metronome_muted_beats"
+        private const val LANGUAGE_CODE = "language_code"
+        private const val INSTRUMENT_NAME = "instrument_name"
+        private const val CONCERT_PITCH = "concert_pitch_a4"
 
         private const val PREFS_NAME = "locale_prefs"
-        private const val KEY_LANGUAGE = "language_code"
+
+        private val PROFILE_SETTING_KEYS = setOf(
+            SILENCE_THRESHOLD_DB,
+            FREEPLAY_FALL_SPEED,
+            FREEPLAY_BEATS_PER_BAR,
+            FREEPLAY_BPM,
+            FREEPLAY_MIN_NOTE_DIVISION,
+            FREEPLAY_SNAP_ENABLED,
+            FREEPLAY_METRONOME_ENABLED,
+            MELODY_METRONOME_ENABLED,
+            METRONOME_BPM,
+            METRONOME_BEATS_PER_BAR,
+            METRONOME_ACCENT_BEAT,
+            METRONOME_SOUND_ENABLED,
+            METRONOME_MUTED_BEATS,
+            INSTRUMENT_NAME,
+            CONCERT_PITCH
+        )
+
+        fun getLanguageCodeSync(context: Context): String =
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(LANGUAGE_CODE, "system") ?: "system"
     }
 
     private val sharedPrefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun getLanguageCodeSync(): String =
-        sharedPrefs.getString(KEY_LANGUAGE, "system") ?: "system"
-
-    val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
-        AppSettings(
-            silenceThresholdDb = (prefs[SILENCE_THRESHOLD_DB] ?: -45f).coerceIn(-65f, -25f),
-            freeplayFallSpeed = prefs[FREEPLAY_FALL_SPEED] ?: 75f,
-            freeplayBeatsPerBar = prefs[FREEPLAY_BEATS_PER_BAR] ?: 4,
-            freeplayBpm = prefs[FREEPLAY_BPM] ?: 120f,
-            freeplayMinNoteDivision = prefs[FREEPLAY_MIN_NOTE_DIVISION] ?: 16,
-            freeplaySnapEnabled = prefs[FREEPLAY_SNAP_ENABLED] ?: true,
-            freeplayMetronomeEnabled = prefs[FREEPLAY_METRONOME_ENABLED] ?: true,
-            melodyMetronomeEnabled = prefs[MELODY_METRONOME_ENABLED] ?: true,
-            metronomeBpm = prefs[METRONOME_BPM] ?: 100,
-            metronomeBeatsPerBar = prefs[METRONOME_BEATS_PER_BAR] ?: 4,
-            metronomeAccentBeat = prefs[METRONOME_ACCENT_BEAT] ?: 0,
-            metronomeSoundEnabled = prefs[METRONOME_SOUND_ENABLED] ?: true,
-            metronomeMutedBeats = prefs[METRONOME_MUTED_BEATS].orEmpty().mapNotNull(String::toIntOrNull).toSet(),
-            languageCode = prefs[LANGUAGE_CODE] ?: "system",
-            instrumentName = prefs[INSTRUMENT_NAME] ?: Instrument.VIOLIN.name,
-            concertPitchA4 = prefs[CONCERT_PITCH] ?: NoteUtils.DEFAULT_CONCERT_PITCH
-        )
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val settings: Flow<AppSettings> = profileRepository.activeProfile.flatMapLatest { profile ->
+        if (profile == null) {
+            flowOf(AppSettings())
+        } else {
+            context.dataStore.data.map { prefs -> prefs.toSettings(profile.id) }
+        }
     }
 
-    suspend fun updateSilenceThreshold(db: Float) {
-        context.dataStore.edit { it[SILENCE_THRESHOLD_DB] = db }
-    }
+    private fun Preferences.toSettings(profileId: String) = AppSettings(
+        silenceThresholdDb = readFloat(profileId, SILENCE_THRESHOLD_DB, -45f).coerceIn(-65f, -25f),
+        freeplayFallSpeed = readFloat(profileId, FREEPLAY_FALL_SPEED, 75f),
+        freeplayBeatsPerBar = readInt(profileId, FREEPLAY_BEATS_PER_BAR, 4),
+        freeplayBpm = readFloat(profileId, FREEPLAY_BPM, 120f),
+        freeplayMinNoteDivision = readInt(profileId, FREEPLAY_MIN_NOTE_DIVISION, 16),
+        freeplaySnapEnabled = readBoolean(profileId, FREEPLAY_SNAP_ENABLED, true),
+        freeplayMetronomeEnabled = readBoolean(profileId, FREEPLAY_METRONOME_ENABLED, true),
+        melodyMetronomeEnabled = readBoolean(profileId, MELODY_METRONOME_ENABLED, true),
+        metronomeBpm = readInt(profileId, METRONOME_BPM, 100),
+        metronomeBeatsPerBar = readInt(profileId, METRONOME_BEATS_PER_BAR, 4),
+        metronomeAccentBeat = readInt(profileId, METRONOME_ACCENT_BEAT, 0),
+        metronomeSoundEnabled = readBoolean(profileId, METRONOME_SOUND_ENABLED, true),
+        metronomeMutedBeats = readStringSet(profileId, METRONOME_MUTED_BEATS).mapNotNull(String::toIntOrNull).toSet(),
+        languageCode = this[stringPreferencesKey(LANGUAGE_CODE)] ?: "system",
+        instrumentName = readString(profileId, INSTRUMENT_NAME, Instrument.VIOLIN.name),
+        concertPitchA4 = readFloat(profileId, CONCERT_PITCH, NoteUtils.DEFAULT_CONCERT_PITCH)
+    )
 
-    suspend fun updateFreeplayFallSpeed(speed: Float) {
-        context.dataStore.edit { it[FREEPLAY_FALL_SPEED] = speed }
-    }
+    private fun Preferences.readFloat(profileId: String, name: String, default: Float): Float =
+        this[floatPreferencesKey(ProfileRepository.scopedKey(profileId, name))] ?: default
 
-    suspend fun updateFreeplayBeatsPerBar(beats: Int) {
-        context.dataStore.edit { it[FREEPLAY_BEATS_PER_BAR] = beats }
-    }
+    private fun Preferences.readInt(profileId: String, name: String, default: Int): Int =
+        this[intPreferencesKey(ProfileRepository.scopedKey(profileId, name))] ?: default
 
-    suspend fun updateFreeplayBpm(bpm: Float) {
-        context.dataStore.edit { it[FREEPLAY_BPM] = bpm }
-    }
+    private fun Preferences.readBoolean(profileId: String, name: String, default: Boolean): Boolean =
+        this[booleanPreferencesKey(ProfileRepository.scopedKey(profileId, name))] ?: default
 
-    suspend fun updateFreeplayMinNoteDivision(division: Int) {
-        context.dataStore.edit { it[FREEPLAY_MIN_NOTE_DIVISION] = division }
-    }
+    private fun Preferences.readString(profileId: String, name: String, default: String): String =
+        this[stringPreferencesKey(ProfileRepository.scopedKey(profileId, name))] ?: default
 
-    suspend fun updateFreeplaySnapEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[FREEPLAY_SNAP_ENABLED] = enabled }
-    }
+    private fun Preferences.readStringSet(profileId: String, name: String): Set<String> =
+        this[stringSetPreferencesKey(ProfileRepository.scopedKey(profileId, name))].orEmpty()
 
-    suspend fun updateFreeplayMetronomeEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[FREEPLAY_METRONOME_ENABLED] = enabled }
-    }
+    suspend fun updateSilenceThreshold(db: Float) = setFloat(SILENCE_THRESHOLD_DB, db)
 
-    suspend fun updateMelodyMetronomeEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[MELODY_METRONOME_ENABLED] = enabled }
-    }
+    suspend fun updateFreeplayFallSpeed(speed: Float) = setFloat(FREEPLAY_FALL_SPEED, speed)
 
-    suspend fun updateMetronomeBpm(bpm: Int) {
-        context.dataStore.edit { it[METRONOME_BPM] = bpm }
-    }
+    suspend fun updateFreeplayBeatsPerBar(beats: Int) = setInt(FREEPLAY_BEATS_PER_BAR, beats)
 
-    suspend fun updateMetronomeBeatsPerBar(beats: Int) {
-        context.dataStore.edit { it[METRONOME_BEATS_PER_BAR] = beats }
-    }
+    suspend fun updateFreeplayBpm(bpm: Float) = setFloat(FREEPLAY_BPM, bpm)
 
-    suspend fun updateMetronomeAccentBeat(beat: Int) {
-        context.dataStore.edit { it[METRONOME_ACCENT_BEAT] = beat }
-    }
+    suspend fun updateFreeplayMinNoteDivision(division: Int) = setInt(FREEPLAY_MIN_NOTE_DIVISION, division)
 
-    suspend fun updateMetronomeSoundEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[METRONOME_SOUND_ENABLED] = enabled }
-    }
+    suspend fun updateFreeplaySnapEnabled(enabled: Boolean) = setBoolean(FREEPLAY_SNAP_ENABLED, enabled)
 
-    suspend fun updateMetronomeMutedBeats(beats: Set<Int>) {
-        context.dataStore.edit { it[METRONOME_MUTED_BEATS] = beats.map(Int::toString).toSet() }
-    }
+    suspend fun updateFreeplayMetronomeEnabled(enabled: Boolean) = setBoolean(FREEPLAY_METRONOME_ENABLED, enabled)
 
-    suspend fun updateInstrument(name: String) {
-        context.dataStore.edit { it[INSTRUMENT_NAME] = name }
-    }
+    suspend fun updateMelodyMetronomeEnabled(enabled: Boolean) = setBoolean(MELODY_METRONOME_ENABLED, enabled)
 
-    suspend fun updateConcertPitch(frequency: Float) {
-        context.dataStore.edit { it[CONCERT_PITCH] = frequency }
-    }
+    suspend fun updateMetronomeBpm(bpm: Int) = setInt(METRONOME_BPM, bpm)
+
+    suspend fun updateMetronomeBeatsPerBar(beats: Int) = setInt(METRONOME_BEATS_PER_BAR, beats)
+
+    suspend fun updateMetronomeAccentBeat(beat: Int) = setInt(METRONOME_ACCENT_BEAT, beat)
+
+    suspend fun updateMetronomeSoundEnabled(enabled: Boolean) = setBoolean(METRONOME_SOUND_ENABLED, enabled)
+
+    suspend fun updateMetronomeMutedBeats(beats: Set<Int>) = setStringSet(
+        METRONOME_MUTED_BEATS,
+        beats.map(Int::toString).toSet()
+    )
+
+    suspend fun updateInstrument(name: String) = setString(INSTRUMENT_NAME, name)
+
+    suspend fun updateConcertPitch(frequency: Float) = setFloat(CONCERT_PITCH, frequency)
 
     suspend fun updateLanguageCode(code: String) {
-        context.dataStore.edit { it[LANGUAGE_CODE] = code }
-        sharedPrefs.edit().putString(KEY_LANGUAGE, code).apply()
+        context.dataStore.edit { it[stringPreferencesKey(LANGUAGE_CODE)] = code }
+        sharedPrefs.edit { putString(LANGUAGE_CODE, code) }
     }
 
     suspend fun resetToDefaults() {
-        context.dataStore.edit { it.clear() }
-        sharedPrefs.edit().clear().apply()
+        val profileId = profileRepository.activeProfileId ?: return
+        context.dataStore.edit { prefs ->
+            prefs.asMap().keys.toList().forEach { key ->
+                val name = ProfileRepository.unscopedKey(profileId, key.name)
+                if (name != null && name in PROFILE_SETTING_KEYS) prefs.remove(key)
+            }
+        }
+    }
+
+    private suspend fun setFloat(name: String, value: Float) {
+        val profileId = profileRepository.activeProfileId ?: return
+        context.dataStore.edit { it[floatPreferencesKey(ProfileRepository.scopedKey(profileId, name))] = value }
+    }
+
+    private suspend fun setInt(name: String, value: Int) {
+        val profileId = profileRepository.activeProfileId ?: return
+        context.dataStore.edit { it[intPreferencesKey(ProfileRepository.scopedKey(profileId, name))] = value }
+    }
+
+    private suspend fun setBoolean(name: String, value: Boolean) {
+        val profileId = profileRepository.activeProfileId ?: return
+        context.dataStore.edit { it[booleanPreferencesKey(ProfileRepository.scopedKey(profileId, name))] = value }
+    }
+
+    private suspend fun setString(name: String, value: String) {
+        val profileId = profileRepository.activeProfileId ?: return
+        context.dataStore.edit { it[stringPreferencesKey(ProfileRepository.scopedKey(profileId, name))] = value }
+    }
+
+    private suspend fun setStringSet(name: String, value: Set<String>) {
+        val profileId = profileRepository.activeProfileId ?: return
+        context.dataStore.edit { it[stringSetPreferencesKey(ProfileRepository.scopedKey(profileId, name))] = value }
     }
 }
 
