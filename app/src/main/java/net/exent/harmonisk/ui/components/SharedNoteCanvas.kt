@@ -38,7 +38,6 @@ import net.exent.harmonisk.ui.freeplay.PianoVisibility
 import net.exent.harmonisk.ui.freeplay.PlayedNote
 import net.exent.harmonisk.ui.melody.NoteResultState
 import net.exent.harmonisk.ui.theme.AmberAccent
-import net.exent.harmonisk.ui.theme.DarkBg
 import net.exent.harmonisk.ui.theme.Orange40
 import kotlin.math.abs
 import kotlin.math.ceil

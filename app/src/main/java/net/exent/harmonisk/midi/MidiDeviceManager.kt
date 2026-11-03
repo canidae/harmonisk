@@ -1,6 +1,7 @@
 package net.exent.harmonisk.midi
 
 import android.content.Context
+import android.media.midi.MidiDevice
 import android.media.midi.MidiDeviceInfo
 import android.media.midi.MidiManager
 import android.os.Handler
@@ -10,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 /**
  * Tracks connected MIDI devices and exposes enable/disable state for input and output.
@@ -100,6 +103,15 @@ class MidiDeviceManager(context: Context) {
      */
     fun setOutputOverride(enabled: Boolean?) {
         _outputOverride.value = enabled
+    }
+
+    suspend fun openDevice(deviceInfo: MidiDeviceInfo): MidiDevice? {
+        val manager = midiManager ?: return null
+        return suspendCancellableCoroutine { cont ->
+            manager.openDevice(deviceInfo, { device ->
+                if (cont.isActive) cont.resume(device)
+            }, Handler(Looper.getMainLooper()))
+        }
     }
 
     fun close() {

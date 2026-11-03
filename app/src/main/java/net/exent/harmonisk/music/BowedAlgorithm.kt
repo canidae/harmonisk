@@ -51,38 +51,6 @@ class BowedAlgorithm {
         return (stringDiff * 3) + fingerDiff
     }
 
-    fun findRecommendedPosition(
-        instrument: Instrument,
-        targetMidi: Int,
-        previousPosition: BowedPosition?,
-        key: KeySignature? = null,
-        preferOpenStrings: Boolean = true
-    ): BowedPosition? {
-        val candidates = getAllValidPositions(targetMidi, instrument, key, preferOpenStrings)
-
-        if (candidates.isEmpty()) return null
-
-        var bestCandidate: BowedPosition? = null
-        var lowestScore = Int.MAX_VALUE
-
-        for (candidate in candidates) {
-            var score = calculateDistance(candidate, previousPosition)
-
-            if (candidate.finger == 0) {
-                score -= 5
-            } else if (candidate.finger == 4) {
-                score += 2
-            }
-
-            if (score < lowestScore) {
-                lowestScore = score
-                bestCandidate = candidate
-            }
-        }
-
-        return bestCandidate
-    }
-
     /**
      * Recommends a fingering for every note in a melody.
      *

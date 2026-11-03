@@ -58,12 +58,9 @@ class MidiParser {
         val allTimeSigs = mutableListOf<TimeSignatureEvent>()
         val allKeys = mutableListOf<Pair<Long, KeySignature>>()
 
-        for (trackIdx in 0 until header.numTracks) {
-            if (pos + 8 > data.size) break
+        repeat(header.numTracks) {
+            if (pos + 8 > data.size) return@repeat
             require(readMidiString(data, pos, 4) == "MTrk") { "Expected MTrk at position $pos" }
-            val trackLength = readMidiInt32(data, pos + 4)
-            val trackEnd = pos + 8 + trackLength
-
             val notes = mutableListOf<NoteEvent>()
 
             val callback = object : MidiTrackReader.EventCallback {
@@ -78,13 +75,11 @@ class MidiParser {
                     allKeys.add(tick to KeySignature(fifths, isMinor))
                 }
                 override fun onEndOfTrack(tick: Long, activeNotes: List<MidiTrackReader.ActiveNote>) {
-                    for (an in activeNotes) {
-                        notes.add(NoteEvent(an.note, an.velocity, an.startTick, tick - an.startTick))
-                    }
+                    notes.addAll(activeNotes.toNoteEvents(tick))
                 }
             }
 
-            pos = reader.readTrack(pos, trackEnd, callback, TAG)
+            pos = reader.readTrack(pos, callback, TAG)
             notes.sortBy { it.startTick }
             allTrackData.add(notes)
         }

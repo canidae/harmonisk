@@ -1,10 +1,6 @@
 package net.exent.harmonisk.midi
 
-import android.content.Context
 import android.media.midi.MidiInputPort
-import android.media.midi.MidiManager
-import android.os.Handler
-import android.os.Looper
 import net.exent.harmonisk.audio.NotePlayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -13,20 +9,14 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
 
 /**
  * Sends MIDI note-on/off messages to the connected device's input port.
  * Implements [NotePlayer] so it can substitute for the internal synthesizer.
  */
 class MidiOutputSender(
-    private val context: Context,
     private val midiDeviceManager: MidiDeviceManager
 ) : NotePlayer {
-
-    private val midiManager: MidiManager? =
-        context.getSystemService(Context.MIDI_SERVICE) as? MidiManager
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -43,7 +33,7 @@ class MidiOutputSender(
 
                 if (deviceInfo == null) return@collectLatest
 
-                val device = openDeviceAsync(deviceInfo) ?: return@collectLatest
+                val device = midiDeviceManager.openDevice(deviceInfo) ?: return@collectLatest
                 val port = device.openInputPort(0)
                 if (port == null) {
                     device.close()
@@ -101,18 +91,6 @@ class MidiOutputSender(
     private inline fun withPort(block: (MidiInputPort) -> Unit) {
         val port = outputPort ?: return
         block(port)
-    }
-
-    private suspend fun openDeviceAsync(
-        deviceInfo: android.media.midi.MidiDeviceInfo
-    ): android.media.midi.MidiDevice? = suspendCancellableCoroutine { cont ->
-        if (midiManager == null) {
-            cont.resume(null)
-            return@suspendCancellableCoroutine
-        }
-        midiManager.openDevice(deviceInfo, { device ->
-            if (cont.isActive) cont.resume(device)
-        }, Handler(Looper.getMainLooper()))
     }
 
     fun close() {

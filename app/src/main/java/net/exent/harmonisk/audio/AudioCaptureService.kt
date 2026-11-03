@@ -20,13 +20,8 @@ class AudioCaptureService(
     private val context: Context
 ) {
     companion object {
-        const val SAMPLE_RATE = AudioConstants.SAMPLE_RATE
         const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_FLOAT
-        /** Read chunk size — smaller for lower latency. Analysis uses a larger sliding window.
-         *  512 samples = ~11.6ms per hop at 44100 Hz. Smaller hops mean the sliding window
-         *  refreshes more frequently, reducing the duration of transition/mixed-note frames. */
-        const val BUFFER_SIZE_SAMPLES = 512
 
         /**
          * VOICE_PERFORMANCE (API 29+): Designed for live performance / karaoke.
@@ -36,7 +31,7 @@ class AudioCaptureService(
     }
 
     private val minBufferSize = AudioRecord.getMinBufferSize(
-        SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT
+        AudioConstants.SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT
     )
 
     /** Estimated mic-to-read latency in ms, measured via AudioRecord.getTimestamp(). */
@@ -51,7 +46,7 @@ class AudioCaptureService(
         if (record.getTimestamp(ts, AudioTimestamp.TIMEBASE_MONOTONIC) == AudioRecord.SUCCESS) {
             val nsSinceCapture = System.nanoTime() - ts.nanoTime
             val framesBehind = (ts.framePosition - totalFramesRead).coerceAtLeast(0)
-            val ms = nsSinceCapture / 1_000_000.0 + framesBehind * 1000.0 / SAMPLE_RATE
+            val ms = nsSinceCapture / 1_000_000.0 + framesBehind * 1000.0 / AudioConstants.SAMPLE_RATE
             val rounded = ms.toInt()
             if (rounded in 0..200) captureLatencyMs = rounded
         }
@@ -70,7 +65,7 @@ class AudioCaptureService(
             .setAudioSource(AUDIO_SOURCE)
             .setAudioFormat(
                 AudioFormat.Builder()
-                    .setSampleRate(SAMPLE_RATE)
+                    .setSampleRate(AudioConstants.SAMPLE_RATE)
                     .setChannelMask(CHANNEL_CONFIG)
                     .setEncoding(AUDIO_FORMAT)
                     .build()
@@ -87,11 +82,11 @@ class AudioCaptureService(
         audioRecord.startRecording()
 
         withContext(Dispatchers.IO) {
-            val buffer = FloatArray(BUFFER_SIZE_SAMPLES)
+            val buffer = FloatArray(AudioConstants.BUFFER_SIZE_SAMPLES)
 
             while (isActive) {
                 val read = audioRecord.read(
-                    buffer, 0, BUFFER_SIZE_SAMPLES, AudioRecord.READ_BLOCKING
+                    buffer, 0, AudioConstants.BUFFER_SIZE_SAMPLES, AudioRecord.READ_BLOCKING
                 )
                 if (read > 0) {
                     totalFramesRead += read

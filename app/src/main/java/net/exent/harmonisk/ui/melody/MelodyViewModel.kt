@@ -1094,7 +1094,7 @@ class MelodyViewModel @Inject constructor(
     }
 
     private fun pitchResultFromMidi(midiNote: Int): PitchResult {
-        val resolution = noteUtils.resolveMidiNote(midiNote)
+        val resolution = NoteUtils.resolveMidiNote(midiNote)
         return PitchResult(
             frequency = NoteUtils.midiToFrequency(midiNote, referenceA4),
             noteName = resolution.noteName,
@@ -1469,7 +1469,6 @@ class MelodyViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        super.onCleared()
         playbackJob?.cancel()
         pitchJob?.cancel()
         melodyPlayer.stop()

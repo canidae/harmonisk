@@ -50,12 +50,6 @@ class MelodyTrack(
         }
     }
 
-    private val noteStartSecondsCache: DoubleArray by lazy {
-        DoubleArray(sortedNotes.size) { i ->
-            tickToSeconds(sortedNotes[i].startTick)
-        }
-    }
-
     fun tickToSeconds(tick: Long): Double {
         val idx = segments.binarySearch { it.startTick.compareTo(tick) }
         val seg = if (idx >= 0) {
@@ -68,20 +62,6 @@ class MelodyTrack(
             return seg.startSecond + (seg.endTick - seg.startTick).toDouble() * seg.usPerBeat / (ticksPerQuarterNote * 1_000_000.0)
         }
         return seg.startSecond + (tick - seg.startTick).toDouble() * seg.usPerBeat / (ticksPerQuarterNote * 1_000_000.0)
-    }
-
-    fun getNoteAtTime(seconds: Double): NoteEvent? {
-        var lo = 0
-        var hi = sortedNotes.size - 1
-        while (lo <= hi) {
-            val mid = (lo + hi) ushr 1
-            if (noteStartSecondsCache[mid] <= seconds) lo = mid + 1 else hi = mid - 1
-        }
-        if (hi < 0) return null
-        val candidate = sortedNotes[hi]
-        val start = noteStartSecondsCache[hi]
-        val end = tickToSeconds(candidate.endTick)
-        return if (seconds < end) candidate else null
     }
 
     fun noteDurationSeconds(note: NoteEvent): Double =

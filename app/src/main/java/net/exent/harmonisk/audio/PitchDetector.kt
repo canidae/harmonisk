@@ -91,7 +91,7 @@ class PitchDetector(context: Context) {
         return Interpreter(mappedBuf, Interpreter.Options().apply { numThreads = 2 })
     }
 
-    fun detectPitch(buffer: FloatArray, lowestFrequency: Float = 0f): PitchDetectionResult {
+    fun detectPitch(buffer: FloatArray, lowestFrequency: Float): PitchDetectionResult {
         PitchResampler.resample(buffer, downsampledBuf)
         normalise(downsampledBuf)
 

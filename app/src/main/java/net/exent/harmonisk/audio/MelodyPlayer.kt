@@ -80,13 +80,6 @@ class MelodyPlayer(
         }
     }
 
-    /** Overload for backward compatibility — wraps a single track in a list. */
-    fun playWithTiming(
-        melodyTrack: MelodyTrack,
-        scope: CoroutineScope,
-        tempo: Float = 1.0f
-    ) = playWithTiming(listOf(melodyTrack), scope, tempo)
-
     /**
      * Drives note-on/off from an external game clock.
      * Notes play at their natural song position — visual offset handles sync.

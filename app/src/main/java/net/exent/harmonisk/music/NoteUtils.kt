@@ -51,24 +51,9 @@ class NoteUtils {
         return NoteInfo(name = NOTE_NAMES[noteIndex], octave = octave, centsOff = centsOff, midiNumber = midiNumber)
     }
 
-    fun noteToFrequency(noteName: String, octave: Int, refA4: Float = DEFAULT_A4_FREQ): Float {
-        val noteIndex = NOTE_NAMES.indexOf(noteName)
-        if (noteIndex == -1) return -1f
-        return midiToFrequency((octave + 1) * SEMITONES_PER_OCTAVE + noteIndex, refA4)
-    }
-
     fun frequencyToCents(detected: Float, reference: Float): Float {
         if (detected <= 0f || reference <= 0f) return 0f
         return (1200.0 * log2(detected.toDouble() / reference.toDouble())).toFloat()
     }
 
-    fun midiToNoteName(midiNumber: Int): String {
-        val (noteIndex, octave) = midiToNoteIndexAndOctave(midiNumber)
-        return "${NOTE_NAMES[noteIndex]}$octave"
-    }
-
-    private fun midiToNoteIndexAndOctave(midi: Int): Pair<Int, Int> =
-        NoteUtils.midiToNoteIndexAndOctave(midi)
-
-    fun resolveMidiNote(midi: Int): MidiNoteResolution = NoteUtils.resolveMidiNote(midi)
 }

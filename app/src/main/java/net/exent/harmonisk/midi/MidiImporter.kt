@@ -1,6 +1,5 @@
 package net.exent.harmonisk.midi
 
-import android.util.Log
 import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.ui.MAX_BPM
 import net.exent.harmonisk.ui.MIN_BPM
@@ -37,12 +36,10 @@ object MidiImporter {
         var beatsPerBar = 4
         val trackNotes = mutableListOf<List<NoteEvent>>()
 
-        for (trackIdx in 0 until header.numTracks) {
-            if (pos + 8 > data.size) break
+        repeat(header.numTracks) {
+            if (pos + 8 > data.size) return@repeat
             val chunkId = readMidiString(data, pos, 4)
-            if (chunkId != "MTrk") { pos += 8; continue }
-            val trackLength = readMidiInt32(data, pos + 4)
-            val trackEnd = pos + 8 + trackLength
+            if (chunkId != "MTrk") { pos += 8; return@repeat }
 
             val notes = mutableListOf<NoteEvent>()
             val callback = object : MidiTrackReader.EventCallback {
@@ -54,13 +51,11 @@ object MidiImporter {
                     beatsPerBar = numerator
                 }
                 override fun onEndOfTrack(tick: Long, activeNotes: List<MidiTrackReader.ActiveNote>) {
-                    for (an in activeNotes) {
-                        notes.add(NoteEvent(an.note, an.velocity, an.startTick, tick - an.startTick))
-                    }
+                    notes.addAll(activeNotes.toNoteEvents(tick))
                 }
             }
 
-            pos = reader.readTrack(pos, trackEnd, callback, TAG)
+            pos = reader.readTrack(pos, callback, TAG)
             if (notes.isNotEmpty()) {
                 trackNotes.add(notes.sortedBy { it.startTick })
             }

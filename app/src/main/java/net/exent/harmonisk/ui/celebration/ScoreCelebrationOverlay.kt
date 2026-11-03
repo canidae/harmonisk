@@ -19,7 +19,6 @@ import nl.dionsegijn.konfetti.core.Position
 import nl.dionsegijn.konfetti.core.emitter.Emitter
 import nl.dionsegijn.konfetti.core.Rotation
 import nl.dionsegijn.konfetti.core.models.Shape
-import nl.dionsegijn.konfetti.core.models.Size
 import kotlin.math.cos
 import kotlin.math.sin
 import java.util.concurrent.TimeUnit

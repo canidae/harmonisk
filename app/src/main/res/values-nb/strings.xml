@@ -7,9 +7,7 @@
     <string name="settings">Innstillinger</string>
     <string name="microphone">mikrofon</string>
     <string name="speaker">høyttaler</string>
-    <string name="save">Lagre</string>
     <string name="cancel">Avbryt</string>
-    <string name="edit">Rediger</string>
 
     <!-- Home screen -->
     <string name="home_free_play_title">Spill fritt</string>
@@ -147,7 +145,6 @@
     <string name="melody_failed_load_melody">Kunne ikke laste melodien</string>
     <string name="melody_difficulty">Vanskelighetsgrad: </string>
     <string name="melody_no_playthroughs">Ingen gjennomspillinger ennå</string>
-    <string name="no_melodies_available">Ingen melodier er inkludert.\nImporter en sangfil for å komme i gang.</string>
     <string name="melody_reset_score">Nullstill poengsummen</string>
     <string name="melody_import_success">Sangen er importert</string>
     <string name="melody_import_folder_success">Sangene er importert til en mappe</string>

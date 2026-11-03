@@ -64,8 +64,6 @@ class FreePlayViewModel @Inject constructor(
         private const val TAG = "FreePlayVM"
     }
 
-    private var lastAdvanceWallMs: Long = 0L
-
     private val _state = MutableStateFlow(FreePlayState())
     val state: StateFlow<FreePlayState> = _state.asStateFlow()
 
@@ -217,7 +215,6 @@ class FreePlayViewModel @Inject constructor(
         if (pos < loopStart || pos >= loopEnd) {
             _state.update { it.copy(songPositionMs = loopStart) }
         }
-        lastAdvanceWallMs = System.currentTimeMillis()
         startListeningInternal()
         _state.update { it.copy(isRecording = true) }
         // Use the same event-driven engine as playback for time advancement + metronome
@@ -236,13 +233,7 @@ class FreePlayViewModel @Inject constructor(
         }
     }
 
-    fun getEffectiveTime(realTimeMs: Long): Long {
-        if (isPausedByGesture) {
-            lastAdvanceWallMs = realTimeMs
-            return _state.value.songPositionMs
-        }
-        return _state.value.songPositionMs
-    }
+    fun getEffectiveTime(): Long = _state.value.songPositionMs
 
     private fun startListeningInternal() {
         if (_state.value.midiInputEnabled) {
@@ -445,7 +436,7 @@ class FreePlayViewModel @Inject constructor(
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
             val clampedMidi = newMidi.coerceIn(21, 108)
-            val resolution = noteUtils.resolveMidiNote(clampedMidi)
+            val resolution = NoteUtils.resolveMidiNote(clampedMidi)
             val duration = note.endTimeMs?.minus(note.startTimeMs)
             val newStart = snapToGridIfEnabled(rawStartMs, current.snapEnabled).coerceAtLeast(0L)
             val newEnd = duration?.let { newStart + it }
@@ -531,7 +522,6 @@ class FreePlayViewModel @Inject constructor(
                 // Imported notes have 0-based timestamps
                 val maxMs = notes.maxOfOrNull { it.endTimeMs ?: it.startTimeMs } ?: 0L
                 val barMs = importedBeatsPerBar * (60000.0 / importedBpm)
-                lastAdvanceWallMs = System.currentTimeMillis()
 
                 // Auto-fit view range to imported note range
                 val minMidi = (notes.minOfOrNull { it.midiNumber }?.toFloat() ?: 60f) - RANGE_PADDING
@@ -678,7 +668,6 @@ class FreePlayViewModel @Inject constructor(
 
     fun resumePlaybackRecording() {
         if (!isPausedByGesture) return
-        lastAdvanceWallMs = System.currentTimeMillis()
         isPausedByGesture = false
     }
 
@@ -812,17 +801,17 @@ class FreePlayViewModel @Inject constructor(
         expandRange(midi)
         if (_state.value.isRecording) {
             val note = PlayedNote(
-                        noteName = result.noteName,
-                        octave = result.octave,
-                        midiNumber = midi,
-                        startTimeMs = currentNoteStartMs,
-                        centsHistory = listOf(result.centsOff),
-                        id = UUID.randomUUID().toString(),
-                        voiceIndex = _state.value.activeVoiceIndex
-                    )
-                    _state.update { it.copy(activeNote = note) }
-                }
-            }
+                noteName = result.noteName,
+                octave = result.octave,
+                midiNumber = midi,
+                startTimeMs = currentNoteStartMs,
+                centsHistory = listOf(result.centsOff),
+                id = UUID.randomUUID().toString(),
+                voiceIndex = _state.value.activeVoiceIndex
+            )
+            _state.update { it.copy(activeNote = note) }
+        }
+    }
 
     private fun commitHoning() {
         honingActive = false
@@ -911,7 +900,7 @@ class FreePlayViewModel @Inject constructor(
     private fun handleMidiNoteOn(midiNote: Int) {
         if (activeMidiNotes.containsKey(midiNote)) return
         val isRecording = _state.value.isRecording
-        val resolution = noteUtils.resolveMidiNote(midiNote)
+        val resolution = NoteUtils.resolveMidiNote(midiNote)
         expandRange(midiNote)
         val songPositionMs = _state.value.songPositionMs
 
@@ -1109,7 +1098,6 @@ class FreePlayViewModel @Inject constructor(
             if (replayGeneration == gen) {
                 player?.allNotesOff()
                 if (soundFontSynthesizer.isReady) soundFontSynthesizer.allNotesOff()
-                lastAdvanceWallMs = System.currentTimeMillis()
                 _state.update {
                     if (isRecordMode) it.copy(isRecording = false)
                     else it.copy(isPlaying = false)
@@ -1121,7 +1109,6 @@ class FreePlayViewModel @Inject constructor(
     private fun stopEngine() {
         replayJob?.cancel()
         replayJob = null
-        lastAdvanceWallMs = System.currentTimeMillis()
         midiOutputSender.allNotesOff()
         if (soundFontSynthesizer.isReady) soundFontSynthesizer.allNotesOff()
     }
@@ -1156,7 +1143,6 @@ class FreePlayViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        super.onCleared()
         stopEngine()
         stopListening()
         previewJob?.cancel()

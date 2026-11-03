@@ -7,9 +7,7 @@
     <string name="settings">Settings</string>
     <string name="microphone">Microphone</string>
     <string name="speaker">speaker</string>
-    <string name="save">Save</string>
     <string name="cancel">Cancel</string>
-    <string name="edit">Edit</string>
 
     <!-- Home screen -->
     <string name="home_free_play_title">Free play</string>
@@ -147,7 +145,6 @@
     <string name="melody_failed_load_melody">Failed to load melody</string>
     <string name="melody_difficulty">Difficulty: </string>
     <string name="melody_no_playthroughs">No playthroughs yet</string>
-    <string name="no_melodies_available">No bundled melodies available.\nImport a song file to get started.</string>
     <string name="melody_reset_score">Reset score</string>
     <string name="melody_import_success">Song imported</string>
     <string name="melody_import_folder_success">Songs imported into a folder</string>

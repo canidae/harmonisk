@@ -6,7 +6,6 @@ import android.media.AudioManager
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
-import net.exent.harmonisk.BuildConfig
 import net.exent.harmonisk.music.Instrument
 import java.io.File
 import java.io.IOException
@@ -35,8 +34,6 @@ class SoundFontSynthesizer(
         @JvmStatic
         private external fun nativeUnload(handle: Long)
         @JvmStatic
-        private external fun nativeActiveVoiceCount(handle: Long): Int
-        @JvmStatic
         private external fun nativeSetChannelPreset(
             handle: Long, channel: Int, bank: Int, preset: Int
         ): Boolean
@@ -62,10 +59,6 @@ class SoundFontSynthesizer(
 
     @Volatile
     private var nativeHandle: Long = 0L
-
-    @Volatile
-    var debugActiveVoices: Int = 0
-        private set
 
     @Volatile
     private var channelsInitialized = false

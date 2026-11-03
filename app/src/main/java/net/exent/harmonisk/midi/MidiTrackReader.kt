@@ -27,10 +27,7 @@ internal class MidiTrackReader(private val data: ByteArray) {
         var pos = 0
         val headerChunkId = readMidiString(data, pos, 4)
         require(headerChunkId == "MThd") { "Invalid MIDI file: expected MThd, got $headerChunkId" }
-        pos += 4
-
-        val headerLength = readMidiInt32(data, pos)
-        pos += 4
+        pos += 8
 
         val format = readMidiInt16(data, pos); pos += 2
         val numTracks = readMidiInt16(data, pos); pos += 2
@@ -40,12 +37,9 @@ internal class MidiTrackReader(private val data: ByteArray) {
     }
 
     val firstTrackPosition: Int
-        get() = 8 + ((data[4].toInt() and 0xFF) shl 24 or
-            (data[5].toInt() and 0xFF) shl 16 or
-            (data[6].toInt() and 0xFF) shl 8 or
-            (data[7].toInt() and 0xFF))
+        get() = 8 + readMidiInt32(data, 4)
 
-    fun readTrack(pos: Int, trackEnd: Int, callback: EventCallback, tag: String): Int {
+    fun readTrack(pos: Int, callback: EventCallback, tag: String): Int {
         var p = pos
         val trackChunkId = readMidiString(data, p, 4)
         require(trackChunkId == "MTrk") { "Expected MTrk at position $p, got $trackChunkId" }
@@ -152,3 +146,6 @@ internal class MidiTrackReader(private val data: ByteArray) {
         return end
     }
 }
+
+internal fun List<MidiTrackReader.ActiveNote>.toNoteEvents(endTick: Long): List<NoteEvent> =
+    map { NoteEvent(it.note, it.velocity, it.startTick, endTick - it.startTick) }
