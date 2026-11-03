@@ -130,8 +130,8 @@ fun SettingsScreen(
                 }
             }
 
-            // Microphone sensitivity, the negated silence threshold: -20 dB at the left,
-            // -60 dB at the right, so moving right detects fainter sounds.
+            // Microphone sensitivity, the negated silence threshold: -25 dB at the left,
+            // -65 dB at the right, so moving right detects fainter sounds.
             SettingSection(
                 title = stringResource(R.string.settings_mic_sensitivity),
                 icon = Icons.Filled.Mic
@@ -139,7 +139,7 @@ fun SettingsScreen(
                 Slider(
                     value = -settings.silenceThresholdDb,
                     onValueChange = { viewModel.updateSilenceThreshold(-it) },
-                    valueRange = 20f..60f,
+                    valueRange = 25f..65f,
                     steps = 39,
                     modifier = Modifier.fillMaxWidth()
                 )
