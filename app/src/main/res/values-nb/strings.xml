@@ -8,6 +8,7 @@
     <string name="microphone">mikrofon</string>
     <string name="speaker">høyttaler</string>
     <string name="cancel">Avbryt</string>
+    <string name="delete">Slett</string>
 
     <!-- Home screen -->
     <string name="home_free_play_title">Spill fritt</string>
@@ -30,6 +31,9 @@
     <string name="profile_current">Gjeldende profil</string>
     <string name="profile_name_required">Skriv inn et profilnavn</string>
     <string name="profile_name_taken">Profilnavnet er allerede i bruk</string>
+    <string name="profile_delete">Slett profil</string>
+    <string name="profile_delete_title">Slette %1$s?</string>
+    <string name="profile_delete_body">Alle poengsummer og innstillinger for denne profilen blir permanent slettet. Dette kan ikke angres.</string>
 
     <!-- Permissions -->
     <string name="permission_title">Mikrofontilgang kreves</string>

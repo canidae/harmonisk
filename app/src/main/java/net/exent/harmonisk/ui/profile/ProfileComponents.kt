@@ -1,7 +1,9 @@
 package net.exent.harmonisk.ui.profile
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -130,65 +132,96 @@ fun ProfileSetupScreen(onCreate: (String) -> Boolean) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProfileDialog(
     profiles: List<ProfileRepository.Profile>,
     activeProfileId: String?,
     onSelect: (String) -> Unit,
     onAdd: () -> Unit,
+    onDelete: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.profile_switch_title)) },
-        text = {
-            LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
-                items(profiles, key = { it.id }) { profile ->
-                    val selected = profile.id == activeProfileId
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onSelect(profile.id) }
-                            .padding(horizontal = 12.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Filled.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            text = profile.name,
-                            style = MaterialTheme.typography.bodyLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (selected) {
+    var pendingDelete by remember { mutableStateOf<ProfileRepository.Profile?>(null) }
+    val target = pendingDelete
+    if (target != null) {
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text(stringResource(R.string.profile_delete_title, target.name)) },
+            text = { Text(stringResource(R.string.profile_delete_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDelete = null
+                        onDelete(target.id)
+                    }
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    } else {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(stringResource(R.string.profile_switch_title)) },
+            text = {
+                LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
+                    items(profiles, key = { it.id }) { profile ->
+                        val selected = profile.id == activeProfileId
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .combinedClickable(
+                                    onClick = { onSelect(profile.id) },
+                                    onLongClick = { pendingDelete = profile },
+                                    onLongClickLabel = stringResource(R.string.profile_delete)
+                                )
+                                .padding(horizontal = 12.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Icon(
-                                Icons.Filled.Check,
-                                contentDescription = stringResource(R.string.profile_current),
+                                Icons.Filled.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                text = profile.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (selected) {
+                                Icon(
+                                    Icons.Filled.Check,
+                                    contentDescription = stringResource(R.string.profile_current),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
+            },
+            confirmButton = {
+                TextButton(onClick = onAdd) {
+                    Text(stringResource(R.string.profile_add))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onAdd) {
-                Text(stringResource(R.string.profile_add))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-        }
-    )
+        )
+    }
 }
 
 @Composable

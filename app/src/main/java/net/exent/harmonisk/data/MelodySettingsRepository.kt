@@ -52,6 +52,10 @@ class MelodySettingsRepository(
         store.set(key(profileId, melodyId, instrument), settings)
     }
 
+    suspend fun deleteProfileData(profileId: String) {
+        store.removeWhere { ProfileRepository.unscopedKey(profileId, it) != null }
+    }
+
     private fun key(profileId: String, melodyId: String, instrument: String): String =
         ProfileRepository.scopedKey(profileId, "$melodyId:$instrument")
 }

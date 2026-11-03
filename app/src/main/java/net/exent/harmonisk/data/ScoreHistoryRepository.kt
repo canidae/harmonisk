@@ -91,4 +91,8 @@ class ScoreHistoryRepository(
             store.remove(ProfileRepository.scopedKey(profile.id, melodyId))
         }
     }
+
+    suspend fun deleteProfileData(profileId: String) {
+        store.removeWhere { ProfileRepository.unscopedKey(profileId, it) != null }
+    }
 }

@@ -148,7 +148,10 @@ class SettingsRepository(
     }
 
     suspend fun resetToDefaults() {
-        val profileId = profileRepository.activeProfileId ?: return
+        profileRepository.activeProfileId?.let { deleteProfileData(it) }
+    }
+
+    suspend fun deleteProfileData(profileId: String) {
         context.dataStore.edit { prefs ->
             prefs.asMap().keys.toList().forEach { key ->
                 val name = ProfileRepository.unscopedKey(profileId, key.name)

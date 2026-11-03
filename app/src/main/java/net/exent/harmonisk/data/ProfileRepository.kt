@@ -67,6 +67,20 @@ class ProfileRepository(context: Context) {
         return true
     }
 
+    @Synchronized
+    fun deleteProfile(id: String): Boolean {
+        val remaining = _profiles.value.filterNot { it.id == id }
+        if (remaining.size == _profiles.value.size) return false
+        val active = if (_activeProfile.value?.id == id) remaining.firstOrNull() else _activeProfile.value
+        _profiles.value = remaining
+        _activeProfile.value = active
+        prefs.edit {
+            putString(KEY_PROFILES, json.encodeToString(serializer, remaining))
+            if (active != null) putString(KEY_ACTIVE, active.id) else remove(KEY_ACTIVE)
+        }
+        return true
+    }
+
     fun isNameAvailable(name: String): Boolean {
         val trimmed = name.trim()
         return trimmed.isNotEmpty() &&
