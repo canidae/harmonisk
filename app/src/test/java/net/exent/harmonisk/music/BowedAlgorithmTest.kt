@@ -17,8 +17,28 @@ class BowedAlgorithmTest {
         algorithm = BowedAlgorithm()
     }
 
+    private fun findPosition(
+        instrument: Instrument,
+        midi: Int,
+        previous: BowedPosition? = null,
+        key: KeySignature? = null,
+        preferOpenStrings: Boolean = true
+    ): BowedPosition? {
+        if (previous == null) {
+            return algorithm.recommendPositions(instrument, listOf(midi), key, preferOpenStrings).firstOrNull()
+        }
+        val previousMidi = instrument.tuning[previous.stringIndex] +
+            (BowedAlgorithm.defaultFingerOffset(instrument, previous.finger) ?: 0)
+        return algorithm.recommendPositions(
+            instrument,
+            listOf(previousMidi, midi),
+            key,
+            preferOpenStrings
+        ).getOrNull(1)
+    }
+
     private fun violinPosition(midi: Int, key: KeySignature? = null, preferOpenStrings: Boolean = true) =
-        algorithm.findRecommendedPosition(Instrument.VIOLIN, midi, null, key, preferOpenStrings)
+        findPosition(Instrument.VIOLIN, midi, key = key, preferOpenStrings = preferOpenStrings)
 
     @Test
     fun `open string preferred with no context`() {
@@ -31,25 +51,25 @@ class BowedAlgorithmTest {
     @Test
     fun `each instrument uses its own open strings`() {
         val viola = Instrument.VIOLA
-        assertEquals(BowedPosition(0, 0), algorithm.findRecommendedPosition(viola, 48, null))
-        assertEquals(BowedPosition(1, 0), algorithm.findRecommendedPosition(viola, 55, null))
-        assertEquals(BowedPosition(2, 0), algorithm.findRecommendedPosition(viola, 62, null))
-        assertEquals(BowedPosition(3, 0), algorithm.findRecommendedPosition(viola, 69, null))
+        assertEquals(BowedPosition(0, 0), findPosition(viola, 48, null))
+        assertEquals(BowedPosition(1, 0), findPosition(viola, 55, null))
+        assertEquals(BowedPosition(2, 0), findPosition(viola, 62, null))
+        assertEquals(BowedPosition(3, 0), findPosition(viola, 69, null))
 
         val cello = Instrument.CELLO
-        assertEquals(BowedPosition(0, 0), algorithm.findRecommendedPosition(cello, 36, null))
-        assertEquals(BowedPosition(1, 0), algorithm.findRecommendedPosition(cello, 43, null))
-        assertEquals(BowedPosition(2, 0), algorithm.findRecommendedPosition(cello, 50, null))
-        assertEquals(BowedPosition(3, 0), algorithm.findRecommendedPosition(cello, 57, null))
+        assertEquals(BowedPosition(0, 0), findPosition(cello, 36, null))
+        assertEquals(BowedPosition(1, 0), findPosition(cello, 43, null))
+        assertEquals(BowedPosition(2, 0), findPosition(cello, 50, null))
+        assertEquals(BowedPosition(3, 0), findPosition(cello, 57, null))
     }
 
     @Test
     fun `cello uses its own first position fingering`() {
-        assertEquals(BowedPosition(0, 1), algorithm.findRecommendedPosition(Instrument.CELLO, 38, null))
-        assertEquals(BowedPosition(0, 2), algorithm.findRecommendedPosition(Instrument.CELLO, 39, null))
-        assertEquals(BowedPosition(0, 3), algorithm.findRecommendedPosition(Instrument.CELLO, 40, null))
-        assertEquals(BowedPosition(0, 4), algorithm.findRecommendedPosition(Instrument.CELLO, 41, null))
-        assertEquals(BowedPosition(1, 0), algorithm.findRecommendedPosition(Instrument.CELLO, 43, null))
+        assertEquals(BowedPosition(0, 1), findPosition(Instrument.CELLO, 38, null))
+        assertEquals(BowedPosition(0, 2), findPosition(Instrument.CELLO, 39, null))
+        assertEquals(BowedPosition(0, 3), findPosition(Instrument.CELLO, 40, null))
+        assertEquals(BowedPosition(0, 4), findPosition(Instrument.CELLO, 41, null))
+        assertEquals(BowedPosition(1, 0), findPosition(Instrument.CELLO, 43, null))
     }
 
     @Test
@@ -62,17 +82,17 @@ class BowedAlgorithmTest {
     fun `same string continuity is preferred`() {
         assertEquals(
             BowedPosition(2, 1),
-            algorithm.findRecommendedPosition(Instrument.VIOLIN, 71, BowedPosition(2, 0))
+            findPosition(Instrument.VIOLIN, 71, BowedPosition(2, 0))
         )
         assertEquals(
             BowedPosition(0, 2),
-            algorithm.findRecommendedPosition(Instrument.VIOLIN, 59, BowedPosition(0, 1))
+            findPosition(Instrument.VIOLIN, 59, BowedPosition(0, 1))
         )
     }
 
     @Test
     fun `string crossing costs more than finger movement`() {
-        val pos = algorithm.findRecommendedPosition(Instrument.VIOLIN, 62, BowedPosition(2, 1))
+        val pos = findPosition(Instrument.VIOLIN, 62, BowedPosition(2, 1))
         assertNotNull(pos)
         assertEquals(BowedPosition(1, 0), pos)
     }
@@ -117,7 +137,7 @@ class BowedAlgorithmTest {
                 for (midi in open..open + highestOffset) {
                     assertNotNull(
                         "${instrument.name} MIDI $midi should be playable in first position",
-                        algorithm.findRecommendedPosition(instrument, midi, null)
+                        findPosition(instrument, midi, null)
                     )
                 }
             }
@@ -127,7 +147,7 @@ class BowedAlgorithmTest {
     @Test
     fun `finger placements stay within one semitone of the natural line`() {
         for (midi in 55..83) {
-            val pos = algorithm.findRecommendedPosition(Instrument.VIOLIN, midi, null) ?: continue
+            val pos = findPosition(Instrument.VIOLIN, midi, null) ?: continue
             val deviation = BowedAlgorithm.fingerOffsetDeviation(midi, 55 + pos.stringIndex * 7, pos.finger, Instrument.VIOLIN) ?: 0
             assertTrue("MIDI $midi deviation $deviation out of range", deviation in -1..1)
         }
@@ -139,12 +159,12 @@ class BowedAlgorithmTest {
     fun `out of first position range returns null`() {
         assertNull(violinPosition(54))
         assertNull(violinPosition(84))
-        assertNull(algorithm.findRecommendedPosition(Instrument.CELLO, 35, null))
-        assertNull(algorithm.findRecommendedPosition(Instrument.CELLO, 42, null))
-        assertNull(algorithm.findRecommendedPosition(Instrument.CELLO, 63, null))
-        assertNull(algorithm.findRecommendedPosition(Instrument.CELLO, 65, null))
-        assertNull(algorithm.findRecommendedPosition(Instrument.VIOLA, 47, null))
-        assertNull(algorithm.findRecommendedPosition(Instrument.VIOLA, 77, null))
+        assertNull(findPosition(Instrument.CELLO, 35, null))
+        assertNull(findPosition(Instrument.CELLO, 42, null))
+        assertNull(findPosition(Instrument.CELLO, 63, null))
+        assertNull(findPosition(Instrument.CELLO, 65, null))
+        assertNull(findPosition(Instrument.VIOLA, 47, null))
+        assertNull(findPosition(Instrument.VIOLA, 77, null))
         assertNull(violinPosition(0))
         assertNull(violinPosition(127))
     }
@@ -155,7 +175,7 @@ class BowedAlgorithmTest {
         for ((midi, stringIndex) in boundary) {
             assertEquals(
                 BowedPosition(stringIndex, 0),
-                algorithm.findRecommendedPosition(Instrument.VIOLIN, midi, BowedPosition(1, 4))
+                findPosition(Instrument.VIOLIN, midi, BowedPosition(1, 4))
             )
         }
         assertEquals(
@@ -170,7 +190,7 @@ class BowedAlgorithmTest {
         for ((midi, stringIndex) in boundary) {
             assertEquals(
                 BowedPosition(stringIndex, 4),
-                algorithm.findRecommendedPosition(Instrument.VIOLIN, midi, null, preferOpenStrings = false)
+                findPosition(Instrument.VIOLIN, midi, null, preferOpenStrings = false)
             )
         }
         assertEquals(
@@ -187,7 +207,7 @@ class BowedAlgorithmTest {
                 for (midi in open..open + highestOffset) {
                     assertNotNull(
                         "${instrument.name} MIDI $midi should be playable in first position",
-                        algorithm.findRecommendedPosition(instrument, midi, null, preferOpenStrings = false)
+                        findPosition(instrument, midi, null, preferOpenStrings = false)
                     )
                 }
             }

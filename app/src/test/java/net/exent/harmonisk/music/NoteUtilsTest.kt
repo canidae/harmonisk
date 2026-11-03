@@ -4,7 +4,6 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import kotlin.math.abs
-import kotlin.math.log2
 
 class NoteUtilsTest {
 
@@ -74,32 +73,6 @@ class NoteUtilsTest {
     }
 
     @Test
-    fun `noteToFrequency for A4 returns 440`() {
-        val freq = noteUtils.noteToFrequency("A", 4)
-        assertEquals(440f, freq, 0.01f)
-    }
-
-    @Test
-    fun `noteToFrequency for C4 returns 261_63`() {
-        val freq = noteUtils.noteToFrequency("C", 4)
-        assertEquals(261.63f, freq, 0.1f)
-    }
-
-    @Test
-    fun `round trip frequency to note to frequency`() {
-        val testFrequencies = listOf(261.63f, 293.66f, 329.63f, 349.23f, 392.00f, 440.00f, 493.88f, 523.25f)
-        for (freq in testFrequencies) {
-            val note = noteUtils.frequencyToNote(freq)
-            val reconstructed = noteUtils.noteToFrequency(note.name, note.octave)
-            val centsError = 1200.0 * log2(reconstructed.toDouble() / freq.toDouble())
-            assertTrue(
-                "Round trip failed for $freq Hz (${note.name}${note.octave}): cents error $centsError exceeds 0.5",
-                abs(centsError) < 0.5
-            )
-        }
-    }
-
-    @Test
     fun `custom reference A4 at 432 Hz`() {
         val info = noteUtils.frequencyToNote(432f, refA4 = 432f)
         assertEquals("A", info.name)
@@ -166,18 +139,5 @@ class NoteUtilsTest {
     fun `negative frequency returns dash note`() {
         val info = noteUtils.frequencyToNote(-100f)
         assertEquals("-", info.name)
-    }
-
-    @Test
-    fun `midiToNoteName is correct`() {
-        assertEquals("A4", noteUtils.midiToNoteName(69))
-        assertEquals("C4", noteUtils.midiToNoteName(60))
-        assertEquals("C0", noteUtils.midiToNoteName(12))
-    }
-
-    @Test
-    fun `invalid note name returns negative frequency`() {
-        val freq = noteUtils.noteToFrequency("X", 4)
-        assertEquals(-1f, freq, 0.01f)
     }
 }

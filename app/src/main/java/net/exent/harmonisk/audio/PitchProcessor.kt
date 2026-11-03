@@ -42,7 +42,7 @@ class PitchProcessor(
          * chunks of rising energy before the sliding window resets, adding to the
          * input detection latency for real instruments.
          */
-        const val INPUT_ONSET_MS = (ONSET_DEBOUNCE_CHUNKS * AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000 + AudioConstants.SAMPLE_RATE / 2) / AudioConstants.SAMPLE_RATE
+        const val INPUT_ONSET_MS = (ONSET_DEBOUNCE_CHUNKS * AudioConstants.BUFFER_SIZE_SAMPLES * 1000 + AudioConstants.SAMPLE_RATE / 2) / AudioConstants.SAMPLE_RATE
     }
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB

@@ -177,18 +177,8 @@ class ScoringEngine {
             greatNotes = greatCount,
             longestStreak = longestStreak,
             avgPitchScore = noteScores.map { it.pitchScore }.average().toFloat(),
-            avgDurationScore = noteScores.map { it.durationScore }.average().toFloat(),
-            encouragingMessage = getEncouragingMessage(avgScore)
+            avgDurationScore = noteScores.map { it.durationScore }.average().toFloat()
         )
-    }
-
-    private fun getEncouragingMessage(score: Float): String = when (scoreTier(score)) {
-        ScoreTier.LEGENDARY -> "Outstanding!"
-        ScoreTier.EXCELLENT -> "Excellent!"
-        ScoreTier.GREAT -> "Well done!"
-        ScoreTier.GOOD -> "Keep it up!"
-        ScoreTier.OK -> "Getting there!"
-        ScoreTier.NEEDS_WORK -> "Keep practicing!"
     }
 }
 
@@ -224,22 +214,9 @@ data class MelodyScore(
     val avgDurationScore: Float,
     val timeScore: Float = 1.0f,
     val wrongNoteScore: Float = 100f,
-    val wrongNoteCount: Int = 0,
-    val encouragingMessage: String = ""
+    val wrongNoteCount: Int = 0
 ) {
     companion object {
-        val EMPTY = MelodyScore(0f, 0, 0, 0, 0, 0, 0f, 0f, encouragingMessage = "Keep practicing!")
+        val EMPTY = MelodyScore(0f, 0, 0, 0, 0, 0, 0f, 0f)
     }
 }
-
-data class ScoreBreakdown(
-    val avgPitchScore: Float,
-    val avgDurationScore: Float,
-    val timeScore: Float
-)
-
-fun MelodyScore.toBreakdown(): ScoreBreakdown = ScoreBreakdown(
-    avgPitchScore = avgPitchScore,
-    avgDurationScore = avgDurationScore,
-    timeScore = timeScore
-)

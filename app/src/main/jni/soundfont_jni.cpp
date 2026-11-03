@@ -144,17 +144,6 @@ Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeGetPresetIndex(
     return idx;
 }
 
-extern "C" JNIEXPORT jint JNICALL
-Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeActiveVoiceCount(
-    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_)
-{
-    auto* h = reinterpret_cast<SynthHandle*>(handle_);
-    if (!h) return -1;
-    // NOTE: not thread-safe — for debugging only; synth state may change
-    // concurrently on the render thread
-    return tsf_active_voice_count(h->synth);
-}
-
 extern "C" JNIEXPORT void JNICALL
 Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeChannelNoteOn(
     JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_, jint channel, jint key, jfloat velocity)

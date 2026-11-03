@@ -154,7 +154,6 @@ class MetronomeViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        super.onCleared()
         tickJob?.cancel()
         soundFontSynthesizer.close()
     }

@@ -223,7 +223,6 @@ class SettingsViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        super.onCleared()
         if (soundFontSynthesizer.isReady) {
             soundFontSynthesizer.allNotesOff()
         }

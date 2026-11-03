@@ -121,16 +121,14 @@ object AppModule {
     @Provides
     @Singleton
     fun provideMidiInputReceiver(
-        @ApplicationContext context: Context,
         midiDeviceManager: MidiDeviceManager
-    ): MidiInputReceiver = MidiInputReceiver(context, midiDeviceManager)
+    ): MidiInputReceiver = MidiInputReceiver(midiDeviceManager)
 
     @Provides
     @Singleton
     fun provideMidiOutputSender(
-        @ApplicationContext context: Context,
         midiDeviceManager: MidiDeviceManager
-    ): MidiOutputSender = MidiOutputSender(context, midiDeviceManager)
+    ): MidiOutputSender = MidiOutputSender(midiDeviceManager)
 
     @Provides
     @Singleton

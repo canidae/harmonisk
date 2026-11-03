@@ -74,14 +74,7 @@ fun FreePlayScreen(
 
     KeepScreenOn()
 
-    var frameTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            withFrameMillis { ms -> frameTime = ms }
-        }
-    }
-
-    val canvasSongPositionMs = viewModel.getEffectiveTime(frameTime)
+    val canvasSongPositionMs = viewModel.getEffectiveTime()
     val midiRange = state.viewMaxMidi - state.viewMinMidi
     val pxPerMs = state.fallSpeedPxPerSec * density.density / 1000f
 

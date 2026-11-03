@@ -10,8 +10,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import net.exent.harmonisk.R
 import net.exent.harmonisk.music.MelodyScore
-import net.exent.harmonisk.music.ScoreBreakdown
-import net.exent.harmonisk.music.toBreakdown
 import net.exent.harmonisk.ui.utils.formatScore
 import net.exent.harmonisk.ui.utils.scoreColor
 
@@ -22,15 +20,13 @@ fun ScoreSummaryPanel(
     modifier: Modifier = Modifier,
     personalBest: Float? = null
 ) {
-    val breakdown = score.toBreakdown()
-
     Column(modifier = modifier.padding(top = 8.dp)) {
         if (currentLevel > 1) {
-            BreakdownRow(stringResource(R.string.score_pitch_accuracy), breakdown.avgPitchScore)
+            BreakdownRow(stringResource(R.string.score_pitch_accuracy), score.avgPitchScore)
         }
-        BreakdownRow(stringResource(R.string.score_note_duration), breakdown.avgDurationScore)
+        BreakdownRow(stringResource(R.string.score_note_duration), score.avgDurationScore)
         if (currentLevel <= 3) {
-            BreakdownRow(stringResource(R.string.score_song_duration), breakdown.timeScore * 100f)
+            BreakdownRow(stringResource(R.string.score_song_duration), score.timeScore * 100f)
         }
         if (currentLevel >= 3) {
             BreakdownRow(stringResource(R.string.score_correct_notes), score.wrongNoteScore)

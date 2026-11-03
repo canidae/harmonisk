@@ -51,8 +51,6 @@ class AudioDelayRepository(
         profiles[device.deviceKey]?.inputDelayMs ?: DEFAULT_INPUT_DELAY_MS
     }
 
-    val allProfiles: Flow<Map<String, DelayProfile>> = store.flow
-
     suspend fun setOutputDelay(deviceKey: String, outputDelayMs: Int) =
         store.update(deviceKey) { existing ->
             DelayProfile(

@@ -196,7 +196,6 @@ class TunerViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        super.onCleared()
         stopListening()
     }
 }

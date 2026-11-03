@@ -39,7 +39,6 @@ fun ScoreProgressGraph(
     val density = LocalDensity.current
     val context = LocalContext.current
     val labelSize = if (compact) 9.sp else 11.sp
-    val labelHeight = with(density) { labelSize.toDp() }
     val bottomPadding = if (compact) 16.dp else 24.dp
     val leftPadding = if (compact) 24.dp else 32.dp
 
