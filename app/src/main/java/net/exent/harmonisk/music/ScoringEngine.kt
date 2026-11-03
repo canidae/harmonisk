@@ -19,6 +19,20 @@ class ScoringEngine {
         // Duration scoring ratio thresholds
         const val PERFECT_DURATION_RATIO = 0.85f
 
+        /** Score needed on the highest reached level to unlock the next one. */
+        const val LEVEL_UP_SCORE = 90f
+
+        /**
+         * The highest level reached after a run. A run below the highest level already reached
+         * leaves the unlock untouched, so the next level is not lost by retrying an easier one.
+         */
+        fun unlockedLevelAfterRun(currentLevel: Int, unlockedLevel: Int, score: Float): Int {
+            val current = currentLevel.coerceIn(1, 5)
+            val unlocked = unlockedLevel.coerceIn(current, 5)
+            return if (score >= LEVEL_UP_SCORE && current == unlocked) (current + 1).coerceAtMost(5)
+            else unlocked
+        }
+
         // Playing the song up to this much longer than its own duration scores full marks, with more
         // leeway the lower the level
         const val TIME_GRACE_RATIO_LEVEL_1 = 1.20
@@ -36,25 +50,8 @@ class ScoringEngine {
         const val PITCH_WEIGHT = 0.6f
         const val DURATION_WEIGHT = 0.4f
 
-        /**
-         * Computes the running cumulative combined score across 5 levels.
-         * For each level (5 down to 1), the best score at that level is capped
-         * to the running max of higher levels, then summed.
-         */
-        fun computeCombinedScore(levelScores: List<Pair<Int, Float>>): Float {
-            if (levelScores.isEmpty()) return 0f
-            val bestPerLevel = levelScores.groupBy { it.first }.mapValues { (_, pairs) ->
-                pairs.maxOf { it.second }
-            }
-            var runningMax = 0f
-            var total = 0f
-            for (level in 5 downTo 1) {
-                val levelBest = bestPerLevel[level] ?: 0f
-                if (levelBest > runningMax) runningMax = levelBest
-                total += runningMax
-            }
-            return total
-        }
+        fun bestScoreForLevel(levelScores: List<Pair<Int, Float>>, level: Int): Float =
+            levelScores.filter { it.first == level }.maxOfOrNull { it.second } ?: 0f
 
         /**
          * Averages the category scores that are in play at [level] — the note score always,

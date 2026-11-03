@@ -67,9 +67,8 @@ fun MelodyScreen(
 ) {
     val context = LocalContext.current
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsStateWithLifecycle()
-    val combinedScores by viewModel.allMelodyCombinedScores.collectAsStateWithLifecycle()
+    val scores by viewModel.allMelodyScores.collectAsStateWithLifecycle()
     val difficulties by viewModel.allMelodyDifficulties.collectAsStateWithLifecycle()
-    val levels by viewModel.allMelodyLevels.collectAsStateWithLifecycle()
     var previewingMelody by remember { mutableStateOf<String?>(null) }
     var expandedMelodyId by remember { mutableStateOf<String?>(null) }
     // The folder the player was in has to outlive the trip into a song, or coming back lists the
@@ -183,9 +182,8 @@ fun MelodyScreen(
         MelodyCard(
             viewModel = viewModel,
             info = info,
-            combinedScore = combinedScores[info.id],
+            scoreSummary = scores[info.id],
             difficulty = difficulties[info.id],
-            level = levels[info.id],
             isPreviewing = previewingMelody == info.name && isPreviewPlaying,
             isExpanded = expandedMelodyId == info.id,
             onPlay = {
@@ -498,9 +496,8 @@ private fun ImportButton(
 private fun MelodyCard(
     viewModel: MelodyViewModel,
     info: net.exent.harmonisk.data.MelodyRepository.MelodyInfo,
-    combinedScore: Float?,
+    scoreSummary: MelodyScoreSummary?,
     difficulty: Float?,
-    level: Int?,
     isPreviewing: Boolean,
     isExpanded: Boolean,
     onPlay: () -> Unit,
@@ -535,25 +532,17 @@ private fun MelodyCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(info.name, style = MaterialTheme.typography.titleMedium)
-                    if (difficulty != null || level != null) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (difficulty != null) {
-                                DifficultyBadge(difficulty = difficulty)
-                            }
-                            if (level != null) {
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.melody_level, level),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+                    if (difficulty != null) {
+                        DifficultyBadge(difficulty = difficulty)
                     }
                 }
 
-                if (combinedScore != null) {
-                    CombinedScoreBadge(score = combinedScore, onClick = onToggleExpand)
+                if (scoreSummary != null) {
+                    LevelScoreBadge(
+                        level = scoreSummary.level,
+                        score = scoreSummary.score,
+                        onClick = onToggleExpand
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
                 }
 
@@ -605,26 +594,30 @@ private fun MelodyCard(
 }
 
 @Composable
-private fun CombinedScoreBadge(
-    score: Float,
-    onClick: () -> Unit
-) {
-    val avgPerLevel = score / 5f
-    val color = scoreColor(avgPerLevel)
+private fun LevelScoreBadge(level: Int, score: Float?, onClick: () -> Unit) {
+    val tint = score?.let { scoreColor(it) } ?: MaterialTheme.colorScheme.primary
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(48.dp)
             .clip(CircleShape)
-            .background(color.copy(alpha = 0.2f))
+            .background(tint.copy(alpha = 0.2f))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = formatScore(score),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = color
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = level.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = score?.let { formatScore(it) } ?: "–",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = if (score != null) tint else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 

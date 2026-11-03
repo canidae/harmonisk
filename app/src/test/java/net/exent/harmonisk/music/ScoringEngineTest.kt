@@ -407,23 +407,36 @@ class ScoringEngineTest {
     }
 
     @Test
-    fun `combined score accumulates the best run of each level`() {
-        val scores = (1..5).map { it to 50f }
-        assertEquals(250f, ScoringEngine.computeCombinedScore(scores), 0.01f)
+    fun `best score for a level ignores runs at other levels`() {
+        val scores = listOf(1 to 100f, 2 to 87f, 3 to 95f, 2 to 50f)
+        assertEquals(87f, ScoringEngine.bestScoreForLevel(scores, 2), 0.01f)
     }
 
     @Test
-    fun `a run that does not beat the best at its level leaves the combined score unchanged`() {
-        val best = listOf(1 to 90f, 2 to 80f, 3 to 70f, 4 to 60f, 5 to 50f)
-        val previous = ScoringEngine.computeCombinedScore(best)
-        assertEquals(350f, previous, 0.01f)
-        assertEquals(previous, ScoringEngine.computeCombinedScore(best + (1 to 50f)), 0.01f)
+    fun `best score for a level without runs is zero`() {
+        assertEquals(0f, ScoringEngine.bestScoreForLevel(listOf(1 to 100f), 2), 0.01f)
     }
 
     @Test
-    fun `a run that beats the best at its level raises the combined score`() {
-        val best = listOf(1 to 90f, 2 to 80f, 3 to 70f, 4 to 60f, 5 to 50f)
-        val previous = ScoringEngine.computeCombinedScore(best)
-        assertTrue(ScoringEngine.computeCombinedScore(best + (1 to 100f)) > previous)
+    fun `reaching the threshold on the highest level unlocks the next one`() {
+        assertEquals(2, ScoringEngine.unlockedLevelAfterRun(1, 1, 90f))
+        assertEquals(5, ScoringEngine.unlockedLevelAfterRun(4, 4, 100f))
+    }
+
+    @Test
+    fun `a run below the threshold keeps the unlocked level`() {
+        assertEquals(1, ScoringEngine.unlockedLevelAfterRun(1, 1, 89.9f))
+        assertEquals(3, ScoringEngine.unlockedLevelAfterRun(3, 3, 0f))
+    }
+
+    @Test
+    fun `retrying an easier unlocked level does not lose the higher level`() {
+        assertEquals(4, ScoringEngine.unlockedLevelAfterRun(1, 4, 100f))
+        assertEquals(4, ScoringEngine.unlockedLevelAfterRun(2, 4, 50f))
+    }
+
+    @Test
+    fun `the last level cannot unlock another`() {
+        assertEquals(5, ScoringEngine.unlockedLevelAfterRun(5, 5, 100f))
     }
 }

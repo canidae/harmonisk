@@ -66,9 +66,8 @@ fun MelodyPlayScreen(
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
     val inputDelay by viewModel.activeInputDelay.collectAsState()
     val scoreHistory by viewModel.currentScoreHistory.collectAsStateWithLifecycle()
-    val canAdvance by viewModel.canAdvanceLevel.collectAsStateWithLifecycle()
     val celebrationLevel by viewModel.celebrationLevel.collectAsStateWithLifecycle()
-    val personalBest by viewModel.personalBestCombinedScore.collectAsStateWithLifecycle()
+    val personalBest by viewModel.personalBestScore.collectAsStateWithLifecycle()
     val currentInstrument by viewModel.currentInstrument.collectAsStateWithLifecycle()
     val devModeEnabled by viewModel.devModeEnabled.collectAsStateWithLifecycle()
     val density = LocalDensity.current
@@ -441,16 +440,12 @@ fun MelodyPlayScreen(
             melodyScore = score,
             onDismiss = { showResultsModal = false },
             scoreHistory = scoreHistory,
-            currentLevel = gameState.currentLevel,
-            canAdvance = canAdvance,
-            onRetry = {
+            currentLevel = gameState.playedLevel,
+            unlockedLevel = gameState.unlockedLevel,
+            newlyUnlockedLevel = gameState.newlyUnlockedLevel,
+            onRetryLevel = { level ->
                 showResultsModal = false
-                viewModel.startPlaying()
-            },
-            onAdvance = {
-                viewModel.advanceLevel()
-                showResultsModal = false
-                viewModel.startPlaying()
+                viewModel.retryLevel(level)
             },
             celebrationLevel = celebrationLevel,
             personalBest = personalBest

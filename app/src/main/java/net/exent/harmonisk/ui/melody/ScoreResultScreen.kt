@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -30,9 +29,9 @@ fun ScoreResultModal(
     onDismiss: () -> Unit,
     scoreHistory: List<ScoreEntry> = emptyList(),
     currentLevel: Int = 1,
-    canAdvance: Boolean = false,
-    onRetry: () -> Unit = {},
-    onAdvance: () -> Unit = {},
+    unlockedLevel: Int = 1,
+    newlyUnlockedLevel: Int? = null,
+    onRetryLevel: (Int) -> Unit = {},
     celebrationLevel: CelebrationLevel = CelebrationLevel.NONE,
     personalBest: Float? = null
 ) {
@@ -44,7 +43,6 @@ fun ScoreResultModal(
 
     val score = melodyScore.overallScore
     val enthusiasm = enthusiasmLevel(score)
-    val context = LocalContext.current
 
     Dialog(onDismissRequest = onDismiss) {
         ScoreCelebrationOverlay(
@@ -68,10 +66,18 @@ fun ScoreResultModal(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(24.dp)
+                            .padding(horizontal = 16.dp, vertical = 24.dp)
                             .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        if (newlyUnlockedLevel != null) {
+                            Text(
+                                text = stringResource(R.string.level_reached, newlyUnlockedLevel),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                        }
                         Text(
                             text = stringResource(R.string.score_level, currentLevel),
                             style = MaterialTheme.typography.titleSmall,
@@ -105,26 +111,43 @@ fun ScoreResultModal(
                         Spacer(modifier = Modifier.height(16.dp))
                         HorizontalDivider()
                         Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = stringResource(R.string.retry_level),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Button(onClick = onRetry) {
-                                Text(context.getString(R.string.retry))
-                            }
-                            if (canAdvance) {
-                                Button(onClick = onAdvance) {
-                                    Text(context.getString(R.string.next_level, currentLevel + 1))
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                for (level in 1 until unlockedLevel) {
+                                    OutlinedButton(
+                                        onClick = { onRetryLevel(level) },
+                                        modifier = Modifier.size(48.dp),
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) {
+                                        Text(level.toString())
+                                    }
                                 }
                             }
+                            Button(
+                                onClick = { onRetryLevel(unlockedLevel) },
+                                modifier = Modifier.size(48.dp),
+                                contentPadding = PaddingValues(0.dp)
+                            ) {
+                                Text(unlockedLevel.toString())
+                            }
                         }
-                        if (canAdvance) {
+                        if (newlyUnlockedLevel != null) {
                             Spacer(modifier = Modifier.height(8.dp))
-                            val change = when (currentLevel + 1) {
-                                2 -> context.getString(R.string.level_2_change)
-                                3 -> context.getString(R.string.level_3_change)
-                                4 -> context.getString(R.string.level_4_change)
-                                5 -> context.getString(R.string.level_5_change)
+                            val change = when (newlyUnlockedLevel) {
+                                2 -> stringResource(R.string.level_2_change)
+                                3 -> stringResource(R.string.level_3_change)
+                                4 -> stringResource(R.string.level_4_change)
+                                5 -> stringResource(R.string.level_5_change)
                                 else -> null
                             }
                             if (change != null) {
