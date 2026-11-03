@@ -31,7 +31,7 @@ class SubharmonicCorrectorTest {
 
     @Test
     fun stopsWhenSubharmonicIsBelowRatio() {
-        val act = activation(200 to 0.8f, 140 to 0.03f)
+        val act = activation(200 to 0.8f, 140 to 0.02f)
         assertEquals(200, SubharmonicCorrector.fundamentalBin(act, 200))
     }
 

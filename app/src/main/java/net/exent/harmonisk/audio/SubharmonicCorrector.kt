@@ -24,7 +24,7 @@ internal object SubharmonicCorrector {
     private const val MAX_STEPS = 1
 
     /** A subharmonic peak must reach this fraction of its parent peak's activation. */
-    const val MIN_PEAK_RATIO = 0.05f
+    const val MIN_PEAK_RATIO = 0.03f
 
     /**
      * @return The bin of the lowest octave-related peak that is strong enough to be the

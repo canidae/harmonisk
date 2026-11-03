@@ -3,7 +3,7 @@ package net.exent.harmonisk.di
 import android.content.Context
 import net.exent.harmonisk.audio.AudioCaptureService
 import net.exent.harmonisk.audio.AudioDeviceMonitor
-import net.exent.harmonisk.audio.CrepePitchDetector
+import net.exent.harmonisk.audio.PitchDetector
 import net.exent.harmonisk.audio.MelodyPlayer
 import net.exent.harmonisk.audio.PitchProcessor
 import net.exent.harmonisk.audio.SoundFontSynthesizer
@@ -39,9 +39,9 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideCrepePitchDetector(
+    fun providePitchDetector(
         @ApplicationContext context: Context
-    ): CrepePitchDetector = CrepePitchDetector(context)
+    ): PitchDetector = PitchDetector(context)
 
     @Provides
     @Singleton
@@ -51,9 +51,9 @@ object AppModule {
     @Singleton
     fun providePitchProcessor(
         audioCaptureService: AudioCaptureService,
-        crepeDetector: CrepePitchDetector,
+        pitchDetector: PitchDetector,
         noteUtils: NoteUtils
-    ): PitchProcessor = PitchProcessor(audioCaptureService, crepeDetector, noteUtils)
+    ): PitchProcessor = PitchProcessor(audioCaptureService, pitchDetector, noteUtils)
 
     @Provides
     @Singleton

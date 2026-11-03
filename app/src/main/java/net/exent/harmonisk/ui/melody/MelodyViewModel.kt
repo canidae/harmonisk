@@ -177,6 +177,7 @@ class MelodyViewModel @Inject constructor(
                 val prevInstrument = _currentInstrument.value
                 _currentInstrument.value = newInstrument
                 val instrument = Instrument.fromName(newInstrument)
+                pitchProcessor.setInstrument(instrument)
                 if (newInstrument != prevInstrument && soundFontSynthesizer.isReady) {
                     soundFontSynthesizer.setInstrument(instrument.midiBank, instrument.midiProgram)
                 }

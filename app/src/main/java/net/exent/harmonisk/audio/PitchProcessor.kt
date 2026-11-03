@@ -1,5 +1,6 @@
 package net.exent.harmonisk.audio
 
+import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.music.PitchResult
 import kotlin.math.abs
@@ -8,7 +9,7 @@ import kotlinx.coroutines.flow.*
 
 class PitchProcessor(
     private val audioCaptureService: AudioCaptureService,
-    private val crepeDetector: CrepePitchDetector,
+    private val pitchDetector: PitchDetector,
     private val noteUtils: NoteUtils
 ) {
     companion object {
@@ -26,7 +27,7 @@ class PitchProcessor(
 
         /**
          * Energy rise (in dB) within one chunk that triggers an onset reset.
-         * On onset the sliding window is cleared so the very first CREPE inference
+         * On onset the sliding window is cleared so the very first pitch detection
          * reflects only the new note's signal — reduces transition ambiguity.
          * The onset condition must persist for ONSET_DEBOUNCE_CHUNKS consecutive
          * chunks to filter single-chunk amplitude modulation blips. 5 dB with a
@@ -42,37 +43,41 @@ class PitchProcessor(
          * input detection latency for real instruments.
          */
         const val INPUT_ONSET_MS = (ONSET_DEBOUNCE_CHUNKS * AudioCaptureService.BUFFER_SIZE_SAMPLES * 1000 + AudioConstants.SAMPLE_RATE / 2) / AudioConstants.SAMPLE_RATE
-
-        /**
-         * After this many milliseconds of consecutive silence, the prior-note frequency
-         * hint is cleared. Prevents a note before a long rest from biasing the next note.
-         */
-        private const val HINT_RESET_MS = 800L
-        private const val HINT_RESET_NANOS = HINT_RESET_MS * 1_000_000L
     }
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB
     private var referenceA4 = NoteUtils.DEFAULT_CONCERT_PITCH
+    private var instrument = Instrument.VIOLIN
+    @Volatile
+    private var lowestFrequency = NoteUtils.midiToFrequency(instrument.tuning.first(), referenceA4)
 
-    /** Duration of the most recent CREPE inference, used for input-delay calibration. */
+    /** Duration of the most recent pitch detection, used for input-delay calibration. */
     @Volatile
     var inferenceLatencyMs: Int = 0
         private set
 
-    /** Frequency of the most recently detected pitch, passed to CREPE as an octave-hint. */
-    private var lastFrequency = 0f
-    private var lastDetectedNano = 0L
-
     fun setSilenceThreshold(db: Float) { silenceThresholdDb = db }
 
-    fun setReferenceA4(frequency: Float) { referenceA4 = frequency }
+    fun setReferenceA4(frequency: Float) {
+        referenceA4 = frequency
+        updateLowestFrequency()
+    }
+
+    fun setInstrument(instrument: Instrument) {
+        this.instrument = instrument
+        updateLowestFrequency()
+    }
+
+    private fun updateLowestFrequency() {
+        lowestFrequency = NoteUtils.midiToFrequency(instrument.tuning.first(), referenceA4)
+    }
 
     /**
-     * Sliding-window pitch flow using CREPE for inference.
+     * Sliding-window pitch flow using the pitch detector.
      *
      * Each incoming chunk (512 samples at 44100 Hz = ~11.6 ms) shifts the 2822-sample
-     * analysis window. On energy onset the window is reset so CREPE receives a clean frame
-     * for the new note as quickly as possible.
+     * analysis window. On energy onset the window is reset so the detector receives a clean
+     * frame for the new note as quickly as possible.
      *
      * @param source Raw 44100 Hz chunks. Defaults to the microphone; tests inject recorded audio
      *               to drive this exact framing with repeatable input.
@@ -100,7 +105,6 @@ class PitchProcessor(
                     slidingWindow.fill(0f)
                     System.arraycopy(chunk, 0, slidingWindow, 0, chunkSize)
                     windowFilled = chunkSize
-                    lastFrequency = 0f
                 } else if (windowFilled >= ANALYSIS_WINDOW_SIZE) {
                     System.arraycopy(slidingWindow, chunkSize, slidingWindow, 0, ANALYSIS_WINDOW_SIZE - chunkSize)
                     System.arraycopy(chunk, 0, slidingWindow, ANALYSIS_WINDOW_SIZE - chunkSize, chunkSize)
@@ -117,16 +121,13 @@ class PitchProcessor(
 
     private fun processBuffer(buffer: FloatArray): PitchResult {
         val rmsDb = AudioUtils.linearToDb(AudioUtils.rms(buffer))
-        if (rmsDb < silenceThresholdDb) return handleSilent()
+        if (rmsDb < silenceThresholdDb) return PitchResult.SILENT
 
         val start = System.nanoTime()
-        val result = crepeDetector.detectPitch(buffer = buffer, hintFreq = lastFrequency)
+        val result = pitchDetector.detectPitch(buffer = buffer, lowestFrequency = lowestFrequency)
         val elapsed = ((System.nanoTime() - start) / 1_000_000).toInt()
         if (elapsed in 0..500) inferenceLatencyMs = elapsed
-        if (result.frequency <= 0f) return handleSilent()
-
-        lastFrequency = result.frequency
-        lastDetectedNano = System.nanoTime()
+        if (result.frequency <= 0f) return PitchResult.SILENT
 
         val noteInfo = noteUtils.frequencyToNote(result.frequency, referenceA4)
         return PitchResult(
@@ -138,10 +139,5 @@ class PitchProcessor(
             isSilent = false,
             confidence = result.confidence
         )
-    }
-
-    private fun handleSilent(): PitchResult {
-        if (System.nanoTime() - lastDetectedNano > HINT_RESET_NANOS) lastFrequency = 0f
-        return PitchResult.SILENT
     }
 }
