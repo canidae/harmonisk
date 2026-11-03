@@ -6,6 +6,7 @@ import net.exent.harmonisk.audio.AudioConstants
 import net.exent.harmonisk.audio.PitchProcessor
 import net.exent.harmonisk.audio.PitchStabilizer
 import net.exent.harmonisk.data.SettingsRepository
+import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.NoteInfo
 import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.music.PitchResult
@@ -69,6 +70,7 @@ class TunerViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
+                pitchProcessor.setInstrument(Instrument.fromName(settings.instrumentName))
                 applyConcertPitch(settings.concertPitchA4)
             }
         }

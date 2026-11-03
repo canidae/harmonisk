@@ -17,6 +17,7 @@ import net.exent.harmonisk.midi.MidiInputReceiver
 import net.exent.harmonisk.midi.MidiNoteEvent
 import net.exent.harmonisk.midi.MidiOutputSender
 import net.exent.harmonisk.midi.MidiWriter
+import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.music.PitchResult
 import net.exent.harmonisk.R
@@ -111,6 +112,7 @@ class FreePlayViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
+                pitchProcessor.setInstrument(Instrument.fromName(settings.instrumentName))
                 referenceA4 = settings.concertPitchA4
                 pitchProcessor.setReferenceA4(settings.concertPitchA4)
             }
