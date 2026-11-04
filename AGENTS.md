@@ -9,4 +9,5 @@
 - Ensure localization is correct and complete for all supported languages.
 - Ensure README.md, THIRD_PARTY_LICENSES.md and PRIVACY_POLICY.md are correct.
 - After implementing changes, build, start and test before committing.
+- Avoid losing user data on device.
 - When releasing, create a tag prefixed with "v" then todays date in format "yyyy.MM.dd". If the tag already exists, overwrite it. Include a concise changelog since the last release in your response to the user.
