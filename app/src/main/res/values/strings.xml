@@ -185,6 +185,8 @@
     <string name="melody_play_go_back">Go back</string>
     <string name="melody_play_level">Level: %1$d</string>
     <string name="melody_level">Lv.%1$d</string>
+    <string name="melody_level_up">Lv.%1$d ↑</string>
+    <string name="melody_level_replay">Lv.%1$d ↓</string>
     <string name="melody_score">Score: %1$s</string>
     <string name="melody_play_prefer_open_strings">Prefer open strings</string>
     <string name="melody_play_auto_key">Easy key</string>

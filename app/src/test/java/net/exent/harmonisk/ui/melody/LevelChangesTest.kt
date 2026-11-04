@@ -2,9 +2,11 @@ package net.exent.harmonisk.ui.melody
 
 import net.exent.harmonisk.data.ScoreHistoryRepository.ScoreEntry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class LevelChangeIndicesTest {
+class LevelChangesTest {
 
     private fun run(number: Int, level: Int): ScoreEntry = ScoreEntry(
         timestamp = number.toLong(),
@@ -21,28 +23,34 @@ class LevelChangeIndicesTest {
 
     @Test
     fun `no marker while every run was played at the same level`() {
-        assertEquals(emptyList<Int>(), levelChangeIndices(listOf(run(1, 1), run(2, 1), run(3, 1))))
+        assertEquals(emptyList<LevelChange>(), levelChanges(listOf(run(1, 1), run(2, 1), run(3, 1))))
     }
 
     @Test
     fun `a marker on the first run at a new level`() {
-        assertEquals(listOf(2), levelChangeIndices(listOf(run(1, 1), run(2, 1), run(3, 2))))
+        assertEquals(listOf(LevelChange(2, 2, 1)), levelChanges(listOf(run(1, 1), run(2, 1), run(3, 2))))
     }
 
     @Test
     fun `every level up is marked, a run on the same level again is not`() {
         val scores = listOf(run(1, 1), run(2, 2), run(3, 2), run(4, 3), run(5, 3), run(6, 4))
-        assertEquals(listOf(1, 3, 5), levelChangeIndices(scores))
+        assertEquals(
+            listOf(LevelChange(1, 2, 1), LevelChange(3, 3, 2), LevelChange(5, 4, 3)),
+            levelChanges(scores)
+        )
     }
 
     @Test
-    fun `a dropped level is marked too`() {
-        assertEquals(listOf(1), levelChangeIndices(listOf(run(1, 3), run(2, 1))))
+    fun `going back to an older level is marked as a replay`() {
+        val changes = levelChanges(listOf(run(1, 3), run(2, 1), run(3, 1), run(4, 3)))
+        assertEquals(listOf(LevelChange(1, 1, 3), LevelChange(3, 3, 1)), changes)
+        assertTrue(changes.first().isReplay)
+        assertFalse(changes.last().isReplay)
     }
 
     @Test
     fun `a single run or no runs have nothing to mark`() {
-        assertEquals(emptyList<Int>(), levelChangeIndices(listOf(run(1, 2))))
-        assertEquals(emptyList<Int>(), levelChangeIndices(emptyList()))
+        assertEquals(emptyList<LevelChange>(), levelChanges(listOf(run(1, 2))))
+        assertEquals(emptyList<LevelChange>(), levelChanges(emptyList()))
     }
 }

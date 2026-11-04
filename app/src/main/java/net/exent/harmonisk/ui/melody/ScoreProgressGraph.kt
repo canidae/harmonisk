@@ -34,7 +34,8 @@ fun ScoreProgressGraph(
     val lineColor = Purple40
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val levelLineColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f)
+    val levelUpColor = MaterialTheme.colorScheme.tertiary
+    val levelReplayColor = MaterialTheme.colorScheme.outline
 
     val density = LocalDensity.current
     val context = LocalContext.current
@@ -99,28 +100,36 @@ fun ScoreProgressGraph(
                 Offset(x, y.coerceIn(chartTop, chartTop + chartHeight))
             }
 
-            // Level-change markers, drawn behind the data
-            for (i in levelChangeIndices(scores)) {
-                val x = points[i].x
+            // Level-change markers, drawn behind the data. Replays of an older level
+            // get a lighter, shorter dash and a downward arrow so a step back is
+            // distinct from unlocking the next level.
+            for (change in levelChanges(scores)) {
+                val markerColor = if (change.isReplay) levelReplayColor else levelUpColor
+                val dashHeight = if (change.isReplay) 3f else 5f
+                val dashGap = if (change.isReplay) 6f else 4f
+                val x = points[change.index].x
                 var y = chartTop
                 while (y < chartTop + chartHeight) {
                     drawLine(
-                        color = levelLineColor,
+                        color = markerColor.copy(alpha = 0.7f),
                         start = Offset(x, y),
-                        end = Offset(x, (y + 5f).coerceAtMost(chartTop + chartHeight)),
-                        strokeWidth = 1.5f
+                        end = Offset(x, (y + dashHeight).coerceAtMost(chartTop + chartHeight)),
+                        strokeWidth = if (change.isReplay) 1f else 1.5f
                     )
-                    y += 9f
+                    y += dashHeight + dashGap
                 }
 
-                val t = if (scores.size == 1) 1f else i.toFloat() / (scores.size - 1)
+                val t = if (scores.size == 1) 1f else change.index.toFloat() / (scores.size - 1)
                 val nearRight = t > 0.75f
                 drawContext.canvas.nativeCanvas.drawText(
-                    context.getString(R.string.melody_level, scores[i].level),
+                    context.getString(
+                        if (change.isReplay) R.string.melody_level_replay else R.string.melody_level_up,
+                        change.level
+                    ),
                     if (nearRight) x - 3f else x + 3f,
                     chartTop + with(density) { labelSize.toPx() },
                     android.graphics.Paint().apply {
-                        color = textColor.hashCode()
+                        color = markerColor.hashCode()
                         this.textSize = with(density) { labelSize.toPx() }
                         textAlign = if (nearRight) android.graphics.Paint.Align.RIGHT
                         else android.graphics.Paint.Align.LEFT
@@ -181,6 +190,13 @@ fun ScoreProgressGraph(
     }
 }
 
-/** Runs played at a different level than the run before, where the graph marks a level change. */
-fun levelChangeIndices(scores: List<ScoreEntry>): List<Int> =
-    scores.indices.filter { it > 0 && scores[it].level != scores[it - 1].level }
+/** A run played at a different level than the run before, where the graph marks a level change. */
+data class LevelChange(val index: Int, val level: Int, val previousLevel: Int) {
+    val isReplay: Boolean get() = level < previousLevel
+}
+
+fun levelChanges(scores: List<ScoreEntry>): List<LevelChange> =
+    scores.zipWithNext().mapIndexedNotNull { index, (previous, current) ->
+        if (current.level == previous.level) null
+        else LevelChange(index + 1, current.level, previous.level)
+    }
