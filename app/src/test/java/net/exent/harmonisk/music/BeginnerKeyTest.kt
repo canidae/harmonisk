@@ -56,6 +56,16 @@ class BeginnerKeyTest {
     }
 
     @Test
+    fun farePaFerdeStaysInD() {
+        val melody = IntArray(34) { 64 }
+        melody[15] = 62
+        melody[16] = 62
+        melody[32] = 69
+        melody[33] = 69
+        assertEquals(0, offset(*melody, key = KeySignature(2, false)))
+    }
+
+    @Test
     fun bMinorScaleStaysPut() {
         val scale = intArrayOf(59, 61, 62, 64, 66, 67, 69, 71)
         assertEquals(0, offset(*scale, key = KeySignature(2, true)))
