@@ -113,21 +113,19 @@ fun ScoreProgressGraph(
                     y += 9f
                 }
 
-                if (!compact) {
-                    val t = if (scores.size == 1) 1f else i.toFloat() / (scores.size - 1)
-                    val nearRight = t > 0.75f
-                    drawContext.canvas.nativeCanvas.drawText(
-                        context.getString(R.string.melody_level, scores[i].level),
-                        if (nearRight) x - 3f else x + 3f,
-                        chartTop + with(density) { labelSize.toPx() },
-                        android.graphics.Paint().apply {
-                            color = textColor.hashCode()
-                            this.textSize = with(density) { labelSize.toPx() }
-                            textAlign = if (nearRight) android.graphics.Paint.Align.RIGHT
-                            else android.graphics.Paint.Align.LEFT
-                        }
-                    )
-                }
+                val t = if (scores.size == 1) 1f else i.toFloat() / (scores.size - 1)
+                val nearRight = t > 0.75f
+                drawContext.canvas.nativeCanvas.drawText(
+                    context.getString(R.string.melody_level, scores[i].level),
+                    if (nearRight) x - 3f else x + 3f,
+                    chartTop + with(density) { labelSize.toPx() },
+                    android.graphics.Paint().apply {
+                        color = textColor.hashCode()
+                        this.textSize = with(density) { labelSize.toPx() }
+                        textAlign = if (nearRight) android.graphics.Paint.Align.RIGHT
+                        else android.graphics.Paint.Align.LEFT
+                    }
+                )
             }
 
             // Draw connecting line
