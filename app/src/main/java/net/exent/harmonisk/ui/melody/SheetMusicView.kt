@@ -56,9 +56,9 @@ private val BEAT_CURSOR_COLOR = android.graphics.Color.argb(255, 64, 64, 255)
  * During playback the sheet pages so alphaTab's beat cursor stays in view: the
  * cursor moves freely across the score (alphaTab animates it with its own
  * timing, including a leading overshoot), and the sheet advances when the cursor
- * reaches the right edge. Near the end of the music the sheet stops paging and
- * lets the cursor finish moving right. This avoids chasing the cursor every
- * frame, which made it flicker.
+ * reaches the right edge. The scroll is clamped to the score's width so the last
+ * notes stay visible. This avoids chasing the cursor every frame, which made it
+ * flicker.
  *
  * While the user pans the shared time line ([songTimeOffsetSeconds] != 0) the
  * sheet scrolls smoothly from [scrollTimeSeconds] so it tracks the note-bar view,
@@ -286,16 +286,13 @@ fun SheetMusicView(
             val onScreenX = params.leftMargin - scroll.scrollX
             val leadX = cursorInsetPx.toInt()
             val pageRightX = viewportWidth - (CURSOR_INSET_DP * 4f * density).toInt()
-            // Near the end of the music there is no room left to page back to the left;
-            // stop scrolling and let the cursor finish moving to the right instead.
-            val lastMusicX = (beatPositions.lastOrNull { !it.isRest }?.xCss ?: 0.0) * density
-            val pageable = params.leftMargin + viewportWidth / 2f < lastMusicX
             if (onScreenX < 0) {
                 // The cursor reset to the start (the song finished): scroll all the
                 // way back so the staff clef is visible again.
                 scroll.scrollTo(0, scroll.scrollY)
-            } else if (onScreenX > pageRightX && pageable) {
-                scroll.scrollTo((params.leftMargin - leadX).coerceAtLeast(0), scroll.scrollY)
+            } else if (onScreenX > pageRightX) {
+                val maxScroll = ((scroll.getChildAt(0)?.width ?: 0) - viewportWidth).coerceAtLeast(0)
+                scroll.scrollTo((params.leftMargin - leadX).coerceIn(0, maxScroll), scroll.scrollY)
             }
         } else if (beatPositions.isNotEmpty()) {
             val timeMs = scrollTime.coerceIn(0.0, durationSec) * 1000.0
