@@ -9,46 +9,20 @@ sealed class CelebrationPayload {
     data class Haptic(val intensity: Int) : CelebrationPayload()
 }
 
-fun CelebrationLevel.toPayloads(): List<CelebrationPayload> = when (this) {
-    CelebrationLevel.NONE -> emptyList()
-    CelebrationLevel.BASE -> listOf(
-        CelebrationPayload.Pulsing(pulseScale),
-        CelebrationPayload.Confetti(confettiCount)
-    )
-    CelebrationLevel.MODERATE -> listOf(
-        CelebrationPayload.Pulsing(pulseScale),
-        CelebrationPayload.Confetti(confettiCount),
-        CelebrationPayload.MusicNotes(musicNoteCount)
-    )
-
-    CelebrationLevel.STRONG -> listOf(
-        CelebrationPayload.Pulsing(pulseScale),
-        CelebrationPayload.Confetti(confettiCount),
-        CelebrationPayload.MusicNotes(musicNoteCount)
-    )
-
-    CelebrationLevel.INTENSE -> listOf(
-        CelebrationPayload.Pulsing(pulseScale),
-        CelebrationPayload.Confetti(confettiCount),
-        CelebrationPayload.MusicNotes(musicNoteCount),
-        CelebrationPayload.Fireworks(fireworksBursts),
-        CelebrationPayload.Haptic(1)
-    )
-
-    CelebrationLevel.EXTREME -> listOf(
-        CelebrationPayload.Pulsing(pulseScale),
-        CelebrationPayload.Confetti(confettiCount),
-        CelebrationPayload.MusicNotes(musicNoteCount),
-        CelebrationPayload.Fireworks(fireworksBursts),
-        CelebrationPayload.Haptic(2)
-    )
-
-    CelebrationLevel.ECSTATIC -> listOf(
-        CelebrationPayload.Pulsing(pulseScale),
-        CelebrationPayload.Confetti(confettiCount),
-        CelebrationPayload.MusicNotes(musicNoteCount),
-        CelebrationPayload.Fireworks(fireworksBursts),
-        CelebrationPayload.Jitter(2f, 20f),
-        CelebrationPayload.Haptic(3)
-    )
+fun CelebrationLevel.toPayloads(score: Float, level: Int): List<CelebrationPayload> {
+    if (this == CelebrationLevel.NONE) return emptyList()
+    val haptic = when (this) {
+        CelebrationLevel.INTENSE -> 1
+        CelebrationLevel.EXTREME -> 2
+        CelebrationLevel.ECSTATIC -> 3
+        else -> 0
+    }
+    return buildList {
+        add(CelebrationPayload.Pulsing(pulseScale))
+        add(CelebrationPayload.Confetti(CelebrationLevel.confettiCount(score, level)))
+        if (musicNoteCount > 0) add(CelebrationPayload.MusicNotes(musicNoteCount))
+        if (fireworksBursts > 0) add(CelebrationPayload.Fireworks(fireworksBursts))
+        if (this@toPayloads == CelebrationLevel.ECSTATIC) add(CelebrationPayload.Jitter(2f, 20f))
+        if (haptic > 0) add(CelebrationPayload.Haptic(haptic))
+    }
 }

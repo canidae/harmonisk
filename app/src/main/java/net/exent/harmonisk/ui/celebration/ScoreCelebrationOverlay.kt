@@ -37,10 +37,12 @@ private val CELEBRATION_COLORS = listOf(
 @Composable
 fun ScoreCelebrationOverlay(
     celebrationLevel: CelebrationLevel,
+    score: Float,
+    level: Int,
     modifier: Modifier = Modifier,
     content: @Composable (pulseModifier: Modifier) -> Unit
 ) {
-    val payloads = remember(celebrationLevel) { celebrationLevel.toPayloads() }
+    val payloads = remember(celebrationLevel, score, level) { celebrationLevel.toPayloads(score, level) }
 
     // ── Haptics ──────────────────────────────────────────────────────────
     val hapticPayload = payloads.filterIsInstance<CelebrationPayload.Haptic>().firstOrNull()
