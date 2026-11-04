@@ -25,10 +25,34 @@ class CelebrationLevelTest {
     }
 
     @Test
-    fun `confetti gets more intense as the score grows`() {
+    fun `confetti starts as a drizzle and grows at 60 and 90 points`() {
+        assertEquals(0, CelebrationLevel.confettiCount(0f, 1))
+        assertEquals(20, CelebrationLevel.confettiCount(1f, 1))
+        assertEquals(20, CelebrationLevel.confettiCount(59.9f, 1))
+        assertEquals(45, CelebrationLevel.confettiCount(60f, 1))
+        assertEquals(45, CelebrationLevel.confettiCount(89.9f, 1))
+        assertEquals(90, CelebrationLevel.confettiCount(90f, 1))
+        assertEquals(90, CelebrationLevel.confettiCount(100f, 1))
+    }
+
+    @Test
+    fun `the song level multiplies the confetti`() {
+        for (level in 1..5) {
+            assertEquals(90 * level, CelebrationLevel.confettiCount(100f, level))
+            assertEquals(
+                90 * level,
+                CelebrationLevel.ECSTATIC.toPayloads(100f, level)
+                    .filterIsInstance<CelebrationPayload.Confetti>().single().count
+            )
+        }
+        assertEquals(90, CelebrationLevel.confettiCount(100f, 0))
+        assertEquals(450, CelebrationLevel.confettiCount(100f, 6))
+    }
+
+    @Test
+    fun `celebration tiers stay ordered`() {
         val levels = CelebrationLevel.entries.filter { it != CelebrationLevel.NONE }
         assertEquals(levels.sortedBy { it.scoreThreshold }, levels)
-        assertTrue(levels.all { it.confettiCount > 0 })
-        assertTrue(levels.zipWithNext().all { (lower, higher) -> lower.confettiCount < higher.confettiCount })
+        assertTrue(levels.zipWithNext().all { (lower, higher) -> lower.musicNoteCount <= higher.musicNoteCount })
     }
 }

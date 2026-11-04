@@ -47,6 +47,8 @@ fun ScoreResultModal(
     Dialog(onDismissRequest = onDismiss) {
         ScoreCelebrationOverlay(
             celebrationLevel = celebrationLevel,
+            score = score,
+            level = currentLevel,
             modifier = Modifier.fillMaxSize()
         ) { pulseModifier ->
             Card(
