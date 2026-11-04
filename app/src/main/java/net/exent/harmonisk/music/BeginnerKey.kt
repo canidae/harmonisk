@@ -10,8 +10,8 @@ import kotlin.math.abs
  *
  * Every shift from -6 to +6 semitones is scored through the bowed fingering algorithm:
  * a note on the default finger placement costs nothing, a low or high placement costs by
- * the semitones it deviates, the fourth finger costs a little, open strings earn a reward
- * and notes outside first position cost the most. Keys with two or three sharps (D and A
+ * the semitones it deviates, the fourth finger costs a little, each open-string pitch earns
+ * a reward and notes outside first position cost the most. Keys with two or three sharps (D and A
  * major and their relative minors) get a small bonus, because their scales sit under the
  * default finger placements. The shift closest to the written key wins a tie.
  */
@@ -46,6 +46,7 @@ class BeginnerKey(private val bowedAlgorithm: BowedAlgorithm) {
             preferOpenStrings
         )
         var cost = abs(shift) * OFFSET_COST + keyBonus(transposedKey)
+        val rewardedOpenStrings = mutableSetOf<Int>()
         positions.forEachIndexed { index, position ->
             if (position == null) {
                 cost += OUT_OF_RANGE_COST
@@ -59,7 +60,9 @@ class BeginnerKey(private val bowedAlgorithm: BowedAlgorithm) {
             ) ?: 0
             cost += abs(deviation) * DEVIATION_COST
             if (position.finger == 4) cost += FOURTH_FINGER_COST
-            if (position.finger == 0) cost -= OPEN_STRING_REWARD
+            if (position.finger == 0 && rewardedOpenStrings.add(pitches[index] + shift)) {
+                cost -= OPEN_STRING_REWARD
+            }
         }
         return cost
     }
