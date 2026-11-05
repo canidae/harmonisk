@@ -58,7 +58,9 @@ import kotlin.math.roundToInt
 fun MelodyPlayScreen(
     onBack: () -> Unit,
     onNavigateToSettings: () -> Unit = {},
-    viewModel: MelodyViewModel = hiltViewModel()
+    viewModel: MelodyViewModel = hiltViewModel(),
+    adventureMode: Boolean = false,
+    stopOnBack: Boolean = true
 ) {
     val gameState by viewModel.gameState.collectAsStateWithLifecycle()
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
@@ -76,7 +78,10 @@ fun MelodyPlayScreen(
     var showConfigMenu by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    BackHandler { viewModel.stop(); onBack() }
+    BackHandler {
+        if (stopOnBack) viewModel.stop()
+        onBack()
+    }
 
     KeepScreenOn()
 
@@ -88,8 +93,14 @@ fun MelodyPlayScreen(
     }
 
     LaunchedEffect(gameState.phase) {
-        if (gameState.phase == PlayPhase.FINISHED) {
+        if (gameState.phase == PlayPhase.FINISHED && !adventureMode) {
             showResultsModal = true
+        }
+    }
+
+    LaunchedEffect(adventureMode, gameState.melodyTrack, gameState.phase) {
+        if (adventureMode && gameState.phase == PlayPhase.READY && gameState.melodyTrack != null) {
+            viewModel.startPlaying()
         }
     }
 
@@ -143,7 +154,7 @@ fun MelodyPlayScreen(
                     gameState.melodyName?.let { name ->
                         Spacer(Modifier.width(6.dp))
                         val levelLabel = stringResource(R.string.melody_level, gameState.currentLevel)
-                        val latestScore = scoreHistory.lastOrNull()?.let {
+                        val latestScore = if (adventureMode) null else scoreHistory.lastOrNull()?.let {
                             stringResource(R.string.melody_score, formatScore(it.overallScore))
                         }
                         Column {
@@ -255,7 +266,7 @@ fun MelodyPlayScreen(
                         onTransposeChange = { viewModel.setTranspose(it) },
                         accompanimentMode = gameState.accompanimentMode,
                         onAccompanimentModeChange = { viewModel.setAccompanimentMode(it) },
-                        showLevelControl = devModeEnabled,
+                        showLevelControl = devModeEnabled && !adventureMode,
                         showPlayVoices = devModeEnabled
                     )
                 }
@@ -379,39 +390,41 @@ fun MelodyPlayScreen(
                         }
 
                         // Contextual action buttons (bottom-right overlay)
-                        val showScrollButton = gameState.phase == PlayPhase.FINISHED && !gameState.isAtScrollStart(viewState.songTimeOffsetSeconds)
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(bottom = PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            if (showScrollButton) {
-                                IconButton(
-                                    onClick = { viewModel.scrollToBeginning() },
-                                    modifier = Modifier.size(OVERLAY_BUTTON_SIZE).background(OVERLAY_BG, CircleShape)
-                                ) {
-                                    Icon(
-                                        Icons.Filled.KeyboardArrowDown,
-                                        contentDescription = stringResource(R.string.melody_play_scroll_start),
-                                        tint = OVERLAY_ICON_TINT,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                        if (!adventureMode) {
+                            val showScrollButton = gameState.phase == PlayPhase.FINISHED && !gameState.isAtScrollStart(viewState.songTimeOffsetSeconds)
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(bottom = PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                if (showScrollButton) {
+                                    IconButton(
+                                        onClick = { viewModel.scrollToBeginning() },
+                                        modifier = Modifier.size(OVERLAY_BUTTON_SIZE).background(OVERLAY_BG, CircleShape)
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.KeyboardArrowDown,
+                                            contentDescription = stringResource(R.string.melody_play_scroll_start),
+                                            tint = OVERLAY_ICON_TINT,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
                                 }
-                            }
-                            if (gameState.phase == PlayPhase.FINISHED) {
-                                IconButton(
-                                    onClick = { showResultsModal = true },
-                                    modifier = Modifier.size(OVERLAY_BUTTON_SIZE).background(OVERLAY_BG, CircleShape)
-                                ) {
-                                    Icon(Icons.Filled.Star, contentDescription = stringResource(R.string.melody_play_results), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(20.dp))
-                                }
-                                IconButton(
-                                    onClick = { viewModel.startPlaying() },
-                                    modifier = Modifier.size(OVERLAY_BUTTON_SIZE).background(OVERLAY_BG, CircleShape)
-                                ) {
-                                    Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.melody_play_again), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(20.dp))
+                                if (gameState.phase == PlayPhase.FINISHED) {
+                                    IconButton(
+                                        onClick = { showResultsModal = true },
+                                        modifier = Modifier.size(OVERLAY_BUTTON_SIZE).background(OVERLAY_BG, CircleShape)
+                                    ) {
+                                        Icon(Icons.Filled.Star, contentDescription = stringResource(R.string.melody_play_results), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(20.dp))
+                                    }
+                                    IconButton(
+                                        onClick = { viewModel.startPlaying() },
+                                        modifier = Modifier.size(OVERLAY_BUTTON_SIZE).background(OVERLAY_BG, CircleShape)
+                                    ) {
+                                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.melody_play_again), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(20.dp))
+                                    }
                                 }
                             }
                         }
@@ -435,7 +448,7 @@ fun MelodyPlayScreen(
     }
 
     val score = gameState.melodyScore
-    if (showResultsModal && score != null) {
+    if (!adventureMode && showResultsModal && score != null) {
         ScoreResultModal(
             melodyScore = score,
             onDismiss = { showResultsModal = false },

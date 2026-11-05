@@ -70,6 +70,16 @@ license, so this does not affect the AGPL-3.0 licensing of Harmonisk.
 | Bravura and BravuraText fonts, shipped inside alphaTab | SIL OFL-1.1 | Bravura by Steinberg Media Technologies GmbH, <https://github.com/steinbergmedia/bravura> |
 | Sonic Network Inc. samples, shipped inside alphaTab | Apache-2.0 | Copyright (c) 2004-2006 Sonic Network Inc. |
 | `app/src/main/assets/melodies/**` | public domain | traditional tunes, arrangements made for this project |
+| `app/src/main/res/raw/ambience_river.ogg`, `ambience_wind.ogg`, `ambience_birds.ogg` | CC0-1.0 | Park ambiences by Thimras, <https://opengameart.org/content/park-ambiences> |
+| `app/src/main/res/raw/ambience_crickets.ogg` | CC0-1.0 | Crickets ambient noise by Wolfgang_, <https://opengameart.org/content/crickets-ambient-noise-loopable> |
+| `app/src/main/res/raw/sfx_collect.ogg` | CC0-1.0 | Gem collect by Bobjt, <https://opengameart.org/content/gem-collect-sfx> |
+| `app/src/main/res/raw/sfx_bonus.ogg` | CC0-1.0 | Bell arpeggio by cynicmusic, <https://opengameart.org/content/bell-arpeggio-24> |
+| `app/src/main/res/raw/sfx_lever.ogg` | CC0-1.0 | 10 Clicks and Switches by StarNinjas, <https://opengameart.org/content/10-clicks-and-switches> |
+| `app/src/main/res/raw/sfx_step.ogg`, `sfx_tick.ogg`, `sfx_pouch.ogg`, adventure fanfare | generated | synthesised for this project |
+
+The adventure sound effects and ambience loops are CC0-1.0 (public domain), so
+they place no conditions on the AGPL-3.0 licensed app; they were trimmed,
+mono-mixed and re-encoded to Ogg Vorbis from the originals.
 
 GeneralUser GS is distributed free of charge and its license explicitly allows
 use in software projects, including commercial ones. Bravura is bundled

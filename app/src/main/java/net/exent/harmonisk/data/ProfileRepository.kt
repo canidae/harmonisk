@@ -15,6 +15,13 @@ class ProfileRepository(context: Context) {
         const val MAX_NAME_LENGTH = 10
         const val DEFAULT_PROFILE_ID = "default"
         const val PROFILE_KEY_PREFIX = "@profile:"
+        const val DEFAULT_EMOJI = "🙂"
+        val PROFILE_EMOJIS = listOf(
+            "🙂", "😀", "😎", "🧑", "👧", "👦", "👩", "👨", "🧒", "👵", "👴",
+            "🐱", "🐶", "🐰", "🐼", "🐨", "🦁", "🐯", "🐷", "🐵", "🦄", "🐙",
+            "🐢", "🐧", "🐦", "🦋", "🐳", "🎻", "🎺", "🥁", "🎸", "🎹", "🎤",
+            "🎨", "🚀"
+        )
         private const val KEY_PROFILES = "profiles_json"
         private const val KEY_ACTIVE = "active_profile_id"
 
@@ -31,7 +38,7 @@ class ProfileRepository(context: Context) {
     }
 
     @Serializable
-    data class Profile(val id: String, val name: String)
+    data class Profile(val id: String, val name: String, val emoji: String = DEFAULT_EMOJI)
 
     private val prefs = context.getSharedPreferences("profiles", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
@@ -45,18 +52,19 @@ class ProfileRepository(context: Context) {
     val activeProfileId: String? get() = _activeProfile.value?.id
 
     @Synchronized
-    fun createProfile(name: String): Profile? {
+    fun createProfile(name: String, emoji: String = DEFAULT_EMOJI, makeActive: Boolean = true): Profile? {
         val trimmed = name.trim()
-        if (!isNameAvailable(trimmed)) return null
+        if (!isNameAvailable(trimmed) || emoji !in PROFILE_EMOJIS) return null
 
         val profile = Profile(
             id = if (_profiles.value.isEmpty()) DEFAULT_PROFILE_ID else UUID.randomUUID().toString(),
-            name = trimmed
+            name = trimmed,
+            emoji = emoji
         )
         val updated = _profiles.value + profile
         _profiles.value = updated
         prefs.edit { putString(KEY_PROFILES, json.encodeToString(serializer, updated)) }
-        setActive(profile)
+        if (makeActive) setActive(profile)
         return profile
     }
 
@@ -81,11 +89,24 @@ class ProfileRepository(context: Context) {
         return true
     }
 
-    fun isNameAvailable(name: String): Boolean {
+    @Synchronized
+    fun updateProfile(id: String, name: String, emoji: String): Boolean {
+        val current = _profiles.value.find { it.id == id } ?: return false
+        val trimmed = name.trim()
+        if (!isNameAvailable(trimmed, id) || emoji !in PROFILE_EMOJIS) return false
+        val updatedProfile = current.copy(name = trimmed, emoji = emoji)
+        val updated = _profiles.value.map { if (it.id == id) updatedProfile else it }
+        _profiles.value = updated
+        if (_activeProfile.value?.id == id) _activeProfile.value = updatedProfile
+        prefs.edit { putString(KEY_PROFILES, json.encodeToString(serializer, updated)) }
+        return true
+    }
+
+    fun isNameAvailable(name: String, excludeId: String? = null): Boolean {
         val trimmed = name.trim()
         return trimmed.isNotEmpty() &&
             trimmed.length <= MAX_NAME_LENGTH &&
-            _profiles.value.none { it.name.equals(trimmed, ignoreCase = true) }
+            _profiles.value.none { it.id != excludeId && it.name.equals(trimmed, ignoreCase = true) }
     }
 
     private fun setActive(profile: Profile) {

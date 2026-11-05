@@ -21,7 +21,6 @@
 
     <!-- Profiles -->
     <string name="profile_setup_title">Create a profile</string>
-    <string name="profile_setup_body">Profiles keep each player\'s settings and scores separate.</string>
     <string name="profile_name">Profile name</string>
     <string name="profile_name_counter">%1$d/%2$d</string>
     <string name="profile_create">Create profile</string>
@@ -222,6 +221,50 @@
     <string name="note_sixteenth">\u266C 16th</string>
     <string name="note_thirty_second">32nd</string>
 
+    <string name="adventure_title">Adventure</string>
+    <string name="adventure_players_title">Who is playing?</string>
+    <string name="adventure_add_player">Add player</string>
+    <string name="adventure_choose_songs">Choose songs</string>
+    <string name="adventure_songs_title">Choose songs</string>
+    <string name="adventure_selected_songs">%1$d selected</string>
+    <string name="adventure_start">Start adventure</string>
+    <string name="adventure_folder_other">Other songs</string>
+    <plurals name="adventure_song_count">
+        <item quantity="one">%1$d song</item>
+        <item quantity="other">%1$d songs</item>
+    </plurals>
+    <string name="adventure_turn">%1$s’s turn</string>
+    <string name="adventure_field">Field %1$d of %2$d</string>
+    <string name="adventure_level">Level %1$d</string>
+    <string name="adventure_play_song">Play song</string>
+    <string name="adventure_load_failed">Could not start that song</string>
+    <string name="adventure_results_title">The adventure is complete</string>
+    <string name="adventure_results_solo_title">Your adventure is complete</string>
+    <string name="adventure_results_home">Back home</string>
+    <string name="adventure_results_new">New adventure</string>
+    <string name="adventure_exit_title">Leave the adventure?</string>
+    <string name="adventure_exit_body">The current adventure will be lost.</string>
+    <string name="adventure_exit_confirm">Leave</string>
+    <string name="adventure_medal_gold">Gold</string>
+    <string name="adventure_medal_silver">Silver</string>
+    <string name="adventure_medal_bronze">Bronze</string>
+    <string name="adventure_solo_badge">Solo</string>
+    <string name="adventure_players_badge">%1$d players</string>
+
+    <string name="profile_edit">Edit profile</string>
+    <string name="profile_edit_title">Edit profile</string>
+    <string name="profile_save">Save</string>
+    <string name="home_game_mode_title">Game mode</string>
+    <string name="game_mode_title">Game mode</string>
+    <string name="game_mode_adventure">Adventure</string>
+    <plurals name="adventure_stickers_won">
+        <item quantity="one">%1$d sticker</item>
+        <item quantity="other">%1$d stickers</item>
+    </plurals>
+    <string name="adventure_reward_points">+%1$d points</string>
+    <string name="adventure_reward_go_again_short">Go again</string>
+    <string name="adventure_winner">%1$s wins!</string>
+    <string name="adventure_tie">It’s a tie!</string>
 </resources>
 
 

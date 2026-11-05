@@ -21,7 +21,6 @@
 
     <!-- Profiles -->
     <string name="profile_setup_title">Opprett en profil</string>
-    <string name="profile_setup_body">Profiler holder innstillinger og poengsummer adskilt for hver spiller.</string>
     <string name="profile_name">Profilnavn</string>
     <string name="profile_name_counter">%1$d/%2$d</string>
     <string name="profile_create">Opprett profil</string>
@@ -222,4 +221,48 @@
     <string name="note_sixteenth">\u266C Sekstendedel</string>
     <string name="note_thirty_second">Trettitoendedel</string>
 
+    <string name="adventure_title">Eventyr</string>
+    <string name="adventure_players_title">Hvem spiller?</string>
+    <string name="adventure_add_player">Legg til spiller</string>
+    <string name="adventure_choose_songs">Velg sanger</string>
+    <string name="adventure_songs_title">Velg sanger</string>
+    <string name="adventure_selected_songs">%1$d valgt</string>
+    <string name="adventure_start">Start eventyret</string>
+    <string name="adventure_folder_other">Andre sanger</string>
+    <plurals name="adventure_song_count">
+        <item quantity="one">%1$d sang</item>
+        <item quantity="other">%1$d sanger</item>
+    </plurals>
+    <string name="adventure_turn">%1$s sin tur</string>
+    <string name="adventure_field">Felt %1$d av %2$d</string>
+    <string name="adventure_level">Nivå %1$d</string>
+    <string name="adventure_play_song">Spill sang</string>
+    <string name="adventure_load_failed">Kunne ikke starte sangen</string>
+    <string name="adventure_results_title">Eventyret er over</string>
+    <string name="adventure_results_solo_title">Ditt eventyr er over</string>
+    <string name="adventure_results_home">Tilbake</string>
+    <string name="adventure_results_new">Nytt eventyr</string>
+    <string name="adventure_exit_title">Forlate eventyret?</string>
+    <string name="adventure_exit_body">Eventyret du spiller nå, går tapt.</string>
+    <string name="adventure_exit_confirm">Forlat</string>
+    <string name="adventure_medal_gold">Gull</string>
+    <string name="adventure_medal_silver">Sølv</string>
+    <string name="adventure_medal_bronze">Bronse</string>
+    <string name="adventure_solo_badge">Solo</string>
+    <string name="adventure_players_badge">%1$d spillere</string>
+
+    <string name="profile_edit">Rediger profil</string>
+    <string name="profile_edit_title">Rediger profil</string>
+    <string name="profile_save">Lagre</string>
+    <string name="home_game_mode_title">Spillmodus</string>
+    <string name="game_mode_title">Spillmodus</string>
+    <string name="game_mode_adventure">Eventyr</string>
+    <plurals name="adventure_stickers_won">
+        <item quantity="one">%1$d klistremerke</item>
+        <item quantity="other">%1$d klistremerker</item>
+    </plurals>
+    <string name="adventure_reward_points">+%1$d poeng</string>
+    <string name="adventure_reward_go_again_short">Spill igjen</string>
+    <string name="adventure_winner">%1$s vinner!</string>
+    <string name="adventure_tie">Det ble uavgjort!</string>
 </resources>

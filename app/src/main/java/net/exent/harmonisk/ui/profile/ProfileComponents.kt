@@ -2,12 +2,14 @@ package net.exent.harmonisk.ui.profile
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -15,7 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -30,13 +32,14 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import net.exent.harmonisk.R
 import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.ui.components.AppLogo
 import net.exent.harmonisk.ui.components.brandBackground
 
 @Composable
-fun ProfileButton(name: String, onClick: () -> Unit) {
+fun ProfileButton(name: String, emoji: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .height(40.dp)
@@ -47,7 +50,7 @@ fun ProfileButton(name: String, onClick: () -> Unit) {
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(Icons.Filled.Person, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+        Text(emoji, fontSize = 17.sp)
         Spacer(Modifier.width(4.dp))
         Text(
             text = name,
@@ -62,15 +65,16 @@ fun ProfileButton(name: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun ProfileSetupScreen(onCreate: (String) -> Boolean) {
+fun ProfileSetupScreen(onCreate: (String, String) -> Boolean) {
     var name by rememberSaveable { mutableStateOf("") }
+    var emoji by rememberSaveable { mutableStateOf(ProfileRepository.DEFAULT_EMOJI) }
     var errorRes by rememberSaveable { mutableStateOf<Int?>(null) }
 
     fun submit() {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) {
             errorRes = R.string.profile_name_required
-        } else if (!onCreate(trimmed)) {
+        } else if (!onCreate(trimmed, emoji)) {
             errorRes = R.string.profile_name_taken
         }
     }
@@ -105,11 +109,6 @@ fun ProfileSetupScreen(onCreate: (String) -> Boolean) {
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
-                        text = stringResource(R.string.profile_setup_body),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                     ProfileNameField(
                         name = name,
                         error = errorRes?.let { stringResource(it) },
@@ -119,6 +118,7 @@ fun ProfileSetupScreen(onCreate: (String) -> Boolean) {
                         },
                         onSubmit = ::submit
                     )
+                    EmojiPicker(selected = emoji, onSelect = { emoji = it })
                     Button(
                         onClick = ::submit,
                         enabled = name.isNotBlank(),
@@ -140,6 +140,7 @@ fun ProfileDialog(
     onSelect: (String) -> Unit,
     onAdd: () -> Unit,
     onDelete: (String) -> Unit,
+    onEdit: (ProfileRepository.Profile) -> Unit,
     onDismiss: () -> Unit
 ) {
     var pendingDelete by remember { mutableStateOf<ProfileRepository.Profile?>(null) }
@@ -185,12 +186,7 @@ fun ProfileDialog(
                                 .padding(horizontal = 12.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                Icons.Filled.Person,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                            Text(profile.emoji, fontSize = 22.sp)
                             Spacer(Modifier.width(12.dp))
                             Text(
                                 text = profile.name,
@@ -199,6 +195,14 @@ fun ProfileDialog(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f)
                             )
+                            IconButton(onClick = { onEdit(profile) }, modifier = Modifier.size(32.dp)) {
+                                Icon(
+                                    Icons.Filled.Edit,
+                                    contentDescription = stringResource(R.string.profile_edit),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                             if (selected) {
                                 Icon(
                                     Icons.Filled.Check,
@@ -226,17 +230,18 @@ fun ProfileDialog(
 
 @Composable
 fun CreateProfileDialog(
-    onCreate: (String) -> Boolean,
+    onCreate: (String, String) -> Boolean,
     onDismiss: () -> Unit
 ) {
     var name by rememberSaveable { mutableStateOf("") }
+    var emoji by rememberSaveable { mutableStateOf(ProfileRepository.DEFAULT_EMOJI) }
     var errorRes by rememberSaveable { mutableStateOf<Int?>(null) }
 
     fun submit() {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) {
             errorRes = R.string.profile_name_required
-        } else if (!onCreate(trimmed)) {
+        } else if (!onCreate(trimmed, emoji)) {
             errorRes = R.string.profile_name_taken
         } else {
             onDismiss()
@@ -247,15 +252,19 @@ fun CreateProfileDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.profile_add_title)) },
         text = {
-            ProfileNameField(
-                name = name,
-                error = errorRes?.let { stringResource(it) },
-                onNameChange = {
-                    name = it.take(ProfileRepository.MAX_NAME_LENGTH)
-                    errorRes = null
-                },
-                onSubmit = ::submit
-            )
+            Column {
+                ProfileNameField(
+                    name = name,
+                    error = errorRes?.let { stringResource(it) },
+                    onNameChange = {
+                        name = it.take(ProfileRepository.MAX_NAME_LENGTH)
+                        errorRes = null
+                    },
+                    onSubmit = ::submit
+                )
+                Spacer(Modifier.height(8.dp))
+                EmojiPicker(selected = emoji, onSelect = { emoji = it })
+            }
         },
         confirmButton = {
             TextButton(onClick = ::submit, enabled = name.isNotBlank()) {
@@ -268,6 +277,102 @@ fun CreateProfileDialog(
             }
         }
     )
+}
+
+@Composable
+fun ProfileEditDialog(
+    profile: ProfileRepository.Profile,
+    onSave: (String, String) -> Boolean,
+    onDismiss: () -> Unit
+) {
+    var name by rememberSaveable(profile.id) { mutableStateOf(profile.name) }
+    var emoji by rememberSaveable(profile.id) { mutableStateOf(profile.emoji) }
+    var errorRes by rememberSaveable(profile.id) { mutableStateOf<Int?>(null) }
+
+    fun submit() {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) {
+            errorRes = R.string.profile_name_required
+        } else if (!onSave(trimmed, emoji)) {
+            errorRes = R.string.profile_name_taken
+        } else {
+            onDismiss()
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.profile_edit_title)) },
+        text = {
+            Column {
+                ProfileNameField(
+                    name = name,
+                    error = errorRes?.let { stringResource(it) },
+                    onNameChange = {
+                        name = it.take(ProfileRepository.MAX_NAME_LENGTH)
+                        errorRes = null
+                    },
+                    onSubmit = ::submit
+                )
+                Spacer(Modifier.height(8.dp))
+                EmojiPicker(selected = emoji, onSelect = { emoji = it })
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = ::submit, enabled = name.isNotBlank()) {
+                Text(stringResource(R.string.profile_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+private fun EmojiPicker(selected: String, onSelect: (String) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 216.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        ProfileRepository.PROFILE_EMOJIS.chunked(6).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                row.forEach { emoji ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (emoji == selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                                else Color.Transparent
+                            )
+                            .border(
+                                width = if (emoji == selected) 2.dp else 1.dp,
+                                color = if (emoji == selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                                shape = CircleShape
+                            )
+                            .clickable { onSelect(emoji) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(emoji, fontSize = 22.sp)
+                    }
+                }
+                repeat(6 - row.size) {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
 }
 
 @Composable
