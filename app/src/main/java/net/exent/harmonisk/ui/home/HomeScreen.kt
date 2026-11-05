@@ -3,6 +3,7 @@ package net.exent.harmonisk.ui.home
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -54,6 +55,7 @@ import net.exent.harmonisk.ui.components.brandBackground
 import net.exent.harmonisk.ui.profile.CreateProfileDialog
 import net.exent.harmonisk.ui.profile.ProfileButton
 import net.exent.harmonisk.ui.profile.ProfileDialog
+import net.exent.harmonisk.ui.profile.ProfileEditDialog
 import net.exent.harmonisk.ui.profile.ProfileSetupScreen
 import net.exent.harmonisk.ui.theme.BrandBlue
 import net.exent.harmonisk.ui.theme.BrandPurple
@@ -76,6 +78,7 @@ private data class ModeItem(
 fun HomeScreen(
     onNavigateToFreePlay: () -> Unit,
     onNavigateToMelody: () -> Unit,
+    onNavigateToGameMode: () -> Unit,
     onNavigateToMetronome: () -> Unit,
     onNavigateToTuner: () -> Unit,
     onNavigateToSettings: () -> Unit,
@@ -90,10 +93,12 @@ fun HomeScreen(
     val profile = activeProfile
     var showProfileDialog by remember { mutableStateOf(false) }
     var showCreateProfileDialog by remember { mutableStateOf(false) }
+    var editingProfile by remember { mutableStateOf<ProfileRepository.Profile?>(null) }
     LaunchedEffect(profile) {
         if (profile == null) {
             showProfileDialog = false
             showCreateProfileDialog = false
+            editingProfile = null
         }
     }
     if (profile == null) {
@@ -112,6 +117,12 @@ fun HomeScreen(
             title = stringResource(R.string.home_melody_title),
             accent = BrandTeal,
             onClick = onNavigateToMelody
+        ),
+        ModeItem(
+            emoji = "🏆",
+            title = stringResource(R.string.home_game_mode_title),
+            accent = Color(0xFFFFC857),
+            onClick = onNavigateToGameMode
         ),
         ModeItem(
             emoji = "⏱️",
@@ -148,7 +159,11 @@ fun HomeScreen(
                 leading = { AppLogo() },
                 titleModifier = Modifier.devModeToggle(toggleDevMode),
                 actions = {
-                    ProfileButton(name = profile.name, onClick = { showProfileDialog = true })
+                    ProfileButton(
+                        name = profile.name,
+                        emoji = profile.emoji,
+                        onClick = { showProfileDialog = true }
+                    )
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
                             Icons.Default.Settings,
@@ -214,6 +229,7 @@ fun HomeScreen(
                 showCreateProfileDialog = true
             },
             onDelete = viewModel::deleteProfile,
+            onEdit = { editingProfile = it; showProfileDialog = false },
             onDismiss = { showProfileDialog = false }
         )
     }
@@ -222,6 +238,14 @@ fun HomeScreen(
         CreateProfileDialog(
             onCreate = viewModel::createProfile,
             onDismiss = { showCreateProfileDialog = false }
+        )
+    }
+
+    editingProfile?.let { profile ->
+        ProfileEditDialog(
+            profile = profile,
+            onSave = { name, emoji -> viewModel.updateProfile(profile.id, name, emoji) },
+            onDismiss = { editingProfile = null }
         )
     }
 }
@@ -287,48 +311,54 @@ private fun ModeCard(
     compact: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val shape = RoundedCornerShape(if (compact) 24.dp else 28.dp)
     Card(
         onClick = mode.onClick,
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(if (compact) 24.dp else 28.dp)
+        shape = shape
     ) {
-        if (compact) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                ModeIcon(mode, size = 44.dp, fontSize = 22.sp)
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    text = mode.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-            }
-        } else {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(18.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ModeIcon(mode, size = 52.dp, fontSize = 26.sp)
-                Spacer(Modifier.width(16.dp))
-                Text(
-                    text = mode.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = mode.accent,
-                    modifier = Modifier.size(28.dp)
-                )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            if (compact) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    ModeIcon(mode, size = 44.dp, fontSize = 22.sp)
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = mode.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ModeIcon(mode, size = 52.dp, fontSize = 26.sp)
+                    Spacer(Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = mode.title,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = mode.accent,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
         }
     }
@@ -392,7 +422,11 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.updateInstrument(instrument.name) }
     }
 
-    fun createProfile(name: String): Boolean = profileRepository.createProfile(name) != null
+    fun createProfile(name: String, emoji: String): Boolean =
+        profileRepository.createProfile(name, emoji) != null
+
+    fun updateProfile(id: String, name: String, emoji: String): Boolean =
+        profileRepository.updateProfile(id, name, emoji)
 
     fun selectProfile(id: String) {
         profileRepository.selectProfile(id)

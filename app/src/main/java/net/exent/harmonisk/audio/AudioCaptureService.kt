@@ -10,11 +10,11 @@ import android.os.Build
 import androidx.core.app.ActivityCompat
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.withContext
 
 class AudioCaptureService(
     private val context: Context
@@ -75,19 +75,18 @@ class AudioCaptureService(
         val audioRecord = builder.build()
 
         if (audioRecord.state != AudioRecord.STATE_INITIALIZED) {
+            audioRecord.release()
             close(IllegalStateException("AudioRecord failed to initialize"))
             return@callbackFlow
         }
 
         audioRecord.startRecording()
-
-        withContext(Dispatchers.IO) {
+        val readLoop = launch(Dispatchers.IO) {
             val buffer = FloatArray(AudioConstants.BUFFER_SIZE_SAMPLES)
-
             while (isActive) {
-                val read = audioRecord.read(
-                    buffer, 0, AudioConstants.BUFFER_SIZE_SAMPLES, AudioRecord.READ_BLOCKING
-                )
+                val read = runCatching {
+                    audioRecord.read(buffer, 0, AudioConstants.BUFFER_SIZE_SAMPLES, AudioRecord.READ_BLOCKING)
+                }.getOrElse { break }
                 if (read > 0) {
                     totalFramesRead += read
                     updateCaptureLatency(audioRecord)
@@ -97,7 +96,8 @@ class AudioCaptureService(
         }
 
         awaitClose {
-            audioRecord.stop()
+            readLoop.cancel()
+            runCatching { audioRecord.stop() }
             audioRecord.release()
         }
     }

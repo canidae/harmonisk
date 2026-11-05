@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import net.exent.harmonisk.ui.freeplay.FreePlayScreen
+import net.exent.harmonisk.ui.gamemode.GameModeScreen
 import net.exent.harmonisk.ui.home.HomeScreen
 import net.exent.harmonisk.ui.melody.MelodyPlayScreen
 import net.exent.harmonisk.ui.melody.MelodyScreen
@@ -15,6 +16,7 @@ import net.exent.harmonisk.ui.melody.MelodyViewModel
 import net.exent.harmonisk.ui.metronome.MetronomeScreen
 import net.exent.harmonisk.ui.settings.SettingsScreen
 import net.exent.harmonisk.ui.tuner.TunerScreen
+import net.exent.harmonisk.ui.adventure.AdventureScreen
 
 @Composable
 fun NavGraph() {
@@ -28,6 +30,7 @@ fun NavGraph() {
             HomeScreen(
                 onNavigateToFreePlay = { navController.navigate(NavRoutes.FREEPLAY) },
                 onNavigateToMelody = { navController.navigate(NavRoutes.MELODY_GRAPH) },
+                onNavigateToGameMode = { navController.navigate(NavRoutes.GAME_MODE) },
                 onNavigateToMetronome = { navController.navigate(NavRoutes.METRONOME) },
                 onNavigateToTuner = { navController.navigate(NavRoutes.TUNER) },
                 onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS) }
@@ -35,6 +38,18 @@ fun NavGraph() {
         }
         composable(NavRoutes.FREEPLAY) {
             FreePlayScreen(onBack = { navController.popBackStack() })
+        }
+        composable(NavRoutes.GAME_MODE) {
+            GameModeScreen(
+                onBack = { navController.popBackStack() },
+                onAdventure = { navController.navigate(NavRoutes.ADVENTURE) }
+            )
+        }
+        composable(NavRoutes.ADVENTURE) {
+            AdventureScreen(
+                onBack = { navController.popBackStack() },
+                onHome = { navController.popBackStack(NavRoutes.HOME, false) }
+            )
         }
         navigation(startDestination = NavRoutes.MELODY, route = NavRoutes.MELODY_GRAPH) {
             composable(NavRoutes.MELODY) { entry ->

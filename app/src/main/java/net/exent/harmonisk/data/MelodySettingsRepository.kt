@@ -40,15 +40,24 @@ class MelodySettingsRepository(
     @OptIn(ExperimentalCoroutinesApi::class)
     fun getSettings(melodyId: String, instrument: String): Flow<MelodySettings> =
         profileRepository.activeProfile.flatMapLatest { profile ->
-            if (profile == null) {
-                flowOf(MelodySettings())
-            } else {
-                store.flow.map { it[key(profile.id, melodyId, instrument)] ?: MelodySettings() }
-            }
+            if (profile == null) flowOf(MelodySettings())
+            else getSettings(profile.id, melodyId, instrument)
         }
+
+    fun getSettings(profileId: String, melodyId: String, instrument: String): Flow<MelodySettings> =
+        store.flow.map { it[key(profileId, melodyId, instrument)] ?: MelodySettings() }
 
     suspend fun saveSettings(melodyId: String, instrument: String, settings: MelodySettings) {
         val profileId = profileRepository.activeProfileId ?: return
+        saveSettings(profileId, melodyId, instrument, settings)
+    }
+
+    suspend fun saveSettings(
+        profileId: String,
+        melodyId: String,
+        instrument: String,
+        settings: MelodySettings
+    ) {
         store.set(key(profileId, melodyId, instrument), settings)
     }
 

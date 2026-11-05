@@ -13,6 +13,7 @@ import net.exent.harmonisk.data.AudioDelayRepository
 import net.exent.harmonisk.data.DevModeState
 import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.data.MelodySettingsRepository
+import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.ScoreHistoryRepository
 import net.exent.harmonisk.data.SettingsRepository
 import net.exent.harmonisk.midi.MelodyTrack
@@ -28,6 +29,9 @@ import net.exent.harmonisk.ui.MIN_FALL_SPEED
 import net.exent.harmonisk.ui.MIN_MIDI
 import net.exent.harmonisk.ui.RANGE_PADDING
 import net.exent.harmonisk.ui.celebration.CelebrationLevel
+import net.exent.harmonisk.ui.adventure.AdventureSessionRepository
+import net.exent.harmonisk.ui.adventure.AdventureTurn
+import net.exent.harmonisk.ui.adventure.AdventureTurnResult
 import kotlinx.coroutines.delay
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
@@ -54,9 +58,11 @@ class MelodyViewModel @Inject constructor(
     private val midiInputReceiver: MidiInputReceiver,
     private val midiOutputSender: MidiOutputSender,
     private val scoreHistoryRepository: ScoreHistoryRepository,
+    private val profileRepository: ProfileRepository,
     private val bowedAlgorithm: BowedAlgorithm,
     private val beginnerKey: BeginnerKey,
-    private val devModeState: DevModeState
+    private val devModeState: DevModeState,
+    private val adventureSession: AdventureSessionRepository
 ) : ViewModel() {
 
     companion object {
@@ -387,14 +393,16 @@ class MelodyViewModel @Inject constructor(
     )
 
     private fun loadMelodySettingsAndHistory(melodyId: String, instrument: String = _currentInstrument.value) {
+        val adventureTurn = adventureSession.turn.value
+        val profileId = adventureTurn?.playerId ?: profileRepository.activeProfileId ?: return
         melodySettingsJob?.cancel()
         scoreHistoryJob?.cancel()
         _currentScoreHistory.value = emptyList()
         _personalBestScore.value = null
         melodySettingsJob = viewModelScope.launch {
-            melodySettingsRepository.getSettings(melodyId, instrument).first().let { saved ->
-                val level = saved.level.coerceIn(1, 5)
-                val unlocked = saved.unlockedLevel.coerceIn(level, 5)
+            melodySettingsRepository.getSettings(profileId, melodyId, instrument).first().let { saved ->
+                val level = (adventureTurn?.level ?: saved.level).coerceIn(1, 5)
+                val unlocked = maxOf(saved.unlockedLevel.coerceIn(1, 5), level)
                 val (wm, hnb) = levelToSettings(level)
                 val accompanimentMode = try {
                     AccompanimentMode.valueOf(saved.accompanimentMode)
@@ -427,7 +435,7 @@ class MelodyViewModel @Inject constructor(
             }
         }
         scoreHistoryJob = viewModelScope.launch {
-            scoreHistoryRepository.getScores(melodyId, instrument).collect { scores ->
+            scoreHistoryRepository.getScores(profileId, melodyId, instrument).collect { scores ->
                 _currentScoreHistory.value = scores
             }
         }
@@ -534,6 +542,7 @@ class MelodyViewModel @Inject constructor(
     }
 
     private fun saveMelodySettings() {
+        if (adventureSession.turn.value != null) return
         val id = currentMelodyId ?: return
         val instrument = _currentInstrument.value
         val g = _gameState.value
@@ -1403,6 +1412,7 @@ class MelodyViewModel @Inject constructor(
 
         // Reaching the score on the highest unlocked level advances to the next one
         val unlockedLevel = _gameState.value.unlockedLevel
+        val previousUnlocked = unlockedLevel
         val newUnlockedLevel = ScoringEngine.unlockedLevelAfterRun(currentLevel, unlockedLevel, adjustedScore)
         val nextLevel = if (newUnlockedLevel > unlockedLevel) newUnlockedLevel else currentLevel
         val (waitMode, hideNoteBars) = levelToSettings(nextLevel)
@@ -1423,11 +1433,27 @@ class MelodyViewModel @Inject constructor(
                 hideNoteBars = hideNoteBars
             )
         }
-        saveMelodySettings()
         _viewState.update { it.copy(songTimeOffsetSeconds = firstNoteStart - currentTimeSeconds) }
 
-        // Persist the score
         val melodyId = currentMelodyId
+        val adventureTurn = adventureSession.turn.value
+        if (adventureTurn != null && melodyId != null) {
+            persistAdventureRun(
+                turn = adventureTurn,
+                melodyId = melodyId,
+                rawScore = adjustedScore,
+                melodyScore = adjustedMelodyScore,
+                level = currentLevel,
+                unlockedLevel = newUnlockedLevel,
+                nextLevel = nextLevel,
+                previousUnlocked = previousUnlocked
+            )
+            return
+        }
+
+        saveMelodySettings()
+
+        // Persist the score
         if (melodyId != null) {
             val existing = currentScoreHistory.value
             val previousBestScore = ScoringEngine.bestScoreForLevel(
@@ -1461,6 +1487,55 @@ class MelodyViewModel @Inject constructor(
                     wrongNoteScore = adjustedMelodyScore.wrongNoteScore
                 ))
             }
+        }
+    }
+
+    private fun persistAdventureRun(
+        turn: AdventureTurn,
+        melodyId: String,
+        rawScore: Float,
+        melodyScore: MelodyScore,
+        level: Int,
+        unlockedLevel: Int,
+        nextLevel: Int,
+        previousUnlocked: Int
+    ) {
+        val instrument = currentInstrumentFlow.value
+        viewModelScope.launch {
+            scoreHistoryRepository.saveScore(
+                turn.playerId,
+                melodyId,
+                ScoreHistoryRepository.ScoreEntry(
+                    timestamp = System.currentTimeMillis(),
+                    overallScore = rawScore,
+                    totalNotes = melodyScore.totalNotes,
+                    notesHit = melodyScore.notesHit,
+                    perfectNotes = melodyScore.perfectNotes,
+                    greatNotes = melodyScore.greatNotes,
+                    longestStreak = melodyScore.longestStreak,
+                    avgPitchScore = melodyScore.avgPitchScore,
+                    avgDurationScore = melodyScore.avgDurationScore,
+                    level = level,
+                    instrument = instrument,
+                    wrongNoteCount = melodyScore.wrongNoteCount,
+                    wrongNoteScore = melodyScore.wrongNoteScore
+                )
+            )
+            val settings = melodySettingsRepository.getSettings(turn.playerId, melodyId, instrument).first()
+            melodySettingsRepository.saveSettings(
+                turn.playerId,
+                melodyId,
+                instrument,
+                settings.copy(level = nextLevel, unlockedLevel = unlockedLevel)
+            )
+            adventureSession.complete(
+                AdventureTurnResult(
+                    turn = turn,
+                    rawScore = rawScore,
+                    unlockedLevel = unlockedLevel,
+                    newlyUnlockedLevel = unlockedLevel.takeIf { it > previousUnlocked }
+                )
+            )
         }
     }
 

@@ -59,18 +59,22 @@ class ScoreHistoryRepository(
     @OptIn(ExperimentalCoroutinesApi::class)
     fun getScores(melodyId: String, instrument: String): Flow<List<ScoreEntry>> =
         profileRepository.activeProfile.flatMapLatest { profile ->
-            if (profile == null) {
-                flowOf(emptyList())
-            } else {
-                store.flow.map { scores ->
-                    val key = ProfileRepository.scopedKey(profile.id, melodyId)
-                    (scores[key] ?: emptyList()).filter { entry -> entry.instrument == instrument }
-                }
-            }
+            if (profile == null) flowOf(emptyList())
+            else getScores(profile.id, melodyId, instrument)
+        }
+
+    fun getScores(profileId: String, melodyId: String, instrument: String): Flow<List<ScoreEntry>> =
+        store.flow.map { scores ->
+            val key = ProfileRepository.scopedKey(profileId, melodyId)
+            (scores[key] ?: emptyList()).filter { entry -> entry.instrument == instrument }
         }
 
     suspend fun saveScore(melodyId: String, entry: ScoreEntry) {
         val profileId = profileRepository.activeProfileId ?: return
+        saveScore(profileId, melodyId, entry)
+    }
+
+    suspend fun saveScore(profileId: String, melodyId: String, entry: ScoreEntry) {
         val key = ProfileRepository.scopedKey(profileId, melodyId)
         store.update(key) { existing ->
             val list = existing?.toMutableList() ?: mutableListOf()
