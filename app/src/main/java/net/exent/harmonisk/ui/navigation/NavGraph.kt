@@ -17,6 +17,7 @@ import net.exent.harmonisk.ui.metronome.MetronomeScreen
 import net.exent.harmonisk.ui.settings.SettingsScreen
 import net.exent.harmonisk.ui.tuner.TunerScreen
 import net.exent.harmonisk.ui.adventure.AdventureScreen
+import net.exent.harmonisk.ui.whack.WhackScreen
 
 @Composable
 fun NavGraph() {
@@ -42,8 +43,12 @@ fun NavGraph() {
         composable(NavRoutes.GAME_MODE) {
             GameModeScreen(
                 onBack = { navController.popBackStack() },
-                onAdventure = { navController.navigate(NavRoutes.ADVENTURE) }
+                onAdventure = { navController.navigate(NavRoutes.ADVENTURE) },
+                onWhack = { navController.navigate(NavRoutes.WHACK) }
             )
+        }
+        composable(NavRoutes.WHACK) {
+            WhackScreen(onBack = { navController.popBackStack() })
         }
         composable(NavRoutes.ADVENTURE) {
             AdventureScreen(

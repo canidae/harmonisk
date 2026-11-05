@@ -257,6 +257,7 @@
     <string name="home_game_mode_title">Spillmodus</string>
     <string name="game_mode_title">Spillmodus</string>
     <string name="game_mode_adventure">Eventyr</string>
+    <string name="game_mode_whack">Tonedengeren</string>
     <plurals name="adventure_stickers_won">
         <item quantity="one">%1$d klistremerke</item>
         <item quantity="other">%1$d klistremerker</item>
@@ -265,4 +266,14 @@
     <string name="adventure_reward_go_again_short">Spill igjen</string>
     <string name="adventure_winner">%1$s vinner!</string>
     <string name="adventure_tie">Det ble uavgjort!</string>
+
+    <string name="whack_title">Tonedengeren</string>
+    <string name="whack_start">Start</string>
+    <string name="whack_hint">Spill tonen som gjemmer seg under emojien. Fargen på beltet viser fingeren: blå løs streng, grønn første, gul andre, oransje tredje, rød fjerde.</string>
+    <string name="whack_best">Beste %1$d</string>
+    <string name="whack_level_up">Nivå %1$d</string>
+    <string name="whack_time_up">Tiden er ute!</string>
+    <string name="whack_hits">Treff</string>
+    <string name="whack_duration">Tre minutter</string>
+    <string name="whack_again">Spill igjen</string>
 </resources>

@@ -38,6 +38,7 @@ import net.exent.harmonisk.ui.freeplay.PianoVisibility
 import net.exent.harmonisk.ui.freeplay.PlayedNote
 import net.exent.harmonisk.ui.melody.NoteResultState
 import net.exent.harmonisk.ui.theme.AmberAccent
+import net.exent.harmonisk.ui.theme.FingerColors
 import net.exent.harmonisk.ui.theme.Orange40
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -63,13 +64,7 @@ private const val BOWED_REFERENCE_WIDTH_DP = 411f
 // The now line and the dividers between string blocks share one weight.
 private const val BOWED_LINE_ALPHA = 0.55f
 private const val BOWED_LINE_WIDTH_DP = 2f
-private val FINGER_COLORS = mapOf(
-    0 to Color(0xFF2196F3), // open string (blue)
-    1 to Color(0xFF4CAF50), // index
-    2 to Color(0xFFFFEB3B), // middle
-    3 to Color(0xFFFF9800), // ring
-    4 to Color(0xFFF44336)  // pinky
-)
+private val FINGER_COLORS = FingerColors.withIndex().associate { it.index to it.value }
 private val OUT_OF_RANGE_GREY = Color(0xFF9E9E9E)
 private val BLACK_KEY_INDICES = setOf(1, 3, 6, 8, 10)
 private const val WHITE_KEYS_PER_OCTAVE = 7f

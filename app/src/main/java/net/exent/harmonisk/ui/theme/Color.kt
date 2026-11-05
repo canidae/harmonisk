@@ -45,3 +45,11 @@ val DarkBackground = Color(0xFF121218)
 val DarkSurface = Color(0xFF1E1E2A)
 val LightBackground = Color(0xFFFFFBFE)
 val LightSurface = Color(0xFFF5F5F5)
+
+val FingerColors = listOf(
+    Color(0xFF2196F3),
+    Color(0xFF4CAF50),
+    Color(0xFFFFEB3B),
+    Color(0xFFFF9800),
+    Color(0xFFF44336)
+)

@@ -24,10 +24,12 @@ This app ships and uses the following third-party works:
 - **ZXing** and **zxing-android-embedded**, used to scan QR codes for song
   imports. Licensed under the Apache License 2.0
   (see <https://github.com/zxing/zxing>).
-- **Adventure sound effects and ambience**, recorded by Thimras, Wolfgang_,
-  Bobjt, cynicmusic and StarNinjas and published on
-  [OpenGameArt](https://opengameart.org). Released under CC0-1.0, so they are
-  public domain and impose no conditions on the app's license.
+- **Adventure and whack a tone sound effects**, recorded by Thimras, Wolfgang_,
+  Bobjt, cynicmusic, StarNinjas, Technopeasant, EZduzziteh, AntumDeluge,
+  CaveboyTup, BMacZero and Yle Arkisto and published on
+  [OpenGameArt](https://opengameart.org). All are CC0-1.0 public domain except
+  the fart, which is CC-BY-3.0; both impose no conditions beyond attribution on
+  the app's license.
 
 The complete list of dependencies and bundled assets, with licenses, is in
 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).

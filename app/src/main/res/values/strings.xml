@@ -257,6 +257,7 @@
     <string name="home_game_mode_title">Game mode</string>
     <string name="game_mode_title">Game mode</string>
     <string name="game_mode_adventure">Adventure</string>
+    <string name="game_mode_whack">Whack a Tone</string>
     <plurals name="adventure_stickers_won">
         <item quantity="one">%1$d sticker</item>
         <item quantity="other">%1$d stickers</item>
@@ -265,6 +266,16 @@
     <string name="adventure_reward_go_again_short">Go again</string>
     <string name="adventure_winner">%1$s wins!</string>
     <string name="adventure_tie">It’s a tie!</string>
+
+    <string name="whack_title">Whack a Tone</string>
+    <string name="whack_start">Start</string>
+    <string name="whack_hint">Play the note hiding under the emoji. The belt colour shows the finger: blue open string, green first, yellow second, orange third, red fourth.</string>
+    <string name="whack_best">Best %1$d</string>
+    <string name="whack_level_up">Level %1$d</string>
+    <string name="whack_time_up">Time’s up!</string>
+    <string name="whack_hits">Whacks</string>
+    <string name="whack_duration">Three minutes</string>
+    <string name="whack_again">Play again</string>
 </resources>
 
 
