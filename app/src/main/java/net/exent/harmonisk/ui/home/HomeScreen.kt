@@ -47,6 +47,7 @@ import net.exent.harmonisk.data.DevModeState
 import net.exent.harmonisk.data.MelodySettingsRepository
 import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.ScoreHistoryRepository
+import net.exent.harmonisk.ui.whack.WhackRepository
 import net.exent.harmonisk.data.SettingsRepository
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.ui.components.AppLogo
@@ -398,6 +399,7 @@ class HomeViewModel @Inject constructor(
     private val profileRepository: ProfileRepository,
     private val melodySettingsRepository: MelodySettingsRepository,
     private val scoreHistoryRepository: ScoreHistoryRepository,
+    private val whackRepository: WhackRepository,
     private val soundFontSynthesizer: SoundFontSynthesizer
 ) : ViewModel() {
 
@@ -438,6 +440,7 @@ class HomeViewModel @Inject constructor(
             settingsRepository.deleteProfileData(id)
             melodySettingsRepository.deleteProfileData(id)
             scoreHistoryRepository.deleteProfileData(id)
+            whackRepository.deleteProfileData(id)
         }
     }
 

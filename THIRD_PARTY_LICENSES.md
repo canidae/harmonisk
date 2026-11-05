@@ -76,10 +76,18 @@ license, so this does not affect the AGPL-3.0 licensing of Harmonisk.
 | `app/src/main/res/raw/sfx_bonus.ogg` | CC0-1.0 | Bell arpeggio by cynicmusic, <https://opengameart.org/content/bell-arpeggio-24> |
 | `app/src/main/res/raw/sfx_lever.ogg` | CC0-1.0 | 10 Clicks and Switches by StarNinjas, <https://opengameart.org/content/10-clicks-and-switches> |
 | `app/src/main/res/raw/sfx_step.ogg`, `sfx_tick.ogg`, `sfx_pouch.ogg`, adventure fanfare | generated | synthesised for this project |
+| `app/src/main/res/raw/whack_baa.ogg`, `whack_moo.ogg`, `whack_oink.ogg`, `whack_meow.ogg`, `whack_bark.ogg`, `whack_whinny.ogg`, `whack_peep.ogg` | CC0-1.0 | Baby Animals - Sounds Pack by Technopeasant, <https://opengameart.org/content/baby-animals-sounds-pack> |
+| `app/src/main/res/raw/whack_ribbit.ogg` | CC0-1.0 | Ribbit Frog Sounds by EZduzziteh, <https://opengameart.org/content/ribbit-frog-sounds> |
+| `app/src/main/res/raw/whack_fart1.ogg`, `whack_fart2.ogg`, `whack_fart3.ogg`, `whack_fart4.ogg` | CC-BY-3.0 | Farts by Yle Arkisto, uploaded by Zache, <https://commons.wikimedia.org/wiki/File:425594_ylearkisto_farts-pieruja.wav> |
+| `app/src/main/res/raw/whack_pop.ogg` | CC0-1.0 | Balloon Sounds by AntumDeluge, <https://opengameart.org/content/balloon-sounds> |
+| `app/src/main/res/raw/whack_roar.ogg` | CC0-1.0 | Small Dino Raspy Calls by CaveboyTup, <https://opengameart.org/content/small-dino-raspy-calls> |
+| `app/src/main/res/raw/whack_blub.ogg` | CC0-1.0 | Bubble Sound Effects by BMacZero, <https://opengameart.org/content/bubble-sound-effects> |
+| `app/src/main/res/raw/whack_beep.ogg`, `sfx_whack_thud.ogg`, `sfx_whack_level.ogg` | generated | synthesised for this project |
 
-The adventure sound effects and ambience loops are CC0-1.0 (public domain), so
-they place no conditions on the AGPL-3.0 licensed app; they were trimmed,
-mono-mixed and re-encoded to Ogg Vorbis from the originals.
+All of the adventure and whack a tone sound effects except the fart are
+CC0-1.0 (public domain), so they place no conditions on the AGPL-3.0 licensed
+app. The fart is CC-BY-3.0, which the attribution above satisfies. Every asset
+was trimmed, mono-mixed and re-encoded to Ogg Vorbis from the original.
 
 GeneralUser GS is distributed free of charge and its license explicitly allows
 use in software projects, including commercial ones. Bravura is bundled
