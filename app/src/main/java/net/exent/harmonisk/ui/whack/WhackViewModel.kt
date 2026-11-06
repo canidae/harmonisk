@@ -78,19 +78,29 @@ class WhackViewModel @Inject constructor(
     private var silentFrames = 0
     private var nextId = 1L
     private var previousEmoji: WhackEmoji? = null
+    private var instrumentOverride: Instrument? = null
     private var best = 0
     private var persistBest = true
     private var wrongsMutedUntil = 0L
 
+    fun setInstrumentOverride(instrument: Instrument?) {
+        instrumentOverride = instrument
+        if (instrument != null) applyInstrument(instrument)
+    }
+
+    private fun applyInstrument(instrument: Instrument) {
+        holes = whackHoles(instrument)
+        pitchProcessor.setInstrument(instrument)
+        _state.update { it.copy(instrument = instrument) }
+    }
+
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
-                val instrument = Instrument.fromName(settings.instrumentName)
-                holes = whackHoles(instrument)
-                pitchProcessor.setInstrument(instrument)
+                val instrument = instrumentOverride ?: Instrument.fromName(settings.instrumentName)
+                applyInstrument(instrument)
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
                 pitchProcessor.setReferenceA4(settings.concertPitchA4)
-                _state.update { it.copy(instrument = instrument) }
             }
         }
         viewModelScope.launch {
@@ -173,8 +183,14 @@ class WhackViewModel @Inject constructor(
         profileRepository.selectProfile(id)
     }
 
-    fun createProfile(name: String, emoji: String): Boolean =
-        profileRepository.createProfile(name, emoji) != null
+    fun createProfile(name: String, emoji: String, instrument: Instrument): Boolean {
+        val created = profileRepository.createProfile(name, emoji, makeActive = false) ?: return false
+        viewModelScope.launch {
+            settingsRepository.updateInstrument(created.id, instrument.name)
+            profileRepository.selectProfile(created.id)
+        }
+        return true
+    }
 
     fun stop() {
         gameJob?.cancel()

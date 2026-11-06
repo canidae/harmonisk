@@ -33,6 +33,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -52,6 +53,7 @@ import net.exent.harmonisk.data.SettingsRepository
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.ui.components.AppLogo
 import net.exent.harmonisk.ui.components.BrandTopBar
+import net.exent.harmonisk.ui.components.InstrumentSelector
 import net.exent.harmonisk.ui.components.brandBackground
 import net.exent.harmonisk.ui.profile.CreateProfileDialog
 import net.exent.harmonisk.ui.profile.ProfileButton
@@ -65,7 +67,6 @@ import net.exent.harmonisk.ui.theme.PlayGreen
 import javax.inject.Inject
 
 private const val DEV_MODE_HOLD_MS = 7_000L
-private val SELECTABLE_INSTRUMENTS = listOf(Instrument.VIOLIN, Instrument.VIOLA, Instrument.CELLO)
 
 private data class ModeItem(
     val emoji: String,
@@ -237,44 +238,24 @@ fun HomeScreen(
 
     if (showCreateProfileDialog) {
         CreateProfileDialog(
+            initialInstrument = selectedInstrument,
             onCreate = viewModel::createProfile,
             onDismiss = { showCreateProfileDialog = false }
         )
     }
 
     editingProfile?.let { profile ->
+        val instrument by remember(profile.id) { viewModel.instrument(profile.id) }
+            .collectAsStateWithLifecycle(initialValue = Instrument.VIOLIN)
         ProfileEditDialog(
             profile = profile,
-            onSave = { name, emoji -> viewModel.updateProfile(profile.id, name, emoji) },
+            instrument = instrument,
+            onSave = { name, emoji, selected ->
+                viewModel.updateProfile(profile.id, name, emoji, selected)
+            },
             onDismiss = { editingProfile = null }
         )
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun InstrumentSelector(
-    selected: Instrument,
-    onSelect: (Instrument) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth()) {
-        SELECTABLE_INSTRUMENTS.forEachIndexed { index, instrument ->
-            SegmentedButton(
-                selected = instrument == selected,
-                onClick = { onSelect(instrument) },
-                shape = SegmentedButtonDefaults.itemShape(index, SELECTABLE_INSTRUMENTS.size)
-            ) {
-                Text(stringResource(instrument.labelRes()))
-            }
-        }
-    }
-}
-
-private fun Instrument.labelRes(): Int = when (this) {
-    Instrument.VIOLIN -> R.string.instrument_violin
-    Instrument.VIOLA -> R.string.instrument_viola
-    Instrument.CELLO -> R.string.instrument_cello
 }
 
 @Composable
@@ -424,11 +405,22 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.updateInstrument(instrument.name) }
     }
 
-    fun createProfile(name: String, emoji: String): Boolean =
-        profileRepository.createProfile(name, emoji) != null
+    fun createProfile(name: String, emoji: String, instrument: Instrument): Boolean {
+        val created = profileRepository.createProfile(name, emoji, makeActive = false) ?: return false
+        viewModelScope.launch {
+            settingsRepository.updateInstrument(created.id, instrument.name)
+            profileRepository.selectProfile(created.id)
+        }
+        return true
+    }
 
-    fun updateProfile(id: String, name: String, emoji: String): Boolean =
-        profileRepository.updateProfile(id, name, emoji)
+    fun updateProfile(id: String, name: String, emoji: String, instrument: Instrument): Boolean {
+        if (!profileRepository.updateProfile(id, name, emoji)) return false
+        viewModelScope.launch { settingsRepository.updateInstrument(id, instrument.name) }
+        return true
+    }
+
+    fun instrument(profileId: String): Flow<Instrument> = settingsRepository.instrument(profileId)
 
     fun selectProfile(id: String) {
         profileRepository.selectProfile(id)

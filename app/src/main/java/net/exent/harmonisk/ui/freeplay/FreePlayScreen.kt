@@ -76,6 +76,7 @@ fun FreePlayScreen(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val profiles by viewModel.profiles.collectAsState()
     val profile by viewModel.activeProfile.collectAsState()
+    val instrument by viewModel.currentInstrument.collectAsState()
     var showProfileDialog by remember { mutableStateOf(false) }
     var showCreateProfileDialog by remember { mutableStateOf(false) }
     var showSwitchConfirm by remember { mutableStateOf(false) }
@@ -797,7 +798,10 @@ fun FreePlayScreen(
 
     if (showCreateProfileDialog) {
         CreateProfileDialog(
-            onCreate = { name, emoji -> viewModel.createProfile(name, emoji) },
+            initialInstrument = instrument,
+            onCreate = { name, emoji, selected ->
+                viewModel.createProfile(name, emoji, selected)
+            },
             onDismiss = { showCreateProfileDialog = false }
         )
     }

@@ -525,7 +525,10 @@ fun MelodyPlayScreen(
 
     if (showCreateProfileDialog) {
         CreateProfileDialog(
-            onCreate = { name, emoji -> viewModel.createProfile(name, emoji) },
+            initialInstrument = currentInstrument,
+            onCreate = { name, emoji, selected ->
+                viewModel.createProfile(name, emoji, selected)
+            },
             onDismiss = { showCreateProfileDialog = false }
         )
     }

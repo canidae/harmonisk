@@ -73,6 +73,9 @@ class FreePlayViewModel @Inject constructor(
     val profiles: StateFlow<List<ProfileRepository.Profile>> = profileRepository.profiles
     val activeProfile: StateFlow<ProfileRepository.Profile?> = profileRepository.activeProfile
 
+    private val _currentInstrument = MutableStateFlow(Instrument.VIOLIN)
+    val currentInstrument: StateFlow<Instrument> = _currentInstrument.asStateFlow()
+
     private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val snackbarMessage: SharedFlow<String> = _snackbarMessage.asSharedFlow()
 
@@ -115,8 +118,10 @@ class FreePlayViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
+                val instrument = Instrument.fromName(settings.instrumentName)
+                _currentInstrument.value = instrument
                 pitchProcessor.setSilenceThreshold(settings.silenceThresholdDb)
-                pitchProcessor.setInstrument(Instrument.fromName(settings.instrumentName))
+                pitchProcessor.setInstrument(instrument)
                 referenceA4 = settings.concertPitchA4
                 pitchProcessor.setReferenceA4(settings.concertPitchA4)
             }
@@ -206,8 +211,14 @@ class FreePlayViewModel @Inject constructor(
         profileRepository.selectProfile(id)
     }
 
-    fun createProfile(name: String, emoji: String): Boolean =
-        profileRepository.createProfile(name, emoji) != null
+    fun createProfile(name: String, emoji: String, instrument: Instrument): Boolean {
+        val created = profileRepository.createProfile(name, emoji, makeActive = false) ?: return false
+        viewModelScope.launch {
+            settingsRepository.updateInstrument(created.id, instrument.name)
+            profileRepository.selectProfile(created.id)
+        }
+        return true
+    }
 
     private fun applySettings(settings: AppSettings) {
         _state.update {

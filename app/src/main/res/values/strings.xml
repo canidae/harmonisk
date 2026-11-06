@@ -33,6 +33,7 @@
     <string name="profile_current">Current profile</string>
     <string name="profile_name_required">Enter a profile name</string>
     <string name="profile_name_taken">That profile name is already in use</string>
+    <string name="profile_instrument">Instrument</string>
     <string name="profile_delete">Delete profile</string>
     <string name="profile_delete_title">Delete %1$s?</string>
     <string name="profile_delete_body">All scores and settings for this profile will be permanently deleted. This cannot be undone.</string>

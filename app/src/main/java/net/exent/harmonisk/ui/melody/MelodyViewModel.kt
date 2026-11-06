@@ -153,6 +153,13 @@ class MelodyViewModel @Inject constructor(
         .map { Instrument.fromName(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Instrument.VIOLIN)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val instrumentFlow: Flow<Instrument> =
+        adventureSession.turn.flatMapLatest { turn ->
+            if (turn != null) settingsRepository.instrument(turn.playerId)
+            else settingsRepository.settings.map { Instrument.fromName(it.instrumentName) }
+        }
+
     // Melody audio output delay
     private var synthOpenJob: Job? = null
     // Mic-to-detection input delay, drives the canvas offset (bars lead the beat)
@@ -175,13 +182,12 @@ class MelodyViewModel @Inject constructor(
                 _gameState.update { it.copy(metronomeEnabled = settings.melodyMetronomeEnabled) }
             }
         }
-        // Observe instrument setting and apply to synthesizer
+        // Observe the instrument of the active profile, or of the adventure player whose turn it is
         viewModelScope.launch {
-            settingsRepository.settings.collect { settings ->
-                val newInstrument = settings.instrumentName
+            instrumentFlow.collect { instrument ->
+                val newInstrument = instrument.name
                 val prevInstrument = _currentInstrument.value
                 _currentInstrument.value = newInstrument
-                val instrument = Instrument.fromName(newInstrument)
                 pitchProcessor.setInstrument(instrument)
                 if (newInstrument != prevInstrument && soundFontSynthesizer.isReady) {
                     soundFontSynthesizer.setInstrument(instrument.midiBank, instrument.midiProgram)
@@ -267,8 +273,14 @@ class MelodyViewModel @Inject constructor(
         profileRepository.selectProfile(id)
     }
 
-    fun createProfile(name: String, emoji: String): Boolean =
-        profileRepository.createProfile(name, emoji) != null
+    fun createProfile(name: String, emoji: String, instrument: Instrument): Boolean {
+        val created = profileRepository.createProfile(name, emoji, makeActive = false) ?: return false
+        viewModelScope.launch {
+            settingsRepository.updateInstrument(created.id, instrument.name)
+            profileRepository.selectProfile(created.id)
+        }
+        return true
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun loadAllMelodyScores() {

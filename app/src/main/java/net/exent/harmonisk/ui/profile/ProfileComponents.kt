@@ -35,7 +35,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.exent.harmonisk.R
 import net.exent.harmonisk.data.ProfileRepository
+import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.ui.components.AppLogo
+import net.exent.harmonisk.ui.components.InstrumentSelector
 import net.exent.harmonisk.ui.components.brandBackground
 
 @Composable
@@ -65,16 +67,20 @@ fun ProfileButton(name: String, emoji: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun ProfileSetupScreen(onCreate: (String, String) -> Boolean) {
+fun ProfileSetupScreen(
+    initialInstrument: Instrument = Instrument.VIOLIN,
+    onCreate: (String, String, Instrument) -> Boolean
+) {
     var name by rememberSaveable { mutableStateOf("") }
     var emoji by rememberSaveable { mutableStateOf(ProfileRepository.DEFAULT_EMOJI) }
+    var instrument by rememberSaveable { mutableStateOf(initialInstrument.name) }
     var errorRes by rememberSaveable { mutableStateOf<Int?>(null) }
 
     fun submit() {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) {
             errorRes = R.string.profile_name_required
-        } else if (!onCreate(trimmed, emoji)) {
+        } else if (!onCreate(trimmed, emoji, Instrument.fromName(instrument))) {
             errorRes = R.string.profile_name_taken
         }
     }
@@ -119,6 +125,10 @@ fun ProfileSetupScreen(onCreate: (String, String) -> Boolean) {
                         onSubmit = ::submit
                     )
                     EmojiPicker(selected = emoji, onSelect = { emoji = it })
+                    InstrumentField(
+                        instrument = Instrument.fromName(instrument),
+                        onSelect = { instrument = it.name }
+                    )
                     Button(
                         onClick = ::submit,
                         enabled = name.isNotBlank(),
@@ -255,18 +265,21 @@ fun ProfileIconButton(emoji: String, name: String, onClick: () -> Unit) {
 
 @Composable
 fun CreateProfileDialog(
-    onCreate: (String, String) -> Boolean,
+    initialInstrument: Instrument,
+    showInstrument: Boolean = true,
+    onCreate: (String, String, Instrument) -> Boolean,
     onDismiss: () -> Unit
 ) {
     var name by rememberSaveable { mutableStateOf("") }
     var emoji by rememberSaveable { mutableStateOf(ProfileRepository.DEFAULT_EMOJI) }
+    var instrument by rememberSaveable { mutableStateOf(initialInstrument.name) }
     var errorRes by rememberSaveable { mutableStateOf<Int?>(null) }
 
     fun submit() {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) {
             errorRes = R.string.profile_name_required
-        } else if (!onCreate(trimmed, emoji)) {
+        } else if (!onCreate(trimmed, emoji, Instrument.fromName(instrument))) {
             errorRes = R.string.profile_name_taken
         } else {
             onDismiss()
@@ -289,6 +302,13 @@ fun CreateProfileDialog(
                 )
                 Spacer(Modifier.height(8.dp))
                 EmojiPicker(selected = emoji, onSelect = { emoji = it })
+                if (showInstrument) {
+                    Spacer(Modifier.height(8.dp))
+                    InstrumentField(
+                        instrument = Instrument.fromName(instrument),
+                        onSelect = { instrument = it.name }
+                    )
+                }
             }
         },
         confirmButton = {
@@ -307,18 +327,22 @@ fun CreateProfileDialog(
 @Composable
 fun ProfileEditDialog(
     profile: ProfileRepository.Profile,
-    onSave: (String, String) -> Boolean,
+    instrument: Instrument,
+    onSave: (String, String, Instrument) -> Boolean,
     onDismiss: () -> Unit
 ) {
     var name by rememberSaveable(profile.id) { mutableStateOf(profile.name) }
     var emoji by rememberSaveable(profile.id) { mutableStateOf(profile.emoji) }
+    var selectedInstrument by rememberSaveable(profile.id, instrument.name) {
+        mutableStateOf(instrument.name)
+    }
     var errorRes by rememberSaveable(profile.id) { mutableStateOf<Int?>(null) }
 
     fun submit() {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) {
             errorRes = R.string.profile_name_required
-        } else if (!onSave(trimmed, emoji)) {
+        } else if (!onSave(trimmed, emoji, Instrument.fromName(selectedInstrument))) {
             errorRes = R.string.profile_name_taken
         } else {
             onDismiss()
@@ -341,6 +365,11 @@ fun ProfileEditDialog(
                 )
                 Spacer(Modifier.height(8.dp))
                 EmojiPicker(selected = emoji, onSelect = { emoji = it })
+                Spacer(Modifier.height(8.dp))
+                InstrumentField(
+                    instrument = Instrument.fromName(selectedInstrument),
+                    onSelect = { selectedInstrument = it.name }
+                )
             }
         },
         confirmButton = {
@@ -354,6 +383,18 @@ fun ProfileEditDialog(
             }
         }
     )
+}
+
+@Composable
+private fun InstrumentField(instrument: Instrument, onSelect: (Instrument) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = stringResource(R.string.profile_instrument),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        InstrumentSelector(selected = instrument, onSelect = onSelect)
+    }
 }
 
 @Composable

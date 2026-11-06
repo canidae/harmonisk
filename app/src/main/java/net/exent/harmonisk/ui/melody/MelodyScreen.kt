@@ -83,6 +83,7 @@ fun MelodyScreen(
     var importingUrl by remember { mutableStateOf<String?>(null) }
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    val instrument by viewModel.currentInstrument.collectAsStateWithLifecycle()
     var showProfileDialog by remember { mutableStateOf(false) }
     var showCreateProfileDialog by remember { mutableStateOf(false) }
 
@@ -422,7 +423,10 @@ fun MelodyScreen(
 
     if (showCreateProfileDialog) {
         CreateProfileDialog(
-            onCreate = { name, emoji -> viewModel.createProfile(name, emoji) },
+            initialInstrument = instrument,
+            onCreate = { name, emoji, selected ->
+                viewModel.createProfile(name, emoji, selected)
+            },
             onDismiss = { showCreateProfileDialog = false }
         )
     }
