@@ -1,7 +1,6 @@
 package net.exent.harmonisk.ui.whack
 
 import androidx.activity.compose.BackHandler
-import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -45,6 +44,7 @@ import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.components.KeepScreenOn
 import net.exent.harmonisk.ui.components.RequireMicPermission
+import net.exent.harmonisk.ui.components.labelRes
 import net.exent.harmonisk.ui.profile.CreateProfileDialog
 import net.exent.harmonisk.ui.profile.ProfileButton
 import net.exent.harmonisk.ui.profile.ProfileSwitchDialog
@@ -65,6 +65,7 @@ fun WhackScreen(
     adventure: Boolean = false,
     durationMs: Long = WhackRules.GAME_MS,
     subtitle: String? = null,
+    instrumentOverride: Instrument? = null,
     onFinished: (Int) -> Unit = {}
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -86,6 +87,9 @@ fun WhackScreen(
     }
     LaunchedEffect(state.levelUp?.id) {
         state.levelUp?.let { sounds.play(WhackSfx.Level, 0.7f) }
+    }
+    LaunchedEffect(instrumentOverride) {
+        viewModel.setInstrumentOverride(instrumentOverride)
     }
     val startGame = { viewModel.start(durationMs, persistBest = !adventure) }
     val leave = {
@@ -189,7 +193,10 @@ fun WhackScreen(
 
     if (showCreateProfileDialog) {
         CreateProfileDialog(
-            onCreate = { name, emoji -> viewModel.createProfile(name, emoji) },
+            initialInstrument = state.instrument,
+            onCreate = { name, emoji, selected ->
+                viewModel.createProfile(name, emoji, selected)
+            },
             onDismiss = { showCreateProfileDialog = false }
         )
     }
@@ -508,7 +515,7 @@ private fun WhackOverlay(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = stringResource(instrumentName(state.instrument)),
+                        text = stringResource(state.instrument.labelRes()),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -572,11 +579,4 @@ private fun LevelBadge(levelUp: WhackLevelUp) {
             color = if (levelUp.level >= 5) Color.White else Color.Black
         )
     }
-}
-
-@StringRes
-private fun instrumentName(instrument: Instrument): Int = when (instrument) {
-    Instrument.VIOLIN -> R.string.instrument_violin
-    Instrument.VIOLA -> R.string.instrument_viola
-    Instrument.CELLO -> R.string.instrument_cello
 }

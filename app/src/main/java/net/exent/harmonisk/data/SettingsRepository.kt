@@ -140,6 +140,17 @@ class SettingsRepository(
 
     suspend fun updateInstrument(name: String) = setString(INSTRUMENT_NAME, name)
 
+    suspend fun updateInstrument(profileId: String, name: String) =
+        setStringFor(profileId, INSTRUMENT_NAME, name)
+
+    fun instrument(profileId: String): Flow<Instrument> =
+        context.dataStore.data.map { prefs ->
+            Instrument.fromName(
+                prefs[stringPreferencesKey(ProfileRepository.scopedKey(profileId, INSTRUMENT_NAME))]
+                    ?: Instrument.VIOLIN.name
+            )
+        }
+
     suspend fun updateConcertPitch(frequency: Float) = setFloat(CONCERT_PITCH, frequency)
 
     suspend fun updateLanguageCode(code: String) {
@@ -177,6 +188,10 @@ class SettingsRepository(
 
     private suspend fun setString(name: String, value: String) {
         val profileId = profileRepository.activeProfileId ?: return
+        setStringFor(profileId, name, value)
+    }
+
+    private suspend fun setStringFor(profileId: String, name: String, value: String) {
         context.dataStore.edit { it[stringPreferencesKey(ProfileRepository.scopedKey(profileId, name))] = value }
     }
 

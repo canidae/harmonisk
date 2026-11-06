@@ -38,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.harmonisk.R
 import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.data.ProfileRepository
+import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.melody.MelodyPlayScreen
 import net.exent.harmonisk.ui.melody.PlayPhase
@@ -57,6 +58,7 @@ fun AdventureScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val melodies by viewModel.melodies.collectAsStateWithLifecycle()
+    val currentPlayerInstrument by viewModel.currentPlayerInstrument.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
     var showCreatePlayer by remember { mutableStateOf(false) }
@@ -147,6 +149,7 @@ fun AdventureScreen(
     if (state.step == AdventureStep.WHACK) {
         AdventureWhackScreen(
             state = state,
+            instrument = currentPlayerInstrument,
             onFinished = viewModel::finishWhack,
             onBack = { viewModel.finishWhack(0) }
         )
@@ -183,7 +186,11 @@ fun AdventureScreen(
 
     if (showCreatePlayer) {
         CreateProfileDialog(
-            onCreate = { name, emoji -> viewModel.createPlayer(name, emoji).also { if (it) showCreatePlayer = false } },
+            initialInstrument = Instrument.VIOLIN,
+            showInstrument = false,
+            onCreate = { name, emoji, _ ->
+                viewModel.createPlayer(name, emoji).also { if (it) showCreatePlayer = false }
+            },
             onDismiss = { showCreatePlayer = false }
         )
     }
@@ -212,6 +219,7 @@ fun AdventureScreen(
 @Composable
 private fun AdventureWhackScreen(
     state: AdventureState,
+    instrument: Instrument,
     onFinished: (Int) -> Unit,
     onBack: () -> Unit
 ) {
@@ -225,6 +233,7 @@ private fun AdventureWhackScreen(
         adventure = true,
         durationMs = WhackRules.ADVENTURE_GAME_MS,
         subtitle = state.currentPlayer?.name,
+        instrumentOverride = instrument,
         onFinished = onFinished
     )
 }

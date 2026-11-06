@@ -4,12 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -20,6 +24,7 @@ import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.data.MelodySettingsRepository
 import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.SettingsRepository
+import net.exent.harmonisk.music.Instrument
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlin.random.Random
@@ -70,6 +75,15 @@ class AdventureViewModel @Inject constructor(
 
     val profiles: StateFlow<List<ProfileRepository.Profile>> = profileRepository.profiles
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val currentPlayerInstrument: StateFlow<Instrument> = _state
+        .map { it.currentPlayer?.profileId }
+        .distinctUntilChanged()
+        .flatMapLatest { id ->
+            if (id == null) flowOf(Instrument.VIOLIN) else settingsRepository.instrument(id)
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, Instrument.VIOLIN)
+
     val melodies: StateFlow<List<MelodyRepository.MelodyInfo>> =
         melodyRepository.importedMelodies
             .map { melodyRepository.getBundledMelodies() + it }
@@ -105,6 +119,12 @@ class AdventureViewModel @Inject constructor(
 
     fun createPlayer(name: String, emoji: String): Boolean {
         val profile = profileRepository.createProfile(name, emoji, makeActive = false) ?: return false
+        viewModelScope.launch {
+            settingsRepository.updateInstrument(
+                profile.id,
+                settingsRepository.settings.first().instrumentName
+            )
+        }
         if (_state.value.selectedPlayerIds.size < 4) {
             _state.update {
                 it.copy(selectedPlayerIds = it.selectedPlayerIds + profile.id)
@@ -296,7 +316,7 @@ class AdventureViewModel @Inject constructor(
         turnJob?.cancel()
         turnJob = viewModelScope.launch {
             try {
-                val instrument = settingsRepository.settings.first().instrumentName
+                val instrument = settingsRepository.instrument(player.profileId).first().name
                 val level = melodySettingsRepository
                     .getSettings(player.profileId, song.id, instrument)
                     .first()
