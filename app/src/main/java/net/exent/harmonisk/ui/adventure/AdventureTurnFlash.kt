@@ -13,6 +13,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -28,33 +30,23 @@ import kotlin.math.roundToInt
 fun TurnFlashOverlay(
     state: AdventureState,
     mapCenter: Offset,
-    flashAnchor: Offset,
+    diceTarget: Offset,
     origin: Offset,
     onRoll: () -> Unit
 ) {
     val player = state.currentPlayer ?: return
     var size by remember { mutableStateOf(IntSize.Zero) }
-    var flying by remember { mutableStateOf(false) }
-    val fly = remember { Animatable(0f) }
+    var dieAnchor by remember { mutableStateOf(Offset.Unspecified) }
+    val handoff = remember { Animatable(0f) }
     LaunchedEffect(state.phase) {
-        when (state.phase) {
-            AdventureTurnPhase.ROLLING, AdventureTurnPhase.DICE -> {
-                flying = false
-                fly.snapTo(0f)
-            }
-            AdventureTurnPhase.MOVING -> {
-                flying = true
-                fly.snapTo(0f)
-                fly.animateTo(
-                    1f,
-                    tween(AdventureTiming.FLASH_FLY_MS.toInt(), easing = FastOutSlowInEasing)
-                )
-                flying = false
-            }
-            else -> {
-                flying = false
-                fly.snapTo(0f)
-            }
+        if (state.phase == AdventureTurnPhase.DELIVERING) {
+            handoff.snapTo(0f)
+            handoff.animateTo(
+                1f,
+                tween(AdventureTiming.DICE_HANDOFF_MS.toInt(), easing = FastOutSlowInEasing)
+            )
+        } else {
+            handoff.snapTo(0f)
         }
     }
     val diceProgress = remember { Animatable(0f) }
@@ -69,17 +61,11 @@ fun TurnFlashOverlay(
     }
     val visible = state.phase == AdventureTurnPhase.ROLLING ||
         state.phase == AdventureTurnPhase.DICE ||
-        flying
+        state.phase == AdventureTurnPhase.DELIVERING
     if (!visible || !mapCenter.isSpecified) return
-    val progress = fly.value
-    val start = mapCenter - origin
-    val end = if (flashAnchor.isSpecified) flashAnchor - origin else start
-    val center = Offset(
-        start.x + (end.x - start.x) * progress,
-        start.y + (end.y - start.y) * progress
-    )
-    val scale = 1f - 0.55f * progress
-    val cardAlpha = 1f - 0.78f * progress
+    val center = mapCenter - origin
+    val cardAlpha = (1f - 1.6f * handoff.value).coerceIn(0f, 1f)
+    val cardScale = 1f - 0.18f * handoff.value
     val cardOffset = IntOffset(
         (center.x - size.width / 2f).roundToInt(),
         (center.y - size.height / 2f).roundToInt()
@@ -88,8 +74,8 @@ fun TurnFlashOverlay(
         modifier = Modifier
             .offset { cardOffset }
             .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
+                scaleX = cardScale
+                scaleY = cardScale
                 alpha = cardAlpha
             }
             .onSizeChanged { size = it }
@@ -119,17 +105,24 @@ fun TurnFlashOverlay(
                         )
                     }
                 }
-                Dice3D(
-                    value = state.diceValue,
-                    progress = diceProgress.value,
-                    modifier = Modifier.size(80.dp)
-                )
+                if (state.phase == AdventureTurnPhase.DELIVERING) {
+                    Spacer(Modifier.size(80.dp))
+                } else {
+                    Dice3D(
+                        value = state.diceValue,
+                        progress = diceProgress.value,
+                        modifier = Modifier
+                            .size(80.dp)
+                            .onGloballyPositioned { dieAnchor = it.boundsInRoot().center }
+                    )
+                }
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text = when {
-                    state.phase == AdventureTurnPhase.ROLLING ->
+                text = when (state.phase) {
+                    AdventureTurnPhase.ROLLING ->
                         stringResource(R.string.adventure_tap_to_throw)
+                    AdventureTurnPhase.DELIVERING -> ""
                     else -> state.diceValue?.let { stringResource(R.string.adventure_move, it) }.orEmpty()
                 },
                 style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
@@ -138,6 +131,36 @@ fun TurnFlashOverlay(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
+        }
+    }
+
+    if (state.phase == AdventureTurnPhase.DELIVERING &&
+        dieAnchor.isSpecified && diceTarget.isSpecified
+    ) {
+        val start = dieAnchor - origin
+        val end = diceTarget - origin
+        val t = handoff.value
+        val position = Offset(
+            start.x + (end.x - start.x) * t,
+            start.y + (end.y - start.y) * t
+        )
+        val dieScale = 1f - 0.45f * t
+        Box(
+            modifier = Modifier
+                .offset {
+                    IntOffset(
+                        (position.x - 40.dp.toPx()).roundToInt(),
+                        (position.y - 40.dp.toPx()).roundToInt()
+                    )
+                }
+                .size(80.dp)
+                .graphicsLayer {
+                    scaleX = dieScale
+                    scaleY = dieScale
+                    alpha = 1f - 0.15f * t
+                }
+        ) {
+            Dice3D(value = state.diceValue, progress = 1f, modifier = Modifier.fillMaxSize())
         }
     }
 }

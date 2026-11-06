@@ -210,7 +210,9 @@ class AdventureViewModel @Inject constructor(
         _state.update { it.copy(diceValue = dice, phase = AdventureTurnPhase.DICE) }
         turnJob?.cancel()
         turnJob = viewModelScope.launch {
-            delay(AdventureTiming.DICE_SHOW_MS)
+            delay(AdventureTiming.DICE_SHOW_MS + AdventureTiming.DICE_PAUSE_MS)
+            _state.update { it.copy(phase = AdventureTurnPhase.DELIVERING) }
+            delay(AdventureTiming.DICE_HANDOFF_MS)
             val landing = resolveLanding(player, dice, snapshot.fieldRewards)
             val players = snapshot.players.toMutableList().also { it[snapshot.currentPlayerIndex] = landing.player }
             _state.update {

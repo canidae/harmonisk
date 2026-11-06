@@ -10,6 +10,7 @@ const val ADVENTURE_CASTLE_BONUS = 100
 enum class AdventureTurnPhase {
     ROLLING,
     DICE,
+    DELIVERING,
     MOVING,
     EVENT,
     PULLING,
@@ -23,7 +24,8 @@ object AdventureTiming {
     const val STEP_MS = 180L
     const val MAX_WALK_MS = 2_200L
     const val DICE_SHOW_MS = 900L
-    const val FLASH_FLY_MS = 650L
+    const val DICE_PAUSE_MS = 1_000L
+    const val DICE_HANDOFF_MS = 600L
     const val SPIN_MS = 2800L
     const val SPIN_EXTRA_MS = 1_000L
     const val HOLD_MS = 400L

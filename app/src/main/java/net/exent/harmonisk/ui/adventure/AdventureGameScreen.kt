@@ -56,9 +56,18 @@ fun AdventureGameScreen(
     KeepScreenOn()
     var mapCenter by remember { mutableStateOf(Offset.Unspecified) }
     var songAnchor by remember { mutableStateOf(Offset.Unspecified) }
-    var flashAnchor by remember { mutableStateOf(Offset.Unspecified) }
+    var tokenAnchor by remember { mutableStateOf(Offset.Unspecified) }
     var avatarAnchor by remember { mutableStateOf(Offset.Unspecified) }
     var origin by remember { mutableStateOf(Offset.Zero) }
+    val latestToken = remember { TokenPosition() }
+    val reportTokenPosition = state.phase == AdventureTurnPhase.ROLLING ||
+        state.phase == AdventureTurnPhase.DICE ||
+        state.phase == AdventureTurnPhase.DELIVERING
+    LaunchedEffect(state.phase) {
+        if (reportTokenPosition && latestToken.position.isSpecified) {
+            tokenAnchor = latestToken.position
+        }
+    }
     val context = LocalContext.current
     val sounds = remember(context) { AdventureSounds(context) }
     DisposableEffect(Unit) {
@@ -151,13 +160,16 @@ fun AdventureGameScreen(
                     fieldRewards = state.fieldRewards,
                     moveFrom = state.moveFrom,
                     moving = state.phase == AdventureTurnPhase.MOVING,
+                    onCurrentTokenPosition = { position ->
+                        latestToken.position = position
+                        if (reportTokenPosition) tokenAnchor = position
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
             }
             CurrentTurnCard(
                 state = state,
                 onSongAnchor = { songAnchor = it },
-                onFlashAnchor = { flashAnchor = it },
                 onAvatarAnchor = { avatarAnchor = it }
             )
         }
@@ -165,7 +177,7 @@ fun AdventureGameScreen(
         TurnFlashOverlay(
             state = state,
             mapCenter = mapCenter,
-            flashAnchor = flashAnchor,
+            diceTarget = tokenAnchor,
             origin = origin,
             onRoll = onRoll
         )
@@ -191,7 +203,6 @@ fun AdventureGameScreen(
 private fun CurrentTurnCard(
     state: AdventureState,
     onSongAnchor: (Offset) -> Unit,
-    onFlashAnchor: (Offset) -> Unit,
     onAvatarAnchor: (Offset) -> Unit
 ) {
     val player = state.currentPlayer ?: return
@@ -200,8 +211,7 @@ private fun CurrentTurnCard(
     val levelAlpha by animateFloatAsState(if (levelVisible) 1f else 0f, label = "level_alpha")
     val status = when (state.phase) {
         AdventureTurnPhase.ROLLING -> stringResource(R.string.adventure_throw_dice)
-        AdventureTurnPhase.DICE, AdventureTurnPhase.MOVING ->
-            state.diceValue?.let { stringResource(R.string.adventure_move, it) }.orEmpty()
+        AdventureTurnPhase.DICE, AdventureTurnPhase.DELIVERING, AdventureTurnPhase.MOVING -> ""
         AdventureTurnPhase.EVENT -> when {
             state.finisherId != null -> stringResource(R.string.adventure_castle_reached)
             state.reward is AdventureReward.Stickers -> stringResource(R.string.adventure_legend_stickers)
@@ -241,25 +251,26 @@ private fun CurrentTurnCard(
                         )
                     }
                 }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(24.dp)
-                        .onGloballyPositioned { coordinates ->
-                            val bounds = coordinates.boundsInRoot()
-                            onSongAnchor(Offset(bounds.left, bounds.center.y))
-                            onFlashAnchor(bounds.center)
-                        },
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Text(
-                        text = status,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = color,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                if (status.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(24.dp)
+                            .onGloballyPositioned { coordinates ->
+                                val bounds = coordinates.boundsInRoot()
+                                onSongAnchor(Offset(bounds.left, bounds.center.y))
+                            },
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Text(
+                            text = status,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = color,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
             Spacer(Modifier.width(8.dp))
@@ -269,13 +280,6 @@ private fun CurrentTurnCard(
                     color = color,
                     modifier = Modifier.alpha(levelAlpha)
                 )
-                if (state.diceValue != null) {
-                    Spacer(Modifier.height(4.dp))
-                    AdventurePill(
-                        text = "🎲 ${state.diceValue}",
-                        color = StorybookGold
-                    )
-                }
             }
         }
     }
@@ -440,4 +444,8 @@ private fun RewardCard(reward: AdventureReward?, levelUp: Int?) {
             )
         }
     }
+}
+
+private class TokenPosition {
+    var position: Offset = Offset.Unspecified
 }
