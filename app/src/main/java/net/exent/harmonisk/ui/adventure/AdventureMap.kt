@@ -35,6 +35,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -310,6 +312,7 @@ fun AdventureMap(
     fieldRewards: List<AdventureReward?>,
     moveFrom: Int = 0,
     moving: Boolean = false,
+    onCurrentTokenPosition: (Offset) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(modifier) {
@@ -459,7 +462,12 @@ fun AdventureMap(
                         points = pointsPx,
                         segmentMeasures = segmentMeasures,
                         tokenSize = tokenSize,
-                        offsetX = ((indexInField - (atField - 1) / 2f) * 14f).dp
+                        offsetX = ((indexInField - (atField - 1) / 2f) * 14f).dp,
+                        onPositioned = if (player.profileId == currentPlayerId) {
+                            onCurrentTokenPosition
+                        } else {
+                            null
+                        }
                     )
                 }
             }
@@ -843,7 +851,8 @@ private fun AnimatedPlayerToken(
     points: List<Offset>,
     segmentMeasures: List<PathMeasure>,
     tokenSize: Dp,
-    offsetX: Dp
+    offsetX: Dp,
+    onPositioned: ((Offset) -> Unit)? = null
 ) {
     val animated = remember(player.profileId) { Animatable(startAt) }
     LaunchedEffect(player.position) {
@@ -881,6 +890,9 @@ private fun AnimatedPlayerToken(
             .size(tokenSize)
             .zIndex(if (current) 3f else 2f)
             .graphicsLayer { translationY = bob * density.density }
+            .onGloballyPositioned { coordinates ->
+                onPositioned?.invoke(coordinates.boundsInRoot().center)
+            }
             .clip(CircleShape)
             .background(Brush.linearGradient(listOf(color, color.copy(alpha = 0.55f))))
             .border(2.dp, if (current) StorybookGold else Color.White.copy(alpha = 0.55f), CircleShape),
