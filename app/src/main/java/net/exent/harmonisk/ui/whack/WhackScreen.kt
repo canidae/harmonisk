@@ -40,10 +40,14 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import net.exent.harmonisk.R
+import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.components.KeepScreenOn
 import net.exent.harmonisk.ui.components.RequireMicPermission
+import net.exent.harmonisk.ui.profile.CreateProfileDialog
+import net.exent.harmonisk.ui.profile.ProfileButton
+import net.exent.harmonisk.ui.profile.ProfileSwitchDialog
 import net.exent.harmonisk.ui.theme.FingerColors
 
 private val BOARD_PADDING = 16.dp
@@ -64,6 +68,11 @@ fun WhackScreen(
     onFinished: (Int) -> Unit = {}
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    var showProfileDialog by remember { mutableStateOf(false) }
+    var showCreateProfileDialog by remember { mutableStateOf(false) }
+    var showSwitchConfirm by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val sounds = remember(context) { WhackSounds(context) }
     DisposableEffect(Unit) {
@@ -96,7 +105,16 @@ fun WhackScreen(
             BrandTopBar(
                 title = stringResource(R.string.whack_title),
                 subtitle = subtitle,
-                onBack = leave
+                onBack = leave,
+                actions = {
+                    if (!adventure) {
+                        profile?.let {
+                            ProfileButton(it.name, it.emoji, onClick = {
+                                if (state.playing) showSwitchConfirm = true else showProfileDialog = true
+                            })
+                        }
+                    }
+                }
             )
         }
     ) { padding ->
@@ -118,6 +136,10 @@ fun WhackScreen(
                         WhackOverlay(
                             state = state,
                             adventure = adventure,
+                            profile = profile,
+                            onProfileClick = {
+                                if (state.playing) showSwitchConfirm = true else showProfileDialog = true
+                            },
                             onStart = startGame,
                             onFinished = onFinished
                         )
@@ -126,6 +148,50 @@ fun WhackScreen(
                 WhackLetters(state.instrument)
             }
         }
+    }
+
+    if (showSwitchConfirm) {
+        AlertDialog(
+            onDismissRequest = { showSwitchConfirm = false },
+            title = { Text(stringResource(R.string.profile_switch_confirm_title)) },
+            text = { Text(stringResource(R.string.profile_switch_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showSwitchConfirm = false
+                        showProfileDialog = true
+                    }
+                ) { Text(stringResource(R.string.profile_switch)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSwitchConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showProfileDialog) {
+        ProfileSwitchDialog(
+            profiles = profiles,
+            activeProfileId = profile?.id,
+            onSelect = { id ->
+                viewModel.selectProfile(id)
+                showProfileDialog = false
+            },
+            onAdd = {
+                showProfileDialog = false
+                showCreateProfileDialog = true
+            },
+            onDismiss = { showProfileDialog = false }
+        )
+    }
+
+    if (showCreateProfileDialog) {
+        CreateProfileDialog(
+            onCreate = { name, emoji -> viewModel.createProfile(name, emoji) },
+            onDismiss = { showCreateProfileDialog = false }
+        )
     }
 }
 
@@ -367,6 +433,8 @@ private fun WhackLetters(instrument: Instrument) {
 private fun WhackOverlay(
     state: WhackState,
     adventure: Boolean,
+    profile: ProfileRepository.Profile?,
+    onProfileClick: () -> Unit,
     onStart: () -> Unit,
     onFinished: (Int) -> Unit
 ) {
@@ -388,6 +456,14 @@ private fun WhackOverlay(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                if (!adventure) {
+                    profile?.let {
+                        TextButton(onClick = onProfileClick) {
+                            Text("${it.emoji}  ${it.name}", style = MaterialTheme.typography.labelLarge)
+                        }
+                        Spacer(Modifier.height(4.dp))
+                    }
+                }
                 if (state.finished) {
                     Text(text = "⏰", fontSize = 44.sp)
                     Spacer(Modifier.height(6.dp))

@@ -49,6 +49,9 @@ import net.exent.harmonisk.ui.OVERLAY_BG
 import net.exent.harmonisk.ui.OVERLAY_BUTTON_SIZE
 import net.exent.harmonisk.ui.OVERLAY_ICON_TINT
 import net.exent.harmonisk.ui.PANEL_BG
+import net.exent.harmonisk.ui.profile.CreateProfileDialog
+import net.exent.harmonisk.ui.profile.ProfileIconButton
+import net.exent.harmonisk.ui.profile.ProfileSwitchDialog
 import net.exent.harmonisk.ui.utils.formatScore
 import net.exent.harmonisk.ui.PANEL_BTN_SIZE
 import net.exent.harmonisk.ui.theme.*
@@ -76,7 +79,19 @@ fun MelodyPlayScreen(
     val context = LocalContext.current
     var showResultsModal by remember { mutableStateOf(false) }
     var showConfigMenu by remember { mutableStateOf(false) }
+    var showProfileDialog by remember { mutableStateOf(false) }
+    var showCreateProfileDialog by remember { mutableStateOf(false) }
+    var showSwitchConfirm by remember { mutableStateOf(false) }
+    val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val sessionActive = gameState.phase == PlayPhase.PLAYING ||
+        gameState.phase == PlayPhase.WAITING_FOR_NOTE ||
+        gameState.phase == PlayPhase.PAUSED
+
+    fun openProfiles() {
+        if (sessionActive) showSwitchConfirm = true else showProfileDialog = true
+    }
 
     BackHandler {
         if (stopOnBack) viewModel.stop()
@@ -247,6 +262,12 @@ fun MelodyPlayScreen(
                                     )
                                 }
                             }
+                        }
+                    }
+
+                    if (!adventureMode) {
+                        profile?.let {
+                            ProfileIconButton(emoji = it.emoji, name = it.name, onClick = ::openProfiles)
                         }
                     }
 
@@ -462,6 +483,50 @@ fun MelodyPlayScreen(
             },
             celebrationLevel = celebrationLevel,
             personalBest = personalBest
+        )
+    }
+
+    if (showSwitchConfirm) {
+        AlertDialog(
+            onDismissRequest = { showSwitchConfirm = false },
+            title = { Text(stringResource(R.string.profile_switch_confirm_title)) },
+            text = { Text(stringResource(R.string.profile_switch_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showSwitchConfirm = false
+                        showProfileDialog = true
+                    }
+                ) { Text(stringResource(R.string.profile_switch)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSwitchConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showProfileDialog) {
+        ProfileSwitchDialog(
+            profiles = profiles,
+            activeProfileId = profile?.id,
+            onSelect = { id ->
+                viewModel.selectProfile(id)
+                showProfileDialog = false
+            },
+            onAdd = {
+                showProfileDialog = false
+                showCreateProfileDialog = true
+            },
+            onDismiss = { showProfileDialog = false }
+        )
+    }
+
+    if (showCreateProfileDialog) {
+        CreateProfileDialog(
+            onCreate = { name, emoji -> viewModel.createProfile(name, emoji) },
+            onDismiss = { showCreateProfileDialog = false }
         )
     }
 }

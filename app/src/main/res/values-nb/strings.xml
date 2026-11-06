@@ -27,6 +27,9 @@
     <string name="profile_add">Legg til profil</string>
     <string name="profile_add_title">Ny profil</string>
     <string name="profile_switch_title">Profiler</string>
+    <string name="profile_switch">Bytt</string>
+    <string name="profile_switch_confirm_title">Bytte profil?</string>
+    <string name="profile_switch_confirm_body">Økten du holder på med, nullstilles for den nye profilen.</string>
     <string name="profile_current">Gjeldende profil</string>
     <string name="profile_name_required">Skriv inn et profilnavn</string>
     <string name="profile_name_taken">Profilnavnet er allerede i bruk</string>

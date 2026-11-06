@@ -139,9 +139,9 @@ fun ProfileDialog(
     activeProfileId: String?,
     onSelect: (String) -> Unit,
     onAdd: () -> Unit,
-    onDelete: (String) -> Unit,
-    onEdit: (ProfileRepository.Profile) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onDelete: ((String) -> Unit)? = null,
+    onEdit: ((ProfileRepository.Profile) -> Unit)? = null
 ) {
     var pendingDelete by remember { mutableStateOf<ProfileRepository.Profile?>(null) }
     val target = pendingDelete
@@ -154,7 +154,7 @@ fun ProfileDialog(
                 TextButton(
                     onClick = {
                         pendingDelete = null
-                        onDelete(target.id)
+                        onDelete?.invoke(target.id)
                     }
                 ) {
                     Text(stringResource(R.string.delete))
@@ -180,8 +180,8 @@ fun ProfileDialog(
                                 .clip(RoundedCornerShape(12.dp))
                                 .combinedClickable(
                                     onClick = { onSelect(profile.id) },
-                                    onLongClick = { pendingDelete = profile },
-                                    onLongClickLabel = stringResource(R.string.profile_delete)
+                                    onLongClick = onDelete?.let { { pendingDelete = profile } },
+                                    onLongClickLabel = onDelete?.let { stringResource(R.string.profile_delete) }
                                 )
                                 .padding(horizontal = 12.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -195,13 +195,15 @@ fun ProfileDialog(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f)
                             )
-                            IconButton(onClick = { onEdit(profile) }, modifier = Modifier.size(32.dp)) {
-                                Icon(
-                                    Icons.Filled.Edit,
-                                    contentDescription = stringResource(R.string.profile_edit),
-                                    modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            onEdit?.let { edit ->
+                                IconButton(onClick = { edit(profile) }, modifier = Modifier.size(32.dp)) {
+                                    Icon(
+                                        Icons.Filled.Edit,
+                                        contentDescription = stringResource(R.string.profile_edit),
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                             if (selected) {
                                 Icon(
@@ -225,6 +227,29 @@ fun ProfileDialog(
                 }
             }
         )
+    }
+}
+
+@Composable
+fun ProfileSwitchDialog(
+    profiles: List<ProfileRepository.Profile>,
+    activeProfileId: String?,
+    onSelect: (String) -> Unit,
+    onAdd: () -> Unit,
+    onDismiss: () -> Unit
+) = ProfileDialog(profiles, activeProfileId, onSelect, onAdd, onDismiss)
+
+@Composable
+fun ProfileIconButton(emoji: String, name: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.18f))
+            .clickable(role = Role.Button, onClickLabel = name, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(emoji, fontSize = 18.sp)
     }
 }
 

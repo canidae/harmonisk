@@ -49,6 +49,9 @@ import net.exent.harmonisk.ui.OVERLAY_ICON_TINT
 import net.exent.harmonisk.ui.PANEL_BG
 import net.exent.harmonisk.ui.PANEL_BTN_SIZE
 import net.exent.harmonisk.ui.PANEL_ROW2_BG
+import net.exent.harmonisk.ui.profile.CreateProfileDialog
+import net.exent.harmonisk.ui.profile.ProfileIconButton
+import net.exent.harmonisk.ui.profile.ProfileSwitchDialog
 import net.exent.harmonisk.ui.theme.*
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -71,6 +74,16 @@ fun FreePlayScreen(
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val profiles by viewModel.profiles.collectAsState()
+    val profile by viewModel.activeProfile.collectAsState()
+    var showProfileDialog by remember { mutableStateOf(false) }
+    var showCreateProfileDialog by remember { mutableStateOf(false) }
+    var showSwitchConfirm by remember { mutableStateOf(false) }
+    val sessionActive = state.isRecording || state.isPlaying
+
+    fun openProfiles() {
+        if (sessionActive) showSwitchConfirm = true else showProfileDialog = true
+    }
 
     KeepScreenOn()
 
@@ -202,6 +215,10 @@ fun FreePlayScreen(
         }
 
         Spacer(Modifier.weight(1f))
+
+        profile?.let {
+            ProfileIconButton(emoji = it.emoji, name = it.name, onClick = ::openProfiles)
+        }
 
         // Help button (always visible)
         IconButton(
@@ -740,6 +757,50 @@ fun FreePlayScreen(
     }
     SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).systemBarsPadding())
     } // end Box
+
+    if (showSwitchConfirm) {
+        AlertDialog(
+            onDismissRequest = { showSwitchConfirm = false },
+            title = { Text(stringResource(R.string.profile_switch_confirm_title)) },
+            text = { Text(stringResource(R.string.profile_switch_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showSwitchConfirm = false
+                        showProfileDialog = true
+                    }
+                ) { Text(stringResource(R.string.profile_switch)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSwitchConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showProfileDialog) {
+        ProfileSwitchDialog(
+            profiles = profiles,
+            activeProfileId = profile?.id,
+            onSelect = { id ->
+                viewModel.selectProfile(id)
+                showProfileDialog = false
+            },
+            onAdd = {
+                showProfileDialog = false
+                showCreateProfileDialog = true
+            },
+            onDismiss = { showProfileDialog = false }
+        )
+    }
+
+    if (showCreateProfileDialog) {
+        CreateProfileDialog(
+            onCreate = { name, emoji -> viewModel.createProfile(name, emoji) },
+            onDismiss = { showCreateProfileDialog = false }
+        )
+    }
 }
 
 @Composable

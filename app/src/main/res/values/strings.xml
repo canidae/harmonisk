@@ -27,6 +27,9 @@
     <string name="profile_add">Add profile</string>
     <string name="profile_add_title">New profile</string>
     <string name="profile_switch_title">Profiles</string>
+    <string name="profile_switch">Switch</string>
+    <string name="profile_switch_confirm_title">Switch profile?</string>
+    <string name="profile_switch_confirm_body">The current session will be reset for the new profile.</string>
     <string name="profile_current">Current profile</string>
     <string name="profile_name_required">Enter a profile name</string>
     <string name="profile_name_taken">That profile name is already in use</string>
