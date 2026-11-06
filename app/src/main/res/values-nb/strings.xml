@@ -241,7 +241,6 @@
     <string name="adventure_field">Felt %1$d av %2$d</string>
     <string name="adventure_level">Nivå %1$d</string>
     <string name="adventure_move">Flytt %1$d</string>
-    <string name="adventure_play_song">Spill sang</string>
     <string name="adventure_load_failed">Kunne ikke starte sangen</string>
     <string name="adventure_results_title">Eventyret er over</string>
     <string name="adventure_results_solo_title">Ditt eventyr er over</string>
@@ -273,7 +272,6 @@
     <string name="adventure_throw_dice">Kast terningen</string>
     <string name="adventure_tap_to_throw">Trykk for å kaste terningen</string>
     <string name="adventure_choose_song">Velg en sang</string>
-    <string name="adventure_spinning">Spinner…</string>
     <string name="adventure_song_complete">Sang ferdig</string>
     <string name="adventure_castle_reached">Borgen er nådd</string>
     <string name="adventure_legend_song">Sang</string>

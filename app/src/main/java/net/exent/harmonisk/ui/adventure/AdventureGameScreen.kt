@@ -16,7 +16,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,7 +49,6 @@ import kotlinx.coroutines.delay
 @Composable
 fun AdventureGameScreen(
     state: AdventureState,
-    onPlay: () -> Unit,
     onPull: () -> Unit,
     onRoll: () -> Unit,
     onBack: () -> Unit
@@ -158,9 +156,6 @@ fun AdventureGameScreen(
             }
             CurrentTurnCard(
                 state = state,
-                onPlay = onPlay,
-                onPull = onPull,
-                onRoll = onRoll,
                 onSongAnchor = { songAnchor = it },
                 onFlashAnchor = { flashAnchor = it },
                 onAvatarAnchor = { avatarAnchor = it }
@@ -195,9 +190,6 @@ fun AdventureGameScreen(
 @Composable
 private fun CurrentTurnCard(
     state: AdventureState,
-    onPlay: () -> Unit,
-    onPull: () -> Unit,
-    onRoll: () -> Unit,
     onSongAnchor: (Offset) -> Unit,
     onFlashAnchor: (Offset) -> Unit,
     onAvatarAnchor: (Offset) -> Unit
@@ -219,36 +211,6 @@ private fun CurrentTurnCard(
         AdventureTurnPhase.PULLING, AdventureTurnPhase.SPINNING, AdventureTurnPhase.HIGHLIGHT ->
             stringResource(R.string.adventure_choose_song)
         AdventureTurnPhase.REVEALED -> state.currentSong?.name.orEmpty()
-    }
-    val actionLabel: String
-    val actionEnabled: Boolean
-    val action: () -> Unit
-    when (state.phase) {
-        AdventureTurnPhase.ROLLING -> {
-            actionLabel = stringResource(R.string.adventure_throw_dice)
-            actionEnabled = true
-            action = onRoll
-        }
-        AdventureTurnPhase.DICE, AdventureTurnPhase.MOVING, AdventureTurnPhase.EVENT -> {
-            actionLabel = status
-            actionEnabled = false
-            action = {}
-        }
-        AdventureTurnPhase.PULLING -> {
-            actionLabel = stringResource(R.string.adventure_pull_lever)
-            actionEnabled = !state.loading
-            action = onPull
-        }
-        AdventureTurnPhase.SPINNING, AdventureTurnPhase.HIGHLIGHT -> {
-            actionLabel = stringResource(R.string.adventure_spinning)
-            actionEnabled = false
-            action = {}
-        }
-        AdventureTurnPhase.REVEALED -> {
-            actionLabel = stringResource(R.string.adventure_play_song)
-            actionEnabled = true
-            action = onPlay
-        }
     }
     StorybookCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -314,31 +276,6 @@ private fun CurrentTurnCard(
                         color = StorybookGold
                     )
                 }
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        Button(
-            onClick = action,
-            enabled = actionEnabled,
-            modifier = Modifier.fillMaxWidth().height(54.dp),
-            shape = RoundedCornerShape(18.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = color, contentColor = Color(0xFF151225))
-        ) {
-            if (state.loading && state.phase == AdventureTurnPhase.PULLING) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp,
-                    color = Color(0xFF151225)
-                )
-            } else {
-                if (state.phase == AdventureTurnPhase.REVEALED) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text(
-                    text = actionLabel,
-                    fontWeight = FontWeight.Black
-                )
             }
         }
     }

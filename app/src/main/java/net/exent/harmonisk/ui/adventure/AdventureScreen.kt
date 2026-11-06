@@ -47,6 +47,7 @@ import net.exent.harmonisk.ui.profile.CreateProfileDialog
 import net.exent.harmonisk.ui.whack.WhackRules
 import net.exent.harmonisk.ui.whack.WhackScreen
 import net.exent.harmonisk.ui.whack.WhackViewModel
+import kotlinx.coroutines.delay
 
 @Composable
 fun AdventureScreen(
@@ -74,6 +75,13 @@ fun AdventureScreen(
         if (state.step != AdventureStep.PLAY) {
             melodyViewModel.stop()
             playingLoaded = false
+        }
+    }
+
+    LaunchedEffect(state.phase, showExitDialog) {
+        if (state.phase == AdventureTurnPhase.REVEALED && !showExitDialog) {
+            delay(AdventureTiming.AUTO_PLAY_MS)
+            viewModel.playCurrentSong()
         }
     }
 
@@ -176,7 +184,6 @@ fun AdventureScreen(
             )
             else -> AdventureGameScreen(
                 state = state,
-                onPlay = viewModel::playCurrentSong,
                 onPull = viewModel::pullLever,
                 onRoll = viewModel::rollDice,
                 onBack = { showExitDialog = true }

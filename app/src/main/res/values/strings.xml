@@ -241,7 +241,6 @@
     <string name="adventure_field">Field %1$d of %2$d</string>
     <string name="adventure_level">Level %1$d</string>
     <string name="adventure_move">Move %1$d</string>
-    <string name="adventure_play_song">Play song</string>
     <string name="adventure_load_failed">Could not start that song</string>
     <string name="adventure_results_title">The adventure is complete</string>
     <string name="adventure_results_solo_title">Your adventure is complete</string>
@@ -273,7 +272,6 @@
     <string name="adventure_throw_dice">Throw the dice</string>
     <string name="adventure_tap_to_throw">Tap to throw the dice</string>
     <string name="adventure_choose_song">Choose a song</string>
-    <string name="adventure_spinning">Spinning…</string>
     <string name="adventure_song_complete">Song complete</string>
     <string name="adventure_castle_reached">Castle reached</string>
     <string name="adventure_legend_song">Song</string>
