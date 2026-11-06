@@ -2,8 +2,6 @@ package net.exent.harmonisk.ui.adventure
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,7 +21,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import net.exent.harmonisk.R
 import kotlin.math.roundToInt
 
@@ -39,7 +36,6 @@ fun TurnFlashOverlay(
     var size by remember { mutableStateOf(IntSize.Zero) }
     var flying by remember { mutableStateOf(false) }
     val fly = remember { Animatable(0f) }
-    val diceScale = remember { Animatable(1f) }
     LaunchedEffect(state.phase) {
         when (state.phase) {
             AdventureTurnPhase.ROLLING, AdventureTurnPhase.DICE -> {
@@ -61,12 +57,13 @@ fun TurnFlashOverlay(
             }
         }
     }
+    val diceProgress = remember { Animatable(0f) }
     LaunchedEffect(state.diceValue) {
+        diceProgress.snapTo(0f)
         if (state.diceValue != null) {
-            diceScale.snapTo(0.5f)
-            diceScale.animateTo(
+            diceProgress.animateTo(
                 1f,
-                spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+                tween(AdventureTiming.DICE_SHOW_MS.toInt(), easing = FastOutSlowInEasing)
             )
         }
     }
@@ -122,14 +119,10 @@ fun TurnFlashOverlay(
                         )
                     }
                 }
-                Text(
-                    text = diceFace(state.diceValue),
-                    fontSize = 52.sp,
-                    color = StorybookGold,
-                    modifier = Modifier.graphicsLayer {
-                        scaleX = diceScale.value
-                        scaleY = diceScale.value
-                    }
+                Dice3D(
+                    value = state.diceValue,
+                    progress = diceProgress.value,
+                    modifier = Modifier.size(80.dp)
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -147,14 +140,4 @@ fun TurnFlashOverlay(
             )
         }
     }
-}
-
-private fun diceFace(value: Int?): String = when (value) {
-    1 -> "⚀"
-    2 -> "⚁"
-    3 -> "⚂"
-    4 -> "⚃"
-    5 -> "⚄"
-    6 -> "⚅"
-    else -> "🎲"
 }
