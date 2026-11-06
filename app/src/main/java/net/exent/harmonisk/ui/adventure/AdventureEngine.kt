@@ -29,6 +29,7 @@ object AdventureTiming {
     const val HOLD_MS = 400L
     const val FLY_MS = 600L
     const val REVEAL_MS = HOLD_MS + FLY_MS
+    const val AUTO_PLAY_MS = 2_000L
     const val REWARD_MS = 2900L
     const val REWARD_FLY_MS = 700L
 

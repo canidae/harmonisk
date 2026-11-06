@@ -400,14 +400,8 @@ class AdventureViewModel @Inject constructor(
     fun onSongLoadFailed() {
         spinJob?.cancel()
         session.clear()
-        _state.update {
-            it.copy(
-                step = AdventureStep.MAP,
-                phase = AdventureTurnPhase.REVEALED,
-                loading = false,
-                error = R.string.adventure_load_failed
-            )
-        }
+        _state.update { it.copy(error = R.string.adventure_load_failed) }
+        advanceToNextPlayer()
     }
 
     fun consumeError() {
@@ -418,9 +412,14 @@ class AdventureViewModel @Inject constructor(
         spinJob?.cancel()
         session.clear()
         resultJob?.cancel()
+        advanceToNextPlayer()
+    }
+
+    private fun advanceToNextPlayer() {
         _state.update {
-            it.copy(step = AdventureStep.MAP, phase = AdventureTurnPhase.REVEALED, loading = false)
+            it.copy(currentPlayerIndex = nextPlayerIndex(it.currentPlayerIndex, it.players.size))
         }
+        beginTurn()
     }
 
     fun finishWhack(hits: Int) {
