@@ -34,6 +34,7 @@ enum class WhackEmoji(val emoji: String, @RawRes vararg val sounds: Int) {
 object WhackRules {
     const val MAX_LEVEL = 5
     const val GAME_MS = 180_000L
+    const val ADVENTURE_GAME_MS = 60_000L
     const val HIT_GAP_MS = 1_100L
     const val FREEZE_MS = 800L
     const val LEVEL_UP_MS = 1_400L

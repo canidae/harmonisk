@@ -3,6 +3,7 @@ package net.exent.harmonisk.ui.adventure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlin.random.Random
 
-enum class AdventureStep { PLAYERS, SONGS, MAP, PLAY, RESULTS }
+enum class AdventureStep { PLAYERS, SONGS, MAP, PLAY, WHACK, RESULTS }
 
 data class AdventureState(
     val step: AdventureStep = AdventureStep.PLAYERS,
@@ -33,11 +34,14 @@ data class AdventureState(
     val currentPlayerIndex: Int = 0,
     val currentSong: MelodyRepository.MelodyInfo? = null,
     val songPool: List<MelodyRepository.MelodyInfo> = emptyList(),
-    val phase: AdventureTurnPhase = AdventureTurnPhase.REVEALED,
+    val phase: AdventureTurnPhase = AdventureTurnPhase.ROLLING,
+    val diceValue: Int? = null,
+    val goAgain: Boolean = false,
     val moveFrom: Int = 0,
+    val spinDurationMs: Long = AdventureTiming.SPIN_MS,
     val currentLevel: Int = 1,
-    val currentBonusSong: Boolean = false,
     val mapSeed: Long = 0L,
+    val fieldRewards: List<AdventureReward?> = emptyList(),
     val reward: AdventureReward? = null,
     val finisherId: String? = null,
     val levelUp: Int? = null,
@@ -73,6 +77,7 @@ class AdventureViewModel @Inject constructor(
 
     private var songPool: List<MelodyRepository.MelodyInfo> = emptyList()
     private var turnJob: Job? = null
+    private var spinJob: Job? = null
     private var resultJob: Job? = null
     private var lastResultId = 0L
 
@@ -137,9 +142,10 @@ class AdventureViewModel @Inject constructor(
     fun startGame() {
         val snapshot = _state.value
         val selectedProfiles = profiles.value.filter { it.id in snapshot.selectedPlayerIds }
-        songPool = melodies.value.filter { it.id in snapshot.selectedSongIds }
-        if (selectedProfiles.isEmpty() || songPool.isEmpty()) return
+        val selectedSongs = melodies.value.filter { it.id in snapshot.selectedSongIds }
+        if (selectedProfiles.isEmpty() || selectedSongs.isEmpty()) return
 
+        songPool = selectedSongs
         val players = selectedProfiles.map { profile ->
             AdventurePlayer(
                 profileId = profile.id,
@@ -147,9 +153,10 @@ class AdventureViewModel @Inject constructor(
                 colorIndex = profiles.value.indexOf(profile),
                 emoji = profile.emoji,
                 position = 1,
-                songQueue = songPool.map { it.id }.shuffled(random)
+                songQueue = selectedSongs.map { it.id }.shuffled(random)
             )
         }
+        val mapSeed = random.nextLong()
         val first = random.nextInt(players.size)
         _state.update {
             it.copy(
@@ -157,18 +164,184 @@ class AdventureViewModel @Inject constructor(
                 players = players,
                 currentPlayerIndex = first,
                 currentSong = null,
-                songPool = songPool,
+                songPool = selectedSongs,
+                phase = AdventureTurnPhase.ROLLING,
+                diceValue = null,
+                goAgain = false,
+                moveFrom = players[first].position,
+                spinDurationMs = AdventureTiming.SPIN_MS,
+                fieldRewards = generateFieldRewards(Random(mapSeed)),
                 currentLevel = 1,
-                currentBonusSong = false,
-                mapSeed = random.nextLong(),
+                mapSeed = mapSeed,
                 reward = null,
                 finisherId = null,
                 levelUp = null,
-                loading = true,
+                loading = false,
                 error = null
             )
         }
-        beginTurn()
+    }
+
+    fun rollDice() {
+        val snapshot = _state.value
+        if (snapshot.phase != AdventureTurnPhase.ROLLING || snapshot.loading) return
+        val player = snapshot.currentPlayer ?: return
+        val dice = random.nextInt(1, 7)
+        _state.update { it.copy(diceValue = dice, phase = AdventureTurnPhase.DICE) }
+        turnJob?.cancel()
+        turnJob = viewModelScope.launch {
+            delay(AdventureTiming.DICE_SHOW_MS)
+            val landing = resolveLanding(player, dice, snapshot.fieldRewards)
+            val players = snapshot.players.toMutableList().also { it[snapshot.currentPlayerIndex] = landing.player }
+            _state.update {
+                it.copy(
+                    players = players,
+                    phase = AdventureTurnPhase.MOVING,
+                    moveFrom = player.position
+                )
+            }
+            delay(AdventureTiming.walkMs(dice))
+            revealLanding(landing)
+        }
+    }
+
+    private fun revealLanding(landing: AdventureLanding) {
+        val snapshot = _state.value
+        val index = snapshot.currentPlayerIndex
+        val player = snapshot.players.getOrNull(index) ?: return
+        if (landing.reachedGoal) {
+            val finished = player.withBonus(ADVENTURE_CASTLE_BONUS)
+            _state.update {
+                it.copy(
+                    players = snapshot.players.toMutableList().also { list -> list[index] = finished },
+                    phase = AdventureTurnPhase.EVENT,
+                    reward = null,
+                    finisherId = finished.profileId
+                )
+            }
+            resultJob?.cancel()
+            resultJob = viewModelScope.launch {
+                delay(900)
+                _state.update { it.copy(step = AdventureStep.RESULTS) }
+            }
+            return
+        }
+        when (val reward = landing.reward) {
+            is AdventureReward.Stickers -> {
+                val rewarded = player.withReward(reward)
+                _state.update {
+                    it.copy(
+                        players = snapshot.players.toMutableList().also { list -> list[index] = rewarded },
+                        phase = AdventureTurnPhase.EVENT,
+                        reward = reward
+                    )
+                }
+                resultJob?.cancel()
+                resultJob = viewModelScope.launch {
+                    delay(AdventureTiming.REWARD_MS + AdventureTiming.REWARD_FLY_MS + 250L)
+                    _state.update { it.copy(reward = null) }
+                    advanceAfterReward(reward)
+                }
+            }
+            AdventureReward.GoAgain -> {
+                _state.update {
+                    it.copy(phase = AdventureTurnPhase.EVENT, reward = AdventureReward.GoAgain)
+                }
+                resultJob?.cancel()
+                resultJob = viewModelScope.launch {
+                    delay(AdventureTiming.REWARD_MS + AdventureTiming.REWARD_FLY_MS + 250L)
+                    _state.update { it.copy(reward = null) }
+                    advanceAfterReward(AdventureReward.GoAgain)
+                }
+            }
+            AdventureReward.Whack -> {
+                _state.update {
+                    it.copy(step = AdventureStep.WHACK, phase = AdventureTurnPhase.EVENT, reward = null)
+                }
+            }
+            AdventureReward.Song -> startSongTurn(player)
+            null -> {
+                val next = nextPlayerIndex(index, snapshot.players.size)
+                _state.update { it.copy(currentPlayerIndex = next, currentSong = null) }
+                beginTurn()
+            }
+        }
+    }
+
+    private fun startSongTurn(player: AdventurePlayer) {
+        val snapshot = _state.value
+        val index = snapshot.currentPlayerIndex
+        val (songId, withSong) = nextSong(player, songPool.map { it.id }, random)
+        val song = songPool.find { it.id == songId }
+        if (song == null) {
+            val next = nextPlayerIndex(index, snapshot.players.size)
+            _state.update { it.copy(currentPlayerIndex = next) }
+            beginTurn()
+            return
+        }
+        val players = snapshot.players.toMutableList().also { it[index] = withSong }
+        val spinDuration = AdventureTiming.SPIN_MS + random.nextLong(AdventureTiming.SPIN_EXTRA_MS + 1)
+        _state.update {
+            it.copy(
+                players = players,
+                currentSong = song,
+                phase = AdventureTurnPhase.PULLING,
+                spinDurationMs = spinDuration,
+                currentLevel = 1,
+                loading = true,
+                step = AdventureStep.MAP,
+                reward = null
+            )
+        }
+        turnJob?.cancel()
+        turnJob = viewModelScope.launch {
+            try {
+                val instrument = settingsRepository.settings.first().instrumentName
+                val level = melodySettingsRepository
+                    .getSettings(player.profileId, song.id, instrument)
+                    .first()
+                    .unlockedLevel
+                    .coerceIn(1, 5)
+                _state.update { it.copy(currentLevel = level, loading = false) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update { it.copy(loading = false) }
+            }
+        }
+    }
+
+    private fun advanceAfterReward(reward: AdventureReward?) {
+        val snapshot = _state.value
+        if (reward is AdventureReward.GoAgain) {
+            beginTurn(goAgain = true)
+        } else {
+            val next = nextPlayerIndex(snapshot.currentPlayerIndex, snapshot.players.size)
+            _state.update { it.copy(currentPlayerIndex = next) }
+            beginTurn()
+        }
+    }
+
+    private fun beginTurn(goAgain: Boolean = false) {
+        spinJob?.cancel()
+        turnJob?.cancel()
+        val snapshot = _state.value
+        val player = snapshot.players.getOrNull(snapshot.currentPlayerIndex) ?: return
+        _state.update {
+            it.copy(
+                step = AdventureStep.MAP,
+                phase = AdventureTurnPhase.ROLLING,
+                diceValue = null,
+                goAgain = goAgain,
+                moveFrom = player.position,
+                currentSong = null,
+                currentLevel = 1,
+                spinDurationMs = AdventureTiming.SPIN_MS,
+                reward = null,
+                levelUp = null,
+                loading = false
+            )
+        }
     }
 
     fun playCurrentSong() {
@@ -183,16 +356,38 @@ class AdventureViewModel @Inject constructor(
             playerName = player.name,
             melodyId = song.id,
             melodyName = song.name,
-            level = snapshot.currentLevel,
-            bonusSong = snapshot.currentBonusSong
+            level = snapshot.currentLevel
         )
         session.begin(turn)
         _state.update { it.copy(step = AdventureStep.PLAY, turnId = turn.id) }
     }
 
+    fun pullLever() {
+        val snapshot = _state.value
+        if (snapshot.phase != AdventureTurnPhase.PULLING || snapshot.loading) return
+        if (snapshot.currentSong == null) return
+        _state.update { it.copy(phase = AdventureTurnPhase.SPINNING) }
+        val spinDuration = snapshot.spinDurationMs
+        spinJob?.cancel()
+        spinJob = viewModelScope.launch {
+            delay(spinDuration)
+            _state.update { it.copy(phase = AdventureTurnPhase.HIGHLIGHT) }
+            delay(AdventureTiming.REVEAL_MS)
+            _state.update { it.copy(phase = AdventureTurnPhase.REVEALED) }
+        }
+    }
+
     fun onSongLoadFailed() {
+        spinJob?.cancel()
         session.clear()
-        _state.update { it.copy(step = AdventureStep.MAP, phase = AdventureTurnPhase.REVEALED, loading = false, error = R.string.adventure_load_failed) }
+        _state.update {
+            it.copy(
+                step = AdventureStep.MAP,
+                phase = AdventureTurnPhase.REVEALED,
+                loading = false,
+                error = R.string.adventure_load_failed
+            )
+        }
     }
 
     fun consumeError() {
@@ -200,32 +395,39 @@ class AdventureViewModel @Inject constructor(
     }
 
     fun abandonSong() {
+        spinJob?.cancel()
         session.clear()
         resultJob?.cancel()
-        _state.update { it.copy(step = AdventureStep.MAP, phase = AdventureTurnPhase.REVEALED, loading = false) }
+        _state.update {
+            it.copy(step = AdventureStep.MAP, phase = AdventureTurnPhase.REVEALED, loading = false)
+        }
     }
 
-    private fun advanceAfterReward(reward: AdventureReward?) {
+    fun finishWhack(hits: Int) {
         val snapshot = _state.value
-        val current = snapshot.currentPlayer ?: return
-        _state.update { it.copy(reward = null) }
-        if (reward is AdventureReward.GoAgain && current.position < ADVENTURE_GOAL) {
-            beginTurn(bonus = true)
-        } else {
-            val next = nextPlayerIndex(snapshot.currentPlayerIndex, snapshot.players.size)
-            _state.update {
-                it.copy(
-                    currentPlayerIndex = next,
-                    currentBonusSong = false
-                )
-            }
-            beginTurn()
+        if (snapshot.step != AdventureStep.WHACK) return
+        val index = snapshot.currentPlayerIndex
+        val player = snapshot.players.getOrNull(index) ?: return
+        val rewarded = player.withBonus(hits.coerceAtLeast(0))
+        val players = snapshot.players.toMutableList().also { list -> list[index] = rewarded }
+        val next = nextPlayerIndex(index, players.size)
+        _state.update {
+            it.copy(
+                step = AdventureStep.MAP,
+                players = players,
+                currentPlayerIndex = next,
+                reward = null,
+                currentSong = null,
+                phase = AdventureTurnPhase.ROLLING
+            )
         }
+        beginTurn()
     }
 
     fun restart() {
         resultJob?.cancel()
         turnJob?.cancel()
+        spinJob?.cancel()
         session.clear()
         _state.update {
             it.copy(
@@ -234,11 +436,18 @@ class AdventureViewModel @Inject constructor(
                 currentPlayerIndex = 0,
                 currentSong = null,
                 songPool = emptyList(),
-                phase = AdventureTurnPhase.REVEALED,
+                phase = AdventureTurnPhase.ROLLING,
+                diceValue = null,
+                goAgain = false,
+                moveFrom = 0,
+                spinDurationMs = AdventureTiming.SPIN_MS,
+                fieldRewards = emptyList(),
+                currentLevel = 1,
+                mapSeed = 0L,
                 reward = null,
                 finisherId = null,
-                currentBonusSong = false,
-                mapSeed = 0L
+                levelUp = null,
+                loading = false
             )
         }
     }
@@ -246,54 +455,8 @@ class AdventureViewModel @Inject constructor(
     fun clear() {
         resultJob?.cancel()
         turnJob?.cancel()
+        spinJob?.cancel()
         session.clear()
-    }
-
-    private fun beginTurn(bonus: Boolean = false) {
-        turnJob?.cancel()
-        val snapshot = _state.value
-        val index = snapshot.currentPlayerIndex
-        val player = snapshot.players.getOrNull(index) ?: return
-        val (songId, withSong) = nextSong(player, songPool.map { it.id }, random)
-        val song = songPool.find { it.id == songId }
-        if (song == null) {
-            _state.update { it.copy(loading = false, error = R.string.adventure_load_failed) }
-            return
-        }
-        val players = snapshot.players.toMutableList().also { it[index] = withSong }
-        _state.update {
-            it.copy(
-                players = players,
-                currentSong = song,
-                phase = AdventureTurnPhase.PULLING,
-                moveFrom = player.position,
-                currentLevel = 1,
-                currentBonusSong = bonus,
-                reward = null,
-                levelUp = null,
-                loading = true,
-                step = AdventureStep.MAP
-            )
-        }
-        turnJob = viewModelScope.launch {
-            launch {
-                val instrument = settingsRepository.settings.first().instrumentName
-                val level = melodySettingsRepository
-                    .getSettings(player.profileId, song.id, instrument)
-                    .first()
-                    .unlockedLevel
-                    .coerceIn(1, 5)
-                _state.update {
-                    it.copy(currentLevel = level, loading = false)
-                }
-            }
-            delay(AdventureTiming.LEVER_MS)
-            _state.update { it.copy(phase = AdventureTurnPhase.SPINNING) }
-            delay(AdventureTiming.SPIN_MS)
-            _state.update { it.copy(phase = AdventureTurnPhase.HIGHLIGHT) }
-            delay(AdventureTiming.REVEAL_MS)
-            _state.update { it.copy(phase = AdventureTurnPhase.REVEALED) }
-        }
     }
 
     private fun onResult(result: AdventureTurnResult) {
@@ -301,61 +464,24 @@ class AdventureViewModel @Inject constructor(
         val index = snapshot.players.indexOfFirst { it.profileId == result.turn.playerId }
         if (index < 0) return
         val played = snapshot.players[index].withScore(result.rawScore)
-        val advanced = played.advanced()
-        val reachedGoal = advanced.position >= ADVENTURE_GOAL
-        val reward = if (reachedGoal) null else rewardFor(advanced.position, random)
-        val rewarded = reward?.let { advanced.withReward(it) } ?: advanced
-        val finisherId = if (reachedGoal) advanced.profileId else snapshot.finisherId
         session.consumeResult()
         resultJob?.cancel()
-
-        if (reachedGoal) {
-            _state.update {
-                it.copy(
-                    step = AdventureStep.MAP,
-                    players = snapshot.players.toMutableList().also { list -> list[index] = advanced },
-                    phase = AdventureTurnPhase.MOVING,
-                    moveFrom = played.position,
-                    reward = null,
-                    finisherId = finisherId,
-                    levelUp = result.newlyUnlockedLevel,
-                    currentBonusSong = result.turn.bonusSong
-                )
-            }
-            resultJob = viewModelScope.launch {
-                delay(AdventureTiming.WALK_MS)
-                _state.update { it.copy(phase = AdventureTurnPhase.REVEALED) }
-                delay(900)
-                _state.update { it.copy(step = AdventureStep.RESULTS) }
-            }
-            return
-        }
-
         _state.update {
             it.copy(
                 step = AdventureStep.MAP,
-                players = snapshot.players.toMutableList()
-                    .also { list -> list[index] = rewarded.copy(position = played.position) },
-                phase = AdventureTurnPhase.REVEALED,
-                reward = reward,
-                finisherId = finisherId,
+                players = snapshot.players.toMutableList().also { list -> list[index] = played },
+                phase = AdventureTurnPhase.EVENT,
+                reward = null,
                 levelUp = result.newlyUnlockedLevel,
-                currentBonusSong = result.turn.bonusSong
+                currentSong = null,
+                loading = false
             )
         }
         resultJob = viewModelScope.launch {
-            delay(AdventureTiming.REWARD_MS + AdventureTiming.REWARD_FLY_MS + 250L)
-            _state.update {
-                it.copy(
-                    players = _state.value.players.toMutableList().also { list -> list[index] = rewarded },
-                    phase = AdventureTurnPhase.MOVING,
-                    moveFrom = played.position,
-                    reward = null
-                )
-            }
-            delay(AdventureTiming.WALK_MS)
-            _state.update { it.copy(phase = AdventureTurnPhase.REVEALED) }
-            advanceAfterReward(reward)
+            delay(900)
+            val next = nextPlayerIndex(index, snapshot.players.size)
+            _state.update { it.copy(currentPlayerIndex = next, currentSong = null, levelUp = null) }
+            beginTurn()
         }
     }
 }

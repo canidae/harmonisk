@@ -2,24 +2,33 @@ package net.exent.harmonisk.ui.adventure
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,8 +52,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -56,16 +67,17 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import net.exent.harmonisk.R
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
+import kotlin.random.Random
 
 private val ReelWidth = 250.dp
 private val LeverWidth = 100.dp
 private val ReelHeight = 138.dp
 private val ReelItemHeight = 46.dp
 private const val ReelFontSize = 20f
-private const val SpinItems = 22f
 private val CabinetWidth = ReelWidth + LeverWidth
 private val ReelPanel = Color(0xFF1B1733)
 
@@ -103,17 +115,26 @@ fun SongRevealOverlay(
     mapCenter: Offset,
     songAnchor: Offset,
     origin: Offset,
+    pullEnabled: Boolean = true,
+    onPull: () -> Unit = {},
     onTick: (Float) -> Unit = {}
 ) {
     val song = state.currentSong ?: return
     val songs = state.songPool
     if (songs.isEmpty()) return
     val targetIndex = songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
-    val distance = if (SpinItems.toInt() % songs.size == 0) SpinItems.toInt() + 1 else SpinItems.toInt()
-    val startScroll = ((targetIndex - distance) % songs.size + songs.size) % songs.size
-    val endScroll = (startScroll + distance).toFloat()
+    val startIndex = remember(
+        song.id,
+        state.currentPlayerIndex,
+        state.moveFrom,
+        songs.size
+    ) { Random.nextInt(songs.size) }
+    val startScroll = startIndex.toFloat()
+    val targetOffset = ((targetIndex - startIndex) % songs.size + songs.size) % songs.size
+    val distance = targetOffset + songs.size
+    val endScroll = (startIndex + distance).toFloat()
 
-    val spin = remember { Animatable(startScroll.toFloat()) }
+    val spin = remember { Animatable(startScroll) }
     val lever = remember { Animatable(0f) }
     val fly = remember { Animatable(0f) }
     var flying by remember { mutableStateOf(false) }
@@ -125,23 +146,15 @@ fun SongRevealOverlay(
                 flying = false
                 fly.snapTo(0f)
                 lever.snapTo(0f)
-                spin.snapTo(startScroll.toFloat())
-                delay(AdventureTiming.LEVER_HOLD_MS)
-                lever.animateTo(
-                    1f,
-                    tween(
-                        (AdventureTiming.LEVER_MS - AdventureTiming.LEVER_HOLD_MS - 40).toInt(),
-                        easing = CubicBezierEasing(0.25f, 1.4f, 0.5f, 1f)
-                    )
-                )
+                spin.snapTo(startScroll)
             }
             AdventureTurnPhase.SPINNING -> {
                 lever.snapTo(1f)
-                var tickedRow = startScroll - 1
+                var tickedRow = startScroll.toInt() - 1
                 val lastRow = endScroll.toInt() - 1
                 spin.animateTo(
                     endScroll,
-                    tween(AdventureTiming.SPIN_MS.toInt(), easing = SlotEasing)
+                    tween(state.spinDurationMs.toInt(), easing = SlotEasing)
                 ) {
                     val row = value.toInt().coerceAtMost(lastRow)
                     if (row != tickedRow) {
@@ -162,7 +175,7 @@ fun SongRevealOverlay(
                 flying = false
                 fly.snapTo(0f)
                 lever.snapTo(0f)
-                spin.snapTo(startScroll.toFloat())
+                spin.snapTo(startScroll)
             }
         }
     }
@@ -200,12 +213,54 @@ fun SongRevealOverlay(
                     songs = songs.map { it.name },
                     scroll = spin.value,
                     highlighted = state.phase == AdventureTurnPhase.HIGHLIGHT,
-                    modifier = Modifier.width(ReelWidth).fillMaxHeight()
+                    hint = if (state.phase == AdventureTurnPhase.PULLING) {
+                        stringResource(R.string.adventure_pull_lever)
+                    } else {
+                        null
+                    },
+                    modifier = Modifier
+                        .width(ReelWidth)
+                        .fillMaxHeight()
+                        .clickable(
+                            enabled = state.phase == AdventureTurnPhase.PULLING && pullEnabled,
+                            onClick = onPull
+                        )
                 )
                 SlotLever(
                     pull = lever.value,
+                    enabled = state.phase == AdventureTurnPhase.PULLING && pullEnabled,
+                    onPull = onPull,
                     modifier = Modifier.width(LeverWidth).fillMaxHeight()
                 )
+            }
+        }
+        AnimatedVisibility(
+            visible = showReel && state.phase == AdventureTurnPhase.PULLING,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .offset {
+                    IntOffset(
+                        0,
+                        (center.y - cabinetHeightPx / 2f - 44.dp.toPx()).roundToInt()
+                    )
+                }
+                .fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                TextButton(
+                    onClick = onPull,
+                    enabled = pullEnabled,
+                    colors = ButtonDefaults.textButtonColors(contentColor = StorybookGold)
+                ) {
+                    Text(
+                        text = stringResource(R.string.adventure_pull_lever),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
         if (canFly) {
@@ -235,8 +290,41 @@ fun SongRevealOverlay(
 }
 
 @Composable
-private fun SlotLever(pull: Float, modifier: Modifier = Modifier) {
-    Canvas(modifier) {
+private fun SlotLever(
+    pull: Float,
+    enabled: Boolean,
+    onPull: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var dragPull by remember { mutableStateOf(0f) }
+    LaunchedEffect(enabled) {
+        if (!enabled) dragPull = 0f
+    }
+    val density = LocalDensity.current
+    val effectivePull = if (dragPull > 0f) dragPull else pull
+    val gestureModifier = if (enabled) {
+        Modifier.pointerInput(enabled, density) {
+            detectVerticalDragGestures(
+                onDragStart = { dragPull = 0f },
+                onVerticalDrag = { change, amount ->
+                    change.consume()
+                    dragPull = (dragPull + amount / with(density) { 72.dp.toPx() }).coerceIn(0f, 1f)
+                },
+                onDragEnd = {
+                    if (dragPull >= 0.55f) {
+                        dragPull = 1f
+                        onPull()
+                    } else {
+                        dragPull = 0f
+                    }
+                },
+                onDragCancel = { dragPull = 0f }
+            )
+        }
+    } else {
+        Modifier
+    }
+    Canvas(modifier.then(gestureModifier)) {
         val height = size.height
         val plateLeft = 4.dp.toPx()
         val plateWidth = 46.dp.toPx()
@@ -245,7 +333,7 @@ private fun SlotLever(pull: Float, modifier: Modifier = Modifier) {
         val armLength = 70.dp.toPx()
         val armWidth = 9.dp.toPx()
         val knobRadius = 13.dp.toPx()
-        val angle = 4f + 91f * pull
+        val angle = 4f + 91f * effectivePull
 
         drawRoundRect(
             brush = Brush.verticalGradient(listOf(Color(0xFF332B4E), Color(0xFF141020))),
@@ -351,13 +439,14 @@ private fun SongReel(
     songs: List<String>,
     scroll: Float,
     highlighted: Boolean,
+    hint: String?,
     modifier: Modifier = Modifier
 ) {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val style = remember { TextStyle(fontSize = ReelFontSize.sp, fontWeight = FontWeight.Black) }
+    val maxWidth = with(density) { (ReelWidth - 32.dp).toPx().roundToInt() }
     val layouts = remember(songs, style) {
-        val maxWidth = with(density) { (ReelWidth - 32.dp).toPx().roundToInt() }
         songs.map {
             measurer.measure(
                 text = it,
@@ -368,6 +457,27 @@ private fun SongReel(
             )
         }
     }
+    val hintLayout = remember(hint, style) {
+        hint?.let {
+            measurer.measure(
+                text = it,
+                style = style,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                constraints = Constraints(maxWidth = maxWidth)
+            )
+        }
+    }
+    val hintTransition = rememberInfiniteTransition(label = "reel_hint")
+    val hintAlpha = hintTransition.animateFloat(
+        initialValue = 0.55f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(750, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "reel_hint_alpha"
+    )
 
     Canvas(modifier.clip(RoundedCornerShape(20.dp))) {
         val width = size.width
@@ -393,6 +503,7 @@ private fun SongReel(
         drawLine(StorybookGold.copy(alpha = 0.45f), Offset(10.dp.toPx(), bandBottom), Offset(width - 10.dp.toPx(), bandBottom), 1.dp.toPx())
 
         val count = layouts.size
+        val reelAlpha = if (hint != null) 0.5f else 1f
         if (count > 0) {
             val whole = floor(scroll).toInt()
             val fraction = scroll - whole
@@ -403,7 +514,7 @@ private fun SongReel(
                 val distance = abs(slot - fraction)
                 val layout = layouts[index]
                 val isWinner = highlighted && distance < 0.5f
-                val alpha = (1f - distance * 0.34f).coerceIn(0f, 1f)
+                val alpha = (1f - distance * 0.34f).coerceIn(0f, 1f) * reelAlpha
                 val itemScale = (1f - distance * 0.10f).coerceAtLeast(0.65f)
                 scale(itemScale, pivot = Offset(width / 2f, y)) {
                     drawText(
@@ -432,6 +543,26 @@ private fun SongReel(
                 1f to Color.Black.copy(alpha = 0.4f)
             )
         )
+        hintLayout?.let { layout ->
+            drawRoundRect(
+                color = ReelPanel.copy(alpha = 0.98f),
+                topLeft = Offset(8.dp.toPx(), bandTop),
+                size = Size(width - 16.dp.toPx(), itemHeight),
+                cornerRadius = CornerRadius(12.dp.toPx())
+            )
+            drawRoundRect(
+                color = StorybookGold.copy(alpha = 0.6f),
+                topLeft = Offset(8.dp.toPx(), bandTop),
+                size = Size(width - 16.dp.toPx(), itemHeight),
+                cornerRadius = CornerRadius(12.dp.toPx()),
+                style = Stroke(1.5.dp.toPx())
+            )
+            drawText(
+                textLayoutResult = layout,
+                color = StorybookGold.copy(alpha = hintAlpha.value),
+                topLeft = Offset((width - layout.size.width) / 2f, centerY - layout.size.height / 2f)
+            )
+        }
         drawRoundRect(
             color = StorybookGold.copy(alpha = 0.35f),
             cornerRadius = corner,

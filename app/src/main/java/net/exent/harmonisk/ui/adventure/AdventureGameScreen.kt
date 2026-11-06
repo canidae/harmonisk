@@ -1,15 +1,18 @@
 package net.exent.harmonisk.ui.adventure
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,10 +22,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -36,22 +40,25 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.exent.harmonisk.R
+import net.exent.harmonisk.ui.components.KeepScreenOn
 import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 import kotlinx.coroutines.delay
-import net.exent.harmonisk.ui.components.KeepScreenOn
 
 @Composable
 fun AdventureGameScreen(
     state: AdventureState,
     onPlay: () -> Unit,
+    onPull: () -> Unit,
+    onRoll: () -> Unit,
     onBack: () -> Unit
 ) {
     KeepScreenOn()
     var mapCenter by remember { mutableStateOf(Offset.Unspecified) }
     var songAnchor by remember { mutableStateOf(Offset.Unspecified) }
+    var flashAnchor by remember { mutableStateOf(Offset.Unspecified) }
     var avatarAnchor by remember { mutableStateOf(Offset.Unspecified) }
     var origin by remember { mutableStateOf(Offset.Zero) }
     val context = LocalContext.current
@@ -62,19 +69,16 @@ fun AdventureGameScreen(
     LaunchedEffect(state.phase) {
         when (state.phase) {
             AdventureTurnPhase.MOVING -> sounds.play(AdventureSound.Step, 0.55f)
-            AdventureTurnPhase.PULLING -> {
-                delay(AdventureTiming.LEVER_HOLD_MS)
-                sounds.play(AdventureSound.Lever, 0.7f)
-            }
+            AdventureTurnPhase.SPINNING -> sounds.play(AdventureSound.Lever, 0.7f)
+            AdventureTurnPhase.DICE -> sounds.play(AdventureSound.Tick, 0.4f)
             else -> Unit
         }
     }
     LaunchedEffect(state.reward) {
         when (state.reward) {
             is AdventureReward.Stickers -> sounds.play(AdventureSound.Collect, 0.75f)
-            is AdventureReward.Points -> sounds.play(AdventureSound.Collect, 0.65f)
             AdventureReward.GoAgain -> sounds.play(AdventureSound.Bonus, 0.55f)
-            null -> Unit
+            AdventureReward.Song, AdventureReward.Whack, null -> Unit
         }
     }
     LaunchedEffect(Unit) {
@@ -133,6 +137,9 @@ fun AdventureGameScreen(
                     )
                 }
             }
+            AdventureLegend(
+                Modifier.padding(start = 12.dp, top = 2.dp, bottom = 2.dp)
+            )
             Box(
                 Modifier
                     .weight(1f)
@@ -143,6 +150,7 @@ fun AdventureGameScreen(
                     players = state.players,
                     currentPlayerId = state.currentPlayer?.profileId,
                     mapSeed = state.mapSeed,
+                    fieldRewards = state.fieldRewards,
                     moveFrom = state.moveFrom,
                     moving = state.phase == AdventureTurnPhase.MOVING,
                     modifier = Modifier.fillMaxSize()
@@ -151,16 +159,28 @@ fun AdventureGameScreen(
             CurrentTurnCard(
                 state = state,
                 onPlay = onPlay,
+                onPull = onPull,
+                onRoll = onRoll,
                 onSongAnchor = { songAnchor = it },
+                onFlashAnchor = { flashAnchor = it },
                 onAvatarAnchor = { avatarAnchor = it }
             )
         }
 
+        TurnFlashOverlay(
+            state = state,
+            mapCenter = mapCenter,
+            flashAnchor = flashAnchor,
+            origin = origin,
+            onRoll = onRoll
+        )
         SongRevealOverlay(
             state = state,
             mapCenter = mapCenter,
             songAnchor = songAnchor,
             origin = origin,
+            pullEnabled = !state.loading,
+            onPull = onPull,
             onTick = { volume -> sounds.play(AdventureSound.Tick, volume) }
         )
         RewardOverlay(
@@ -176,13 +196,60 @@ fun AdventureGameScreen(
 private fun CurrentTurnCard(
     state: AdventureState,
     onPlay: () -> Unit,
+    onPull: () -> Unit,
+    onRoll: () -> Unit,
     onSongAnchor: (Offset) -> Unit,
+    onFlashAnchor: (Offset) -> Unit,
     onAvatarAnchor: (Offset) -> Unit
 ) {
     val player = state.currentPlayer ?: return
     val color = ADVENTURE_PLAYER_COLORS[player.colorIndex % ADVENTURE_PLAYER_COLORS.size]
-    val revealed = state.phase == AdventureTurnPhase.REVEALED
-    val levelAlpha by animateFloatAsState(if (revealed) 1f else 0f, label = "level_alpha")
+    val levelVisible = state.currentSong != null && !state.loading
+    val levelAlpha by animateFloatAsState(if (levelVisible) 1f else 0f, label = "level_alpha")
+    val status = when (state.phase) {
+        AdventureTurnPhase.ROLLING -> stringResource(R.string.adventure_throw_dice)
+        AdventureTurnPhase.DICE, AdventureTurnPhase.MOVING ->
+            state.diceValue?.let { stringResource(R.string.adventure_move, it) }.orEmpty()
+        AdventureTurnPhase.EVENT -> when {
+            state.finisherId != null -> stringResource(R.string.adventure_castle_reached)
+            state.reward is AdventureReward.Stickers -> stringResource(R.string.adventure_legend_stickers)
+            state.reward is AdventureReward.GoAgain -> stringResource(R.string.adventure_reward_go_again_short)
+            else -> stringResource(R.string.adventure_song_complete)
+        }
+        AdventureTurnPhase.PULLING, AdventureTurnPhase.SPINNING, AdventureTurnPhase.HIGHLIGHT ->
+            stringResource(R.string.adventure_choose_song)
+        AdventureTurnPhase.REVEALED -> state.currentSong?.name.orEmpty()
+    }
+    val actionLabel: String
+    val actionEnabled: Boolean
+    val action: () -> Unit
+    when (state.phase) {
+        AdventureTurnPhase.ROLLING -> {
+            actionLabel = stringResource(R.string.adventure_throw_dice)
+            actionEnabled = true
+            action = onRoll
+        }
+        AdventureTurnPhase.DICE, AdventureTurnPhase.MOVING, AdventureTurnPhase.EVENT -> {
+            actionLabel = status
+            actionEnabled = false
+            action = {}
+        }
+        AdventureTurnPhase.PULLING -> {
+            actionLabel = stringResource(R.string.adventure_pull_lever)
+            actionEnabled = !state.loading
+            action = onPull
+        }
+        AdventureTurnPhase.SPINNING, AdventureTurnPhase.HIGHLIGHT -> {
+            actionLabel = stringResource(R.string.adventure_spinning)
+            actionEnabled = false
+            action = {}
+        }
+        AdventureTurnPhase.REVEALED -> {
+            actionLabel = stringResource(R.string.adventure_play_song)
+            actionEnabled = true
+            action = onPlay
+        }
+    }
     StorybookCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -194,14 +261,24 @@ private fun CurrentTurnCard(
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.adventure_turn, player.name),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.adventure_turn, player.name),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = if (player.stickers.isEmpty()) Modifier else Modifier.widthIn(max = 140.dp)
+                    )
+                    if (player.stickers.isNotEmpty()) {
+                        Spacer(Modifier.width(8.dp))
+                        StickerStrip(
+                            stickers = player.stickers,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -209,45 +286,91 @@ private fun CurrentTurnCard(
                         .onGloballyPositioned { coordinates ->
                             val bounds = coordinates.boundsInRoot()
                             onSongAnchor(Offset(bounds.left, bounds.center.y))
+                            onFlashAnchor(bounds.center)
                         },
                     contentAlignment = Alignment.CenterStart
                 ) {
                     Text(
-                        text = if (revealed) state.currentSong?.name.orEmpty() else "",
+                        text = status,
                         style = MaterialTheme.typography.bodyMedium,
                         color = color,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
-            AdventurePill(
-                text = stringResource(R.string.adventure_level, state.currentLevel),
-                color = color,
-                modifier = Modifier.alpha(levelAlpha)
-            )
+            Spacer(Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                AdventurePill(
+                    text = stringResource(R.string.adventure_level, state.currentLevel),
+                    color = color,
+                    modifier = Modifier.alpha(levelAlpha)
+                )
+                if (state.diceValue != null) {
+                    Spacer(Modifier.height(4.dp))
+                    AdventurePill(
+                        text = "🎲 ${state.diceValue}",
+                        color = StorybookGold
+                    )
+                }
+            }
         }
         Spacer(Modifier.height(12.dp))
         Button(
-            onClick = onPlay,
-            enabled = revealed && !state.loading && state.currentSong != null && state.reward == null && state.finisherId == null,
+            onClick = action,
+            enabled = actionEnabled,
             modifier = Modifier.fillMaxWidth().height(54.dp),
             shape = RoundedCornerShape(18.dp),
             colors = ButtonDefaults.buttonColors(containerColor = color, contentColor = Color(0xFF151225))
         ) {
-            if (state.loading) {
+            if (state.loading && state.phase == AdventureTurnPhase.PULLING) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
                     strokeWidth = 2.dp,
                     color = Color(0xFF151225)
                 )
             } else {
-                Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
+                if (state.phase == AdventureTurnPhase.REVEALED) {
+                    Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                }
                 Text(
-                    text = stringResource(R.string.adventure_play_song),
+                    text = actionLabel,
                     fontWeight = FontWeight.Black
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StickerStrip(stickers: List<AdventureSticker>, modifier: Modifier = Modifier) {
+    val counts = remember(stickers) {
+        stickers.groupingBy { it }.eachCount().entries.sortedBy { it.key.ordinal }
+    }
+    Row(
+        modifier = modifier.horizontalScroll(rememberScrollState()),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        counts.forEach { (sticker, count) ->
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(sticker.emoji, fontSize = 15.sp)
+                if (count > 1) {
+                    Spacer(Modifier.width(2.dp))
+                    Text(
+                        text = "×$count",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.75f)
+                    )
+                }
             }
         }
     }
@@ -264,9 +387,7 @@ private fun RewardOverlay(
     val levelUp = state.levelUp
     val emojis = when (reward) {
         is AdventureReward.Stickers -> reward.stickers.map { it.emoji }
-        is AdventureReward.Points -> listOf("⭐")
-        AdventureReward.GoAgain -> emptyList()
-        null -> emptyList()
+        AdventureReward.Song, AdventureReward.GoAgain, AdventureReward.Whack, null -> emptyList()
     }
     var center by remember { mutableStateOf(Offset.Unspecified) }
     var flying by remember { mutableStateOf(false) }
@@ -341,9 +462,8 @@ private fun RewardCard(reward: AdventureReward?, levelUp: Int?) {
                 is AdventureReward.Stickers -> reward.stickers.forEach { sticker ->
                     Text(sticker.emoji, fontSize = 30.sp)
                 }
-                is AdventureReward.Points -> Text("⭐", fontSize = 30.sp)
                 AdventureReward.GoAgain -> Text("🎲", fontSize = 30.sp)
-                null -> {}
+                AdventureReward.Song, AdventureReward.Whack, null -> {}
             }
         }
         if (reward is AdventureReward.Stickers) {
@@ -354,17 +474,6 @@ private fun RewardCard(reward: AdventureReward?, levelUp: Int?) {
                     reward.stickers.size,
                     reward.stickers.size
                 ),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = StorybookGold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        if (reward is AdventureReward.Points) {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.adventure_reward_points, reward.points),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = StorybookGold,

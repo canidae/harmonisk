@@ -27,36 +27,39 @@ class AdventureEngineTest {
     )
 
     @Test
-    fun `rewards are never granted at the castle`() {
-        repeat(50) {
-            assertNull(rewardFor(ADVENTURE_GOAL, Random(it)))
+    fun `the adventure has fifty fields and a castle`() {
+        assertEquals(50, ADVENTURE_FIELD_COUNT)
+        assertEquals(51, ADVENTURE_GOAL)
+    }
+
+    @Test
+    fun `rewards are preassigned to every field after the start`() {
+        val rewards = generateFieldRewards(Random(5))
+        assertEquals(ADVENTURE_FIELD_COUNT + 1, rewards.size)
+        assertNull(rewards[0])
+        assertNull(rewards[1])
+        (2..ADVENTURE_FIELD_COUNT).forEach { field ->
+            assertNotNull(rewards[field])
         }
     }
 
     @Test
-    fun `rewards are split between stickers, points and go again`() {
-        val kinds = (0 until 60).mapNotNull { seed ->
-            when (rewardFor(1, Random(seed))) {
-                is AdventureReward.Stickers -> "stickers"
-                is AdventureReward.Points -> "points"
-                AdventureReward.GoAgain -> "go"
-                null -> null
-            }
-        }.toSet()
-        assertEquals(setOf("stickers", "points", "go"), kinds)
-    }
-
-    @Test
-    fun `points rewards add to the bonus score`() {
-        val player = player("A", songScore = 50f).withReward(AdventureReward.Points(18))
-        assertEquals(18f, player.bonusScore)
-        assertEquals(68f, player.total)
+    fun `rewards are mostly songs with stickers, whack and throw again`() {
+        val rewards = List(10_000) { randomFieldReward(Random(it)) }
+        val songs = rewards.count { it is AdventureReward.Song }
+        val stickers = rewards.count { it is AdventureReward.Stickers }
+        val whack = rewards.count { it is AdventureReward.Whack }
+        val again = rewards.count { it is AdventureReward.GoAgain }
+        assertTrue(songs in 5_000..6_000)
+        assertTrue(stickers in 1_500..2_500)
+        assertTrue(whack in 1_000..2_000)
+        assertTrue(again in 500..1_500)
     }
 
     @Test
     fun `sticker rewards contain one to three distinct stickers`() {
-        repeat(50) { seed ->
-            val reward = rewardFor(1, Random(seed))
+        repeat(200) { seed ->
+            val reward = randomFieldReward(Random(seed))
             if (reward is AdventureReward.Stickers) {
                 assertTrue(reward.stickers.size in 1..3)
                 assertEquals(reward.stickers.size, reward.stickers.distinct().size)
@@ -75,6 +78,15 @@ class AdventureEngineTest {
     }
 
     @Test
+    fun `song fields do not add a score until the song is played`() {
+        val player = player("A", songScore = 10f).withReward(AdventureReward.Song)
+        assertEquals(10f, player.total)
+        val played = player.withScore(30f)
+        assertEquals(40f, played.total)
+        assertEquals(1, played.songsPlayed)
+    }
+
+    @Test
     fun `go again does not change the score`() {
         val player = player("A", songScore = 42f).withReward(AdventureReward.GoAgain)
         assertEquals(42f, player.songScore)
@@ -83,9 +95,59 @@ class AdventureEngineTest {
     }
 
     @Test
-    fun `players cannot advance past the castle`() {
-        val player = player("A", position = ADVENTURE_GOAL).advanced()
-        assertEquals(ADVENTURE_GOAL, player.position)
+    fun `the first player at the castle gets a hundred point bonus`() {
+        val player = player("A", songScore = 120f).withBonus(ADVENTURE_CASTLE_BONUS)
+        assertEquals(100f, player.bonusScore)
+        assertEquals(220f, player.total)
+    }
+
+    @Test
+    fun `whack hits are added to the total score`() {
+        val player = player("A", songScore = 42f).withBonus(7)
+        assertEquals(7f, player.bonusScore)
+        assertEquals(49f, player.total)
+    }
+
+    @Test
+    fun `the dice moves the player and returns the landing reward`() {
+        val rewards = MutableList<AdventureReward?>(ADVENTURE_GOAL) { null }
+        rewards[5] = AdventureReward.Stickers(listOf(AdventureSticker.MUSHROOM))
+        val landing = resolveLanding(player("A", position = 1), dice = 4, fieldRewards = rewards)
+        assertEquals(5, landing.player.position)
+        assertEquals(AdventureReward.Stickers(listOf(AdventureSticker.MUSHROOM)), landing.reward)
+        assertFalse(landing.reachedGoal)
+    }
+
+    @Test
+    fun `only the landing field reward is returned`() {
+        val rewards = MutableList<AdventureReward?>(ADVENTURE_GOAL) { null }
+        rewards[3] = AdventureReward.Song
+        rewards[5] = AdventureReward.GoAgain
+        val landing = resolveLanding(player("A", position = 1), dice = 4, fieldRewards = rewards)
+        assertEquals(AdventureReward.GoAgain, landing.reward)
+    }
+
+    @Test
+    fun `reaching the castle has no field reward and clamps the position`() {
+        val rewards = MutableList<AdventureReward?>(ADVENTURE_GOAL) { AdventureReward.Song }
+        val landing = resolveLanding(player("A", position = 48), dice = 6, fieldRewards = rewards)
+        assertEquals(ADVENTURE_GOAL, landing.player.position)
+        assertNull(landing.reward)
+        assertTrue(landing.reachedGoal)
+    }
+
+    @Test
+    fun `players cannot pass the castle`() {
+        assertEquals(46, player("A", position = 41).movedBy(5).position)
+        assertEquals(ADVENTURE_GOAL, player("A", position = 48).movedBy(10).position)
+        assertEquals(ADVENTURE_GOAL, player("A", position = ADVENTURE_GOAL).movedBy(6).position)
+    }
+
+    @Test
+    fun `walk time grows with the number of fields and is capped`() {
+        assertEquals(AdventureTiming.WALK_MS, AdventureTiming.walkMs(1))
+        assertEquals(1_800L, AdventureTiming.walkMs(6))
+        assertEquals(AdventureTiming.MAX_WALK_MS, AdventureTiming.walkMs(20))
     }
 
     @Test
@@ -156,19 +218,40 @@ class AdventureEngineTest {
     }
 
     @Test
-    fun `map specs start and end in every corner`() {
-        val corners = (0 until 40).map { seed ->
-            val start = generateMapSpec(Random(seed)).points.first()
-            (if (start.x < 0.5f) "L" else "R") + (if (start.y < 0.5f) "T" else "B")
-        }.toSet()
-        assertEquals(4, corners.size)
+    fun `map specs contain fifty fields and a castle at the top`() {
+        val spec = generateMapSpec(Random(3), columns = 4)
+        assertEquals(ADVENTURE_GOAL, spec.points.size)
+        val start = spec.points.first()
+        val castle = spec.points.last()
+        assertTrue(start.x < 0.5f)
+        assertTrue(start.y > 0.8f)
+        assertTrue(castle.x in 0.45f..0.55f)
+        assertTrue(castle.y < 0.1f)
+        assertTrue(spec.contentAspect > 2f)
     }
 
     @Test
-    fun `map specs have a full path and stay on the map`() {
+    fun `map specs snake across the width`() {
+        val spec = generateMapSpec(Random(11), columns = 4)
+        assertTrue(spec.points[3].x > spec.points[0].x)
+        assertTrue(spec.points[4].y < spec.points[3].y)
+        assertTrue(spec.points[4].x > spec.points[0].x)
+        assertTrue(spec.points[7].x < spec.points[4].x)
+    }
+
+    @Test
+    fun `map specs are deterministic for a seed`() {
+        val first = generateMapSpec(Random(21), columns = 5)
+        val second = generateMapSpec(Random(21), columns = 5)
+        assertEquals(first.points, second.points)
+        assertEquals(first.trees, second.trees)
+        assertEquals(first.bridge, second.bridge)
+    }
+
+    @Test
+    fun `map specs keep everything on the map`() {
         repeat(10) { seed ->
-            val spec = generateMapSpec(Random(seed))
-            assertEquals(6, spec.points.size)
+            val spec = generateMapSpec(Random(seed), columns = 4)
             (spec.points + spec.mountains + spec.trees + spec.rocks + spec.village).forEach {
                 assertTrue(it.x in 0f..1f)
                 assertTrue(it.y in 0f..1f)

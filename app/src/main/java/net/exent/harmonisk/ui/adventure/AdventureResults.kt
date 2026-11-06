@@ -97,6 +97,13 @@ fun AdventureResultsScreen(
                             color = StorybookMint
                         )
                     }
+                    if (showWinner && state.finisherId != null) {
+                        Text(
+                            text = stringResource(R.string.adventure_castle_bonus, ADVENTURE_CASTLE_BONUS),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = StorybookGold
+                        )
+                    }
                 }
                 IconButton(onClick = onHome) {
                     Icon(

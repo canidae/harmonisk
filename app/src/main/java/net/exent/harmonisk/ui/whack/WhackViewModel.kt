@@ -35,6 +35,7 @@ data class WhackState(
     val hits: Int = 0,
     val best: Int = 0,
     val remainingMs: Long = WhackRules.GAME_MS,
+    val durationMs: Long = WhackRules.GAME_MS,
     val target: WhackTarget? = null,
     val hammer: WhackHammer? = null,
     val scored: WhackScored? = null,
@@ -72,6 +73,7 @@ class WhackViewModel @Inject constructor(
     private var nextId = 1L
     private var previousEmoji: WhackEmoji? = null
     private var best = 0
+    private var persistBest = true
     private var wrongsMutedUntil = 0L
 
     init {
@@ -93,8 +95,12 @@ class WhackViewModel @Inject constructor(
         }
     }
 
-    fun start() {
+    fun start(
+        durationMs: Long = _state.value.durationMs,
+        persistBest: Boolean = this.persistBest
+    ) {
         if (_state.value.playing) return
+        this.persistBest = persistBest
         resetPitch()
         while (judgements.tryReceive().isSuccess) Unit
         previousEmoji = null
@@ -105,7 +111,8 @@ class WhackViewModel @Inject constructor(
                 level = 1,
                 hits = 0,
                 best = best,
-                remainingMs = WhackRules.GAME_MS,
+                remainingMs = durationMs,
+                durationMs = durationMs,
                 target = null,
                 hammer = null,
                 scored = null,
@@ -118,7 +125,7 @@ class WhackViewModel @Inject constructor(
             playTurns()
         }
         timerJob = viewModelScope.launch {
-            val end = SystemClock.elapsedRealtime() + WhackRules.GAME_MS
+            val end = SystemClock.elapsedRealtime() + durationMs
             while (true) {
                 val left = end - SystemClock.elapsedRealtime()
                 _state.update { it.copy(remainingMs = left.coerceAtLeast(0)) }
@@ -126,6 +133,26 @@ class WhackViewModel @Inject constructor(
                 delay(250)
             }
             finish()
+        }
+    }
+
+    fun reset(
+        durationMs: Long = _state.value.durationMs,
+        persistBest: Boolean = this.persistBest
+    ) {
+        stop()
+        this.persistBest = persistBest
+        _state.update {
+            it.copy(
+                level = 1,
+                hits = 0,
+                remainingMs = durationMs,
+                durationMs = durationMs,
+                target = null,
+                hammer = null,
+                scored = null,
+                levelUp = null
+            )
         }
     }
 
@@ -139,7 +166,9 @@ class WhackViewModel @Inject constructor(
             it.copy(
                 playing = false,
                 finished = false,
-                remainingMs = WhackRules.GAME_MS,
+                level = 1,
+                hits = 0,
+                remainingMs = it.durationMs,
                 target = null,
                 hammer = null,
                 scored = null,
@@ -269,7 +298,9 @@ class WhackViewModel @Inject constructor(
         val hits = current.hits + 1
         if (hits > best) {
             best = hits
-            profileRepository.activeProfileId?.let { whackRepository.saveBest(it, hits) }
+            if (persistBest) {
+                profileRepository.activeProfileId?.let { whackRepository.saveBest(it, hits) }
+            }
         }
         val level = WhackRules.levelFor(hits)
         swingPress(target.hole, hit = true)
