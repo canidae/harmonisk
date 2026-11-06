@@ -10,6 +10,8 @@ import net.exent.harmonisk.audio.SoundFontSynthesizer
 import net.exent.harmonisk.audio.NotePlayer
 import net.exent.harmonisk.audio.PitchProcessor
 import net.exent.harmonisk.data.AudioDelayRepository
+import net.exent.harmonisk.data.AppSettings
+import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.SettingsRepository
 import net.exent.harmonisk.midi.MidiDeviceManager
 import net.exent.harmonisk.midi.MidiImporter
@@ -49,6 +51,7 @@ class FreePlayViewModel @Inject constructor(
     @param:ApplicationContext private val appContext: Context,
     private val pitchProcessor: PitchProcessor,
     private val settingsRepository: SettingsRepository,
+    private val profileRepository: ProfileRepository,
     private val midiDeviceManager: MidiDeviceManager,
     private val midiInputReceiver: MidiInputReceiver,
     private val midiOutputSender: MidiOutputSender,
@@ -66,6 +69,9 @@ class FreePlayViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(FreePlayState())
     val state: StateFlow<FreePlayState> = _state.asStateFlow()
+
+    val profiles: StateFlow<List<ProfileRepository.Profile>> = profileRepository.profiles
+    val activeProfile: StateFlow<ProfileRepository.Profile?> = profileRepository.activeProfile
 
     private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val snackbarMessage: SharedFlow<String> = _snackbarMessage.asSharedFlow()
@@ -116,18 +122,20 @@ class FreePlayViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            settingsRepository.settings.first().let { settings ->
-                _state.update {
-                    it.copy(
-                        fallSpeedPxPerSec = settings.freeplayFallSpeed,
-                        beatsPerBar = settings.freeplayBeatsPerBar,
-                        bpm = settings.freeplayBpm,
-                        minNoteDivision = settings.freeplayMinNoteDivision,
-                        snapEnabled = settings.freeplaySnapEnabled,
-                        metronomeEnabled = settings.freeplayMetronomeEnabled
-                    )
+            settingsRepository.settings.first().let(::applySettings)
+        }
+        viewModelScope.launch {
+            profileRepository.activeProfile
+                .map { it?.id }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect {
+                    if (_state.value.isRecording) stopRecording()
+                    stopPlaying()
+                    stopListening()
+                    replayJob?.cancel()
+                    settingsRepository.settings.first().let(::applySettings)
                 }
-            }
         }
         // Observe MIDI device availability and switch input source automatically
         viewModelScope.launch {
@@ -192,6 +200,26 @@ class FreePlayViewModel @Inject constructor(
 
     fun setMidiInputEnabled(useMidi: Boolean) {
         midiDeviceManager.setInputOverride(useMidi)
+    }
+
+    fun selectProfile(id: String) {
+        profileRepository.selectProfile(id)
+    }
+
+    fun createProfile(name: String, emoji: String): Boolean =
+        profileRepository.createProfile(name, emoji) != null
+
+    private fun applySettings(settings: AppSettings) {
+        _state.update {
+            it.copy(
+                fallSpeedPxPerSec = settings.freeplayFallSpeed,
+                beatsPerBar = settings.freeplayBeatsPerBar,
+                bpm = settings.freeplayBpm,
+                minNoteDivision = settings.freeplayMinNoteDivision,
+                snapEnabled = settings.freeplaySnapEnabled,
+                metronomeEnabled = settings.freeplayMetronomeEnabled
+            )
+        }
     }
 
     fun setOutputDevice(device: OutputDevice) {

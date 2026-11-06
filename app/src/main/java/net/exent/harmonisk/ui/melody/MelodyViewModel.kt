@@ -82,6 +82,9 @@ class MelodyViewModel @Inject constructor(
     /** Developer mode gates playing melody voices while the player is being scored. */
     val devModeEnabled: StateFlow<Boolean> = devModeState.enabled
 
+    val profiles: StateFlow<List<ProfileRepository.Profile>> = profileRepository.profiles
+    val activeProfile: StateFlow<ProfileRepository.Profile?> = profileRepository.activeProfile
+
     val availableMelodies: StateFlow<List<MelodyRepository.MelodyInfo>> =
         melodyRepository.importedMelodies
             .map { imported -> melodyRepository.getBundledMelodies() + imported }
@@ -224,6 +227,19 @@ class MelodyViewModel @Inject constructor(
         }
         loadAllMelodyScores()
         loadAllMelodyDifficulties()
+        viewModelScope.launch {
+            profileRepository.activeProfile
+                .map { it?.id }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect {
+                    if (adventureSession.turn.value != null) return@collect
+                    if (currentMelodyId != null) {
+                        stop()
+                        enterReadyPhase()
+                    }
+                }
+        }
     }
 
     val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
@@ -246,6 +262,13 @@ class MelodyViewModel @Inject constructor(
         effective -> false       // auto-on → force off
         else -> true             // off → force on
     }
+
+    fun selectProfile(id: String) {
+        profileRepository.selectProfile(id)
+    }
+
+    fun createProfile(name: String, emoji: String): Boolean =
+        profileRepository.createProfile(name, emoji) != null
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun loadAllMelodyScores() {

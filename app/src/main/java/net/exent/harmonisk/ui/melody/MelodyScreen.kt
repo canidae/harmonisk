@@ -50,6 +50,9 @@ import net.exent.harmonisk.R
 import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.components.brandBackground
+import net.exent.harmonisk.ui.profile.CreateProfileDialog
+import net.exent.harmonisk.ui.profile.ProfileButton
+import net.exent.harmonisk.ui.profile.ProfileSwitchDialog
 import net.exent.harmonisk.ui.theme.BrandPurple
 import net.exent.harmonisk.ui.utils.formatScore
 import net.exent.harmonisk.ui.utils.scoreColor
@@ -78,6 +81,10 @@ fun MelodyScreen(
     var showUrlDialog by remember { mutableStateOf(false) }
     var urlText by rememberSaveable { mutableStateOf("") }
     var importingUrl by remember { mutableStateOf<String?>(null) }
+    val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    var showProfileDialog by remember { mutableStateOf(false) }
+    var showCreateProfileDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.initSynthesizer()
@@ -261,6 +268,11 @@ fun MelodyScreen(
                         currentFolder != null -> currentFolder = null
                         else -> onBack()
                     }
+                },
+                actions = {
+                    profile?.let {
+                        ProfileButton(it.name, it.emoji, onClick = { showProfileDialog = true })
+                    }
                 }
             )
         }
@@ -389,6 +401,29 @@ fun MelodyScreen(
                 }
             },
             confirmButton = {}
+        )
+    }
+
+    if (showProfileDialog) {
+        ProfileSwitchDialog(
+            profiles = profiles,
+            activeProfileId = profile?.id,
+            onSelect = { id ->
+                viewModel.selectProfile(id)
+                showProfileDialog = false
+            },
+            onAdd = {
+                showProfileDialog = false
+                showCreateProfileDialog = true
+            },
+            onDismiss = { showProfileDialog = false }
+        )
+    }
+
+    if (showCreateProfileDialog) {
+        CreateProfileDialog(
+            onCreate = { name, emoji -> viewModel.createProfile(name, emoji) },
+            onDismiss = { showCreateProfileDialog = false }
         )
     }
 }

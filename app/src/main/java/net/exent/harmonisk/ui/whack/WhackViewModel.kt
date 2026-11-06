@@ -10,6 +10,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.exent.harmonisk.audio.PitchProcessor
@@ -58,6 +61,9 @@ class WhackViewModel @Inject constructor(
     private val _state = MutableStateFlow(WhackState())
     val state: StateFlow<WhackState> = _state.asStateFlow()
 
+    val profiles: StateFlow<List<ProfileRepository.Profile>> = profileRepository.profiles
+    val activeProfile: StateFlow<ProfileRepository.Profile?> = profileRepository.activeProfile
+
     private data class Judged(val targetId: Long, val judgement: WhackJudgement)
 
     private val judgements = Channel<Judged>(Channel.BUFFERED)
@@ -92,6 +98,13 @@ class WhackViewModel @Inject constructor(
                 best = profile?.let { whackRepository.best(it.id) } ?: 0
                 _state.update { it.copy(best = best) }
             }
+        }
+        viewModelScope.launch {
+            profileRepository.activeProfile
+                .map { it?.id }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { if (_state.value.playing) stop() }
         }
     }
 
@@ -155,6 +168,13 @@ class WhackViewModel @Inject constructor(
             )
         }
     }
+
+    fun selectProfile(id: String) {
+        profileRepository.selectProfile(id)
+    }
+
+    fun createProfile(name: String, emoji: String): Boolean =
+        profileRepository.createProfile(name, emoji) != null
 
     fun stop() {
         gameJob?.cancel()
