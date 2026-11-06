@@ -71,8 +71,8 @@ import net.exent.harmonisk.R
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
-import kotlin.random.Random
 
+private const val SPIN_ITEMS = 22
 private val ReelWidth = 250.dp
 private val LeverWidth = 100.dp
 private val ReelHeight = 138.dp
@@ -123,15 +123,9 @@ fun SongRevealOverlay(
     val songs = state.songPool
     if (songs.isEmpty()) return
     val targetIndex = songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
-    val startIndex = remember(
-        song.id,
-        state.currentPlayerIndex,
-        state.moveFrom,
-        songs.size
-    ) { Random.nextInt(songs.size) }
+    val distance = if (SPIN_ITEMS % songs.size == 0) SPIN_ITEMS + 1 else SPIN_ITEMS
+    val startIndex = ((targetIndex - distance) % songs.size + songs.size) % songs.size
     val startScroll = startIndex.toFloat()
-    val targetOffset = ((targetIndex - startIndex) % songs.size + songs.size) % songs.size
-    val distance = targetOffset + songs.size
     val endScroll = (startIndex + distance).toFloat()
 
     val spin = remember { Animatable(startScroll) }
