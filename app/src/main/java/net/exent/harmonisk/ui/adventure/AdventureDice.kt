@@ -8,9 +8,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
+import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.min
 import kotlin.math.sin
 
 private data class Vec3(val x: Float, val y: Float, val z: Float) {
@@ -46,9 +49,13 @@ private val PIPS = mapOf(
 private val DIE_LIGHT = Vec3(-0.35f, 0.55f, 0.75f)
 private const val TILT_X = -18f
 private const val TILT_Y = -24f
+private const val PIP_RADIUS = 0.15f
+private const val PIP_SEGMENTS = 18
 private val DIE_BASE = Color(0xFFF6EEDF)
 private val DIE_SHADE = Color(0xFF8A7A66)
-private val PIP_COLOR = Color(0xFF9E2B2B)
+private val PIP_DARK = Color(0xFF5B1818)
+private val PIP_LIGHT = Color(0xFFC05252)
+private val PIP_RIM = Color(0xFF3E0C0C).copy(alpha = 0.75f)
 private val EDGE_COLOR = Color(0xFF5B4A3A).copy(alpha = 0.35f)
 
 private fun rotateX(v: Vec3, angleDegrees: Float): Vec3 {
@@ -80,9 +87,8 @@ private fun targetAngles(value: Int): Pair<Float, Float> = when (value) {
 private data class ProjectedFace(
     val value: Int,
     val corners: List<Offset>,
-    val pips: List<Offset>,
-    val normal: Vec3,
-    val radius: Float
+    val pips: List<Path>,
+    val normal: Vec3
 )
 
 @Composable
@@ -106,6 +112,21 @@ private fun DrawScope.drawDie(angleX: Float, angleY: Float) {
         return Offset(center.x + p.x * f * scale, center.y - p.y * f * scale)
     }
 
+    fun pipPath(pipCenter: Vec3, u: Vec3, v: Vec3): Path {
+        val path = Path()
+        for (i in 0 until PIP_SEGMENTS) {
+            val angle = 2.0 * PI * i / PIP_SEGMENTS
+            val point = pipCenter +
+                u * (PIP_RADIUS * cos(angle).toFloat()) +
+                v * (PIP_RADIUS * sin(angle).toFloat())
+            val projected = project(point)
+            if (i == 0) path.moveTo(projected.x, projected.y)
+            else path.lineTo(projected.x, projected.y)
+        }
+        path.close()
+        return path
+    }
+
     val faces = DICE_FACES.map { face ->
         val normal = rotate(face.normal, angleX, angleY)
         val u = rotate(face.u, angleX, angleY)
@@ -117,11 +138,10 @@ private fun DrawScope.drawDie(angleX: Float, angleY: Float) {
             project(faceCenter + u * 1f + v * 1f),
             project(faceCenter + u * -1f + v * 1f)
         )
-        val radius = 0.13f * scale * camera / (camera - faceCenter.z)
         val pips = PIPS.getValue(face.value).map { (px, py) ->
-            project(faceCenter + u * px + v * py)
+            pipPath(faceCenter + u * px + v * py, u, v)
         }
-        ProjectedFace(face.value, corners, pips, normal, radius)
+        ProjectedFace(face.value, corners, pips, normal)
     }
     faces.filter { it.normal.z > 0.02f }.sortedBy { it.normal.z }.forEach { face ->
         val light = (0.55f + 0.45f * (face.normal.x * DIE_LIGHT.x +
@@ -134,6 +154,23 @@ private fun DrawScope.drawDie(angleX: Float, angleY: Float) {
         }
         drawPath(path, color)
         drawPath(path, EDGE_COLOR, style = Stroke(width = 1.dp.toPx()))
-        face.pips.forEach { drawCircle(PIP_COLOR, radius = face.radius, center = it) }
+        face.pips.forEach { pip ->
+            val bounds = pip.getBounds()
+            val pipRadius = min(bounds.width, bounds.height) / 2f
+            drawPath(pip, PIP_DARK)
+            clipPath(pip) {
+                drawCircle(
+                    color = PIP_LIGHT,
+                    radius = pipRadius * 0.86f,
+                    center = bounds.center + Offset(pipRadius * 0.12f, pipRadius * 0.12f),
+                    style = Stroke(width = pipRadius * 0.22f)
+                )
+            }
+            drawPath(
+                pip,
+                PIP_RIM,
+                style = Stroke(width = (pipRadius * 0.18f).coerceAtLeast(0.7.dp.toPx()))
+            )
+        }
     }
 }
