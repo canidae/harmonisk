@@ -236,6 +236,7 @@
     <string name="adventure_turn">%1$s sin tur</string>
     <string name="adventure_field">Felt %1$d av %2$d</string>
     <string name="adventure_level">Nivå %1$d</string>
+    <string name="adventure_move">Flytt %1$d</string>
     <string name="adventure_play_song">Spill sang</string>
     <string name="adventure_load_failed">Kunne ikke starte sangen</string>
     <string name="adventure_results_title">Eventyret er over</string>
@@ -262,8 +263,19 @@
         <item quantity="one">%1$d klistremerke</item>
         <item quantity="other">%1$d klistremerker</item>
     </plurals>
-    <string name="adventure_reward_points">+%1$d poeng</string>
-    <string name="adventure_reward_go_again_short">Spill igjen</string>
+    <string name="adventure_reward_go_again_short">Kast igjen</string>
+    <string name="adventure_go_again">Igjen</string>
+    <string name="adventure_pull_lever">Dra i spaken</string>
+    <string name="adventure_throw_dice">Kast terningen</string>
+    <string name="adventure_tap_to_throw">Trykk for å kaste terningen</string>
+    <string name="adventure_choose_song">Velg en sang</string>
+    <string name="adventure_spinning">Spinner…</string>
+    <string name="adventure_song_complete">Sang ferdig</string>
+    <string name="adventure_castle_reached">Borgen er nådd</string>
+    <string name="adventure_legend_song">Sang</string>
+    <string name="adventure_legend_stickers">Klistremerker</string>
+    <string name="adventure_legend_whack">Tonedengeren</string>
+    <string name="adventure_castle_bonus">Borgbonus +%1$d</string>
     <string name="adventure_winner">%1$s vinner!</string>
     <string name="adventure_tie">Det ble uavgjort!</string>
 
@@ -275,5 +287,7 @@
     <string name="whack_time_up">Tiden er ute!</string>
     <string name="whack_hits">Treff</string>
     <string name="whack_duration">Tre minutter</string>
+    <string name="whack_duration_minute">Ett minutt</string>
     <string name="whack_again">Spill igjen</string>
+    <string name="whack_continue">Fortsett</string>
 </resources>

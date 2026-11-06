@@ -12,10 +12,14 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +36,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -40,9 +45,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import net.exent.harmonisk.R
+import net.exent.harmonisk.ui.whack.WhackPressIcon
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -67,6 +75,16 @@ private val WOOD_LIGHT = Color(0xFFB07A4A)
 private val CASTLE_STONE = Color(0xFFB5AFA1)
 private val CASTLE_DARK = Color(0xFF817B70)
 
+private val FIELD_STICKERS = Color(0xFF3FC7C0)
+private val FIELD_SONG = Color(0xFFFFC857)
+private val FIELD_GO_AGAIN = Color(0xFF9B7BFF)
+private val FIELD_WHACK = Color(0xFFE05D5D)
+private val FIELD_START = Color(0xFF8DE8C4)
+
+private const val MAP_TOP_UNITS = 1.5f
+private const val MAP_BOTTOM_UNITS = 0.5f
+private const val CASTLE_Y = 0.06f
+
 data class AdventureAnimal(val emoji: String, val position: Offset)
 
 data class AdventureMapSpec(
@@ -79,7 +97,9 @@ data class AdventureMapSpec(
     val village: List<Offset>,
     val river: List<Offset>,
     val bridge: Offset,
-    val bridgeSegment: Int
+    val bridgeSegment: Int,
+    val columns: Int,
+    val contentAspect: Float
 )
 
 private val LAND_ANIMALS = listOf("🐗", "🦌", "🦊", "🐰", "🦔", "🐑", "🐐", "🐿️")
@@ -99,17 +119,18 @@ private fun List<Obstacle>.allows(spot: Offset): Boolean = none { obstacle ->
 private fun openSpot(
     random: Random,
     near: Offset,
-    spread: Float,
+    spreadX: Float,
+    spreadY: Float,
     obstacles: List<Obstacle>,
-    xRange: ClosedFloatingPointRange<Float> = 0.12f..0.88f,
-    yRange: ClosedFloatingPointRange<Float> = 0.09f..0.92f
+    xRange: ClosedFloatingPointRange<Float> = 0.08f..0.92f,
+    yRange: ClosedFloatingPointRange<Float> = 0.02f..0.98f
 ): Offset {
     var best = near
     var bestScore = -1f
     repeat(160) {
         val spot = Offset(
-            (near.x + (random.nextFloat() - 0.5f) * 2f * spread).coerceIn(xRange.start, xRange.endInclusive),
-            (near.y + (random.nextFloat() - 0.5f) * 2f * spread).coerceIn(yRange.start, yRange.endInclusive)
+            (near.x + (random.nextFloat() - 0.5f) * 2f * spreadX).coerceIn(xRange.start, xRange.endInclusive),
+            (near.y + (random.nextFloat() - 0.5f) * 2f * spreadY).coerceIn(yRange.start, yRange.endInclusive)
         )
         val score = obstacles.minOf { obstacle ->
             obstacle.samples.minOf { ellipseScore(spot, it, obstacle.marginX, obstacle.marginY) }
@@ -128,30 +149,13 @@ private fun scatter(
     count: Int,
     obstacles: List<Obstacle>,
     xRange: ClosedFloatingPointRange<Float> = 0.04f..0.96f,
-    yRange: ClosedFloatingPointRange<Float> = 0.12f..0.94f
+    yRange: ClosedFloatingPointRange<Float> = 0.02f..0.98f
 ): List<Offset> {
     fun pick(range: ClosedFloatingPointRange<Float>) =
         range.start + random.nextFloat() * (range.endInclusive - range.start)
     return List(count * 6) { Offset(pick(xRange), pick(yRange)) }
         .filter { obstacles.allows(it) }
         .take(count)
-}
-
-private fun canonicalStops(random: Random, swayScale: Float): List<Offset> {
-    val start = Offset(0.1f, 0.88f)
-    val end = Offset(0.86f, 0.16f)
-    var direction = if (random.nextBoolean()) 1f else -1f
-    val fields = (0 until ADVENTURE_FIELD_COUNT).map { index ->
-        val jitter = if (index == 0) 0f else (random.nextFloat() - 0.5f) * 0.02f
-        val progress = index / ADVENTURE_FIELD_COUNT.toFloat() + jitter
-        if (random.nextInt(3) != 0) direction = -direction
-        val sway = direction * (0.055f + random.nextFloat() * 0.04f) * swayScale * sin(PI.toFloat() * progress)
-        Offset(
-            (start.x + (end.x - start.x) * progress + sway).coerceIn(0.12f, 0.88f),
-            start.y + (end.y - start.y) * progress
-        )
-    }
-    return fields + end
 }
 
 private fun crossings(pathSamples: List<Offset>, river: List<Offset>): Int {
@@ -167,116 +171,135 @@ private fun crossings(pathSamples: List<Offset>, river: List<Offset>): Int {
     return total
 }
 
-private fun riverThrough(random: Random, crossing: Offset, pathSamples: List<Offset>): List<Offset> {
-    val slope = (random.nextFloat() - 0.5f) * 0.08f
-    val amplitude = 0.015f + random.nextFloat() * 0.02f
-    val frequency = 5f + random.nextFloat() * 4f
-    fun river(amp: Float, drift: Float) = List(9) { index ->
-        val x = -0.06f + index * 0.14f
-        Offset(x, crossing.y + drift * (x - crossing.x) + amp * sin(frequency * (x - crossing.x)))
-    }
-    val wavy = river(amplitude, slope)
-    return if (crossings(pathSamples, wavy) == 1) wavy else river(0f, 0f)
-}
+fun generateMapSpec(random: Random, columns: Int = 4): AdventureMapSpec {
+    val columnCount = columns.coerceAtLeast(3)
+    val rows = (ADVENTURE_FIELD_COUNT + columnCount - 1) / columnCount
+    val contentUnits = rows + MAP_TOP_UNITS + MAP_BOTTOM_UNITS
+    val cellW = 1f / columnCount
+    val cellH = 1f / contentUnits
+    val contentAspect = contentUnits / columnCount
 
-fun generateMapSpec(random: Random): AdventureMapSpec {
-    fun range(min: Float, max: Float) = min + random.nextFloat() * (max - min)
-    val rotation = random.nextInt(4)
-    val stops = canonicalStops(random, if (rotation % 2 == 0) 1.7f else 1f)
-    val bridgeSegment = (1..ADVENTURE_FIELD_COUNT - 2).maxBy { index ->
-        val from = cubicPoint(stops, index, 0.45f)
-        val to = cubicPoint(stops, index, 0.55f)
-        abs(to.y - from.y)
+    fun rowY(row: Int) = (contentUnits - MAP_BOTTOM_UNITS - (row + 0.5f)) / contentUnits
+    val fields = (0 until ADVENTURE_FIELD_COUNT).map { index ->
+        val row = index / columnCount
+        val positionInRow = index % columnCount
+        val column = if (row % 2 == 0) positionInRow else columnCount - 1 - positionInRow
+        val jitterX = if (index == 0) 0f else (random.nextFloat() - 0.5f) * 0.12f * cellW
+        val jitterY = if (index == 0) 0f else (random.nextFloat() - 0.5f) * 0.10f * cellH
+        Offset(
+            ((column + 0.5f) * cellW + jitterX).coerceIn(0.05f, 0.95f),
+            (rowY(row) + jitterY).coerceIn(0.02f, 0.98f)
+        )
     }
-    val crossing = cubicPoint(stops, bridgeSegment, 0.5f)
-    val river = riverThrough(random, crossing, sampleCurve(stops))
-    fun place(point: Offset): Offset = when (rotation) {
-        0 -> point
-        1 -> Offset(1f - point.y, point.x)
-        2 -> Offset(1f - point.x, 1f - point.y)
-        else -> Offset(point.y, 1f - point.x)
-    }
-    val points = stops.map(::place)
-    val water = river.map(::place)
-    val bridge = place(crossing)
+    val points = fields + Offset(0.5f, CASTLE_Y)
     val pathSamples = sampleCurve(points)
-    val riverSamples = sampleCurve(water)
+
+    val gap = (rows / 2).coerceIn(1, (rows - 1).coerceAtLeast(1))
+    val gapY = (contentUnits - MAP_BOTTOM_UNITS - gap) / contentUnits
+    val riverAmplitude = 0.14f * cellH
+    fun river(amplitude: Float) = List(9) { index ->
+        val x = -0.06f + index * 0.14f
+        Offset(x, gapY + amplitude * sin(5f * (x - 0.5f)))
+    }
+    val wavyRiver = river(riverAmplitude)
+    val riverPoints = if (crossings(pathSamples, wavyRiver) == 1) wavyRiver else river(0f)
+    val bridgeSegment = (gap * columnCount - 1).coerceIn(0, points.lastIndex - 1)
+    val bridge = cubicPoint(points, bridgeSegment, 0.5f)
+
+    fun pathObstacle() = Obstacle(pathSamples, 0.46f * cellW, 0.46f * cellH)
+    fun riverObstacle() = Obstacle(sampleCurve(riverPoints), 0.34f * cellW, 0.34f * cellH)
+    fun fieldObstacle() = Obstacle(points, 0.32f * cellW, 0.32f * cellH)
+    val lakeObstacleMarginX = 0.8f * cellW
+    val lakeObstacleMarginY = 0.8f * cellH
+
     val lake = openSpot(
         random,
-        near = Offset(0.5f, 0.5f),
-        spread = 0.45f,
+        near = Offset(0.5f, gapY),
+        spreadX = 0.3f,
+        spreadY = 0.06f,
         obstacles = listOf(
-            Obstacle(pathSamples, 0.19f, 0.11f),
-            Obstacle(riverSamples, 0.19f, 0.11f)
+            pathObstacle(),
+            riverObstacle(),
+            Obstacle(points, 0.4f * cellW, 0.4f * cellH)
         ),
         xRange = 0.18f..0.82f,
-        yRange = 0.12f..0.86f
+        yRange = 0.08f..0.92f
     )
+    val village = mutableListOf<Offset>()
     val villageObstacles = mutableListOf(
-        Obstacle(pathSamples, 0.07f, 0.055f),
-        Obstacle(riverSamples, 0.09f, 0.06f),
-        Obstacle(listOf(lake), 0.17f, 0.09f),
-        Obstacle(points, 0.06f, 0.05f)
+        pathObstacle(),
+        riverObstacle(),
+        Obstacle(listOf(lake), lakeObstacleMarginX, lakeObstacleMarginY),
+        fieldObstacle()
     )
-    val village = List(3) {
-        openSpot(
+    repeat(3) {
+        village += openSpot(
             random,
-            near = points[3] + Offset(range(-0.08f, 0.14f), range(-0.08f, 0.14f)),
-            spread = 0.1f,
+            near = points[3] + Offset(
+                (random.nextFloat() - 0.5f) * 0.8f * cellW,
+                (random.nextFloat() - 0.5f) * 0.8f * cellH
+            ),
+            spreadX = 0.3f * cellW,
+            spreadY = 0.3f * cellH,
             obstacles = villageObstacles
-        ).also { spot -> villageObstacles += Obstacle(listOf(spot), 0.035f, 0.03f) }
+        ).also { spot ->
+            villageObstacles += Obstacle(listOf(spot), 0.28f * cellW, 0.28f * cellH)
+        }
     }
+    val decorationObstacles = mutableListOf(
+        pathObstacle(),
+        riverObstacle(),
+        Obstacle(listOf(lake), lakeObstacleMarginX, lakeObstacleMarginY),
+        Obstacle(village, 0.24f * cellW, 0.24f * cellH)
+    )
     val trees = scatter(
         random,
-        22,
-        listOf(
-            Obstacle(pathSamples, 0.09f, 0.07f),
-            Obstacle(riverSamples, 0.09f, 0.07f),
-            Obstacle(listOf(lake), 0.17f, 0.095f),
-            Obstacle(village, 0.05f, 0.04f)
-        )
+        (columnCount * rows * 1.1f).roundToInt(),
+        decorationObstacles
     )
     val rocks = scatter(
         random,
-        10,
-        listOf(
-            Obstacle(pathSamples, 0.07f, 0.055f),
-            Obstacle(riverSamples, 0.07f, 0.055f),
-            Obstacle(listOf(lake), 0.17f, 0.095f),
-            Obstacle(village, 0.05f, 0.04f)
-        )
+        (columnCount * rows * 0.55f).roundToInt(),
+        decorationObstacles
     )
     val mountains = scatter(
         random,
-        3,
-        listOf(
-            Obstacle(pathSamples, 0.13f, 0.1f),
-            Obstacle(riverSamples, 0.12f, 0.1f),
-            Obstacle(listOf(lake), 0.2f, 0.12f),
-            Obstacle(village, 0.1f, 0.08f),
-            Obstacle(listOf(points.last()), 0.18f, 0.16f)
-        ),
+        6,
+        decorationObstacles + Obstacle(listOf(points.last()), 0.7f * cellW, 0.7f * cellH),
         xRange = 0.08f..0.92f,
-        yRange = 0.05f..0.2f
+        yRange = 0.015f..0.2f
     )
     val animalObstacles = mutableListOf(
-        Obstacle(mountains, 0.12f, 0.1f),
-        Obstacle(pathSamples, 0.06f, 0.05f),
-        Obstacle(riverSamples, 0.1f, 0.07f),
-        Obstacle(listOf(lake), 0.17f, 0.09f),
-        Obstacle(village, 0.05f, 0.04f),
-        Obstacle(points, 0.05f, 0.04f),
-        Obstacle(trees, 0.04f, 0.035f)
+        Obstacle(mountains, 0.45f * cellW, 0.45f * cellH),
+        pathObstacle(),
+        riverObstacle(),
+        Obstacle(listOf(lake), lakeObstacleMarginX, lakeObstacleMarginY),
+        Obstacle(village, 0.24f * cellW, 0.24f * cellH),
+        fieldObstacle(),
+        Obstacle(trees, 0.2f * cellW, 0.2f * cellH)
     )
     val animals = mutableListOf<AdventureAnimal>()
-    LAND_ANIMALS.shuffled(random).take(random.nextInt(4)).forEach { emoji ->
-        repeat(random.nextInt(6)) {
+    LAND_ANIMALS.shuffled(random).take(3 + random.nextInt(4)).forEach { emoji ->
+        repeat(1 + random.nextInt(4)) {
             val spot = scatter(random, 1, animalObstacles).firstOrNull() ?: return@repeat
             animals += AdventureAnimal(emoji, spot)
-            animalObstacles += Obstacle(listOf(spot), 0.035f, 0.03f)
+            animalObstacles += Obstacle(listOf(spot), 0.2f * cellW, 0.2f * cellH)
         }
     }
-    return AdventureMapSpec(points, mountains, trees, rocks, animals, lake, village, water, bridge, bridgeSegment)
+    return AdventureMapSpec(
+        points = points,
+        mountains = mountains,
+        trees = trees,
+        rocks = rocks,
+        animals = animals,
+        lake = lake,
+        village = village,
+        river = riverPoints,
+        bridge = bridge,
+        bridgeSegment = bridgeSegment,
+        columns = columnCount,
+        contentAspect = contentAspect
+    )
 }
 
 @Composable
@@ -284,18 +307,38 @@ fun AdventureMap(
     players: List<AdventurePlayer>,
     currentPlayerId: String?,
     mapSeed: Long,
+    fieldRewards: List<AdventureReward?>,
     moveFrom: Int = 0,
     moving: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val spec = remember(mapSeed) { generateMapSpec(Random(mapSeed)) }
-    BoxWithConstraints(modifier = modifier) {
+    BoxWithConstraints(modifier) {
         val density = LocalDensity.current
-        val widthPx = with(density) { maxWidth.toPx() }
-        val heightPx = with(density) { maxHeight.toPx() }
-        val pointsPx = spec.points.map { Offset(it.x * widthPx, it.y * heightPx) }
-        val riverPx = spec.river.map { Offset(it.x * widthPx, it.y * heightPx) }
-        val bridgePx = Offset(spec.bridge.x * widthPx, spec.bridge.y * heightPx)
+        val viewportHeightPx = with(density) { maxHeight.toPx() }
+        val columns = (maxWidth.value / 92f).roundToInt().coerceIn(4, 8)
+        val spec = remember(mapSeed, columns) { generateMapSpec(Random(mapSeed), columns) }
+        val contentWidth = maxWidth
+        val contentHeight = maxOf(contentWidth * spec.contentAspect, maxHeight)
+        val contentWidthPx = with(density) { contentWidth.toPx() }
+        val contentHeightPx = with(density) { contentHeight.toPx() }
+        val pointsDp = remember(spec, contentWidth, contentHeight) {
+            spec.points.map { Offset(contentWidth.value * it.x, contentHeight.value * it.y) }
+        }
+        val initialField = players.firstOrNull { it.profileId == currentPlayerId }?.position ?: 1
+        val initialPoint = spec.points.getOrNull((initialField - 1).coerceIn(0, spec.points.lastIndex))
+        val initialScroll = (
+            (initialPoint?.y ?: 1f) * contentHeightPx - viewportHeightPx / 2f
+            ).coerceAtLeast(0f).roundToInt()
+        val scroll = rememberScrollState(initial = initialScroll)
+        val pointsPx = remember(spec, contentWidthPx, contentHeightPx) {
+            spec.points.map { Offset(it.x * contentWidthPx, it.y * contentHeightPx) }
+        }
+        val riverPx = remember(spec, contentWidthPx, contentHeightPx) {
+            spec.river.map { Offset(it.x * contentWidthPx, it.y * contentHeightPx) }
+        }
+        val bridgePx = remember(spec, contentWidthPx, contentHeightPx) {
+            Offset(spec.bridge.x * contentWidthPx, spec.bridge.y * contentHeightPx)
+        }
         val path = remember(pointsPx) { smoothPath(pointsPx) }
         val riverPath = remember(riverPx) { smoothPath(riverPx) }
         val segmentMeasures = remember(pointsPx) {
@@ -303,16 +346,15 @@ fun AdventureMap(
                 PathMeasure().apply { setPath(segmentPath(pointsPx, index), false) }
             }
         }
-        val bridgeAngle = remember(pointsPx) {
+        val bridgeAngle = remember(pointsPx, spec.bridgeSegment) {
             val from = cubicPoint(pointsPx, spec.bridgeSegment, 0.45f)
             val to = cubicPoint(pointsPx, spec.bridgeSegment, 0.55f)
             Math.toDegrees(atan2((to.y - from.y).toDouble(), (to.x - from.x).toDouble())).toFloat()
         }
-        val pointsDp = spec.points.map { Offset(maxWidth.value * it.x, maxHeight.value * it.y) }
-        val fieldSize = 46.dp
-        val tokenSize = 36.dp
+        val fieldSize = (contentWidth / columns.toFloat() * 0.5f).coerceIn(30.dp, 44.dp)
+        val tokenSize = fieldSize * 0.78f
         val flowTransition = rememberInfiniteTransition(label = "river_flow")
-        val flow by flowTransition.animateFloat(
+        val flowState = flowTransition.animateFloat(
             initialValue = 0f,
             targetValue = 1f,
             animationSpec = infiniteRepeatable(
@@ -325,79 +367,140 @@ fun AdventureMap(
         val animalLayouts = remember(spec) {
             spec.animals.map { measurer.measure(it.emoji, TextStyle(fontSize = 20.sp)) }
         }
-
-        Canvas(Modifier.fillMaxSize().clipToBounds()) {
-            drawRect(
-                Brush.verticalGradient(
-                    listOf(GROUND_TOP, GROUND_BOTTOM),
-                    startY = 0f,
-                    endY = size.height
-                )
-            )
-            drawGroundPatches()
-            spec.mountains.forEach { drawMountain(it, size.width, size.height) }
-            drawRiver(riverPath, flow)
-            drawLake(Offset(spec.lake.x * size.width, spec.lake.y * size.height))
-            spec.village.forEach { drawHouse(Offset(it.x * size.width, it.y * size.height)) }
-            spec.trees.forEach { drawTree(Offset(it.x * size.width, it.y * size.height), 1f) }
-            spec.rocks.forEach { drawRock(Offset(it.x * size.width, it.y * size.height)) }
-            drawPath(path)
-            drawBridge(bridgePx, bridgeAngle)
-            drawCastle(Offset(pointsPx.last().x, pointsPx.last().y - 22.dp.toPx()))
-            spec.animals.forEachIndexed { index, animal ->
-                val layout = animalLayouts[index]
-                val center = Offset(animal.position.x * size.width, animal.position.y * size.height)
-                drawText(
-                    textLayoutResult = layout,
-                    topLeft = Offset(center.x - layout.size.width / 2f, center.y - layout.size.height / 2f)
-                )
-            }
-            if (players.any { it.position >= ADVENTURE_GOAL && it.profileId == currentPlayerId }) {
-                drawCircle(
-                    color = StorybookGold,
-                    radius = 30.dp.toPx(),
-                    center = pointsPx.last(),
-                    style = Stroke(width = 3.dp.toPx())
-                )
-            }
+        val currentField = players.firstOrNull { it.profileId == currentPlayerId }?.position ?: 1
+        LaunchedEffect(currentPlayerId, currentField, columns, contentHeightPx) {
+            withFrameNanos { }
+            val point = spec.points.getOrNull((currentField - 1).coerceIn(0, spec.points.lastIndex)) ?: return@LaunchedEffect
+            val maxScroll = (contentHeightPx - viewportHeightPx).coerceAtLeast(0f)
+            val target = (point.y * contentHeightPx - viewportHeightPx / 2f).coerceIn(0f, maxScroll)
+            scroll.animateScrollTo(target.roundToInt())
         }
 
-        pointsDp.forEachIndexed { index, point ->
-            if (index < ADVENTURE_FIELD_COUNT) {
-                val field = index + 1
-                val reached = players.any { it.position >= field }
-                val active = !moving && players.any { it.position == field && it.profileId == currentPlayerId }
-                FieldBadge(
-                    index = field,
-                    reached = reached,
-                    active = active,
-                    size = fieldSize,
-                    modifier = Modifier.offset(
-                        x = point.x.dp - fieldSize / 2,
-                        y = point.y.dp - fieldSize / 2
+        Box(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(scroll)
+                .clipToBounds()
+        ) {
+            Box(Modifier.fillMaxWidth().height(contentHeight)) {
+                Canvas(Modifier.fillMaxSize()) {
+                    drawRect(
+                        Brush.verticalGradient(
+                            listOf(GROUND_TOP, GROUND_BOTTOM),
+                            startY = 0f,
+                            endY = size.height
+                        )
                     )
-                )
-            }
-        }
+                    drawGroundPatches()
+                    spec.mountains.forEach { drawMountain(it, size.width, size.height) }
+                    drawRiver(riverPath, flowState.value)
+                    drawLake(Offset(spec.lake.x * size.width, spec.lake.y * size.height))
+                    spec.village.forEach { drawHouse(Offset(it.x * size.width, it.y * size.height)) }
+                    spec.trees.forEach { drawTree(Offset(it.x * size.width, it.y * size.height), 1f) }
+                    spec.rocks.forEach { drawRock(Offset(it.x * size.width, it.y * size.height)) }
+                    drawPath(path)
+                    drawBridge(bridgePx, bridgeAngle)
+                    drawCastle(Offset(pointsPx.last().x, pointsPx.last().y - 22.dp.toPx()))
+                    spec.animals.forEachIndexed { index, animal ->
+                        val layout = animalLayouts[index]
+                        val center = Offset(animal.position.x * size.width, animal.position.y * size.height)
+                        drawText(
+                            textLayoutResult = layout,
+                            topLeft = Offset(center.x - layout.size.width / 2f, center.y - layout.size.height / 2f)
+                        )
+                    }
+                    if (players.any { it.position >= ADVENTURE_GOAL && it.profileId == currentPlayerId }) {
+                        drawCircle(
+                            color = StorybookGold,
+                            radius = 30.dp.toPx(),
+                            center = pointsPx.last(),
+                            style = Stroke(width = 3.dp.toPx())
+                        )
+                    }
+                }
 
-        players.forEach { player ->
-            val atField = players.count { it.position == player.position }
-            val indexInField = players.filter { it.position == player.position }.indexOf(player)
-            val startAt = if (player.profileId == currentPlayerId && moving && moveFrom < player.position) {
-                (moveFrom - 1).toFloat()
-            } else {
-                (player.position - 1).toFloat()
+                pointsDp.forEachIndexed { index, point ->
+                    if (index < ADVENTURE_FIELD_COUNT) {
+                        val field = index + 1
+                        val reached = players.any { it.position >= field }
+                        val active = !moving && players.any { it.position == field && it.profileId == currentPlayerId }
+                        FieldBadge(
+                            index = field,
+                            reward = fieldRewards.getOrNull(field),
+                            reached = reached,
+                            active = active,
+                            size = fieldSize,
+                            modifier = Modifier.offset(
+                                x = point.x.dp - fieldSize / 2,
+                                y = point.y.dp - fieldSize / 2
+                            )
+                        )
+                    }
+                }
+
+                players.forEach { player ->
+                    val atField = players.count { it.position == player.position }
+                    val indexInField = players.filter { it.position == player.position }.indexOf(player)
+                    val startAt = if (player.profileId == currentPlayerId && moving && moveFrom < player.position) {
+                        (moveFrom - 1).toFloat()
+                    } else {
+                        (player.position - 1).toFloat()
+                    }
+                    val steps = if (player.profileId == currentPlayerId && moving && player.position > moveFrom) {
+                        player.position - moveFrom
+                    } else {
+                        1
+                    }
+                    AnimatedPlayerToken(
+                        player = player,
+                        current = player.profileId == currentPlayerId,
+                        startAt = startAt,
+                        walkMs = AdventureTiming.walkMs(steps),
+                        points = pointsPx,
+                        segmentMeasures = segmentMeasures,
+                        tokenSize = tokenSize,
+                        offsetX = ((indexInField - (atField - 1) / 2f) * 14f).dp
+                    )
+                }
             }
-            AnimatedPlayerToken(
-                player = player,
-                current = player.profileId == currentPlayerId,
-                startAt = startAt,
-                points = pointsPx,
-                segmentMeasures = segmentMeasures,
-                tokenSize = tokenSize,
-                offsetX = ((indexInField - (atField - 1) / 2f) * 14f).dp
-            )
         }
+    }
+}
+
+@Composable
+fun AdventureLegend(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color(0xCC1B1733))
+            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(50))
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        LegendItem(FIELD_SONG, stringResource(R.string.adventure_legend_song))
+        LegendItem(FIELD_STICKERS, stringResource(R.string.adventure_legend_stickers))
+        LegendItem(FIELD_WHACK, stringResource(R.string.adventure_legend_whack))
+        LegendItem(FIELD_GO_AGAIN, stringResource(R.string.adventure_reward_go_again_short))
+        Text("🏰", fontSize = 12.sp)
+    }
+}
+
+@Composable
+private fun LegendItem(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Spacer(Modifier.width(3.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White.copy(alpha = 0.8f)
+        )
     }
 }
 
@@ -450,11 +553,14 @@ private fun segmentPath(points: List<Offset>, index: Int): Path = Path().apply {
 
 private fun DrawScope.drawGroundPatches() {
     val patches = listOf(
-        Offset(size.width * 0.12f, size.height * 0.22f),
-        Offset(size.width * 0.44f, size.height * 0.74f),
-        Offset(size.width * 0.76f, size.height * 0.42f),
-        Offset(size.width * 0.88f, size.height * 0.82f),
-        Offset(size.width * 0.56f, size.height * 0.16f)
+        Offset(size.width * 0.12f, size.height * 0.12f),
+        Offset(size.width * 0.44f, size.height * 0.27f),
+        Offset(size.width * 0.76f, size.height * 0.18f),
+        Offset(size.width * 0.2f, size.height * 0.46f),
+        Offset(size.width * 0.7f, size.height * 0.55f),
+        Offset(size.width * 0.36f, size.height * 0.71f),
+        Offset(size.width * 0.84f, size.height * 0.8f),
+        Offset(size.width * 0.18f, size.height * 0.9f)
     )
     patches.forEachIndexed { index, center ->
         drawCircle(
@@ -464,9 +570,9 @@ private fun DrawScope.drawGroundPatches() {
             center = center
         )
     }
-    repeat(20) { index ->
-        val x = size.width * (0.04f + index * 0.048f)
-        val y = size.height * (0.2f + (index * 37 % 60) / 100f)
+    repeat(60) { index ->
+        val x = size.width * (0.04f + (index * 0.618f % 1f) * 0.92f)
+        val y = size.height * (0.02f + (index * 0.37f % 1f) * 0.96f)
         drawLine(
             color = Color(0xFF6B9B52).copy(alpha = 0.35f),
             start = Offset(x, y),
@@ -661,44 +767,70 @@ private fun DrawScope.drawBridge(center: Offset, angle: Float) {
 @Composable
 private fun FieldBadge(
     index: Int,
+    reward: AdventureReward?,
     reached: Boolean,
     active: Boolean,
     size: Dp,
     modifier: Modifier = Modifier
 ) {
-    val transition = rememberInfiniteTransition(label = "field_pulse")
-    val pulse by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = if (active) 1.1f else 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "field_pulse_value"
-    )
+    val pulse = if (active) {
+        val transition = rememberInfiniteTransition(label = "field_pulse")
+        val value by transition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(900, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "field_pulse_value"
+        )
+        value
+    } else {
+        1f
+    }
+    val base = when (reward) {
+        is AdventureReward.Stickers -> FIELD_STICKERS
+        AdventureReward.Song -> FIELD_SONG
+        AdventureReward.GoAgain -> FIELD_GO_AGAIN
+        AdventureReward.Whack -> FIELD_WHACK
+        null -> FIELD_START
+    }
+    val icon = when (reward) {
+        is AdventureReward.Stickers -> reward.stickers.firstOrNull()?.emoji
+        AdventureReward.Song -> "🎵"
+        AdventureReward.GoAgain -> "🎲"
+        AdventureReward.Whack -> null
+        null -> null
+    }
     Box(
         modifier = modifier
             .size(size)
             .graphicsLayer {
                 scaleX = if (active) pulse else 1f
                 scaleY = if (active) pulse else 1f
-                alpha = if (reached) 1f else 0.55f
             }
             .clip(CircleShape)
-            .background(if (active) StorybookGold.copy(alpha = 0.35f) else Color(0xFF1E3A2A).copy(alpha = 0.82f))
+            .background(base.copy(alpha = if (reached) 0.95f else 0.72f))
             .border(
                 width = if (active) 2.5.dp else 1.dp,
-                color = if (active) StorybookGold else Color.White.copy(alpha = 0.35f),
+                color = if (active) StorybookGold else Color.White.copy(alpha = 0.42f),
                 shape = CircleShape
             ),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = index.toString(),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Black,
-            color = if (active || reached) Color.White else Color.White.copy(alpha = 0.65f)
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = index.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Black,
+                color = Color.White
+            )
+            if (reward == AdventureReward.Whack) {
+                WhackPressIcon(Modifier.size(width = 12.dp, height = 9.dp))
+            } else if (icon != null) {
+                Text(icon, fontSize = 8.sp)
+            }
+        }
     }
 }
 
@@ -707,6 +839,7 @@ private fun AnimatedPlayerToken(
     player: AdventurePlayer,
     current: Boolean,
     startAt: Float,
+    walkMs: Long,
     points: List<Offset>,
     segmentMeasures: List<PathMeasure>,
     tokenSize: Dp,
@@ -716,7 +849,7 @@ private fun AnimatedPlayerToken(
     LaunchedEffect(player.position) {
         animated.animateTo(
             (player.position - 1).toFloat(),
-            tween(AdventureTiming.WALK_MS.toInt(), easing = FastOutSlowInEasing)
+            tween(walkMs.toInt(), easing = FastOutSlowInEasing)
         )
     }
     val value = animated.value.coerceIn(0f, points.lastIndex.toFloat())
@@ -753,6 +886,6 @@ private fun AnimatedPlayerToken(
             .border(2.dp, if (current) StorybookGold else Color.White.copy(alpha = 0.55f), CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        Text(player.emoji, fontSize = 18.sp)
+        Text(player.emoji, fontSize = (tokenSize.value * 0.5f).sp)
     }
 }

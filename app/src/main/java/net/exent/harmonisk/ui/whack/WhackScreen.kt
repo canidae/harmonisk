@@ -57,7 +57,11 @@ private val HOLE_RIM = Color(0xFFFFE0A3)
 @Composable
 fun WhackScreen(
     onBack: () -> Unit,
-    viewModel: WhackViewModel = hiltViewModel()
+    viewModel: WhackViewModel = hiltViewModel(),
+    adventure: Boolean = false,
+    durationMs: Long = WhackRules.GAME_MS,
+    subtitle: String? = null,
+    onFinished: (Int) -> Unit = {}
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -74,7 +78,15 @@ fun WhackScreen(
     LaunchedEffect(state.levelUp?.id) {
         state.levelUp?.let { sounds.play(WhackSfx.Level, 0.7f) }
     }
-    BackHandler(enabled = state.playing) { viewModel.stop() }
+    val startGame = { viewModel.start(durationMs, persistBest = !adventure) }
+    val leave = {
+        when {
+            state.playing -> viewModel.stop()
+            adventure && state.finished -> onFinished(state.hits)
+            else -> onBack()
+        }
+    }
+    BackHandler(enabled = state.playing || adventure) { leave() }
     KeepScreenOn()
 
     Scaffold(
@@ -83,7 +95,8 @@ fun WhackScreen(
         topBar = {
             BrandTopBar(
                 title = stringResource(R.string.whack_title),
-                onBack = { if (state.playing) viewModel.stop() else onBack() }
+                subtitle = subtitle,
+                onBack = leave
             )
         }
     ) { padding ->
@@ -94,7 +107,7 @@ fun WhackScreen(
                     .padding(padding)
                     .navigationBarsPadding()
             ) {
-                WhackHeader(state)
+                WhackHeader(state, adventure)
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -104,7 +117,9 @@ fun WhackScreen(
                     if (!state.playing) {
                         WhackOverlay(
                             state = state,
-                            onStart = viewModel::start
+                            adventure = adventure,
+                            onStart = startGame,
+                            onFinished = onFinished
                         )
                     }
                 }
@@ -115,7 +130,7 @@ fun WhackScreen(
 }
 
 @Composable
-private fun WhackHeader(state: WhackState) {
+private fun WhackHeader(state: WhackState, adventure: Boolean) {
     val seconds = (state.remainingMs + 999) / 1000
     val urgent = state.playing && seconds <= 20
     Column(
@@ -144,16 +159,18 @@ private fun WhackHeader(state: WhackState) {
                     fontWeight = FontWeight.Bold,
                     color = if (urgent) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                 )
-                Text(
-                    text = stringResource(R.string.whack_best, state.best),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (!adventure) {
+                    Text(
+                        text = stringResource(R.string.whack_best, state.best),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
         Spacer(Modifier.height(4.dp))
         LinearProgressIndicator(
-            progress = { (state.remainingMs.toFloat() / WhackRules.GAME_MS).coerceIn(0f, 1f) },
+            progress = { (state.remainingMs.toFloat() / state.durationMs).coerceIn(0f, 1f) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(6.dp)
@@ -347,7 +364,12 @@ private fun WhackLetters(instrument: Instrument) {
 }
 
 @Composable
-private fun WhackOverlay(state: WhackState, onStart: () -> Unit) {
+private fun WhackOverlay(
+    state: WhackState,
+    adventure: Boolean,
+    onStart: () -> Unit,
+    onFinished: (Int) -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -385,12 +407,14 @@ private fun WhackOverlay(state: WhackState, onStart: () -> Unit) {
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = stringResource(R.string.whack_best, state.best),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (!adventure) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = stringResource(R.string.whack_best, state.best),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 } else {
                     WhackPressIcon(Modifier.size(width = 76.dp, height = 56.dp))
                     Spacer(Modifier.height(10.dp))
@@ -401,7 +425,9 @@ private fun WhackOverlay(state: WhackState, onStart: () -> Unit) {
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        text = stringResource(R.string.whack_duration),
+                        text = stringResource(
+                            if (adventure) R.string.whack_duration_minute else R.string.whack_duration
+                        ),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -410,21 +436,31 @@ private fun WhackOverlay(state: WhackState, onStart: () -> Unit) {
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
-                        text = stringResource(R.string.whack_best, state.best),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (!adventure) {
+                        Text(
+                            text = stringResource(R.string.whack_best, state.best),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 Spacer(Modifier.height(18.dp))
                 Button(
-                    onClick = onStart,
+                    onClick = {
+                        if (state.finished && adventure) onFinished(state.hits) else onStart()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp)
                 ) {
                     Text(
-                        text = stringResource(if (state.finished) R.string.whack_again else R.string.whack_start),
+                        text = stringResource(
+                            when {
+                                state.finished && adventure -> R.string.whack_continue
+                                state.finished -> R.string.whack_again
+                                else -> R.string.whack_start
+                            }
+                        ),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )

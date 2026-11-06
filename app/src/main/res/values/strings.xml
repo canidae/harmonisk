@@ -236,6 +236,7 @@
     <string name="adventure_turn">%1$s’s turn</string>
     <string name="adventure_field">Field %1$d of %2$d</string>
     <string name="adventure_level">Level %1$d</string>
+    <string name="adventure_move">Move %1$d</string>
     <string name="adventure_play_song">Play song</string>
     <string name="adventure_load_failed">Could not start that song</string>
     <string name="adventure_results_title">The adventure is complete</string>
@@ -262,8 +263,19 @@
         <item quantity="one">%1$d sticker</item>
         <item quantity="other">%1$d stickers</item>
     </plurals>
-    <string name="adventure_reward_points">+%1$d points</string>
-    <string name="adventure_reward_go_again_short">Go again</string>
+    <string name="adventure_reward_go_again_short">Throw again</string>
+    <string name="adventure_go_again">Go again</string>
+    <string name="adventure_pull_lever">Pull the lever</string>
+    <string name="adventure_throw_dice">Throw the dice</string>
+    <string name="adventure_tap_to_throw">Tap to throw the dice</string>
+    <string name="adventure_choose_song">Choose a song</string>
+    <string name="adventure_spinning">Spinning…</string>
+    <string name="adventure_song_complete">Song complete</string>
+    <string name="adventure_castle_reached">Castle reached</string>
+    <string name="adventure_legend_song">Song</string>
+    <string name="adventure_legend_stickers">Stickers</string>
+    <string name="adventure_legend_whack">Whack</string>
+    <string name="adventure_castle_bonus">Castle bonus +%1$d</string>
     <string name="adventure_winner">%1$s wins!</string>
     <string name="adventure_tie">It’s a tie!</string>
 
@@ -275,7 +287,9 @@
     <string name="whack_time_up">Time’s up!</string>
     <string name="whack_hits">Whacks</string>
     <string name="whack_duration">Three minutes</string>
+    <string name="whack_duration_minute">One minute</string>
     <string name="whack_again">Play again</string>
+    <string name="whack_continue">Continue</string>
 </resources>
 
 

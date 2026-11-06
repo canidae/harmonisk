@@ -3,21 +3,37 @@ package net.exent.harmonisk.ui.adventure
 import kotlin.math.abs
 import kotlin.random.Random
 
-const val ADVENTURE_FIELD_COUNT = 5
+const val ADVENTURE_FIELD_COUNT = 50
 const val ADVENTURE_GOAL = ADVENTURE_FIELD_COUNT + 1
+const val ADVENTURE_CASTLE_BONUS = 100
 
-enum class AdventureTurnPhase { MOVING, PULLING, SPINNING, HIGHLIGHT, REVEALED }
+enum class AdventureTurnPhase {
+    ROLLING,
+    DICE,
+    MOVING,
+    EVENT,
+    PULLING,
+    SPINNING,
+    HIGHLIGHT,
+    REVEALED
+}
 
 object AdventureTiming {
     const val WALK_MS = 900L
-    const val LEVER_MS = 950L
-    const val LEVER_HOLD_MS = 500L
+    const val STEP_MS = 180L
+    const val MAX_WALK_MS = 2_200L
+    const val DICE_SHOW_MS = 900L
+    const val FLASH_FLY_MS = 650L
     const val SPIN_MS = 2800L
+    const val SPIN_EXTRA_MS = 1_000L
     const val HOLD_MS = 400L
     const val FLY_MS = 600L
     const val REVEAL_MS = HOLD_MS + FLY_MS
     const val REWARD_MS = 2900L
     const val REWARD_FLY_MS = 700L
+
+    fun walkMs(steps: Int): Long =
+        (WALK_MS + (steps - 1).coerceAtLeast(0) * STEP_MS).coerceAtMost(MAX_WALK_MS)
 }
 
 enum class AdventureSticker(val emoji: String, val value: Int) {
@@ -45,8 +61,9 @@ enum class AdventureSticker(val emoji: String, val value: Int) {
 
 sealed interface AdventureReward {
     data class Stickers(val stickers: List<AdventureSticker>) : AdventureReward
-    data class Points(val points: Int) : AdventureReward
+    data object Song : AdventureReward
     data object GoAgain : AdventureReward
+    data object Whack : AdventureReward
 }
 
 enum class AdventureMedal { GOLD, SILVER, BRONZE, NONE }
@@ -74,29 +91,60 @@ data class AdventureStanding(
     val medal: AdventureMedal
 )
 
-fun AdventurePlayer.advanced(): AdventurePlayer = copy(position = (position + 1).coerceAtMost(ADVENTURE_GOAL))
+data class AdventureLanding(
+    val player: AdventurePlayer,
+    val reward: AdventureReward?,
+    val reachedGoal: Boolean
+)
+
+fun AdventurePlayer.movedBy(fields: Int): AdventurePlayer =
+    copy(position = (position + fields.coerceAtLeast(0)).coerceAtMost(ADVENTURE_GOAL))
 
 fun AdventurePlayer.withScore(score: Float): AdventurePlayer = copy(
     songScore = songScore + score,
     songsPlayed = songsPlayed + 1
 )
 
+fun AdventurePlayer.withBonus(points: Int): AdventurePlayer =
+    copy(bonusScore = bonusScore + points)
+
 fun AdventurePlayer.withReward(reward: AdventureReward): AdventurePlayer = when (reward) {
     is AdventureReward.Stickers -> copy(
         stickerScore = stickerScore + reward.stickers.sumOf { it.value }.toFloat(),
         stickers = stickers + reward.stickers
     )
-    is AdventureReward.Points -> copy(bonusScore = bonusScore + reward.points)
-    AdventureReward.GoAgain -> this
+    AdventureReward.Song, AdventureReward.GoAgain, AdventureReward.Whack -> this
 }
 
-fun rewardFor(field: Int, random: Random): AdventureReward? {
-    if (field >= ADVENTURE_GOAL) return null
-    return when (random.nextInt(3)) {
-        0 -> AdventureReward.Stickers(AdventureSticker.entries.shuffled(random).take(1 + random.nextInt(3)))
-        1 -> AdventureReward.Points(12 + random.nextInt(13))
-        else -> AdventureReward.GoAgain
+fun resolveLanding(
+    player: AdventurePlayer,
+    dice: Int,
+    fieldRewards: List<AdventureReward?>
+): AdventureLanding {
+    val moved = player.movedBy(dice)
+    val reachedGoal = moved.position >= ADVENTURE_GOAL
+    return AdventureLanding(
+        player = moved,
+        reward = if (reachedGoal) null else fieldRewards.getOrNull(moved.position),
+        reachedGoal = reachedGoal
+    )
+}
+
+fun generateFieldRewards(random: Random): List<AdventureReward?> =
+    (0..ADVENTURE_FIELD_COUNT).map { field ->
+        when (field) {
+            0, 1 -> null
+            else -> randomFieldReward(random)
+        }
     }
+
+fun randomFieldReward(random: Random): AdventureReward = when (random.nextInt(100)) {
+    in 0 until 55 -> AdventureReward.Song
+    in 55 until 75 -> AdventureReward.Stickers(
+        AdventureSticker.entries.shuffled(random).take(1 + random.nextInt(3))
+    )
+    in 75 until 90 -> AdventureReward.Whack
+    else -> AdventureReward.GoAgain
 }
 
 fun nextPlayerIndex(current: Int, playerCount: Int): Int =

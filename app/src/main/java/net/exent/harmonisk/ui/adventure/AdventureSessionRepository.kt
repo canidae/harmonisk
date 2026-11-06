@@ -12,8 +12,7 @@ data class AdventureTurn(
     val playerName: String,
     val melodyId: String,
     val melodyName: String,
-    val level: Int,
-    val bonusSong: Boolean
+    val level: Int
 )
 
 data class AdventureTurnResult(

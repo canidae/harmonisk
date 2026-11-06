@@ -43,6 +43,9 @@ import net.exent.harmonisk.ui.melody.MelodyPlayScreen
 import net.exent.harmonisk.ui.melody.PlayPhase
 import net.exent.harmonisk.ui.melody.MelodyViewModel
 import net.exent.harmonisk.ui.profile.CreateProfileDialog
+import net.exent.harmonisk.ui.whack.WhackRules
+import net.exent.harmonisk.ui.whack.WhackScreen
+import net.exent.harmonisk.ui.whack.WhackViewModel
 
 @Composable
 fun AdventureScreen(
@@ -72,7 +75,7 @@ fun AdventureScreen(
         }
     }
 
-    BackHandler(enabled = state.step != AdventureStep.PLAY) {
+    BackHandler(enabled = state.step != AdventureStep.PLAY && state.step != AdventureStep.WHACK) {
         when (state.step) {
             AdventureStep.PLAYERS -> onBack()
             AdventureStep.SONGS -> viewModel.backToPlayers()
@@ -141,6 +144,15 @@ fun AdventureScreen(
         return
     }
 
+    if (state.step == AdventureStep.WHACK) {
+        AdventureWhackScreen(
+            state = state,
+            onFinished = viewModel::finishWhack,
+            onBack = { viewModel.finishWhack(0) }
+        )
+        return
+    }
+
     AdventureBackdrop(Modifier.fillMaxSize()) {
         when (state.step) {
             AdventureStep.PLAYERS -> PlayerSetupScreen(
@@ -162,6 +174,8 @@ fun AdventureScreen(
             else -> AdventureGameScreen(
                 state = state,
                 onPlay = viewModel::playCurrentSong,
+                onPull = viewModel::pullLever,
+                onRoll = viewModel::rollDice,
                 onBack = { showExitDialog = true }
             )
         }
@@ -196,6 +210,26 @@ fun AdventureScreen(
 }
 
 @Composable
+private fun AdventureWhackScreen(
+    state: AdventureState,
+    onFinished: (Int) -> Unit,
+    onBack: () -> Unit
+) {
+    val whackViewModel: WhackViewModel = hiltViewModel()
+    LaunchedEffect(Unit) {
+        whackViewModel.reset(WhackRules.ADVENTURE_GAME_MS, persistBest = false)
+    }
+    WhackScreen(
+        onBack = onBack,
+        viewModel = whackViewModel,
+        adventure = true,
+        durationMs = WhackRules.ADVENTURE_GAME_MS,
+        subtitle = state.currentPlayer?.name,
+        onFinished = onFinished
+    )
+}
+
+@Composable
 private fun PlayerSetupScreen(
     profiles: List<ProfileRepository.Profile>,
     selectedIds: Set<String>,
@@ -204,6 +238,12 @@ private fun PlayerSetupScreen(
     onContinue: () -> Unit,
     onBack: () -> Unit
 ) {
+    val rows = remember(profiles) {
+        buildList<PlayerCell> {
+            profiles.forEach { add(PlayerCell.Profile(it)) }
+            if (profiles.size < 4) add(PlayerCell.Add)
+        }.chunked(2)
+    }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color.Transparent,
@@ -247,26 +287,30 @@ private fun PlayerSetupScreen(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(profiles.chunked(2)) { row ->
+                    items(rows) { row ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            for (profile in row) {
-                                PlayerCard(
-                                    profile = profile,
-                                    colorIndex = profiles.indexOf(profile),
-                                    selected = profile.id in selectedIds,
-                                    enabled = profile.id in selectedIds || selectedIds.size < 4,
-                                    onClick = { onToggle(profile.id) },
-                                    modifier = if (row.size == 1) Modifier.fillMaxWidth() else Modifier.weight(1f)
-                                )
+                            row.forEach { cell ->
+                                when (cell) {
+                                    is PlayerCell.Profile -> PlayerCard(
+                                        profile = cell.profile,
+                                        colorIndex = profiles.indexOf(cell.profile),
+                                        selected = cell.profile.id in selectedIds,
+                                        enabled = cell.profile.id in selectedIds || selectedIds.size < 4,
+                                        onClick = { onToggle(cell.profile.id) },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    PlayerCell.Add -> AddPlayerCard(
+                                        onClick = onAdd,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
                             }
-                        }
-                    }
-                    if (profiles.size < 4) {
-                        item {
-                            AddPlayerCard(onClick = onAdd)
+                            if (row.size == 1) {
+                                Spacer(Modifier.weight(1f))
+                            }
                         }
                     }
                 }
@@ -344,12 +388,15 @@ private fun PlayerCard(
 private fun AddPlayerCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth().heightIn(min = 78.dp),
+        modifier = modifier.fillMaxWidth().heightIn(min = 88.dp),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.06f))
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(18.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 88.dp)
+                .padding(horizontal = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -362,6 +409,11 @@ private fun AddPlayerCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
             )
         }
     }
+}
+
+private sealed interface PlayerCell {
+    data class Profile(val profile: ProfileRepository.Profile) : PlayerCell
+    data object Add : PlayerCell
 }
 
 private data class SongGroup(

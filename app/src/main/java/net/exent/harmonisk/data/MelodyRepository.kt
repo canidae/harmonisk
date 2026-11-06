@@ -42,6 +42,7 @@ class MelodyRepository(
     private val multiTrackCache = object : LinkedHashMap<String, List<MelodyTrack>>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: Map.Entry<String, List<MelodyTrack>>) = size > MAX_CACHE_ENTRIES
     }
+    private val cacheLock = Any()
 
     private val importedMelodyStore = JsonPreferenceStore<String, ImportedMelody>(
         dataStore = context.importedStore,
@@ -123,7 +124,7 @@ class MelodyRepository(
     /**
      * Load and parse a melody by its info.
      */
-    fun loadMelody(info: MelodyInfo): MelodyTrack? {
+    fun loadMelody(info: MelodyInfo): MelodyTrack? = synchronized(cacheLock) {
         cache[info.id]?.let { return it }
 
         val track = try {
@@ -146,7 +147,7 @@ class MelodyRepository(
          }
 
          track?.let { cache[info.id] = it }
-        return track
+        track
     }
 
     /**
@@ -154,7 +155,7 @@ class MelodyRepository(
      * Unlike [loadMelody], tracks are not merged, so multi-voice files keep their
      * per-track identity.
      */
-    fun loadMultiTrack(info: MelodyInfo): List<MelodyTrack> {
+    fun loadMultiTrack(info: MelodyInfo): List<MelodyTrack> = synchronized(cacheLock) {
         multiTrackCache[info.id]?.let { return it }
 
         val tracks = try {
@@ -177,7 +178,7 @@ class MelodyRepository(
          }
 
          if (tracks.isNotEmpty()) multiTrackCache[info.id] = tracks
-        return tracks
+        tracks
     }
 
     /** Stable melody ID derived from a user-supplied URI (uses full URI string, no hash collisions). */
@@ -216,8 +217,10 @@ class MelodyRepository(
 
     /** Drop cached parses so a re-imported file is never served from the previous copy. */
     private suspend fun evictCached(id: String) {
-        cache.remove(id)
-        multiTrackCache.remove(id)
+        synchronized(cacheLock) {
+            cache.remove(id)
+            multiTrackCache.remove(id)
+        }
         difficultyRepository.remove(id)
     }
 
