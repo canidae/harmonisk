@@ -47,6 +47,8 @@ private val PIPS = mapOf(
 )
 
 private val DIE_LIGHT = Vec3(-0.35f, 0.55f, 0.75f)
+private const val IDLE_TILT_X = -18f
+private const val IDLE_TILT_Y = -24f
 private const val PIP_RADIUS = 0.15f
 private const val PIP_SEGMENTS = 18
 private val DIE_BASE = Color(0xFFF6EEDF)
@@ -95,8 +97,9 @@ fun Dice3D(value: Int?, progress: Float, modifier: Modifier = Modifier) {
     val (targetX, targetY) = targetAngles(rolled)
     val turnsX = if (rolled % 2 == 0) 1f else 2f
     val turnsY = if (rolled % 2 == 0) 2f else 1f
-    val angleX = (targetX + 360f * turnsX) * progress
-    val angleY = (targetY + 360f * turnsY) * progress
+    val rest = 1f - progress
+    val angleX = IDLE_TILT_X * rest + (targetX + 360f * turnsX) * progress
+    val angleY = IDLE_TILT_Y * rest + (targetY + 360f * turnsY) * progress
     Canvas(modifier) { drawDie(angleX, angleY) }
 }
 
