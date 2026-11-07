@@ -259,7 +259,6 @@
     <string name="adventure_go_again">Go again</string>
     <string name="adventure_pull_lever">Pull the lever</string>
     <string name="adventure_throw_dice">Throw the dice</string>
-    <string name="adventure_tap_to_throw">Tap to throw the dice</string>
     <string name="adventure_choose_song">Choose a song</string>
     <string name="adventure_song_complete">Song complete</string>
     <string name="adventure_castle_reached">Castle reached</string>

@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -181,6 +182,7 @@ fun AdventurePill(text: String, color: Color, modifier: Modifier = Modifier) {
 @Composable
 fun StorybookCard(
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(
@@ -188,6 +190,7 @@ fun StorybookCard(
             .clip(MaterialTheme.shapes.extraLarge)
             .background(Color(0xF21B1733))
             .border(1.dp, StorybookGold.copy(alpha = 0.22f), MaterialTheme.shapes.extraLarge)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(18.dp),
         content = content
     )
