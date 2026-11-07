@@ -30,6 +30,7 @@ class AdventureEngineTest {
     fun `the last field is forty-nine and the castle is fifty`() {
         assertEquals(49, ADVENTURE_FIELD_COUNT)
         assertEquals(50, ADVENTURE_GOAL)
+        assertEquals(25, ADVENTURE_HALFWAY)
     }
 
     @Test
@@ -186,6 +187,36 @@ class AdventureEngineTest {
         assertEquals(AdventureTiming.WALK_MS, AdventureTiming.walkMs(1))
         assertEquals(1_800L, AdventureTiming.walkMs(6))
         assertEquals(AdventureTiming.MAX_WALK_MS, AdventureTiming.walkMs(20))
+    }
+
+    @Test
+    fun `the faerie gives the lowest scorer twice the gap to the leader`() {
+        val players = listOf(
+            player("A", songScore = 100f),
+            player("B", songScore = 60f),
+            player("C", songScore = 80f)
+        )
+        val gift = faerieGift(players)
+        assertNotNull(gift)
+        assertEquals("B", gift!!.playerId)
+        assertEquals(80, gift.points)
+        assertTrue(60f + gift.points > 100f)
+    }
+
+    @Test
+    fun `the faerie rounds the gift to whole points`() {
+        val gift = faerieGift(
+            listOf(player("A", songScore = 10.4f), player("B", songScore = 0f))
+        )
+        assertEquals(21, gift?.points)
+    }
+
+    @Test
+    fun `the faerie does not appear without a score gap`() {
+        assertNull(faerieGift(listOf(player("A", songScore = 50f))))
+        assertNull(
+            faerieGift(listOf(player("A", songScore = 50f), player("B", songScore = 50f)))
+        )
     }
 
     @Test

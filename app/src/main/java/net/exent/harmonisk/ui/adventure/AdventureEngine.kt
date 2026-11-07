@@ -1,10 +1,12 @@
 package net.exent.harmonisk.ui.adventure
 
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 const val ADVENTURE_FIELD_COUNT = 49
 const val ADVENTURE_GOAL = ADVENTURE_FIELD_COUNT + 1
+const val ADVENTURE_HALFWAY = ADVENTURE_GOAL / 2
 const val ADVENTURE_CASTLE_BONUS = 100
 
 enum class AdventureTurnPhase {
@@ -36,6 +38,12 @@ object AdventureTiming {
     const val REWARD_FLY_MS = 700L
     const val REWARD_TOTAL_MS = REWARD_MS + REWARD_FLY_MS + 250L
     const val CASTLE_RESULT_MS = 900L
+    const val FAERIE_ENTER_MS = 900L
+    const val FAERIE_POP_MS = 260L
+    const val FAERIE_HOLD_MS = 1_000L
+    const val FAERIE_FLY_MS = 800L
+    const val FAERIE_EXIT_MS = 700L
+    const val FAERIE_TIMEOUT_MS = 10_000L
 
     fun walkMs(steps: Int): Long =
         (WALK_MS + (steps - 1).coerceAtLeast(0) * STEP_MS).coerceAtMost(MAX_WALK_MS)
@@ -100,6 +108,11 @@ data class AdventureLanding(
     val player: AdventurePlayer,
     val reward: AdventureReward?,
     val reachedGoal: Boolean
+)
+
+data class AdventureFaerie(
+    val playerId: String,
+    val points: Int
 )
 
 fun AdventurePlayer.movedBy(fields: Int): AdventurePlayer =
@@ -172,6 +185,14 @@ fun nextSong(player: AdventurePlayer, songPool: List<String>, random: Random): P
     val index = if (player.queueIndex >= player.songQueue.size) 0 else player.queueIndex
     val next = queue.getOrNull(index) ?: return null to player
     return next to player.copy(songQueue = queue, queueIndex = index + 1)
+}
+
+fun faerieGift(players: List<AdventurePlayer>): AdventureFaerie? {
+    if (players.size < 2) return null
+    val lowest = players.minByOrNull { it.total } ?: return null
+    val highest = players.maxOf { it.total }
+    val points = ((highest - lowest.total) * 2f).roundToInt()
+    return if (points > 0) AdventureFaerie(lowest.profileId, points) else null
 }
 
 fun standings(players: List<AdventurePlayer>): List<AdventureStanding> {
