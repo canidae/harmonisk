@@ -50,13 +50,7 @@ class MelodyTrack(
     }
 
     fun tickToSeconds(tick: Long): Double {
-        val idx = segments.binarySearch { it.startTick.compareTo(tick) }
-        val seg = if (idx >= 0) {
-            segments[idx]
-        } else {
-            val insertionPoint = -(idx + 1)
-            segments[if (insertionPoint == 0) 0 else insertionPoint - 1]
-        }
+        val seg = segmentFor(tick.toDouble()) { it.startTick.toDouble() }
         if (tick >= seg.endTick) {
             return seg.startSecond + (seg.endTick - seg.startTick).toDouble() * seg.usPerBeat / (ticksPerQuarterNote * 1_000_000.0)
         }
@@ -92,6 +86,14 @@ class MelodyTrack(
         )
     }
 
+    private fun segmentFor(value: Double, selector: (TempoSegment) -> Double): TempoSegment {
+        val idx = segments.binarySearch { selector(it).compareTo(value) }
+        return if (idx >= 0) segments[idx] else {
+            val insertionPoint = -(idx + 1)
+            segments[if (insertionPoint == 0) 0 else insertionPoint - 1]
+        }
+    }
+
     fun bpmAt(tick: Long): Double {
         val event = tempoChanges.lastOrNull { it.tick <= tick }
             ?: tempoChanges.firstOrNull()
@@ -107,13 +109,7 @@ class MelodyTrack(
 
     fun secondsToTick(seconds: Double): Long {
         if (seconds <= 0.0) return 0L
-        val idx = segments.binarySearch { it.startSecond.compareTo(seconds) }
-        val seg = if (idx >= 0) {
-            segments[idx]
-        } else {
-            val insertionPoint = -(idx + 1)
-            segments[if (insertionPoint == 0) 0 else insertionPoint - 1]
-        }
+        val seg = segmentFor(seconds) { it.startSecond }
         val elapsedInSegment = seconds - seg.startSecond
         val segmentEndSec = seg.startSecond + (seg.endTick - seg.startTick).toDouble() * seg.usPerBeat / (ticksPerQuarterNote * 1_000_000.0)
         if (seconds >= segmentEndSec) {

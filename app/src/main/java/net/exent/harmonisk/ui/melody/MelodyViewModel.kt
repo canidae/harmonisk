@@ -67,7 +67,6 @@ class MelodyViewModel @Inject constructor(
 
     companion object {
         private val TAG = "MelodyViewModel"
-        const val DRUM_CHANNEL = SoundFontSynthesizer.DRUM_CHANNEL
     }
 
     private val _gameState = MutableStateFlow(MelodyGameState())
@@ -352,7 +351,7 @@ class MelodyViewModel @Inject constructor(
         tracks.mapIndexed { index, track ->
             if (track.notes.isEmpty()) track
             else {
-                val channel = if (index >= MelodyViewModel.DRUM_CHANNEL) (index + 1).coerceAtMost(15) else index
+                val channel = if (index >= SoundFontSynthesizer.DRUM_CHANNEL) (index + 1).coerceAtMost(15) else index
                 MelodyTrack(
                     name = track.name,
                     notes = track.notes,
@@ -821,7 +820,7 @@ class MelodyViewModel @Inject constructor(
             tempoChanges = track.tempoChanges,
             timeSignatures = track.timeSignatures,
             ticksPerQuarterNote = ppq,
-            channel = MelodyViewModel.DRUM_CHANNEL
+            channel = SoundFontSynthesizer.DRUM_CHANNEL
         )
     }
 
@@ -1258,7 +1257,7 @@ class MelodyViewModel @Inject constructor(
         val centsOff = expectedNotes.minOf { note ->
             abs(noteUtils.frequencyToCents(result.frequency, NoteUtils.midiToFrequency(note.noteNumber, referenceA4)))
         }
-        val isCorrectNote = abs(centsOff) <= 50f
+        val isCorrectNote = abs(centsOff) <= NoteUtils.MAX_CENTS_OFF
         val isMidi = _deviceState.value.midiInputEnabled
         val frameDurationMs = AudioConstants.FRAME_DURATION_MS
 
@@ -1350,7 +1349,7 @@ class MelodyViewModel @Inject constructor(
             if (noteDurationSeconds <= 0.0) return@update current
             val noteStartSeconds = track.noteStartSeconds(note)
             val expectedFreq = NoteUtils.midiToFrequency(note.noteNumber, referenceA4)
-            if (abs(noteUtils.frequencyToCents(frequency, expectedFreq)) > 50f) {
+            if (abs(noteUtils.frequencyToCents(frequency, expectedFreq)) > NoteUtils.MAX_CENTS_OFF) {
                 return@update current
             }
             val pos = ((current.currentTimeSeconds - noteStartSeconds) / noteDurationSeconds).toFloat().coerceIn(0f, 1f)
@@ -1548,21 +1547,14 @@ class MelodyViewModel @Inject constructor(
             }
 
             viewModelScope.launch {
-                scoreHistoryRepository.saveScore(melodyId, ScoreHistoryRepository.ScoreEntry(
-                    timestamp = System.currentTimeMillis(),
-                    overallScore = adjustedScore,
-                    totalNotes = adjustedMelodyScore.totalNotes,
-                    notesHit = adjustedMelodyScore.notesHit,
-                    perfectNotes = adjustedMelodyScore.perfectNotes,
-                    greatNotes = adjustedMelodyScore.greatNotes,
-                    longestStreak = adjustedMelodyScore.longestStreak,
-                    avgPitchScore = adjustedMelodyScore.avgPitchScore,
-                    avgDurationScore = adjustedMelodyScore.avgDurationScore,
-                    level = currentLevel,
-                    instrument = currentInstrumentFlow.value,
-                    wrongNoteCount = adjustedMelodyScore.wrongNoteCount,
-                    wrongNoteScore = adjustedMelodyScore.wrongNoteScore
-                ))
+                scoreHistoryRepository.saveScore(
+                    melodyId,
+                    ScoreHistoryRepository.ScoreEntry.from(
+                        score = adjustedMelodyScore,
+                        level = currentLevel,
+                        instrument = currentInstrumentFlow.value
+                    )
+                )
             }
         }
     }
@@ -1582,20 +1574,11 @@ class MelodyViewModel @Inject constructor(
             scoreHistoryRepository.saveScore(
                 turn.playerId,
                 melodyId,
-                ScoreHistoryRepository.ScoreEntry(
-                    timestamp = System.currentTimeMillis(),
+                ScoreHistoryRepository.ScoreEntry.from(
+                    score = melodyScore,
                     overallScore = rawScore,
-                    totalNotes = melodyScore.totalNotes,
-                    notesHit = melodyScore.notesHit,
-                    perfectNotes = melodyScore.perfectNotes,
-                    greatNotes = melodyScore.greatNotes,
-                    longestStreak = melodyScore.longestStreak,
-                    avgPitchScore = melodyScore.avgPitchScore,
-                    avgDurationScore = melodyScore.avgDurationScore,
                     level = level,
-                    instrument = instrument,
-                    wrongNoteCount = melodyScore.wrongNoteCount,
-                    wrongNoteScore = melodyScore.wrongNoteScore
+                    instrument = instrument
                 )
             )
             val settings = melodySettingsRepository.getSettings(turn.playerId, melodyId, instrument).first()
@@ -1645,14 +1628,7 @@ private class NoteTrackingState {
     var hasSeenSilenceSinceLastValid = false
 
     fun reset() {
-        centsOffSum = 0f
-        centsOffCount = 0
-        correctPitchFrameCount = 0
-        detectedPitchFrameCount = 0
-        correctPitchMs = 0L
-        detectedPitchMs = 0L
-        lastPitchAtMs = 0L
-        lastCorrectAtMs = 0L
+        resetPitchAccumulators()
         isWaitingForNote = false
         wasWaitingForNote = false
         lastWrongMidiNote = -1
@@ -1661,7 +1637,9 @@ private class NoteTrackingState {
     }
 
     /** Reset only the per-note pitch accumulation counters (called when a new note begins). */
-    fun resetForNewNote() {
+    fun resetForNewNote() = resetPitchAccumulators()
+
+    private fun resetPitchAccumulators() {
         centsOffSum = 0f
         centsOffCount = 0
         correctPitchFrameCount = 0

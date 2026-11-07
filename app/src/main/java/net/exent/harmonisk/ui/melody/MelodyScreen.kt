@@ -54,6 +54,7 @@ import net.exent.harmonisk.ui.profile.CreateProfileDialog
 import net.exent.harmonisk.ui.profile.ProfileButton
 import net.exent.harmonisk.ui.profile.ProfileSwitchDialog
 import net.exent.harmonisk.ui.theme.BrandPurple
+import net.exent.harmonisk.ui.utils.folderDisplayName
 import net.exent.harmonisk.ui.utils.formatScore
 import net.exent.harmonisk.ui.utils.scoreColor
 import kotlinx.coroutines.launch
@@ -162,19 +163,13 @@ fun MelodyScreen(
         }
     }
 
-    fun folderDisplayName(folder: String): String {
-        val resId = context.resources.getIdentifier("melody_folder_$folder", "string", context.packageName)
-        return if (resId != 0) context.getString(resId)
-        else folder.replace('_', ' ').replaceFirstChar { it.uppercase() }
-    }
-
     val melodies by viewModel.sortedMelodies.collectAsStateWithLifecycle()
     val importedMelodies = melodies.filter { !it.isBundled }
     val looseImported = importedMelodies.filter { it.folder == MelodyRepository.IMPORTED_FOLDER }
     val importedSubfolders = importedMelodies
         .filter { it.folder != null && it.folder != MelodyRepository.IMPORTED_FOLDER }
-        .groupBy { it.folder!! }
-    val bundledFolders = melodies.filter { it.isBundled && it.folder != null }.groupBy { it.folder!! }
+        .groupBy { it.folder.orEmpty() }
+    val bundledFolders = melodies.filter { it.isBundled && it.folder != null }.groupBy { it.folder.orEmpty() }
     val looseBundled = melodies.filter { it.isBundled && it.folder == null }
 
     val inImportedFolder = currentFolder == MelodyRepository.IMPORTED_FOLDER
@@ -259,8 +254,8 @@ fun MelodyScreen(
             BrandTopBar(
                 title = stringResource(R.string.melody_title),
                 subtitle = when {
-                    currentSubfolder != null -> folderDisplayName(currentSubfolder!!)
-                    currentFolder != null -> folderDisplayName(currentFolder!!)
+                    currentSubfolder != null -> folderDisplayName(context, currentSubfolder!!)
+                    currentFolder != null -> folderDisplayName(context, currentFolder!!)
                     else -> stringResource(R.string.melody_choose)
                 },
                 onBack = {
@@ -293,15 +288,15 @@ fun MelodyScreen(
                         items(looseBundled) { info -> songCard(info) }
                         item {
                             FolderCard(
-                                name = folderDisplayName(MelodyRepository.IMPORTED_FOLDER),
+                                name = folderDisplayName(context, MelodyRepository.IMPORTED_FOLDER),
                                 count = importedMelodies.size,
                                 onClick = { currentFolder = MelodyRepository.IMPORTED_FOLDER }
                             )
                         }
-                        items(bundledFolders.keys.sortedBy { folderDisplayName(it) }) { folder ->
+                        items(bundledFolders.keys.sortedBy { folderDisplayName(context, it) }) { folder ->
                             FolderCard(
-                                name = folderDisplayName(folder),
-                                count = bundledFolders[folder]!!.size,
+                                name = folderDisplayName(context, folder),
+                                count = bundledFolders[folder]?.size ?: 0,
                                 onClick = { currentFolder = folder }
                             )
                         }
@@ -313,10 +308,10 @@ fun MelodyScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (browsingImported) {
-                            items(importedSubfolders.keys.sortedBy { folderDisplayName(it) }) { folder ->
+                            items(importedSubfolders.keys.sortedBy { folderDisplayName(context, it) }) { folder ->
                                 FolderCard(
-                                    name = folderDisplayName(folder),
-                                    count = importedSubfolders[folder]!!.size,
+                                    name = folderDisplayName(context, folder),
+                                    count = importedSubfolders[folder]?.size ?: 0,
                                     onClick = { currentSubfolder = folder },
                                     onRemove = { viewModel.removeImportedFolder(folder) }
                                 )

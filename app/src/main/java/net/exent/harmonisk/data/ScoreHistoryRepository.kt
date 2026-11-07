@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
+import net.exent.harmonisk.music.MelodyScore
 
 private val Context.scoreHistoryStore: DataStore<Preferences> by preferencesDataStore(
     name = "score_history"
@@ -39,7 +40,30 @@ class ScoreHistoryRepository(
         val instrument: String = "PIANO",
         val wrongNoteCount: Int = 0,
         val wrongNoteScore: Float = 100f
-    )
+    ) {
+        companion object {
+            fun from(
+                score: MelodyScore,
+                overallScore: Float = score.overallScore,
+                level: Int,
+                instrument: String
+            ) = ScoreEntry(
+                timestamp = System.currentTimeMillis(),
+                overallScore = overallScore,
+                totalNotes = score.totalNotes,
+                notesHit = score.notesHit,
+                perfectNotes = score.perfectNotes,
+                greatNotes = score.greatNotes,
+                longestStreak = score.longestStreak,
+                avgPitchScore = score.avgPitchScore,
+                avgDurationScore = score.avgDurationScore,
+                level = level,
+                instrument = instrument,
+                wrongNoteCount = score.wrongNoteCount,
+                wrongNoteScore = score.wrongNoteScore
+            )
+        }
+    }
 
     /** Timestamp of the most recent playthrough of each melody, across instruments. */
     @OptIn(ExperimentalCoroutinesApi::class)

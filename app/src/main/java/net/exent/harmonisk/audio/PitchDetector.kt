@@ -20,7 +20,7 @@ data class PitchDetectionResult(
 }
 
 internal object PitchResampler {
-    const val SOURCE_RATE = 44100
+    const val SOURCE_RATE = AudioConstants.SAMPLE_RATE
     const val TARGET_RATE = 16000
     const val TARGET_SAMPLES = 1024
 

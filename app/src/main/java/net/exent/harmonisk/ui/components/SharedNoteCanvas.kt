@@ -34,6 +34,7 @@ import net.exent.harmonisk.midi.MelodyTrack
 import net.exent.harmonisk.music.BowedAlgorithm
 import net.exent.harmonisk.music.BowedPosition
 import net.exent.harmonisk.music.Instrument
+import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.ui.record.PianoVisibility
 import net.exent.harmonisk.ui.record.PlayedNote
 import net.exent.harmonisk.ui.melody.NoteResultState
@@ -1261,7 +1262,7 @@ private fun DrawScope.drawVerticalPitchLine(
     val path = Path()
     for (i in centsHistory.indices) {
         val t = centsPositions[i].coerceIn(0f, 1f)
-        val normalized = (centsHistory[i] / 50f).coerceIn(-1f, 1f)
+        val normalized = (centsHistory[i] / NoteUtils.MAX_CENTS_OFF).coerceIn(-1f, 1f)
         val x = centerX + normalized * maxDeviationPx
         // Bowed bars fall toward the play line: the note starts at the bar
         // bottom, so the pitch line grows upward from detection start.
@@ -1429,7 +1430,7 @@ private fun DrawScope.drawWigglyPitchLine(
 
     for (i in centsHistory.indices) {
         val t = centsPositions[i].coerceIn(0f, 1f)
-        val normalized = (centsHistory[i] / 50f).coerceIn(-1f, 1f)
+        val normalized = (centsHistory[i] / NoteUtils.MAX_CENTS_OFF).coerceIn(-1f, 1f)
         val x = centerX + normalized * maxDeviationPx
         val y = if (pianoAtBottom) rawBottomY - t * fullHeight else rawTopY + t * fullHeight
         if (i == 0) {
@@ -1467,12 +1468,12 @@ private fun getIndicatorColor(
     val expectedNote = melodyTrack.notes[currentNoteIndex]
 
     return if (detectedMidi == expectedNote.noteNumber) {
-        val absCents = abs(centsOff ?: 50f)
+        val absCents = abs(centsOff ?: NoteUtils.MAX_CENTS_OFF)
         when {
             absCents <= 5f -> OVERLAY_PERFECT
             absCents <= 10f -> OVERLAY_GREAT
             absCents <= 30f -> OVERLAY_GOOD
-            absCents <= 50f -> OVERLAY_OK
+            absCents <= NoteUtils.MAX_CENTS_OFF -> OVERLAY_OK
             else -> OVERLAY_MISS
         }
     } else {

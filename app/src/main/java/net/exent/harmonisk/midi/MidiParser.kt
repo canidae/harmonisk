@@ -9,13 +9,8 @@ class MidiParser {
      * All note events from all tracks are merged and sorted.
      */
     fun parse(inputStream: InputStream, name: String = "Unknown"): MelodyTrack {
-        val data = inputStream.readBytes()
-        val reader = MidiTrackReader(data)
-        val header = reader.readHeader()
-        require(header.format in 0..1) { "Only MIDI format 0 and 1 are supported, got ${header.format}" }
-        require(header.timeDivision > 0) { "Only ticks-per-quarter-note time division is supported" }
-
-        val tracks = readAllTracks(data, reader, header, name)
+        val source = readSource(inputStream)
+        val tracks = readAllTracks(source.data, source.reader, source.header, name)
         val allNotes = tracks.flatMap { it.notes }.sortedBy { it.startTick }
         val allTempos = tracks.flatMap { it.tempoChanges }.distinct()
         val allTimeSignatures = tracks.flatMap { it.timeSignatures }.distinct()
@@ -25,7 +20,7 @@ class MidiParser {
             notes = allNotes,
             tempoChanges = if (allTempos.isEmpty()) listOf(TempoEvent(0, 500_000)) else allTempos,
             timeSignatures = allTimeSignatures,
-            ticksPerQuarterNote = header.timeDivision,
+            ticksPerQuarterNote = source.header.timeDivision,
             keySignature = tracks.firstNotNullOfOrNull { it.keySignature }
         )
     }
@@ -36,12 +31,23 @@ class MidiParser {
      * should retain its identity (e.g. different instruments).
      */
     fun parseMultiTrack(inputStream: InputStream, name: String = "Unknown"): List<MelodyTrack> {
+        val source = readSource(inputStream)
+        return readAllTracks(source.data, source.reader, source.header, name)
+    }
+
+    private data class MidiSource(
+        val data: ByteArray,
+        val reader: MidiTrackReader,
+        val header: MidiTrackReader.Header
+    )
+
+    private fun readSource(inputStream: InputStream): MidiSource {
         val data = inputStream.readBytes()
         val reader = MidiTrackReader(data)
         val header = reader.readHeader()
         require(header.format in 0..1) { "Only MIDI format 0 and 1 are supported, got ${header.format}" }
         require(header.timeDivision > 0) { "Only ticks-per-quarter-note time division is supported" }
-        return readAllTracks(data, reader, header, name)
+        return MidiSource(data, reader, header)
     }
 
     private fun readAllTracks(

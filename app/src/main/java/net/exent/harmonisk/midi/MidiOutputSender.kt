@@ -52,28 +52,22 @@ class MidiOutputSender(
     }
 
     override fun noteOn(channel: Int, note: Int, velocity: Int) = withPort { port ->
-        val buf = ByteArray(3)
-        buf[0] = (0x90 or (channel and 0x0F)).toByte()
-        buf[1] = (note and 0x7F).toByte()
-        buf[2] = (velocity and 0x7F).toByte()
-        try { port.send(buf, 0, 3) } catch (_: Exception) {}
+        send(port, 0x90 or (channel and 0x0F), note and 0x7F, velocity and 0x7F)
     }
 
     override fun noteOff(channel: Int, note: Int) = withPort { port ->
-        val buf = ByteArray(3)
-        buf[0] = (0x80 or (channel and 0x0F)).toByte()
-        buf[1] = (note and 0x7F).toByte()
-        buf[2] = 0
-        try { port.send(buf, 0, 3) } catch (_: Exception) {}
+        send(port, 0x80 or (channel and 0x0F), note and 0x7F, 0)
     }
 
     override fun allNotesOff() = withPort { port ->
-        val buf = ByteArray(3)
-        for (ch in 0..15) {
-            buf[0] = (0xB0 or ch).toByte()
-            buf[1] = 123  // All Notes Off (CC 123)
-            buf[2] = 0
-            try { port.send(buf, 0, 3) } catch (_: Exception) {}
+        for (ch in 0..15) send(port, 0xB0 or ch, 123, 0)
+    }
+
+    private fun send(port: MidiInputPort, vararg bytes: Int) {
+        val buf = ByteArray(bytes.size) { bytes[it].toByte() }
+        try {
+            port.send(buf, 0, buf.size)
+        } catch (_: Exception) {
         }
     }
 

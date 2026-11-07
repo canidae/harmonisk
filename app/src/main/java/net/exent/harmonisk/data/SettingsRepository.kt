@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import net.exent.harmonisk.audio.AudioConstants
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.NoteUtils
 
@@ -76,7 +77,7 @@ class SettingsRepository(
     }
 
     private fun Preferences.toSettings(profileId: String) = AppSettings(
-        silenceThresholdDb = readFloat(profileId, SILENCE_THRESHOLD_DB, -45f).coerceIn(-65f, -25f),
+        silenceThresholdDb = readFloat(profileId, SILENCE_THRESHOLD_DB, AudioConstants.DEFAULT_SILENCE_THRESHOLD_DB).coerceIn(-65f, -25f),
         recordFallSpeed = readFloat(profileId, RECORD_FALL_SPEED, 75f),
         recordBeatsPerBar = readInt(profileId, RECORD_BEATS_PER_BAR, 4),
         recordBpm = readFloat(profileId, RECORD_BPM, 120f),
@@ -202,7 +203,7 @@ class SettingsRepository(
 }
 
 data class AppSettings(
-    val silenceThresholdDb: Float = -45f,
+    val silenceThresholdDb: Float = AudioConstants.DEFAULT_SILENCE_THRESHOLD_DB,
     val recordFallSpeed: Float = 75f,
     val recordBeatsPerBar: Int = 4,
     val recordBpm: Float = 120f,

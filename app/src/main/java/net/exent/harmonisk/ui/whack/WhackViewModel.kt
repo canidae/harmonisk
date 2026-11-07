@@ -124,26 +124,11 @@ class WhackViewModel @Inject constructor(
         persistBest: Boolean = this.persistBest
     ) {
         if (_state.value.playing) return
-        this.persistBest = persistBest
+        reset(durationMs, persistBest)
         resetPitch()
         while (judgements.tryReceive().isSuccess) Unit
         previousEmoji = null
-        _state.update {
-            it.copy(
-                playing = true,
-                finished = false,
-                level = 1,
-                hits = 0,
-                score = 0,
-                best = best,
-                remainingMs = durationMs,
-                durationMs = durationMs,
-                target = null,
-                hammer = null,
-                scored = null,
-                levelUp = null
-            )
-        }
+        _state.update { it.copy(playing = true, finished = false, best = best) }
         startListening()
         gameJob = viewModelScope.launch {
             delay(WhackRules.START_MS)

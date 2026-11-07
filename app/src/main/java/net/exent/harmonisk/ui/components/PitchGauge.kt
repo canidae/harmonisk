@@ -34,7 +34,7 @@ fun PitchGauge(
     isSilent: Boolean,
     isInTune: Boolean = false,
     modifier: Modifier = Modifier,
-    maxCents: Float = 50f,
+    maxCents: Float = NoteUtils.MAX_CENTS_OFF,
     inTuneCents: Float = NoteUtils.IN_TUNE_CENTS
 ) {
     val clampedCents = centsOff.coerceIn(-maxCents, maxCents)
