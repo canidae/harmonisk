@@ -55,20 +55,11 @@ fun AdventureGameScreen(
     KeepScreenOn()
     var mapCenter by remember { mutableStateOf(Offset.Unspecified) }
     var songAnchor by remember { mutableStateOf(Offset.Unspecified) }
-    var tokenAnchor by remember { mutableStateOf(Offset.Unspecified) }
     var origin by remember { mutableStateOf(Offset.Zero) }
     var turnStage by remember { mutableStateOf(TurnIntroStage.INTRO) }
     var panelDiceAnchor by remember { mutableStateOf(Offset.Unspecified) }
     val latestToken = remember { TokenPosition() }
     val tokenPositions = remember { mutableMapOf<String, Offset>() }
-    val reportTokenPosition = state.phase == AdventureTurnPhase.ROLLING ||
-        state.phase == AdventureTurnPhase.DICE ||
-        state.phase == AdventureTurnPhase.DELIVERING
-    LaunchedEffect(state.phase) {
-        if (reportTokenPosition && latestToken.position.isSpecified) {
-            tokenAnchor = latestToken.position
-        }
-    }
     LaunchedEffect(state.phase, state.currentPlayerIndex) {
         if (state.phase == AdventureTurnPhase.ROLLING) {
             turnStage = TurnIntroStage.INTRO
@@ -168,7 +159,6 @@ fun AdventureGameScreen(
                         tokenPositions[profileId] = position
                         if (profileId == state.currentPlayer?.profileId) {
                             latestToken.position = position
-                            if (reportTokenPosition) tokenAnchor = position
                         }
                     },
                     modifier = Modifier.fillMaxSize()
@@ -186,7 +176,6 @@ fun AdventureGameScreen(
         TurnFlashOverlay(
             state = state,
             mapCenter = mapCenter,
-            diceTarget = tokenAnchor,
             panelDiceAnchor = panelDiceAnchor,
             origin = origin,
             stage = turnStage
@@ -303,18 +292,13 @@ private fun CurrentTurnCard(
                     }
                 }
             }
-            if (state.phase == AdventureTurnPhase.ROLLING ||
-                state.phase == AdventureTurnPhase.DICE ||
-                state.phase == AdventureTurnPhase.DELIVERING
-            ) {
-                Spacer(Modifier.width(8.dp))
-                TurnDice(
-                    diceValue = state.diceValue,
-                    visible = state.phase == AdventureTurnPhase.DICE ||
-                        (state.phase == AdventureTurnPhase.ROLLING && stage == TurnIntroStage.PANEL),
-                    onAnchor = onDiceAnchor
-                )
-            }
+            Spacer(Modifier.width(8.dp))
+            TurnDice(
+                diceValue = state.diceValue,
+                visible = state.diceValue != null ||
+                    (state.phase == AdventureTurnPhase.ROLLING && stage == TurnIntroStage.PANEL),
+                onAnchor = onDiceAnchor
+            )
         }
     }
 }

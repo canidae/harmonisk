@@ -32,7 +32,6 @@ enum class TurnIntroStage { INTRO, HANDOFF, PANEL }
 fun TurnFlashOverlay(
     state: AdventureState,
     mapCenter: Offset,
-    diceTarget: Offset,
     panelDiceAnchor: Offset,
     origin: Offset,
     stage: TurnIntroStage
@@ -50,18 +49,6 @@ fun TurnFlashOverlay(
             )
         } else {
             introHandoff.snapTo(0f)
-        }
-    }
-    val delivery = remember { Animatable(0f) }
-    LaunchedEffect(state.phase) {
-        if (state.phase == AdventureTurnPhase.DELIVERING) {
-            delivery.snapTo(0f)
-            delivery.animateTo(
-                1f,
-                tween(AdventureTiming.DICE_HANDOFF_MS.toInt(), easing = FastOutSlowInEasing)
-            )
-        } else {
-            delivery.snapTo(0f)
         }
     }
     if (state.phase == AdventureTurnPhase.ROLLING &&
@@ -154,37 +141,6 @@ fun TurnFlashOverlay(
             ) {
                 Dice3D(value = null, progress = 0f, modifier = Modifier.fillMaxSize())
             }
-        }
-    }
-
-    if (state.phase == AdventureTurnPhase.DELIVERING &&
-        panelDiceAnchor.isSpecified &&
-        diceTarget.isSpecified
-    ) {
-        val start = panelDiceAnchor - origin
-        val end = diceTarget - origin
-        val t = delivery.value
-        val position = Offset(
-            start.x + (end.x - start.x) * t,
-            start.y + (end.y - start.y) * t
-        )
-        val dieScale = 1f - 0.45f * t
-        Box(
-            modifier = Modifier
-                .offset {
-                    IntOffset(
-                        (position.x - 40.dp.toPx()).roundToInt(),
-                        (position.y - 40.dp.toPx()).roundToInt()
-                    )
-                }
-                .size(80.dp)
-                .graphicsLayer {
-                    scaleX = dieScale
-                    scaleY = dieScale
-                    alpha = 1f - 0.15f * t
-                }
-        ) {
-            Dice3D(value = state.diceValue, progress = 1f, modifier = Modifier.fillMaxSize())
         }
     }
 }
