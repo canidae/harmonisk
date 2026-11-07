@@ -283,11 +283,11 @@
 
     <string name="whack_title">Tonedengeren</string>
     <string name="whack_start">Start</string>
-    <string name="whack_hint">Spill tonen som gjemmer seg under emojien. Fargen på beltet viser fingeren: blå løs streng, grønn første, gul andre, oransje tredje, rød fjerde.</string>
+    <string name="whack_hint">Spill tonen som gjemmer seg under emojien. Fargen på beltet viser fingeren: blå løs streng, grønn første, gul andre, oransje tredje, rød fjerde. Svar raskere for å få flere poeng.</string>
     <string name="whack_best">Beste %1$d</string>
     <string name="whack_level_up">Nivå %1$d</string>
     <string name="whack_time_up">Tiden er ute!</string>
-    <string name="whack_hits">Treff</string>
+    <string name="whack_points">Poeng</string>
     <string name="whack_duration">Tre minutter</string>
     <string name="whack_duration_minute">Ett minutt</string>
     <string name="whack_again">Spill igjen</string>

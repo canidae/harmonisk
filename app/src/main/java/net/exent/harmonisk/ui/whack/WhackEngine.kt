@@ -47,6 +47,14 @@ object WhackRules {
     val LEVEL_HITS = listOf(8, 18, 30, 45)
 
     fun levelFor(hits: Int): Int = 1 + LEVEL_HITS.count { hits >= it }
+
+    fun pointsFor(elapsedMs: Long): Int = when {
+        elapsedMs <= 1_000L -> 5
+        elapsedMs <= 2_000L -> 4
+        elapsedMs <= 3_000L -> 3
+        elapsedMs <= 4_000L -> 2
+        else -> 1
+    }
 }
 
 /** Every first-position note, one row per finger, one column per string. */

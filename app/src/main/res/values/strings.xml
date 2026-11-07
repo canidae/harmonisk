@@ -283,11 +283,11 @@
 
     <string name="whack_title">Whack a Tone</string>
     <string name="whack_start">Start</string>
-    <string name="whack_hint">Play the note hiding under the emoji. The belt colour shows the finger: blue open string, green first, yellow second, orange third, red fourth.</string>
+    <string name="whack_hint">Play the note hiding under the emoji. The belt colour shows the finger: blue open string, green first, yellow second, orange third, red fourth. Answer faster to score more points.</string>
     <string name="whack_best">Best %1$d</string>
     <string name="whack_level_up">Level %1$d</string>
     <string name="whack_time_up">Time’s up!</string>
-    <string name="whack_hits">Whacks</string>
+    <string name="whack_points">Points</string>
     <string name="whack_duration">Three minutes</string>
     <string name="whack_duration_minute">One minute</string>
     <string name="whack_again">Play again</string>
