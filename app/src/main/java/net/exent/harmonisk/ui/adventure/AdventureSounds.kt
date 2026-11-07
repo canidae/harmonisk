@@ -1,10 +1,9 @@
 package net.exent.harmonisk.ui.adventure
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.SoundPool
 import androidx.annotation.RawRes
 import net.exent.harmonisk.R
+import net.exent.harmonisk.ui.components.SoundPoolPlayer
 
 enum class AdventureSound(@param:RawRes val resource: Int) {
     Step(R.raw.sfx_step),
@@ -20,27 +19,13 @@ enum class AdventureSound(@param:RawRes val resource: Int) {
 }
 
 class AdventureSounds(context: Context) {
-    private val pool = SoundPool.Builder()
-        .setMaxStreams(8)
-        .setAudioAttributes(
-            AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_GAME)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-        )
-        .build()
-    private val samples = AdventureSound.entries.associateWith { pool.load(context, it.resource, 1) }
+    private val player = SoundPoolPlayer(context, 8, AdventureSound.entries.map { it.resource })
 
-    fun play(sound: AdventureSound, volume: Float) {
-        samples[sound]?.let { pool.play(it, volume, volume, 1, 0, 1f) }
-    }
+    fun play(sound: AdventureSound, volume: Float) = player.play(sound.resource, volume)
 
-    fun loop(sound: AdventureSound, volume: Float): Int =
-        samples[sound]?.let { pool.play(it, volume, volume, 0, -1, 1f) } ?: 0
+    fun loop(sound: AdventureSound, volume: Float): Int = player.loop(sound.resource, volume)
 
-    fun stop(streamId: Int) {
-        if (streamId != 0) pool.stop(streamId)
-    }
+    fun stop(streamId: Int) = player.stop(streamId)
 
-    fun release() = pool.release()
+    fun release() = player.release()
 }

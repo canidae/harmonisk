@@ -17,7 +17,6 @@ object MelodyUrlImporter {
     private const val USER_AGENT = "Harmonisk"
     private const val DRIVE_DOWNLOAD = "https://drive.usercontent.google.com/download?id="
 
-    private val MELODY_EXTENSIONS = listOf(".mid", ".midi", ".xml", ".musicxml", ".abc")
     private val HEADER_FILENAME = Regex("""filename\*?=(?:UTF-8'')?"?([^";]+)""", RegexOption.IGNORE_CASE)
     private val DRIVE_PATH_ID = Regex("""drive\.google\.com/(?:drive/(?:u/\d+/)?)?file/d/([A-Za-z0-9_-]{10,})""")
     private val DRIVE_QUERY_ID = Regex("""[?&]id=([A-Za-z0-9_-]{10,})""")
@@ -77,11 +76,7 @@ object MelodyUrlImporter {
             ?: runCatching { URL(url).path }.getOrNull()?.substringAfterLast('/')
             ?: ""
         val decoded = runCatching { URLDecoder.decode(raw, "UTF-8") }.getOrDefault(raw)
-        return decoded.substringBefore('?')
-            .let { name -> MELODY_EXTENSIONS.firstOrNull { name.endsWith(it, true) }?.let { name.dropLast(it.length) } ?: name }
-            .replace('_', ' ')
-            .trim()
-            .ifEmpty { "Imported song" }
+        return MelodyNames.displayName(decoded.substringBefore('?')) ?: "Imported song"
     }
 
     private fun readCapped(input: InputStream): ByteArray {

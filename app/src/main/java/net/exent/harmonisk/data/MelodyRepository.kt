@@ -72,8 +72,6 @@ class MelodyRepository(
         /** Asset directory holding bundled melodies, one subdirectory per folder. */
         const val MELODY_ASSETS_DIR = "melodies"
 
-        /** File name suffixes that identify a melody rather than belong to its title. */
-        private val MELODY_NAME_SUFFIXES = listOf(".mid", ".midi", ".xml", ".musicxml", ".abc")
     }
 
     data class MelodyInfo(
@@ -97,7 +95,7 @@ class MelodyRepository(
         for (folder in folders) {
             val folderPrefix = "$MELODY_ASSETS_DIR/$folder"
             val files = context.assets.list(folderPrefix).orEmpty()
-                .filter { name -> MELODY_NAME_SUFFIXES.any { name.endsWith(it, true) } }
+                .filter { name -> MelodyNames.extensions.any { name.endsWith(it, true) } }
                 .sorted()
             for (file in files) {
                 val assetPath = "$folderPrefix/$file"
@@ -198,22 +196,13 @@ class MelodyRepository(
             }
         } catch (_: Exception) {
             null
-        }?.let { raw ->
-            stripMelodyExtension(raw).replace('_', ' ').trim().ifEmpty { null }
-        } ?: run {
+        }?.let { raw -> MelodyNames.displayName(raw) } ?: run {
             // Fallback: decode last path segment
             val rawPath = uri.lastPathSegment ?: return "Imported song"
-            stripMelodyExtension(android.net.Uri.decode(rawPath).substringAfterLast('/'))
-                .replace('_', ' ')
-                .trim()
-                .ifEmpty { "Imported song" }
+            MelodyNames.displayName(android.net.Uri.decode(rawPath).substringAfterLast('/'))
+                ?: "Imported song"
         }
     }
-
-    private fun stripMelodyExtension(name: String): String =
-        MELODY_NAME_SUFFIXES.firstOrNull { name.endsWith(it, true) }
-            ?.let { name.dropLast(it.length) }
-            ?: name
 
     /** Drop cached parses so a re-imported file is never served from the previous copy. */
     private suspend fun evictCached(id: String) {
@@ -368,7 +357,7 @@ class MelodyRepository(
     private fun writeMelodyFile(seed: Int, displayName: String, bytes: ByteArray): Uri {
         val melodiesDir = java.io.File(context.filesDir, "melodies")
         if (!melodiesDir.exists()) melodiesDir.mkdirs()
-        val safeName = displayName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
+        val safeName = MelodyNames.safeFileName(displayName)
         val extension = MelodyFileFormat.detect(bytes).extension
         val targetFile = java.io.File(melodiesDir, "${safeName}_${seed.toLong() and 0xFFFFFFFFL}.$extension")
         targetFile.writeBytes(bytes)
