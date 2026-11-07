@@ -40,8 +40,8 @@ val ADVENTURE_PLAYER_COLORS = listOf(
 
 private val GROUND_TOP = Color(0xFF24432F)
 private val GROUND_BOTTOM = Color(0xFF0C1711)
-private val STORYBOOK_GOLD = Color(0xFFFFD166)
-private val STORYBOOK_MINT = Color(0xFF8DE8C4)
+val StorybookGold = Color(0xFFFFD166)
+val StorybookMint = Color(0xFF8DE8C4)
 
 @Composable
 fun AdventureBackdrop(
@@ -114,7 +114,7 @@ fun AdventureAvatar(
             .background(Brush.linearGradient(listOf(color, color.copy(alpha = 0.55f))))
             .border(
                 width = if (selected) 2.dp else 1.dp,
-                color = if (selected) STORYBOOK_GOLD else Color.White.copy(alpha = 0.3f),
+                color = if (selected) StorybookGold else Color.White.copy(alpha = 0.3f),
                 shape = CircleShape
             ),
         contentAlignment = Alignment.Center
@@ -186,11 +186,9 @@ fun StorybookCard(
         modifier = modifier
             .clip(MaterialTheme.shapes.extraLarge)
             .background(Color(0xF21B1733))
-            .border(1.dp, STORYBOOK_GOLD.copy(alpha = 0.22f), MaterialTheme.shapes.extraLarge)
+            .border(1.dp, StorybookGold.copy(alpha = 0.22f), MaterialTheme.shapes.extraLarge)
             .padding(18.dp),
         content = content
     )
 }
 
-val StorybookGold: Color get() = STORYBOOK_GOLD
-val StorybookMint: Color get() = STORYBOOK_MINT

@@ -52,9 +52,6 @@ class AudioDeviceMonitor(context: Context) {
         audioManager.registerAudioDeviceCallback(callback, Handler(Looper.getMainLooper()))
     }
 
-    fun close() {
-        audioManager.unregisterAudioDeviceCallback(callback)
-    }
 
     private fun resolveActiveOutputDevice(): AudioOutputDevice {
         val outputs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)

@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import net.exent.harmonisk.ui.whack.WhackPressIcon
-import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.roundToInt
@@ -97,7 +96,6 @@ data class AdventureMapSpec(
     val river: List<Offset>,
     val bridge: Offset,
     val bridgeSegment: Int,
-    val columns: Int,
     val contentAspect: Float
 )
 
@@ -296,7 +294,6 @@ fun generateMapSpec(random: Random, columns: Int = 4): AdventureMapSpec {
         river = riverPoints,
         bridge = bridge,
         bridgeSegment = bridgeSegment,
-        columns = columnCount,
         contentAspect = contentAspect
     )
 }
@@ -852,8 +849,8 @@ private fun CampBadge(badgeSize: Dp, modifier: Modifier = Modifier) {
         drawCircle(Color(0xFF5A3B22), w * 0.13f, Offset(fx, fy))
         drawPath(Path().apply {
             moveTo(fx, fy - h * 0.2f)
-            quadraticBezierTo(fx + w * 0.1f, fy - h * 0.04f, fx, fy - h * 0.01f)
-            quadraticBezierTo(fx - w * 0.1f, fy - h * 0.04f, fx, fy - h * 0.2f)
+            quadraticTo(fx + w * 0.1f, fy - h * 0.04f, fx, fy - h * 0.01f)
+            quadraticTo(fx - w * 0.1f, fy - h * 0.04f, fx, fy - h * 0.2f)
         }, Color(0xFFFFA53D))
         drawCircle(Color(0xFFFFE08A), w * 0.035f, Offset(fx, fy - h * 0.09f))
     }

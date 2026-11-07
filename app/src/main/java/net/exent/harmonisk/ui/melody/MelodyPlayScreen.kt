@@ -60,7 +60,6 @@ import kotlin.math.roundToInt
 @Composable
 fun MelodyPlayScreen(
     onBack: () -> Unit,
-    onNavigateToSettings: () -> Unit = {},
     viewModel: MelodyViewModel = hiltViewModel(),
     adventureMode: Boolean = false,
     stopOnBack: Boolean = true

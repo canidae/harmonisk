@@ -178,7 +178,7 @@ class SoundFontSynthesizer(
         }
     }
 
-    override fun setInstrument(bank: Int, program: Int) {
+    fun setInstrument(bank: Int, program: Int) {
         currentBank = bank
         currentProgram = program
         val h = nativeHandle
