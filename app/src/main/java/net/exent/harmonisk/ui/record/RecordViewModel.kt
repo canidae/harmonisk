@@ -714,6 +714,33 @@ class RecordViewModel @Inject constructor(
         }
     }
 
+    private fun newPlayedNote(
+        noteName: String,
+        octave: Int,
+        midiNumber: Int,
+        startTimeMs: Long,
+        centsHistory: List<Float> = emptyList()
+    ) = PlayedNote(
+        noteName = noteName,
+        octave = octave,
+        midiNumber = midiNumber,
+        startTimeMs = startTimeMs,
+        centsHistory = centsHistory,
+        id = UUID.randomUUID().toString(),
+        voiceIndex = _state.value.activeVoiceIndex
+    )
+
+    private fun appendCentsSample(cents: Float) {
+        centsSamples.add(cents)
+        _state.update { current ->
+            current.copy(
+                activeNote = current.activeNote?.copy(
+                    centsHistory = current.activeNote.centsHistory + cents
+                )
+            )
+        }
+    }
+
     /** Snap OFF: register note on the very first frame the semitone changes. No debounce, no minimum. */
     private fun processResultNoSnap(result: PitchResult) {
         if (result.isValid) {
@@ -726,26 +753,12 @@ class RecordViewModel @Inject constructor(
                 centsSamples.add(result.centsOff)
                 expandRange(midi)
                 if (_state.value.isRecording) {
-                    val note = PlayedNote(
-                        noteName = result.noteName,
-                        octave = result.octave,
-                        midiNumber = midi,
-                        startTimeMs = currentNoteStartMs,
-                        centsHistory = listOf(result.centsOff),
-                        id = UUID.randomUUID().toString(),
-                        voiceIndex = _state.value.activeVoiceIndex
-                    )
-                    _state.update { it.copy(activeNote = note) }
+                    _state.update {
+                        it.copy(activeNote = newPlayedNote(result.noteName, result.octave, midi, currentNoteStartMs, listOf(result.centsOff)))
+                    }
                 }
             } else {
-                centsSamples.add(result.centsOff)
-                _state.update { current ->
-                    current.copy(
-                        activeNote = current.activeNote?.copy(
-                            centsHistory = current.activeNote.centsHistory + result.centsOff
-                        )
-                    )
-                }
+                appendCentsSample(result.centsOff)
             }
         } else {
             if (currentNoteMidi != null) {
@@ -774,15 +787,7 @@ class RecordViewModel @Inject constructor(
                 } else {
                     // Continue accumulating
                     honingFreqs.add(result.frequency)
-                    centsSamples.add(result.centsOff)
-                    // Update tentative display
-                    _state.update { current ->
-                        current.copy(
-                            activeNote = current.activeNote?.copy(
-                                centsHistory = current.activeNote.centsHistory + result.centsOff
-                            )
-                        )
-                    }
+                    appendCentsSample(result.centsOff)
                     if (elapsed >= gridIntervalMs()) {
                         commitHoning()
                     }
@@ -794,14 +799,7 @@ class RecordViewModel @Inject constructor(
                     startHoning(result)
                 } else {
                     // Same pitch, note already committed — just extend it
-                    centsSamples.add(result.centsOff)
-                    _state.update { current ->
-                        current.copy(
-                            activeNote = current.activeNote?.copy(
-                                centsHistory = current.activeNote.centsHistory + result.centsOff
-                            )
-                        )
-                    }
+                    appendCentsSample(result.centsOff)
                 }
             }
         } else {
@@ -834,16 +832,9 @@ class RecordViewModel @Inject constructor(
         currentNoteStartMs = snapToGrid(honingStartSongMs)
         expandRange(midi)
         if (_state.value.isRecording) {
-            val note = PlayedNote(
-                noteName = result.noteName,
-                octave = result.octave,
-                midiNumber = midi,
-                startTimeMs = currentNoteStartMs,
-                centsHistory = listOf(result.centsOff),
-                id = UUID.randomUUID().toString(),
-                voiceIndex = _state.value.activeVoiceIndex
-            )
-            _state.update { it.copy(activeNote = note) }
+            _state.update {
+                it.copy(activeNote = newPlayedNote(result.noteName, result.octave, midi, currentNoteStartMs, listOf(result.centsOff)))
+            }
         }
     }
 
@@ -857,16 +848,9 @@ class RecordViewModel @Inject constructor(
         currentNoteStartMs = snapToGrid(honingStartSongMs)
         expandRange(confirmedMidi)
         if (_state.value.isRecording) {
-            val note = PlayedNote(
-                noteName = noteInfo.name,
-                octave = noteInfo.octave,
-                midiNumber = confirmedMidi,
-                startTimeMs = currentNoteStartMs,
-                centsHistory = centsSamples.toList(),
-                id = UUID.randomUUID().toString(),
-                voiceIndex = _state.value.activeVoiceIndex
-            )
-            _state.update { it.copy(activeNote = note) }
+            _state.update {
+                it.copy(activeNote = newPlayedNote(noteInfo.name, noteInfo.octave, confirmedMidi, currentNoteStartMs, centsSamples.toList()))
+            }
         }
         honingFreqs.clear()
     }
@@ -938,14 +922,7 @@ class RecordViewModel @Inject constructor(
         expandRange(midiNote)
         val songPositionMs = _state.value.songPositionMs
 
-        val note = PlayedNote(
-            noteName = resolution.noteName,
-            octave = resolution.octave,
-            midiNumber = midiNote,
-            startTimeMs = songPositionMs,
-            id = UUID.randomUUID().toString(),
-            voiceIndex = _state.value.activeVoiceIndex
-        )
+        val note = newPlayedNote(resolution.noteName, resolution.octave, midiNote, songPositionMs)
         activeMidiNotes[midiNote] = note
 
         if (isRecording && songPositionMs >= 0) {
