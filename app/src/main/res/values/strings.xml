@@ -277,9 +277,6 @@
     <string name="adventure_legend_song">Song</string>
     <string name="adventure_legend_stickers">Stickers</string>
     <string name="adventure_legend_whack">Whack</string>
-    <string name="adventure_castle_bonus">Castle bonus +%1$d</string>
-    <string name="adventure_winner">%1$s wins!</string>
-    <string name="adventure_tie">It’s a tie!</string>
 
     <string name="whack_title">Whack a Tone</string>
     <string name="whack_start">Start</string>

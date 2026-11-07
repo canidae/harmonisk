@@ -3,7 +3,7 @@ package net.exent.harmonisk.ui.adventure
 import kotlin.math.abs
 import kotlin.random.Random
 
-const val ADVENTURE_FIELD_COUNT = 50
+const val ADVENTURE_FIELD_COUNT = 49
 const val ADVENTURE_GOAL = ADVENTURE_FIELD_COUNT + 1
 const val ADVENTURE_CASTLE_BONUS = 100
 
@@ -76,7 +76,7 @@ data class AdventurePlayer(
     val name: String,
     val colorIndex: Int,
     val emoji: String = "🙂",
-    val position: Int = 1,
+    val position: Int = 0,
     val songScore: Float = 0f,
     val stickerScore: Float = 0f,
     val bonusScore: Float = 0f,
@@ -134,9 +134,9 @@ fun resolveLanding(
 }
 
 fun generateFieldRewards(random: Random): List<AdventureReward?> =
-    (0..ADVENTURE_FIELD_COUNT).map { field ->
+    (0..ADVENTURE_GOAL).map { field ->
         when (field) {
-            0, 1 -> null
+            0, ADVENTURE_GOAL -> null
             else -> randomFieldReward(random)
         }
     }

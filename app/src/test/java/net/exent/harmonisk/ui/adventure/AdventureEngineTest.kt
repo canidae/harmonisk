@@ -27,20 +27,25 @@ class AdventureEngineTest {
     )
 
     @Test
-    fun `the adventure has fifty fields and a castle`() {
-        assertEquals(50, ADVENTURE_FIELD_COUNT)
-        assertEquals(51, ADVENTURE_GOAL)
+    fun `the last field is forty-nine and the castle is fifty`() {
+        assertEquals(49, ADVENTURE_FIELD_COUNT)
+        assertEquals(50, ADVENTURE_GOAL)
     }
 
     @Test
-    fun `rewards are preassigned to every field after the start`() {
+    fun `players begin on the start field`() {
+        assertEquals(0, AdventurePlayer("A", "A", 0).position)
+    }
+
+    @Test
+    fun `rewards are preassigned to fields one through forty-nine`() {
         val rewards = generateFieldRewards(Random(5))
-        assertEquals(ADVENTURE_FIELD_COUNT + 1, rewards.size)
+        assertEquals(ADVENTURE_GOAL + 1, rewards.size)
         assertNull(rewards[0])
-        assertNull(rewards[1])
-        (2..ADVENTURE_FIELD_COUNT).forEach { field ->
+        (1..ADVENTURE_FIELD_COUNT).forEach { field ->
             assertNotNull(rewards[field])
         }
+        assertNull(rewards[ADVENTURE_GOAL])
     }
 
     @Test
@@ -138,12 +143,12 @@ class AdventureEngineTest {
 
     @Test
     fun `the dice moves the player and returns the landing reward`() {
-        val rewards = MutableList<AdventureReward?>(ADVENTURE_GOAL) { null }
-        rewards[5] = AdventureReward.Stickers(
+        val rewards = MutableList<AdventureReward?>(ADVENTURE_GOAL + 1) { null }
+        rewards[4] = AdventureReward.Stickers(
             listOf(AdventureSticker.MUSHROOM, AdventureSticker.CRYSTAL)
         )
-        val landing = resolveLanding(player("A", position = 1), dice = 4, fieldRewards = rewards)
-        assertEquals(5, landing.player.position)
+        val landing = resolveLanding(player("A", position = 0), dice = 4, fieldRewards = rewards)
+        assertEquals(4, landing.player.position)
         assertEquals(
             AdventureReward.Stickers(listOf(AdventureSticker.MUSHROOM, AdventureSticker.CRYSTAL)),
             landing.reward
@@ -153,16 +158,16 @@ class AdventureEngineTest {
 
     @Test
     fun `only the landing field reward is returned`() {
-        val rewards = MutableList<AdventureReward?>(ADVENTURE_GOAL) { null }
-        rewards[3] = AdventureReward.Song
-        rewards[5] = AdventureReward.GoAgain
-        val landing = resolveLanding(player("A", position = 1), dice = 4, fieldRewards = rewards)
+        val rewards = MutableList<AdventureReward?>(ADVENTURE_GOAL + 1) { null }
+        rewards[2] = AdventureReward.Song
+        rewards[4] = AdventureReward.GoAgain
+        val landing = resolveLanding(player("A", position = 0), dice = 4, fieldRewards = rewards)
         assertEquals(AdventureReward.GoAgain, landing.reward)
     }
 
     @Test
     fun `reaching the castle has no field reward and clamps the position`() {
-        val rewards = MutableList<AdventureReward?>(ADVENTURE_GOAL) { AdventureReward.Song }
+        val rewards = MutableList<AdventureReward?>(ADVENTURE_GOAL + 1) { AdventureReward.Song }
         val landing = resolveLanding(player("A", position = 48), dice = 6, fieldRewards = rewards)
         assertEquals(ADVENTURE_GOAL, landing.player.position)
         assertNull(landing.reward)
@@ -251,9 +256,9 @@ class AdventureEngineTest {
     }
 
     @Test
-    fun `map specs contain fifty fields and a castle at the top`() {
+    fun `map specs contain a start, forty-nine fields and a castle at the top`() {
         val spec = generateMapSpec(Random(3), columns = 4)
-        assertEquals(ADVENTURE_GOAL, spec.points.size)
+        assertEquals(ADVENTURE_GOAL + 1, spec.points.size)
         val start = spec.points.first()
         val castle = spec.points.last()
         assertTrue(start.x < 0.5f)

@@ -172,7 +172,7 @@ class AdventureViewModel @Inject constructor(
                 name = profile.name,
                 colorIndex = profiles.value.indexOf(profile),
                 emoji = profile.emoji,
-                position = 1,
+                position = 0,
                 songQueue = selectedSongs.map { it.id }.shuffled(random)
             )
         }

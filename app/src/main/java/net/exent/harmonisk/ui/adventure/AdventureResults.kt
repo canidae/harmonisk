@@ -63,14 +63,6 @@ fun AdventureResultsScreen(
         delay(250)
         showWinner = true
     }
-    val winners = standings.filter { it.rank == 1 }
-    val winnerText = when {
-        state.solo -> null
-        winners.size > 1 -> stringResource(R.string.adventure_tie)
-        winners.size == 1 -> stringResource(R.string.adventure_winner, winners.first().player.name)
-        else -> null
-    }
-
     AdventureBackdrop(Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -89,21 +81,6 @@ fun AdventureResultsScreen(
                         fontWeight = FontWeight.Black,
                         color = StorybookGold
                     )
-                    if (showWinner && winnerText != null) {
-                        Text(
-                            text = winnerText,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = StorybookMint
-                        )
-                    }
-                    if (showWinner && state.finisherId != null) {
-                        Text(
-                            text = stringResource(R.string.adventure_castle_bonus, ADVENTURE_CASTLE_BONUS),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = StorybookGold
-                        )
-                    }
                 }
                 IconButton(onClick = onHome) {
                     Icon(
