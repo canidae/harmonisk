@@ -307,7 +307,8 @@ fun AdventureMap(
     fieldRewards: List<AdventureReward?>,
     moveFrom: Int = 0,
     moving: Boolean = false,
-    onCurrentTokenPosition: (Offset) -> Unit = {},
+    focusPlayerId: String? = null,
+    onTokenPosition: (String, Offset) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(modifier) {
@@ -366,9 +367,11 @@ fun AdventureMap(
             spec.animals.map { measurer.measure(it.emoji, TextStyle(fontSize = 20.sp)) }
         }
         val currentField = players.firstOrNull { it.profileId == currentPlayerId }?.position ?: 0
-        LaunchedEffect(currentPlayerId, currentField, columns, contentHeightPx) {
+        LaunchedEffect(currentPlayerId, currentField, focusPlayerId, columns, contentHeightPx) {
             withFrameNanos { }
-            val point = spec.points.getOrNull(currentField.coerceIn(0, spec.points.lastIndex)) ?: return@LaunchedEffect
+            val field = focusPlayerId?.let { id -> players.firstOrNull { it.profileId == id }?.position }
+                ?: currentField
+            val point = spec.points.getOrNull(field.coerceIn(0, spec.points.lastIndex)) ?: return@LaunchedEffect
             val maxScroll = (contentHeightPx - viewportHeightPx).coerceAtLeast(0f)
             val target = (point.y * contentHeightPx - viewportHeightPx / 2f).coerceIn(0f, maxScroll)
             scroll.animateScrollTo(target.roundToInt())
@@ -458,10 +461,8 @@ fun AdventureMap(
                         segmentMeasures = segmentMeasures,
                         tokenSize = tokenSize,
                         offsetX = ((indexInField - (atField - 1) / 2f) * 14f).dp,
-                        onPositioned = if (player.profileId == currentPlayerId) {
-                            onCurrentTokenPosition
-                        } else {
-                            null
+                        onPositioned = { position ->
+                            onTokenPosition(player.profileId, position)
                         }
                     )
                 }

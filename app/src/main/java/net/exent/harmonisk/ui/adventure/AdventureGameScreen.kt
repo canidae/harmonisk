@@ -49,7 +49,8 @@ fun AdventureGameScreen(
     state: AdventureState,
     onPull: () -> Unit,
     onRoll: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onFaerieFinished: () -> Unit = {}
 ) {
     KeepScreenOn()
     var mapCenter by remember { mutableStateOf(Offset.Unspecified) }
@@ -57,6 +58,7 @@ fun AdventureGameScreen(
     var tokenAnchor by remember { mutableStateOf(Offset.Unspecified) }
     var origin by remember { mutableStateOf(Offset.Zero) }
     val latestToken = remember { TokenPosition() }
+    val tokenPositions = remember { mutableMapOf<String, Offset>() }
     val reportTokenPosition = state.phase == AdventureTurnPhase.ROLLING ||
         state.phase == AdventureTurnPhase.DICE ||
         state.phase == AdventureTurnPhase.DELIVERING
@@ -148,9 +150,13 @@ fun AdventureGameScreen(
                     fieldRewards = state.fieldRewards,
                     moveFrom = state.moveFrom,
                     moving = state.phase == AdventureTurnPhase.MOVING,
-                    onCurrentTokenPosition = { position ->
-                        latestToken.position = position
-                        if (reportTokenPosition) tokenAnchor = position
+                    focusPlayerId = state.faerie?.playerId,
+                    onTokenPosition = { profileId, position ->
+                        tokenPositions[profileId] = position
+                        if (profileId == state.currentPlayer?.profileId) {
+                            latestToken.position = position
+                            if (reportTokenPosition) tokenAnchor = position
+                        }
                     },
                     modifier = Modifier.fillMaxSize()
                 )
@@ -182,6 +188,14 @@ fun AdventureGameScreen(
             mapAnchor = { latestToken.position },
             origin = origin,
             onStored = { sounds.play(AdventureSound.Pouch, 0.65f) }
+        )
+        FaerieOverlay(
+            faerie = state.faerie,
+            player = state.players.firstOrNull { it.profileId == state.faerie?.playerId },
+            mapCenter = mapCenter,
+            playerAnchor = { id -> tokenPositions[id] ?: Offset.Unspecified },
+            origin = origin,
+            onFinished = onFaerieFinished
         )
     }
 }

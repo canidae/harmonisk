@@ -187,7 +187,8 @@ fun AdventureScreen(
                 state = state,
                 onPull = viewModel::pullLever,
                 onRoll = viewModel::rollDice,
-                onBack = { showExitDialog = true }
+                onBack = { showExitDialog = true },
+                onFaerieFinished = viewModel::finishFaerie
             )
         }
     }

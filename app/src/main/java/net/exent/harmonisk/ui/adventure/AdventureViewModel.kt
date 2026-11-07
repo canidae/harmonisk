@@ -49,6 +49,8 @@ data class AdventureState(
     val mapSeed: Long = 0L,
     val fieldRewards: List<AdventureReward?> = emptyList(),
     val reward: AdventureReward? = null,
+    val faerie: AdventureFaerie? = null,
+    val faerieGiven: Boolean = false,
     val finisherId: String? = null,
     val levelUp: Int? = null,
     val turnScore: Int? = null,
@@ -95,6 +97,8 @@ class AdventureViewModel @Inject constructor(
     private var turnJob: Job? = null
     private var spinJob: Job? = null
     private var resultJob: Job? = null
+    private var faerieJob: Job? = null
+    private var pendingLanding: AdventureLanding? = null
     private var lastResultId = 0L
 
     init {
@@ -167,6 +171,9 @@ class AdventureViewModel @Inject constructor(
         val selectedSongs = melodies.value.filter { it.id in snapshot.selectedSongIds }
         if (selectedProfiles.isEmpty() || selectedSongs.isEmpty()) return
 
+        pendingLanding = null
+        faerieJob?.cancel()
+        faerieJob = null
         songPool = selectedSongs
         val players = selectedProfiles.map { profile ->
             AdventurePlayer(
@@ -196,6 +203,8 @@ class AdventureViewModel @Inject constructor(
                 currentLevel = 1,
                 mapSeed = mapSeed,
                 reward = null,
+                faerie = null,
+                faerieGiven = false,
                 finisherId = null,
                 levelUp = null,
                 turnScore = null,
@@ -251,16 +260,51 @@ class AdventureViewModel @Inject constructor(
             }
             return
         }
+        val reward = landing.reward
+        val landed = if (reward is AdventureReward.Stickers) player.withReward(reward) else player
+        val players = snapshot.players.toMutableList().also { it[index] = landed }
+        val crossedHalfway = !snapshot.faerieGiven && players.all { it.position >= ADVENTURE_HALFWAY }
+        val faerie = if (crossedHalfway) faerieGift(players) else null
+        if (faerie != null) {
+            val recipient = players.indexOfFirst { it.profileId == faerie.playerId }
+            if (recipient >= 0) players[recipient] = players[recipient].withBonus(faerie.points)
+        }
+        _state.update {
+            it.copy(
+                players = players,
+                faerie = faerie,
+                faerieGiven = snapshot.faerieGiven || crossedHalfway
+            )
+        }
+        if (faerie == null) {
+            finishLanding(landing)
+            return
+        }
+        pendingLanding = landing
+        faerieJob?.cancel()
+        faerieJob = viewModelScope.launch {
+            delay(AdventureTiming.FAERIE_TIMEOUT_MS)
+            finishFaerie()
+        }
+    }
+
+    fun finishFaerie() {
+        val landing = pendingLanding
+        if (_state.value.faerie == null) return
+        pendingLanding = null
+        faerieJob?.cancel()
+        faerieJob = null
+        _state.update { it.copy(faerie = null) }
+        if (landing != null) finishLanding(landing) else beginTurn()
+    }
+
+    private fun finishLanding(landing: AdventureLanding) {
+        val snapshot = _state.value
+        val index = snapshot.currentPlayerIndex
+        val player = snapshot.players.getOrNull(index) ?: return
         when (val reward = landing.reward) {
             is AdventureReward.Stickers -> {
-                val rewarded = player.withReward(reward)
-                _state.update {
-                    it.copy(
-                        players = snapshot.players.toMutableList().also { list -> list[index] = rewarded },
-                        phase = AdventureTurnPhase.EVENT,
-                        reward = reward
-                    )
-                }
+                _state.update { it.copy(phase = AdventureTurnPhase.EVENT, reward = reward) }
                 scheduleRewardAdvance(reward)
             }
             AdventureReward.GoAgain -> {
@@ -466,6 +510,8 @@ class AdventureViewModel @Inject constructor(
         resultJob?.cancel()
         turnJob?.cancel()
         spinJob?.cancel()
+        faerieJob?.cancel()
+        pendingLanding = null
         session.clear()
         _state.value = AdventureState()
     }
@@ -474,6 +520,8 @@ class AdventureViewModel @Inject constructor(
         resultJob?.cancel()
         turnJob?.cancel()
         spinJob?.cancel()
+        faerieJob?.cancel()
+        pendingLanding = null
         session.clear()
     }
 
