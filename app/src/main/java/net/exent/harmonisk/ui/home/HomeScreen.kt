@@ -78,9 +78,9 @@ private data class ModeItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToFreePlay: () -> Unit,
+    onNavigateToRecord: () -> Unit,
     onNavigateToMelody: () -> Unit,
-    onNavigateToGameMode: () -> Unit,
+    onNavigateToGames: () -> Unit,
     onNavigateToMetronome: () -> Unit,
     onNavigateToTuner: () -> Unit,
     onNavigateToSettings: () -> Unit,
@@ -90,6 +90,7 @@ fun HomeScreen(
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val snackbarHostState = remember { SnackbarHostState() }
     val selectedInstrument by viewModel.instrument.collectAsStateWithLifecycle()
+    val devModeEnabled by viewModel.devModeEnabled.collectAsStateWithLifecycle()
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val activeProfile by viewModel.activeProfile.collectAsStateWithLifecycle()
     val profile = activeProfile
@@ -107,34 +108,34 @@ fun HomeScreen(
         ProfileSetupScreen(onCreate = viewModel::createProfile)
         return
     }
-    val modes = listOf(
-        ModeItem(
+    val modes = listOfNotNull(
+        if (devModeEnabled) ModeItem(
             emoji = "🎵",
-            title = stringResource(R.string.home_free_play_title),
+            title = stringResource(R.string.record_title),
             accent = BrandPurple,
-            onClick = onNavigateToFreePlay
-        ),
+            onClick = onNavigateToRecord
+        ) else null,
         ModeItem(
             emoji = "🎼",
-            title = stringResource(R.string.home_melody_title),
+            title = stringResource(R.string.melody_title),
             accent = BrandTeal,
             onClick = onNavigateToMelody
         ),
         ModeItem(
             emoji = "🏆",
-            title = stringResource(R.string.home_game_mode_title),
+            title = stringResource(R.string.games_title),
             accent = Color(0xFFFFC857),
-            onClick = onNavigateToGameMode
+            onClick = onNavigateToGames
         ),
         ModeItem(
             emoji = "⏱️",
-            title = stringResource(R.string.home_metronome_title),
+            title = stringResource(R.string.metronome_title),
             accent = BrandBlue,
             onClick = onNavigateToMetronome
         ),
         ModeItem(
             emoji = "🎸",
-            title = stringResource(R.string.home_tuner_title),
+            title = stringResource(R.string.tuner_title),
             accent = PlayGreen,
             onClick = onNavigateToTuner
         )
@@ -392,6 +393,7 @@ class HomeViewModel @Inject constructor(
 
     val profiles: StateFlow<List<ProfileRepository.Profile>> = profileRepository.profiles
     val activeProfile: StateFlow<ProfileRepository.Profile?> = profileRepository.activeProfile
+    val devModeEnabled: StateFlow<Boolean> = devModeState.enabled
 
     init {
         viewModelScope.launch {

@@ -13,7 +13,7 @@ internal val OVERLAY_ICON_TINT = Color.White.copy(alpha = 0.9f)
 internal val PANEL_BTN_SIZE = 32.dp
 internal val OVERLAY_BUTTON_SIZE = 40.dp
 
-// Fall speed bounds shared between MelodyViewModel and FreePlayViewModel
+// Fall speed bounds shared between MelodyViewModel and RecordViewModel
 internal const val MIN_FALL_SPEED = 30f
 internal const val MAX_FALL_SPEED = 600f
 

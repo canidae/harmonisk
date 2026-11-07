@@ -351,7 +351,7 @@ fun ProfileEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.profile_edit_title)) },
+        title = { Text(stringResource(R.string.profile_edit)) },
         text = {
             Column {
                 ProfileNameField(

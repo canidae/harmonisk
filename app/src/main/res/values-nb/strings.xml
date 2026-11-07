@@ -9,12 +9,20 @@
     <string name="speaker">høyttaler</string>
     <string name="cancel">Avbryt</string>
     <string name="delete">Slett</string>
+    <string name="start">Start</string>
+    <string name="stop">Stopp</string>
+    <string name="play_again">Spill igjen</string>
+    <string name="help">Hjelp</string>
+    <string name="got_it">Skjønner</string>
+    <string name="level">Nivå %1$d</string>
+    <string name="bpm">BPM</string>
+    <string name="none">Ingen</string>
+    <string name="metronome_on">Metronom på</string>
+    <string name="metronome_off">Metronom av</string>
 
     <!-- Home screen -->
-    <string name="home_free_play_title">Spill fritt</string>
-    <string name="home_melody_title">Lær en melodi</string>
-    <string name="home_metronome_title">Metronom</string>
-    <string name="home_tuner_title">Stem instrument</string>
+    <string name="record_title">Opptak</string>
+    <string name="games_title">Spill</string>
     <string name="dev_mode_enabled">Utviklermodus slått på</string>
     <string name="home_version">Versjon %1$s</string>
     <string name="dev_mode_disabled">Utviklermodus slått av</string>
@@ -47,7 +55,6 @@
     <string name="permission_grant">Gi tillatelse</string>
 
     <!-- Settings -->
-    <string name="settings_title">Innstillinger</string>
     <string name="settings_mic_sensitivity">Mikrofonfølsomhet</string>
     <string name="settings_silence_threshold">%1$.0f dB</string>
     <string name="settings_silence_threshold_min">Mindre følsom</string>
@@ -59,76 +66,64 @@
     <string name="settings_delay_help">Det tar litt tid for telefonen å spille av en lyd, så du hører tonen litt etter at appen spilte den. Utgangsforsinkelsen er for å veie opp for dette. Øk forsinkelsen hvis du hører lyden for sent, og reduser den hvis du hører lyden for tidlig.\n\nDet tar også litt tid for telefonen å oppdage at en tone blir spilt, så appen registrerer tonen litt etter at du spilte den. Inngangsforsinkelsen er for å veie opp for dette. Øk forsinkelsen hvis appen ikke oppdager tonen så fort du spiller den, og reduser den inntil det ikke er et problem.</string>
     <string name="settings_devices">%1$s / %2$s</string>
     <string name="settings_auto_calibrate">Auto</string>
-    <string name="settings_calibrating_stop">Stopp</string>
     <string name="settings_no_detection">Mikrofonen hører ingen toner</string>
     <string name="settings_calibrating">Kalibrerer … %1$d/5 toner oppdaget</string>
     <string name="settings_input_delay_min">0</string>
     <string name="settings_input_delay_max">500</string>
     <string name="settings_reset_dialog_title">Tilbakestille til standardinnstillingene?</string>
-    <string name="settings_reset_dialog_body">Alle innstillinger for gjeldende profil blir tilbakestilt til standardverdiene, inkludert:\n\n\u2022 Mikrofonfølsomhet\n\u2022 Hastighet, tempo, taktart og notefesting i Fritt spill\n\u2022 Tempo, slag per takt og betoning i Metronom</string>
+    <string name="settings_reset_dialog_body">Alle innstillinger for gjeldende profil blir tilbakestilt til standardverdiene, inkludert:\n\n\u2022 Mikrofonfølsomhet\n\u2022 Hastighet, tempo, taktart og notefesting i Opptak\n\u2022 Tempo, slag per takt og betoning i Metronom</string>
     <string name="settings_reset">Tilbakestill</string>
     <string name="settings_reset_to_defaults">Tilbakestill til standardinnstillingene</string>
     <string name="settings_language">Språk</string>
-    <string name="settings_help">Hjelp</string>
-    <string name="settings_help_got_it">Skjønner</string>
     <string name="instrument_violin">Fiolin</string>
     <string name="instrument_viola">Bratsj</string>
     <string name="instrument_cello">Cello</string>
 
-    <!-- Free Play -->
-    <string name="freeplay_mic">Mik</string>
-    <string name="freeplay_midi">MIDI</string>
-    <string name="freeplay_synth">Synth</string>
-    <string name="freeplay_none">Ingen</string>
-    <string name="freeplay_microphone">Mikrofon</string>
-    <string name="freeplay_internal_synth">Intern synthesizer</string>
-    <string name="freeplay_none_silent">Ingen (stille)</string>
-    <string name="freeplay_help">Hjelp</string>
-    <string name="freeplay_metronome_on">Metronom på</string>
-    <string name="freeplay_metronome_off">Metronom av</string>
-    <string name="freeplay_settings">Innstillinger</string>
-    <string name="freeplay_snap_notes">Fest noter</string>
-    <string name="freeplay_min_note_duration">Min. notelengde: %1$s</string>
-    <string name="freeplay_piano">Piano: %1$s</string>
-    <string name="freeplay_import_midi">Importer MIDI</string>
-    <string name="freeplay_export_midi">Eksporter MIDI</string>
-    <string name="freeplay_help_title">Spill fritt \u2014 Hjelp</string>
-    <string name="freeplay_help_got_it">Skjønner</string>
-    <string name="freeplay_help_note_editing">Noteredigering</string>
-    <string name="freeplay_help_looping">Løkker</string>
-    <string name="freeplay_help_tap_note">Trykk på en note</string>
-    <string name="freeplay_help_tap_note_desc">Velg noten du vil redigere.</string>
-    <string name="freeplay_help_drag_note">Dra i en valgt note</string>
-    <string name="freeplay_help_drag_note_desc">Endre tid eller halvtone.</string>
-    <string name="freeplay_help_drag_handle">Dra i et håndtak</string>
-    <string name="freeplay_help_drag_handle_desc">Juster start og slutt.</string>
-    <string name="freeplay_help_split">Del (\u2702)</string>
-    <string name="freeplay_help_split_desc">Deler noten i to.</string>
-    <string name="freeplay_help_delete">Slett (\uD83D\uDDD1)</string>
-    <string name="freeplay_help_delete_desc">Fjerner noten.</string>
-    <string name="freeplay_help_tap_empty">Trykk på et tomt område</string>
-    <string name="freeplay_help_tap_empty_desc">Opphever notevalget.</string>
-    <string name="freeplay_help_loop_info">Trykk på et taktnummer for å låse det til gjeldende posisjon (nummeret blir oransje). Trykk på det samme nummeret igjen for å låse det opp.</string>
-    <string name="freeplay_bpm">BPM</string>
-    <string name="freeplay_meter">Taktart</string>
-    <string name="freeplay_loop">Løkke</string>
-    <string name="freeplay_voice">Stemme %1$d</string>
-    <string name="freeplay_add_voice">+ Legg til stemme</string>
-    <string name="freeplay_split_note">Del opp noten</string>
-    <string name="freeplay_delete_note">Slett noten</string>
-    <string name="freeplay_play">Spill</string>
-    <string name="freeplay_record">Spill inn</string>
-    <string name="freeplay_piano_both">Vis piano oppe og nede</string>
-    <string name="freeplay_piano_upper">Vis piano kun oppe</string>
-    <string name="freeplay_piano_lower">Vis piano kun nede</string>
-    <string name="freeplay_piano_none">Ikke vis piano</string>
-    <string name="freeplay_end_bar_mismatch">Sluttakten må være en annen enn startakten</string>
-    <string name="freeplay_start_bar_exceeds_end">Startakten må komme før sluttakten</string>
+    <!-- Record -->
+    <string name="record_mic">Mik</string>
+    <string name="record_midi">MIDI</string>
+    <string name="record_synth">Synth</string>
+    <string name="record_microphone">Mikrofon</string>
+    <string name="record_internal_synth">Intern synthesizer</string>
+    <string name="record_none_silent">Ingen (stille)</string>
+    <string name="record_snap_notes">Fest noter</string>
+    <string name="record_min_note_duration">Min. notelengde: %1$s</string>
+    <string name="record_piano">Piano: %1$s</string>
+    <string name="record_import_midi">Importer MIDI</string>
+    <string name="record_export_midi">Eksporter MIDI</string>
+    <string name="record_help_title">Opptak \u2014 Hjelp</string>
+    <string name="record_help_note_editing">Noteredigering</string>
+    <string name="record_help_looping">Løkker</string>
+    <string name="record_help_tap_note">Trykk på en note</string>
+    <string name="record_help_tap_note_desc">Velg noten du vil redigere.</string>
+    <string name="record_help_drag_note">Dra i en valgt note</string>
+    <string name="record_help_drag_note_desc">Endre tid eller halvtone.</string>
+    <string name="record_help_drag_handle">Dra i et håndtak</string>
+    <string name="record_help_drag_handle_desc">Juster start og slutt.</string>
+    <string name="record_help_split">Del (\u2702)</string>
+    <string name="record_help_split_desc">Deler noten i to.</string>
+    <string name="record_help_delete">Slett (\uD83D\uDDD1)</string>
+    <string name="record_help_delete_desc">Fjerner noten.</string>
+    <string name="record_help_tap_empty">Trykk på et tomt område</string>
+    <string name="record_help_tap_empty_desc">Opphever notevalget.</string>
+    <string name="record_help_loop_info">Trykk på et taktnummer for å låse det til gjeldende posisjon (nummeret blir oransje). Trykk på det samme nummeret igjen for å låse det opp.</string>
+    <string name="record_meter">Taktart</string>
+    <string name="record_loop">Løkke</string>
+    <string name="record_voice">Stemme %1$d</string>
+    <string name="record_add_voice">+ Legg til stemme</string>
+    <string name="record_split_note">Del opp noten</string>
+    <string name="record_delete_note">Slett noten</string>
+    <string name="record_play">Spill</string>
+    <string name="record_capture">Spill inn</string>
+    <string name="record_piano_both">Vis piano oppe og nede</string>
+    <string name="record_piano_upper">Vis piano kun oppe</string>
+    <string name="record_piano_lower">Vis piano kun nede</string>
+    <string name="record_piano_none">Ikke vis piano</string>
+    <string name="record_end_bar_mismatch">Sluttakten må være en annen enn startakten</string>
+    <string name="record_start_bar_exceeds_end">Startakten må komme før sluttakten</string>
 
     <!-- Metronome -->
     <string name="metronome_title">Metronom</string>
-    <string name="metronome_start">Start</string>
-    <string name="metronome_stop">Stopp</string>
     <string name="metronome_faster">Raskere</string>
     <string name="metronome_slower">Saktere</string>
     <string name="metronome_sound_on">Lyd på</string>
@@ -180,11 +175,9 @@
     <string name="melody_play_mic_input">Mik-inngang</string>
     <string name="melody_play_midi_output_on">MIDI-utgang aktiv</string>
     <string name="melody_play_midi_output_off">MIDI-utgang av</string>
-    <string name="melody_play_start">Start</string>
     <string name="melody_play_resume">Fortsett</string>
     <string name="melody_play_scroll_start">Rull til starten</string>
     <string name="melody_play_results">Resultater</string>
-    <string name="melody_play_again">Spill igjen</string>
     <string name="melody_play_go_back">Gå tilbake</string>
     <string name="melody_play_level">Nivå: %1$d</string>
     <string name="melody_level">Niv.%1$d</string>
@@ -203,7 +196,6 @@
 
     <!-- Score results -->
     <string name="score_dismiss">Lukk</string>
-    <string name="score_level">Nivå %1$d</string>
     <string name="level_reached">Nivå %1$d nådd!</string>
     <string name="retry_level">Prøv nivå på nytt</string>
     <string name="level_2_change">På nivå 2 teller treffsikkerheten på tonen med i poengsummen</string>
@@ -229,7 +221,6 @@
     <string name="adventure_players_title">Hvem spiller?</string>
     <string name="adventure_add_player">Legg til spiller</string>
     <string name="adventure_choose_songs">Velg sanger</string>
-    <string name="adventure_songs_title">Velg sanger</string>
     <string name="adventure_selected_songs">%1$d valgt</string>
     <string name="adventure_start">Start eventyret</string>
     <string name="adventure_folder_other">Andre sanger</string>
@@ -254,17 +245,12 @@
     <string name="adventure_players_badge">%1$d spillere</string>
 
     <string name="profile_edit">Rediger profil</string>
-    <string name="profile_edit_title">Rediger profil</string>
     <string name="profile_save">Lagre</string>
-    <string name="home_game_mode_title">Spillmodus</string>
-    <string name="game_mode_title">Spillmodus</string>
-    <string name="game_mode_adventure">Eventyr</string>
-    <string name="game_mode_whack">Tonedengeren</string>
     <plurals name="adventure_stickers_won">
         <item quantity="one">%1$d klistremerke</item>
         <item quantity="other">%1$d klistremerker</item>
     </plurals>
-    <string name="adventure_reward_go_again_short">Kast igjen</string>
+    <string name="adventure_throw_again">Kast igjen</string>
     <string name="adventure_go_again">Igjen</string>
     <string name="adventure_pull_lever">Dra i spaken</string>
     <string name="adventure_throw_dice">Kast terningen</string>
@@ -276,14 +262,11 @@
     <string name="adventure_reward_stickers">Klistremerker</string>
 
     <string name="whack_title">Tonedengeren</string>
-    <string name="whack_start">Start</string>
     <string name="whack_hint">Spill tonen som gjemmer seg under emojien. Fargen på beltet viser fingeren: blå løs streng, grønn første, gul andre, oransje tredje, rød fjerde. Svar raskere for å få flere poeng.</string>
     <string name="whack_best">Beste %1$d</string>
-    <string name="whack_level_up">Nivå %1$d</string>
     <string name="whack_time_up">Tiden er ute!</string>
     <string name="whack_points">Poeng</string>
-    <string name="whack_duration">Tre minutter</string>
-    <string name="whack_duration_minute">Ett minutt</string>
-    <string name="whack_again">Spill igjen</string>
+    <string name="whack_duration_three_minutes">Tre minutter</string>
+    <string name="whack_duration_one_minute">Ett minutt</string>
     <string name="whack_continue">Fortsett</string>
 </resources>

@@ -520,7 +520,7 @@ private fun WhackOverlay(
                     Spacer(Modifier.height(10.dp))
                     Text(
                         text = stringResource(
-                            if (adventure) R.string.whack_duration_minute else R.string.whack_duration
+                            if (adventure) R.string.whack_duration_one_minute else R.string.whack_duration_three_minutes
                         ),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -551,8 +551,8 @@ private fun WhackOverlay(
                         text = stringResource(
                             when {
                                 state.finished && adventure -> R.string.whack_continue
-                                state.finished -> R.string.whack_again
-                                else -> R.string.whack_start
+                                state.finished -> R.string.play_again
+                                else -> R.string.start
                             }
                         ),
                         style = MaterialTheme.typography.titleMedium,
@@ -584,7 +584,7 @@ private fun LevelBadge(levelUp: WhackLevelUp) {
             .padding(horizontal = 12.dp, vertical = 5.dp)
     ) {
         Text(
-            text = stringResource(R.string.whack_level_up, levelUp.level),
+            text = stringResource(R.string.level, levelUp.level),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Black,
             color = if (levelUp.level >= 5) Color.White else Color.Black

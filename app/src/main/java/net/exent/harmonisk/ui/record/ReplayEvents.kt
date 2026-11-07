@@ -1,6 +1,6 @@
-package net.exent.harmonisk.ui.freeplay
+package net.exent.harmonisk.ui.record
 
-/** A scheduled note-on or note-off in the Free Play playback engine. */
+/** A scheduled note-on or note-off in the Record playback engine. */
 internal data class ReplayEvent(
     val timeMs: Long,
     val midiNote: Int,

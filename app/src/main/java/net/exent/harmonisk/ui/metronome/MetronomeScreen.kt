@@ -320,7 +320,7 @@ private fun TempoControls(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = stringResource(R.string.freeplay_bpm),
+                    text = stringResource(R.string.bpm),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -396,7 +396,7 @@ private fun RunButton(state: MetronomeState, viewModel: MetronomeViewModel) {
         Icon(if (state.isRunning) Icons.Filled.Pause else Icons.Filled.PlayArrow, contentDescription = null)
         Spacer(Modifier.width(8.dp))
         Text(
-            text = stringResource(if (state.isRunning) R.string.metronome_stop else R.string.metronome_start),
+            text = stringResource(if (state.isRunning) R.string.stop else R.string.start),
             style = MaterialTheme.typography.titleMedium
         )
     }

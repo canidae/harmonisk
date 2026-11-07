@@ -9,12 +9,20 @@
     <string name="speaker">speaker</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
+    <string name="start">Start</string>
+    <string name="stop">Stop</string>
+    <string name="play_again">Play again</string>
+    <string name="help">Help</string>
+    <string name="got_it">Got it</string>
+    <string name="level">Level %1$d</string>
+    <string name="bpm">BPM</string>
+    <string name="none">None</string>
+    <string name="metronome_on">Metronome on</string>
+    <string name="metronome_off">Metronome off</string>
 
     <!-- Home screen -->
-    <string name="home_free_play_title">Free play</string>
-    <string name="home_melody_title">Learn a melody</string>
-    <string name="home_metronome_title">Metronome</string>
-    <string name="home_tuner_title">Tune instrument</string>
+    <string name="record_title">Record</string>
+    <string name="games_title">Games</string>
     <string name="dev_mode_enabled">Developer mode enabled</string>
     <string name="home_version">Version %1$s</string>
     <string name="dev_mode_disabled">Developer mode disabled</string>
@@ -47,7 +55,6 @@
     <string name="permission_grant">Grant permission</string>
 
     <!-- Settings -->
-    <string name="settings_title">Settings</string>
     <string name="settings_mic_sensitivity">Microphone sensitivity</string>
     <string name="settings_silence_threshold">%1$.0f dB</string>
     <string name="settings_silence_threshold_min">Less sensitive</string>
@@ -59,76 +66,64 @@
     <string name="settings_delay_help">A phone takes a moment to turn a note into sound, so the note is always heard a little after the app played it. The output delay tells the app how long that moment is. Increase it if the sound reaches you late, decrease it if it reaches you early.\n\nListening to a note and working out its pitch takes a moment, so the app always registers a note a little after you played it. The input delay tells the app how long that moment is. Increase it if your notes are scored late, decrease it if they are scored early.</string>
     <string name="settings_devices">%1$s / %2$s</string>
     <string name="settings_auto_calibrate">Auto</string>
-    <string name="settings_calibrating_stop">Stop</string>
     <string name="settings_no_detection">Microphone can\'t detect any tones</string>
     <string name="settings_calibrating">Calibrating\u2026 %1$d/5 tones detected</string>
     <string name="settings_input_delay_min">0</string>
     <string name="settings_input_delay_max">500</string>
     <string name="settings_reset_dialog_title">Reset to defaults?</string>
-    <string name="settings_reset_dialog_body">All settings for the current profile will be returned to their default values, including:\n\n\u2022 Silence threshold\n\u2022 Free play speed, tempo, time signature, note snapping\n\u2022 Metronome tempo, beats per bar and accent</string>
+    <string name="settings_reset_dialog_body">All settings for the current profile will be returned to their default values, including:\n\n\u2022 Silence threshold\n\u2022 Record speed, tempo, time signature, note snapping\n\u2022 Metronome tempo, beats per bar and accent</string>
     <string name="settings_reset">Reset</string>
     <string name="settings_reset_to_defaults">Reset to defaults</string>
     <string name="settings_language">Language</string>
-    <string name="settings_help">Help</string>
-    <string name="settings_help_got_it">Got it</string>
     <string name="instrument_violin">Violin</string>
     <string name="instrument_viola">Viola</string>
     <string name="instrument_cello">Cello</string>
 
-    <!-- Free Play -->
-    <string name="freeplay_mic">Mic</string>
-    <string name="freeplay_midi">MIDI</string>
-    <string name="freeplay_synth">Synth</string>
-    <string name="freeplay_none">None</string>
-    <string name="freeplay_microphone">Microphone</string>
-    <string name="freeplay_internal_synth">Internal synth</string>
-    <string name="freeplay_none_silent">None (silent)</string>
-    <string name="freeplay_help">Help</string>
-    <string name="freeplay_metronome_on">Metronome on</string>
-    <string name="freeplay_metronome_off">Metronome off</string>
-    <string name="freeplay_settings">Settings</string>
-    <string name="freeplay_snap_notes">Snap notes</string>
-    <string name="freeplay_min_note_duration">Min note duration: %1$s</string>
-    <string name="freeplay_piano">Piano: %1$s</string>
-    <string name="freeplay_import_midi">Import MIDI</string>
-    <string name="freeplay_export_midi">Export MIDI</string>
-    <string name="freeplay_help_title">Free play \u2014 Help</string>
-    <string name="freeplay_help_got_it">Got it</string>
-    <string name="freeplay_help_note_editing">Note editing</string>
-    <string name="freeplay_help_looping">Looping</string>
-    <string name="freeplay_help_tap_note">Tap a note bar</string>
-    <string name="freeplay_help_tap_note_desc">Select note for editing.</string>
-    <string name="freeplay_help_drag_note">Drag a selected note</string>
-    <string name="freeplay_help_drag_note_desc">Change time/semitone.</string>
-    <string name="freeplay_help_drag_handle">Drag a handle</string>
-    <string name="freeplay_help_drag_handle_desc">Adjust start/end.</string>
-    <string name="freeplay_help_split">Split (\u2702)</string>
-    <string name="freeplay_help_split_desc">Halves the note.</string>
-    <string name="freeplay_help_delete">Delete (\uD83D\uDDD1)</string>
-    <string name="freeplay_help_delete_desc">Removes the note.</string>
-    <string name="freeplay_help_tap_empty">Tap empty space</string>
-    <string name="freeplay_help_tap_empty_desc">Deselect the note.</string>
-    <string name="freeplay_help_loop_info">Tap a bar number to lock it to the current position (turns orange). Tap the same locked number again to unlock it.</string>
-    <string name="freeplay_bpm">BPM</string>
-    <string name="freeplay_meter">Meter</string>
-    <string name="freeplay_loop">Loop</string>
-    <string name="freeplay_voice">Voice %1$d</string>
-    <string name="freeplay_add_voice">+ Add voice</string>
-    <string name="freeplay_split_note">Split note</string>
-    <string name="freeplay_delete_note">Delete note</string>
-    <string name="freeplay_play">Play</string>
-    <string name="freeplay_record">Record</string>
-    <string name="freeplay_piano_both">Upper + lower keyboards</string>
-    <string name="freeplay_piano_upper">Upper keyboard only</string>
-    <string name="freeplay_piano_lower">Lower keyboard only</string>
-    <string name="freeplay_piano_none">No piano keyboards</string>
-    <string name="freeplay_end_bar_mismatch">End bar must differ from start bar</string>
-    <string name="freeplay_start_bar_exceeds_end">Start bar must be before end bar</string>
+    <!-- Record -->
+    <string name="record_mic">Mic</string>
+    <string name="record_midi">MIDI</string>
+    <string name="record_synth">Synth</string>
+    <string name="record_microphone">Microphone</string>
+    <string name="record_internal_synth">Internal synth</string>
+    <string name="record_none_silent">None (silent)</string>
+    <string name="record_snap_notes">Snap notes</string>
+    <string name="record_min_note_duration">Min note duration: %1$s</string>
+    <string name="record_piano">Piano: %1$s</string>
+    <string name="record_import_midi">Import MIDI</string>
+    <string name="record_export_midi">Export MIDI</string>
+    <string name="record_help_title">Record \u2014 Help</string>
+    <string name="record_help_note_editing">Note editing</string>
+    <string name="record_help_looping">Looping</string>
+    <string name="record_help_tap_note">Tap a note bar</string>
+    <string name="record_help_tap_note_desc">Select note for editing.</string>
+    <string name="record_help_drag_note">Drag a selected note</string>
+    <string name="record_help_drag_note_desc">Change time/semitone.</string>
+    <string name="record_help_drag_handle">Drag a handle</string>
+    <string name="record_help_drag_handle_desc">Adjust start/end.</string>
+    <string name="record_help_split">Split (\u2702)</string>
+    <string name="record_help_split_desc">Halves the note.</string>
+    <string name="record_help_delete">Delete (\uD83D\uDDD1)</string>
+    <string name="record_help_delete_desc">Removes the note.</string>
+    <string name="record_help_tap_empty">Tap empty space</string>
+    <string name="record_help_tap_empty_desc">Deselect the note.</string>
+    <string name="record_help_loop_info">Tap a bar number to lock it to the current position (turns orange). Tap the same locked number again to unlock it.</string>
+    <string name="record_meter">Meter</string>
+    <string name="record_loop">Loop</string>
+    <string name="record_voice">Voice %1$d</string>
+    <string name="record_add_voice">+ Add voice</string>
+    <string name="record_split_note">Split note</string>
+    <string name="record_delete_note">Delete note</string>
+    <string name="record_play">Play</string>
+    <string name="record_capture">Record</string>
+    <string name="record_piano_both">Upper + lower keyboards</string>
+    <string name="record_piano_upper">Upper keyboard only</string>
+    <string name="record_piano_lower">Lower keyboard only</string>
+    <string name="record_piano_none">No piano keyboards</string>
+    <string name="record_end_bar_mismatch">End bar must differ from start bar</string>
+    <string name="record_start_bar_exceeds_end">Start bar must be before end bar</string>
 
     <!-- Metronome -->
     <string name="metronome_title">Metronome</string>
-    <string name="metronome_start">Start</string>
-    <string name="metronome_stop">Stop</string>
     <string name="metronome_faster">Faster</string>
     <string name="metronome_slower">Slower</string>
     <string name="metronome_sound_on">Sound on</string>
@@ -180,11 +175,9 @@
     <string name="melody_play_mic_input">Mic input</string>
     <string name="melody_play_midi_output_on">MIDI output active</string>
     <string name="melody_play_midi_output_off">MIDI output off</string>
-    <string name="melody_play_start">Start</string>
     <string name="melody_play_resume">Resume</string>
     <string name="melody_play_scroll_start">Scroll to beginning</string>
     <string name="melody_play_results">Results</string>
-    <string name="melody_play_again">Play again</string>
     <string name="melody_play_go_back">Go back</string>
     <string name="melody_play_level">Level: %1$d</string>
     <string name="melody_level">Lv.%1$d</string>
@@ -203,7 +196,6 @@
 
     <!-- Score results -->
     <string name="score_dismiss">Dismiss</string>
-    <string name="score_level">Level %1$d</string>
     <string name="level_reached">Level %1$d reached!</string>
     <string name="retry_level">Retry level</string>
     <string name="level_2_change">On level 2 pitch accuracy will count toward your score</string>
@@ -229,7 +221,6 @@
     <string name="adventure_players_title">Who is playing?</string>
     <string name="adventure_add_player">Add player</string>
     <string name="adventure_choose_songs">Choose songs</string>
-    <string name="adventure_songs_title">Choose songs</string>
     <string name="adventure_selected_songs">%1$d selected</string>
     <string name="adventure_start">Start adventure</string>
     <string name="adventure_folder_other">Other songs</string>
@@ -254,17 +245,12 @@
     <string name="adventure_players_badge">%1$d players</string>
 
     <string name="profile_edit">Edit profile</string>
-    <string name="profile_edit_title">Edit profile</string>
     <string name="profile_save">Save</string>
-    <string name="home_game_mode_title">Game mode</string>
-    <string name="game_mode_title">Game mode</string>
-    <string name="game_mode_adventure">Adventure</string>
-    <string name="game_mode_whack">Whack a Tone</string>
     <plurals name="adventure_stickers_won">
         <item quantity="one">%1$d sticker</item>
         <item quantity="other">%1$d stickers</item>
     </plurals>
-    <string name="adventure_reward_go_again_short">Throw again</string>
+    <string name="adventure_throw_again">Throw again</string>
     <string name="adventure_go_again">Go again</string>
     <string name="adventure_pull_lever">Pull the lever</string>
     <string name="adventure_throw_dice">Throw the dice</string>
@@ -276,15 +262,12 @@
     <string name="adventure_reward_stickers">Stickers</string>
 
     <string name="whack_title">Whack a Tone</string>
-    <string name="whack_start">Start</string>
     <string name="whack_hint">Play the note hiding under the emoji. The belt colour shows the finger: blue open string, green first, yellow second, orange third, red fourth. Answer faster to score more points.</string>
     <string name="whack_best">Best %1$d</string>
-    <string name="whack_level_up">Level %1$d</string>
     <string name="whack_time_up">Time’s up!</string>
     <string name="whack_points">Points</string>
-    <string name="whack_duration">Three minutes</string>
-    <string name="whack_duration_minute">One minute</string>
-    <string name="whack_again">Play again</string>
+    <string name="whack_duration_three_minutes">Three minutes</string>
+    <string name="whack_duration_one_minute">One minute</string>
     <string name="whack_continue">Continue</string>
 </resources>
 

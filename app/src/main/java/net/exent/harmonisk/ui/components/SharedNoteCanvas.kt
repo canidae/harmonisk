@@ -34,8 +34,8 @@ import net.exent.harmonisk.midi.MelodyTrack
 import net.exent.harmonisk.music.BowedAlgorithm
 import net.exent.harmonisk.music.BowedPosition
 import net.exent.harmonisk.music.Instrument
-import net.exent.harmonisk.ui.freeplay.PianoVisibility
-import net.exent.harmonisk.ui.freeplay.PlayedNote
+import net.exent.harmonisk.ui.record.PianoVisibility
+import net.exent.harmonisk.ui.record.PlayedNote
 import net.exent.harmonisk.ui.melody.NoteResultState
 import net.exent.harmonisk.ui.theme.AmberAccent
 import net.exent.harmonisk.ui.theme.FingerColors
@@ -155,7 +155,7 @@ val VOICE_COLORS = listOf(
 )
 
 sealed interface CanvasMode {
-    data class FreePlay(
+    data class Record(
         val notes: List<PlayedNote>,
         val activeNote: PlayedNote?,
         val songPositionMs: Long,
@@ -189,7 +189,7 @@ sealed interface CanvasMode {
     ) : CanvasMode
 }
 
-internal fun computeFreePlayNoteRects(
+internal fun computeRecordNoteRects(
     notes: List<PlayedNote>,
     now: Long,
     pianoEdgeY: Float,
@@ -217,7 +217,7 @@ internal fun computeFreePlayNoteRects(
 }
 
 /**
- * A unified note canvas used by both Free Play and Melody Play modes.
+ * A unified note canvas used by both Record and Melody Play modes.
  */
 @OptIn(ExperimentalTextApi::class)
 @Composable
@@ -236,8 +236,8 @@ fun SharedNoteCanvas(
     val fontScale = localDensity.fontScale
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
-    // Emit note rects for edit-mode hit testing (FreePlay only)
-    if (onNoteRects != null && mode is CanvasMode.FreePlay && canvasSize != IntSize.Zero) {
+    // Emit note rects for edit-mode hit testing (Record only)
+    if (onNoteRects != null && mode is CanvasMode.Record && canvasSize != IntSize.Zero) {
         val w = canvasSize.width.toFloat()
         val pianoEdgeY = canvasSize.height / 2f
         val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
@@ -247,7 +247,7 @@ fun SharedNoteCanvas(
             viewMaxMidi + rightPaddingPx * midiPerPx
         } else viewMaxMidi
         val layout = calculatePianoLayout(viewMinMidi, effMax, w)
-        val rects = computeFreePlayNoteRects(mode.notes, now, pianoEdgeY, pxPerMs, layout)
+        val rects = computeRecordNoteRects(mode.notes, now, pianoEdgeY, pxPerMs, layout)
         SideEffect { onNoteRects(rects) }
     }
 
@@ -269,7 +269,7 @@ fun SharedNoteCanvas(
         val minMidi = floor(viewMinMidi).toInt()
         val maxMidi = ceil(effectiveViewMaxMidi).toInt()
 
-        val pianoVisibility = if (mode is CanvasMode.FreePlay) mode.pianoVisibility else PianoVisibility.BOTH
+        val pianoVisibility = if (mode is CanvasMode.Record) mode.pianoVisibility else PianoVisibility.BOTH
         val showTopPiano = pianoVisibility == PianoVisibility.BOTH || pianoVisibility == PianoVisibility.UPPER_ONLY
         val showBottomPiano = pianoVisibility == PianoVisibility.BOTH || pianoVisibility == PianoVisibility.LOWER_ONLY
         val bowedMode = mode is CanvasMode.Melody
@@ -277,10 +277,10 @@ fun SharedNoteCanvas(
         // Piano edge and far edge Y coordinates
         val pianoEdgeY: Float   // the "now" line or melody piano edge
         val canvasFarEdgeY: Float
-        // For FreePlay: two pianos (top + bottom), now-line at height/2
+        // For Record: two pianos (top + bottom), now-line at height/2
         val noteAreaTop: Float  // top of the note drawing area (bottom of top piano)
         val noteAreaBottom: Float  // bottom of the note drawing area (top of bottom piano)
-        if (mode is CanvasMode.FreePlay) {
+        if (mode is CanvasMode.Record) {
             pianoEdgeY = height / 2f
             canvasFarEdgeY = height
             noteAreaTop = if (showTopPiano) pianoHeight else 0f
@@ -302,7 +302,7 @@ fun SharedNoteCanvas(
 
         // Compute playable-area bottom (before bar 1 = black, no columns/grid)
         val playableBottom: Float = when {
-            mode is CanvasMode.FreePlay && mode.fallSpeedPxPerSec > 0f -> {
+            mode is CanvasMode.Record && mode.fallSpeedPxPerSec > 0f -> {
                 val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
                 val now = mode.songPositionMs.toDouble()
                 val bar1Y = (pianoEdgeY + now * pxPerMs).toFloat()
@@ -348,9 +348,9 @@ fun SharedNoteCanvas(
 
         // Mode-specific rendering
         when (mode) {
-            is CanvasMode.FreePlay -> {
+            is CanvasMode.Record -> {
                 drawBarLines(mode, pianoEdgeY, noteAreaTop, noteAreaBottom, density, textMeasurer)
-                drawFreePlayNotes(mode, layout, pianoEdgeY, noteAreaTop, noteAreaBottom, density)
+                drawRecordNotes(mode, layout, pianoEdgeY, noteAreaTop, noteAreaBottom, density)
                 // "Now" line — thin bright marker in the center
                 drawLine(
                     color = Color.White.copy(alpha = 0.55f),
@@ -421,7 +421,7 @@ fun SharedNoteCanvas(
 
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawBarLines(
-    mode: CanvasMode.FreePlay,
+    mode: CanvasMode.Record,
     nowY: Float,
     noteAreaTop: Float,
     noteAreaBottom: Float,
@@ -604,10 +604,10 @@ private fun DrawScope.drawBarLines(
 
 // endregion
 
-// region Free Play rendering
+// region Record rendering
 
-private fun DrawScope.drawFreePlayNotes(
-    mode: CanvasMode.FreePlay,
+private fun DrawScope.drawRecordNotes(
+    mode: CanvasMode.Record,
     layout: Map<Int, KeyLayout>,
     pianoEdgeY: Float,
     noteAreaTop: Float,
@@ -662,7 +662,7 @@ private fun DrawScope.drawFreePlayNotes(
             borderAlpha = if (isSelected) 0.0f else 0.25f,  // selection glow replaces border
             centsHistory = note.centsHistory,
             density = density,
-            wigglyPianoAtBottom = true  // FreePlay notes scroll down: sample 0 (start) is at rawBottomY
+            wigglyPianoAtBottom = true  // Record notes scroll down: sample 0 (start) is at rawBottomY
         )
 
         // Selection glow: bright thick rounded outline drawn on top of the note bar

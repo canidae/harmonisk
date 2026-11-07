@@ -1,4 +1,4 @@
-package net.exent.harmonisk.ui.freeplay
+package net.exent.harmonisk.ui.record
 
 import android.content.res.Configuration
 import android.net.Uri
@@ -58,16 +58,16 @@ import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 private val PIANO_VISIBILITY_LABELS = mapOf(
-    PianoVisibility.BOTH        to R.string.freeplay_piano_both,
-    PianoVisibility.UPPER_ONLY  to R.string.freeplay_piano_upper,
-    PianoVisibility.LOWER_ONLY  to R.string.freeplay_piano_lower,
-    PianoVisibility.NONE        to R.string.freeplay_piano_none
+    PianoVisibility.BOTH        to R.string.record_piano_both,
+    PianoVisibility.UPPER_ONLY  to R.string.record_piano_upper,
+    PianoVisibility.LOWER_ONLY  to R.string.record_piano_lower,
+    PianoVisibility.NONE        to R.string.record_piano_none
 )
 
 @Composable
-fun FreePlayScreen(
+fun RecordScreen(
     onBack: () -> Unit,
-    viewModel: FreePlayViewModel = hiltViewModel()
+    viewModel: RecordViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val density = LocalDensity.current
@@ -151,7 +151,7 @@ fun FreePlayScreen(
                 )
                 Spacer(Modifier.width(3.dp))
                 Text(
-                    text = if (state.midiInputEnabled) (state.midiInputDeviceName?.take(9) ?: stringResource(R.string.freeplay_midi)) else stringResource(R.string.freeplay_mic),
+                    text = if (state.midiInputEnabled) (state.midiInputDeviceName?.take(9) ?: stringResource(R.string.record_midi)) else stringResource(R.string.record_mic),
                     fontSize = 11.sp,
                     color = if (state.midiInputEnabled) MidiPurple else OVERLAY_ICON_TINT,
                     maxLines = 1
@@ -160,7 +160,7 @@ fun FreePlayScreen(
             }
             DropdownMenu(expanded = showInputMenu, onDismissRequest = { showInputMenu = false }) {
                 DropdownMenuItem(
-                    text = { Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Mic, null, Modifier.size(16.dp)); Text(stringResource(R.string.freeplay_microphone)) } },
+                    text = { Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Mic, null, Modifier.size(16.dp)); Text(stringResource(R.string.record_microphone)) } },
                     onClick = { viewModel.setMidiInputEnabled(false); showInputMenu = false }
                 )
                 val inputDeviceName = state.midiInputDeviceName
@@ -176,9 +176,9 @@ fun FreePlayScreen(
         // Output source dropdown
         Box {
             val outputLabel = when (state.outputDevice) {
-                OutputDevice.MIDI -> state.midiOutputDeviceName?.take(9) ?: stringResource(R.string.freeplay_midi)
-                OutputDevice.SYNTH -> stringResource(R.string.freeplay_synth)
-                OutputDevice.NONE -> stringResource(R.string.freeplay_none)
+                OutputDevice.MIDI -> state.midiOutputDeviceName?.take(9) ?: stringResource(R.string.record_midi)
+                OutputDevice.SYNTH -> stringResource(R.string.record_synth)
+                OutputDevice.NONE -> stringResource(R.string.none)
             }
             val outputTint = if (state.outputDevice == OutputDevice.MIDI) MidiPurple else OVERLAY_ICON_TINT
             TextButton(
@@ -198,11 +198,11 @@ fun FreePlayScreen(
             }
             DropdownMenu(expanded = showOutputMenu, onDismissRequest = { showOutputMenu = false }) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.freeplay_internal_synth), fontWeight = if (state.outputDevice == OutputDevice.SYNTH) FontWeight.Bold else FontWeight.Normal) },
+                    text = { Text(stringResource(R.string.record_internal_synth), fontWeight = if (state.outputDevice == OutputDevice.SYNTH) FontWeight.Bold else FontWeight.Normal) },
                     onClick = { viewModel.setOutputDevice(OutputDevice.SYNTH); showOutputMenu = false }
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.freeplay_none_silent), fontWeight = if (state.outputDevice == OutputDevice.NONE) FontWeight.Bold else FontWeight.Normal) },
+                    text = { Text(stringResource(R.string.record_none_silent), fontWeight = if (state.outputDevice == OutputDevice.NONE) FontWeight.Bold else FontWeight.Normal) },
                     onClick = { viewModel.setOutputDevice(OutputDevice.NONE); showOutputMenu = false }
                 )
                 val outputDeviceName = state.midiOutputDeviceName
@@ -226,7 +226,7 @@ fun FreePlayScreen(
             onClick = { showEditHelp = true },
             modifier = Modifier.size(PANEL_BTN_SIZE)
         ) {
-            Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = stringResource(R.string.freeplay_help), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
+            Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = stringResource(R.string.help), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
         }
 
         // Metronome toggle
@@ -236,7 +236,7 @@ fun FreePlayScreen(
         ) {
             Icon(
                 Icons.Filled.Timer,
-                contentDescription = if (state.metronomeEnabled) stringResource(R.string.freeplay_metronome_on) else stringResource(R.string.freeplay_metronome_off),
+                contentDescription = if (state.metronomeEnabled) stringResource(R.string.metronome_on) else stringResource(R.string.metronome_off),
                 tint = if (state.metronomeEnabled) MetronomeBlue else OVERLAY_ICON_TINT,
                 modifier = Modifier.size(17.dp)
             )
@@ -248,32 +248,32 @@ fun FreePlayScreen(
                 onClick = { showConfigMenu = true },
                 modifier = Modifier.size(PANEL_BTN_SIZE)
             ) {
-                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.freeplay_settings), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
+                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
             }
             DropdownMenu(expanded = showConfigMenu, onDismissRequest = { showConfigMenu = false }, offset = DpOffset((-160).dp, 0.dp)) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.freeplay_snap_notes)) },
+                    text = { Text(stringResource(R.string.record_snap_notes)) },
                     trailingIcon = { Switch(checked = state.snapEnabled, onCheckedChange = { viewModel.toggleSnap() }, modifier = Modifier.height(20.dp)) },
                     onClick = { viewModel.toggleSnap() }
                 )
                 if (state.snapEnabled) {
                     val divIndex = NOTE_DIVISION_OPTIONS.indexOfFirst { it.division == state.minNoteDivision }.takeIf { it >= 0 } ?: 2
                     val reversedIndex = 3 - divIndex
-                    DropdownMenuItem(text = { Text(stringResource(R.string.freeplay_min_note_duration, NOTE_DIVISION_OPTIONS.find { it.division == state.minNoteDivision }?.let { stringResource(it.labelResId) } ?: "${state.minNoteDivision}th")) }, onClick = {})
+                    DropdownMenuItem(text = { Text(stringResource(R.string.record_min_note_duration, NOTE_DIVISION_OPTIONS.find { it.division == state.minNoteDivision }?.let { stringResource(it.labelResId) } ?: "${state.minNoteDivision}th")) }, onClick = {})
                     Slider(value = reversedIndex.toFloat(), onValueChange = { viewModel.setMinNoteDivision(NOTE_DIVISION_OPTIONS[3 - it.roundToInt()].division) }, valueRange = 0f..3f, steps = 2, modifier = Modifier.padding(horizontal = 16.dp))
                 }
                 HorizontalDivider()
                 var showPianoVisMenu by remember { mutableStateOf(false) }
                 Box {
-                    val pianoLabelRes = PIANO_VISIBILITY_LABELS[state.pianoVisibility] ?: R.string.freeplay_piano
+                    val pianoLabelRes = PIANO_VISIBILITY_LABELS[state.pianoVisibility] ?: R.string.record_piano
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.freeplay_piano, stringResource(pianoLabelRes))) },
+                        text = { Text(stringResource(R.string.record_piano, stringResource(pianoLabelRes))) },
                         trailingIcon = { Icon(Icons.Filled.ArrowDropDown, null, Modifier.size(16.dp)) },
                         onClick = { showPianoVisMenu = true }
                     )
                     DropdownMenu(expanded = showPianoVisMenu, onDismissRequest = { showPianoVisMenu = false }) {
                         PianoVisibility.entries.forEach { vis ->
-                            val labelRes = PIANO_VISIBILITY_LABELS[vis] ?: R.string.freeplay_piano
+                            val labelRes = PIANO_VISIBILITY_LABELS[vis] ?: R.string.record_piano
                             DropdownMenuItem(
                                 text = { Text(stringResource(labelRes), fontWeight = if (vis == state.pianoVisibility) FontWeight.Bold else FontWeight.Normal) },
                                 onClick = { viewModel.setPianoVisibility(vis); showPianoVisMenu = false; showConfigMenu = false }
@@ -283,18 +283,18 @@ fun FreePlayScreen(
                 }
                 HorizontalDivider()
                 DropdownMenuItem(
-                    text = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.FileOpen, null, Modifier.size(18.dp)); Text(stringResource(R.string.freeplay_import_midi)) } },
+                    text = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.FileOpen, null, Modifier.size(18.dp)); Text(stringResource(R.string.record_import_midi)) } },
                     onClick = { importLauncher.launch(arrayOf("audio/midi", "audio/x-midi", "*/*")); showConfigMenu = false }
                 )
                 DropdownMenuItem(
-                    text = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Save, null, Modifier.size(18.dp)); Text(stringResource(R.string.freeplay_export_midi)) } },
+                    text = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Save, null, Modifier.size(18.dp)); Text(stringResource(R.string.record_export_midi)) } },
                     onClick = { exportLauncher.launch("session.mid"); showConfigMenu = false }
                 )
             }
         }
 
         if (showEditHelp) {
-            FreePlayHelpDialog(onDismiss = { showEditHelp = false })
+            RecordHelpDialog(onDismiss = { showEditHelp = false })
         }
     }
 
@@ -350,7 +350,7 @@ fun FreePlayScreen(
             }
         ) {
             Text(
-                stringResource(R.string.freeplay_bpm),
+                stringResource(R.string.bpm),
                 fontSize = 10.sp,
                 color = Color.White.copy(alpha = if (bpmDragging) 0.9f else 0.5f)
             )
@@ -367,7 +367,7 @@ fun FreePlayScreen(
 
         // Meter (time signature) — two separate dropdowns
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.freeplay_meter), fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
+            Text(stringResource(R.string.record_meter), fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
             Spacer(Modifier.width(4.dp))
 
             // Beats (numerator) dropdown
@@ -430,13 +430,13 @@ fun FreePlayScreen(
                 for (v in 0 until state.voiceCount) {
                     val vColor = VOICE_COLORS[v % VOICE_COLORS.size]
                     DropdownMenuItem(
-                        text = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(10.dp).background(vColor, CircleShape)); Text(stringResource(R.string.freeplay_voice, v + 1), fontWeight = if (v == state.activeVoiceIndex) FontWeight.Bold else FontWeight.Normal) } },
+                        text = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(10.dp).background(vColor, CircleShape)); Text(stringResource(R.string.record_voice, v + 1), fontWeight = if (v == state.activeVoiceIndex) FontWeight.Bold else FontWeight.Normal) } },
                         onClick = { viewModel.setActiveVoice(v); showVoiceMenu = false }
                     )
                 }
                 if (state.voiceCount < 8) {
                     HorizontalDivider()
-                    DropdownMenuItem(text = { Text(stringResource(R.string.freeplay_add_voice)) }, onClick = { viewModel.addVoice(); showVoiceMenu = false })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.record_add_voice)) }, onClick = { viewModel.addVoice(); showVoiceMenu = false })
                 }
             }
         }
@@ -445,7 +445,7 @@ fun FreePlayScreen(
 
         // Loop controls — "Loop X – Y"
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.freeplay_loop), fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
+            Text(stringResource(R.string.record_loop), fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
             Spacer(Modifier.width(4.dp))
             Text(
                 text = effectiveLoopStartBar.toString(),
@@ -659,7 +659,7 @@ fun FreePlayScreen(
                 DisposableEffect(Unit) { onDispose { viewModel.stopListening() } }
 
                 SharedNoteCanvas(
-                    mode = CanvasMode.FreePlay(
+                    mode = CanvasMode.Record(
                         notes = state.playedNotes,
                         activeNote = state.activeNote,
                         songPositionMs = canvasSongPositionMs,
@@ -704,7 +704,7 @@ fun FreePlayScreen(
                             .background(DarkBg.copy(alpha = 0.87f), CircleShape)
                             .border(1.dp, AmberAccent.copy(alpha = 0.7f), CircleShape)
                     ) {
-                        Icon(Icons.Filled.ContentCut, contentDescription = stringResource(R.string.freeplay_split_note),
+                        Icon(Icons.Filled.ContentCut, contentDescription = stringResource(R.string.record_split_note),
                             tint = AmberAccent, modifier = Modifier.size(18.dp))
                     }
                     IconButton(
@@ -713,7 +713,7 @@ fun FreePlayScreen(
                             .background(DarkBg.copy(alpha = 0.87f), CircleShape)
                             .border(1.dp, DeleteRed.copy(alpha = 0.7f), CircleShape)
                     ) {
-                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.freeplay_delete_note),
+                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.record_delete_note),
                             tint = DeleteRed, modifier = Modifier.size(18.dp))
                     }
                 }
@@ -738,7 +738,7 @@ fun FreePlayScreen(
                             .background(PlayGreen.copy(alpha = 0.25f), CircleShape)
                             .border(2.dp, PlayGreen.copy(alpha = 0.7f), CircleShape)
                     ) {
-                        Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.freeplay_play),
+                        Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.record_play),
                             modifier = Modifier.size(40.dp), tint = PlayGreen.copy(alpha = 0.9f))
                     }
                     IconButton(
@@ -748,7 +748,7 @@ fun FreePlayScreen(
                             .background(DeleteRed.copy(alpha = 0.25f), CircleShape)
                             .border(2.dp, DeleteRed.copy(alpha = 0.7f), CircleShape)
                     ) {
-                        Icon(Icons.Filled.FiberManualRecord, contentDescription = stringResource(R.string.freeplay_record),
+                        Icon(Icons.Filled.FiberManualRecord, contentDescription = stringResource(R.string.record_capture),
                             modifier = Modifier.size(40.dp), tint = DeleteRed.copy(alpha = 0.9f))
                     }
                 }
@@ -808,21 +808,21 @@ fun FreePlayScreen(
 }
 
 @Composable
-private fun FreePlayHelpDialog(onDismiss: () -> Unit) {
+private fun RecordHelpDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.freeplay_help_got_it)) } },
-        title = { Text(stringResource(R.string.freeplay_help_title), fontWeight = FontWeight.Bold) },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.got_it)) } },
+        title = { Text(stringResource(R.string.record_help_title), fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.freeplay_help_note_editing), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.record_help_note_editing), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 val noteItems = listOf(
-                    Triple(Icons.Filled.TouchApp,      null as Color?,     stringResource(R.string.freeplay_help_tap_note) to stringResource(R.string.freeplay_help_tap_note_desc)),
-                    Triple(Icons.Filled.OpenWith,      null,               stringResource(R.string.freeplay_help_drag_note) to stringResource(R.string.freeplay_help_drag_note_desc)),
-                    Triple(Icons.Filled.SwipeVertical, null,               stringResource(R.string.freeplay_help_drag_handle) to stringResource(R.string.freeplay_help_drag_handle_desc)),
-                    Triple(Icons.Filled.ContentCut,    AmberAccent,  stringResource(R.string.freeplay_help_split) to stringResource(R.string.freeplay_help_split_desc)),
-                    Triple(Icons.Filled.Delete,        DeleteRed,  stringResource(R.string.freeplay_help_delete) to stringResource(R.string.freeplay_help_delete_desc)),
-                    Triple(Icons.Filled.TouchApp,      null,               stringResource(R.string.freeplay_help_tap_empty) to stringResource(R.string.freeplay_help_tap_empty_desc))
+                    Triple(Icons.Filled.TouchApp,      null as Color?,     stringResource(R.string.record_help_tap_note) to stringResource(R.string.record_help_tap_note_desc)),
+                    Triple(Icons.Filled.OpenWith,      null,               stringResource(R.string.record_help_drag_note) to stringResource(R.string.record_help_drag_note_desc)),
+                    Triple(Icons.Filled.SwipeVertical, null,               stringResource(R.string.record_help_drag_handle) to stringResource(R.string.record_help_drag_handle_desc)),
+                    Triple(Icons.Filled.ContentCut,    AmberAccent,  stringResource(R.string.record_help_split) to stringResource(R.string.record_help_split_desc)),
+                    Triple(Icons.Filled.Delete,        DeleteRed,  stringResource(R.string.record_help_delete) to stringResource(R.string.record_help_delete_desc)),
+                    Triple(Icons.Filled.TouchApp,      null,               stringResource(R.string.record_help_tap_empty) to stringResource(R.string.record_help_tap_empty_desc))
                 )
                 noteItems.forEach { (icon, color, labelAndDesc) ->
                     val (label, description) = labelAndDesc
@@ -838,19 +838,19 @@ private fun FreePlayHelpDialog(onDismiss: () -> Unit) {
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
 
-                Text(stringResource(R.string.freeplay_help_looping), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.record_help_looping), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
                     Icon(Icons.Filled.Loop, null, modifier = Modifier.size(18.dp).padding(top = 1.dp))
                     Column {
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.freeplay_loop), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.record_loop), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                             Text("1", fontSize = 13.sp, color = Color.White,
                                 modifier = Modifier.background(DarkBg, MaterialTheme.shapes.extraSmall).padding(horizontal = 4.dp, vertical = 1.dp))
                             Text("–", fontSize = 12.sp)
                             Text("4", fontSize = 13.sp, color = AmberAccent,
                                 modifier = Modifier.background(DarkBg, MaterialTheme.shapes.extraSmall).padding(horizontal = 4.dp, vertical = 1.dp))
                         }
-                        Text(stringResource(R.string.freeplay_help_loop_info), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.record_help_loop_info), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

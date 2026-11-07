@@ -216,13 +216,13 @@ fun MelodyPlayScreen(
                     ) {
                         Icon(
                             Icons.Filled.Timer,
-                            contentDescription = if (gameState.metronomeEnabled) stringResource(R.string.freeplay_metronome_on) else stringResource(R.string.freeplay_metronome_off),
+                            contentDescription = if (gameState.metronomeEnabled) stringResource(R.string.metronome_on) else stringResource(R.string.metronome_off),
                             tint = if (gameState.metronomeEnabled) MetronomeBlue else OVERLAY_ICON_TINT,
                             modifier = Modifier.size(17.dp)
                         )
                     }
 
-                    // Voice selector (top-panel chip, like Free Play)
+                    // Voice selector (top-panel chip, like Record)
                     if (gameState.melodyTracks.size > 1) {
                         var showVoiceMenu by remember { mutableStateOf(false) }
                         val voiceColor = VOICE_COLORS[gameState.activeVoiceIndex % VOICE_COLORS.size]
@@ -403,7 +403,7 @@ fun MelodyPlayScreen(
                             ) {
                                 Icon(
                                     Icons.Filled.PlayArrow,
-                                    contentDescription = if (gameState.phase == PlayPhase.READY) stringResource(R.string.melody_play_start) else stringResource(R.string.melody_play_resume),
+                                    contentDescription = if (gameState.phase == PlayPhase.READY) stringResource(R.string.start) else stringResource(R.string.melody_play_resume),
                                     tint = PlayGreen.copy(alpha = 0.9f),
                                     modifier = Modifier.size(40.dp)
                                 )
@@ -444,7 +444,7 @@ fun MelodyPlayScreen(
                                         onClick = { viewModel.startPlaying() },
                                         modifier = Modifier.size(OVERLAY_BUTTON_SIZE).background(OVERLAY_BG, CircleShape)
                                     ) {
-                                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.melody_play_again), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(20.dp))
+                                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.play_again), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(20.dp))
                                     }
                                 }
                             }
@@ -638,7 +638,7 @@ private fun MelodySettingsMenu(
                         AccompanimentMode.ALL to R.string.accompaniment_all,
                         AccompanimentMode.EXCEPT to R.string.accompaniment_except,
                         AccompanimentMode.SELECTED_ONLY to R.string.accompaniment_selected,
-                        AccompanimentMode.NONE to R.string.freeplay_none
+                        AccompanimentMode.NONE to R.string.none
                     ).forEach { (mode, labelRes) ->
                         val isSelected = accompanimentMode == mode
                         val bg = if (isSelected) MaterialTheme.colorScheme.primary else Color.DarkGray.copy(alpha = 0.3f)

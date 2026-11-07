@@ -1,11 +1,11 @@
-package net.exent.harmonisk.ui.freeplay
+package net.exent.harmonisk.ui.record
 
 enum class PianoVisibility { NONE, UPPER_ONLY, LOWER_ONLY, BOTH }
 
 /** Audio output routing for playback. */
 enum class OutputDevice { SYNTH, NONE, MIDI }
 
-data class FreePlayState(
+data class RecordState(
     val isRecording: Boolean = false,
     val playedNotes: List<PlayedNote> = emptyList(),
     val activeNote: PlayedNote? = null,

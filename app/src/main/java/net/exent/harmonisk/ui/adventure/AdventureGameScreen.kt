@@ -200,7 +200,7 @@ private fun CurrentTurnCard(
             state.finisherId != null -> stringResource(R.string.adventure_castle_reached)
             state.turnScore != null -> stringResource(R.string.adventure_score)
             state.reward is AdventureReward.Stickers -> stringResource(R.string.adventure_reward_stickers)
-            state.reward is AdventureReward.GoAgain -> stringResource(R.string.adventure_reward_go_again_short)
+            state.reward is AdventureReward.GoAgain -> stringResource(R.string.adventure_throw_again)
             else -> stringResource(R.string.adventure_song_complete)
         }
         AdventureTurnPhase.PULLING, AdventureTurnPhase.SPINNING, AdventureTurnPhase.HIGHLIGHT ->
@@ -440,7 +440,7 @@ private fun RewardCard(reward: AdventureReward?, score: Int?, levelUp: Int?) {
         if (reward is AdventureReward.GoAgain) {
             Spacer(Modifier.height(4.dp))
             Text(
-                text = stringResource(R.string.adventure_reward_go_again_short),
+                text = stringResource(R.string.adventure_throw_again),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = StorybookGold,
