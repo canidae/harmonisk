@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import kotlinx.coroutines.delay
 import net.exent.harmonisk.R
 import net.exent.harmonisk.ui.components.CanvasMode
 import net.exent.harmonisk.ui.components.KeepScreenOn
@@ -69,14 +71,14 @@ fun RecordScreen(
     onBack: () -> Unit,
     viewModel: RecordViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val density = LocalDensity.current
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val profiles by viewModel.profiles.collectAsState()
-    val profile by viewModel.activeProfile.collectAsState()
-    val instrument by viewModel.currentInstrument.collectAsState()
+    val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    val instrument by viewModel.currentInstrument.collectAsStateWithLifecycle()
     val profileDialogs = rememberProfileDialogState()
     val sessionActive = state.isRecording || state.isPlaying
 
@@ -309,7 +311,7 @@ fun RecordScreen(
                     val deltaPerFrame = fraction * 20f * 16f / 1000f  // 20 BPM/sec at ~60fps
                     viewModel.setBpm(viewModel.state.value.bpm + deltaPerFrame)
                 }
-                kotlinx.coroutines.delay(16L)
+                delay(16L)
             }
         }
 

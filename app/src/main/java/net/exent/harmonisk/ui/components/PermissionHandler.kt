@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -81,6 +82,7 @@ private fun PermissionRequest(
     onRequestPermission: () -> Unit
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -101,9 +103,9 @@ private fun PermissionRequest(
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = when {
-                permanentlyDenied -> context.getString(R.string.permission_permanently_denied)
-                showRationale -> context.getString(R.string.permission_rationale)
-                else -> context.getString(R.string.permission_description)
+                permanentlyDenied -> resources.getString(R.string.permission_permanently_denied)
+                showRationale -> resources.getString(R.string.permission_rationale)
+                else -> resources.getString(R.string.permission_description)
             },
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,

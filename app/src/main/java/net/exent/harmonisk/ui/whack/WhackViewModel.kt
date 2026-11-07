@@ -217,7 +217,6 @@ class WhackViewModel @Inject constructor(
 
     override fun onCleared() {
         stopListening()
-        super.onCleared()
     }
 
     private fun startListening() {

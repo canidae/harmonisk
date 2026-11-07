@@ -6,6 +6,7 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
+import net.exent.harmonisk.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,7 +18,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  * Device priority (highest first): Bluetooth A2DP → wired → built-in speaker.
  * Each device is identified by a key (e.g. "bluetooth_AirPods Pro", "speaker", "wired").
  */
-class AudioDeviceMonitor(context: Context) {
+class AudioDeviceMonitor(private val context: Context) {
 
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
@@ -57,30 +58,56 @@ class AudioDeviceMonitor(context: Context) {
         val outputs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
 
         firstOfTypes(outputs, AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)?.let { bluetooth ->
-            val name = bluetooth.productName?.toString()?.takeIf { it.isNotBlank() } ?: "Bluetooth"
-            return AudioOutputDevice(type = AudioOutputDeviceType.BLUETOOTH, name = name, deviceKey = "bluetooth_$name")
+            val name = bluetooth.productName?.toString()?.takeIf { it.isNotBlank() }
+            return AudioOutputDevice(
+                type = AudioOutputDeviceType.BLUETOOTH,
+                name = name,
+                nameRes = R.string.device_bluetooth,
+                deviceKey = "bluetooth_${name ?: "Bluetooth"}"
+            )
         }
 
         firstOfTypes(outputs, AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES)?.let {
-            return AudioOutputDevice(type = AudioOutputDeviceType.WIRED, name = "Wired headphones", deviceKey = "wired")
+            return AudioOutputDevice(
+                type = AudioOutputDeviceType.WIRED,
+                nameRes = R.string.device_wired_headphones,
+                deviceKey = "wired"
+            )
         }
 
-        return AudioOutputDevice(type = AudioOutputDeviceType.SPEAKER, name = "Phone speaker", deviceKey = "speaker")
+        return AudioOutputDevice(
+            type = AudioOutputDeviceType.SPEAKER,
+            nameRes = R.string.device_phone_speaker,
+            deviceKey = "speaker"
+        )
     }
 
     private fun resolveActiveInputDevice(): AudioInputDevice {
         val inputs = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
 
         firstOfTypes(inputs, AudioDeviceInfo.TYPE_BLUETOOTH_SCO)?.let { bluetooth ->
-            val name = bluetooth.productName?.toString()?.takeIf { it.isNotBlank() } ?: "Bluetooth"
-            return AudioInputDevice(type = AudioInputDeviceType.BLUETOOTH, name = name, deviceKey = "bt_mic_$name")
+            val name = bluetooth.productName?.toString()?.takeIf { it.isNotBlank() }
+            return AudioInputDevice(
+                type = AudioInputDeviceType.BLUETOOTH,
+                name = name,
+                nameRes = R.string.device_bluetooth,
+                deviceKey = "bt_mic_${name ?: "Bluetooth"}"
+            )
         }
 
         firstOfTypes(inputs, AudioDeviceInfo.TYPE_WIRED_HEADSET)?.let {
-            return AudioInputDevice(type = AudioInputDeviceType.WIRED, name = "Wired headset mic", deviceKey = "wired_mic")
+            return AudioInputDevice(
+                type = AudioInputDeviceType.WIRED,
+                nameRes = R.string.device_wired_headset_mic,
+                deviceKey = "wired_mic"
+            )
         }
 
-        return AudioInputDevice(type = AudioInputDeviceType.BUILTIN, name = "Built-in microphone", deviceKey = "builtin_mic")
+        return AudioInputDevice(
+            type = AudioInputDeviceType.BUILTIN,
+            nameRes = R.string.device_builtin_mic,
+            deviceKey = "builtin_mic"
+        )
     }
 
     private fun firstOfTypes(devices: Array<out AudioDeviceInfo>, vararg types: Int): AudioDeviceInfo? {
@@ -94,7 +121,8 @@ class AudioDeviceMonitor(context: Context) {
 
 data class AudioOutputDevice(
     val type: AudioOutputDeviceType,
-    val name: String,
+    val name: String? = null,
+    val nameRes: Int = 0,
     val deviceKey: String
 )
 
@@ -104,7 +132,8 @@ enum class AudioOutputDeviceType {
 
 data class AudioInputDevice(
     val type: AudioInputDeviceType,
-    val name: String,
+    val name: String? = null,
+    val nameRes: Int = 0,
     val deviceKey: String
 )
 

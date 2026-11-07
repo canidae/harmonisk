@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -37,10 +38,10 @@ fun SettingsScreen(
     onBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val settings by viewModel.settings.collectAsState()
-    val isCalibrating by viewModel.isCalibrating.collectAsState()
-    val calibrationTonesDetected by viewModel.calibrationTonesDetected.collectAsState()
-    val calibrationNoDetection by viewModel.calibrationNoDetection.collectAsState()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val isCalibrating by viewModel.isCalibrating.collectAsStateWithLifecycle()
+    val calibrationTonesDetected by viewModel.calibrationTonesDetected.collectAsStateWithLifecycle()
+    val calibrationNoDetection by viewModel.calibrationNoDetection.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -168,13 +169,17 @@ fun SettingsScreen(
                 icon = Icons.Filled.Timer,
                 helpText = stringResource(R.string.settings_delay_help)
             ) {
-                val device by viewModel.currentDevice.collectAsState()
-                val inputDevice by viewModel.currentInputDevice.collectAsState()
-                val outputDelay by viewModel.activeOutputDelay.collectAsState()
-                val inputDelay by viewModel.activeInputDelay.collectAsState()
+                val device by viewModel.currentDevice.collectAsStateWithLifecycle()
+                val inputDevice by viewModel.currentInputDevice.collectAsStateWithLifecycle()
+                val outputDelay by viewModel.activeOutputDelay.collectAsStateWithLifecycle()
+                val inputDelay by viewModel.activeInputDelay.collectAsStateWithLifecycle()
 
-                val inName = inputDevice?.name ?: context.getString(R.string.microphone)
-                val outName = device?.name ?: context.getString(R.string.speaker)
+                val inName = inputDevice?.name
+                    ?: inputDevice?.nameRes?.takeIf { it != 0 }?.let { stringResource(it) }
+                    ?: stringResource(R.string.microphone)
+                val outName = device?.name
+                    ?: device?.nameRes?.takeIf { it != 0 }?.let { stringResource(it) }
+                    ?: stringResource(R.string.speaker)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)

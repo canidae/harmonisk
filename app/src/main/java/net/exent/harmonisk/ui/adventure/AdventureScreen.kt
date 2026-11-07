@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -59,13 +60,14 @@ fun AdventureScreen(
     val melodies by viewModel.melodies.collectAsStateWithLifecycle()
     val currentPlayerInstrument by viewModel.currentPlayerInstrument.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val resources = LocalResources.current
     var showExitDialog by remember { mutableStateOf(false) }
     var showCreatePlayer by remember { mutableStateOf(false) }
     var playingLoaded by rememberSaveable(state.turnId) { mutableStateOf(false) }
 
     LaunchedEffect(state.error) {
         val error = state.error ?: return@LaunchedEffect
-        Toast.makeText(context, context.getString(error), Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, resources.getString(error), Toast.LENGTH_SHORT).show()
         viewModel.consumeError()
     }
 
@@ -446,12 +448,13 @@ private fun SongSetupScreen(
     onStart: () -> Unit
 ) {
     val context = LocalContext.current
-    val groups = remember(melodies) {
+    val resources = LocalResources.current
+    val groups = remember(melodies, resources) {
         val grouped = melodies.groupBy { it.isBundled to it.folder }
         grouped.map { (key, songs) ->
             val (bundled, folder) = key
             val title = when {
-                folder == null -> context.getString(R.string.adventure_folder_other)
+                folder == null -> resources.getString(R.string.adventure_folder_other)
                 else -> folderDisplayName(context, folder)
             }
             SongGroup(
