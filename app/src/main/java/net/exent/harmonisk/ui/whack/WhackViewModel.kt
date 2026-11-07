@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.exent.harmonisk.audio.PitchProcessor
 import net.exent.harmonisk.data.ProfileRepository
+import net.exent.harmonisk.data.createProfileWithInstrument
 import net.exent.harmonisk.data.SettingsRepository
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.PitchResult
@@ -171,14 +172,8 @@ class WhackViewModel @Inject constructor(
         profileRepository.selectProfile(id)
     }
 
-    fun createProfile(name: String, emoji: String, instrument: Instrument): Boolean {
-        val created = profileRepository.createProfile(name, emoji, makeActive = false) ?: return false
-        viewModelScope.launch {
-            settingsRepository.updateInstrument(created.id, instrument.name)
-            profileRepository.selectProfile(created.id)
-        }
-        return true
-    }
+    fun createProfile(name: String, emoji: String, instrument: Instrument): Boolean =
+        createProfileWithInstrument(viewModelScope, profileRepository, settingsRepository, name, emoji, instrument)
 
     fun stop() {
         gameJob?.cancel()

@@ -49,9 +49,9 @@ import net.exent.harmonisk.ui.OVERLAY_ICON_TINT
 import net.exent.harmonisk.ui.PANEL_BG
 import net.exent.harmonisk.ui.PANEL_BTN_SIZE
 import net.exent.harmonisk.ui.PANEL_ROW2_BG
-import net.exent.harmonisk.ui.profile.CreateProfileDialog
+import net.exent.harmonisk.ui.profile.ProfileDialogs
 import net.exent.harmonisk.ui.profile.ProfileIconButton
-import net.exent.harmonisk.ui.profile.ProfileSwitchDialog
+import net.exent.harmonisk.ui.profile.rememberProfileDialogState
 import net.exent.harmonisk.ui.theme.*
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -77,14 +77,8 @@ fun RecordScreen(
     val profiles by viewModel.profiles.collectAsState()
     val profile by viewModel.activeProfile.collectAsState()
     val instrument by viewModel.currentInstrument.collectAsState()
-    var showProfileDialog by remember { mutableStateOf(false) }
-    var showCreateProfileDialog by remember { mutableStateOf(false) }
-    var showSwitchConfirm by remember { mutableStateOf(false) }
+    val profileDialogs = rememberProfileDialogState()
     val sessionActive = state.isRecording || state.isPlaying
-
-    fun openProfiles() {
-        if (sessionActive) showSwitchConfirm = true else showProfileDialog = true
-    }
 
     KeepScreenOn()
 
@@ -218,7 +212,7 @@ fun RecordScreen(
         Spacer(Modifier.weight(1f))
 
         profile?.let {
-            ProfileIconButton(emoji = it.emoji, name = it.name, onClick = ::openProfiles)
+            ProfileIconButton(emoji = it.emoji, name = it.name, onClick = { profileDialogs.open(sessionActive) })
         }
 
         // Help button (always visible)
@@ -759,52 +753,14 @@ fun RecordScreen(
     SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).systemBarsPadding())
     } // end Box
 
-    if (showSwitchConfirm) {
-        AlertDialog(
-            onDismissRequest = { showSwitchConfirm = false },
-            title = { Text(stringResource(R.string.profile_switch_confirm_title)) },
-            text = { Text(stringResource(R.string.profile_switch_confirm_body)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showSwitchConfirm = false
-                        showProfileDialog = true
-                    }
-                ) { Text(stringResource(R.string.profile_switch)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSwitchConfirm = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
-
-    if (showProfileDialog) {
-        ProfileSwitchDialog(
-            profiles = profiles,
-            activeProfileId = profile?.id,
-            onSelect = { id ->
-                viewModel.selectProfile(id)
-                showProfileDialog = false
-            },
-            onAdd = {
-                showProfileDialog = false
-                showCreateProfileDialog = true
-            },
-            onDismiss = { showProfileDialog = false }
-        )
-    }
-
-    if (showCreateProfileDialog) {
-        CreateProfileDialog(
-            initialInstrument = instrument,
-            onCreate = { name, emoji, selected ->
-                viewModel.createProfile(name, emoji, selected)
-            },
-            onDismiss = { showCreateProfileDialog = false }
-        )
-    }
+    ProfileDialogs(
+        state = profileDialogs,
+        profiles = profiles,
+        activeProfileId = profile?.id,
+        initialInstrument = instrument,
+        onSelect = viewModel::selectProfile,
+        onCreate = viewModel::createProfile
+    )
 }
 
 @Composable

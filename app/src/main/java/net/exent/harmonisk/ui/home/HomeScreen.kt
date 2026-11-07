@@ -44,6 +44,7 @@ import net.exent.harmonisk.BuildConfig
 import net.exent.harmonisk.R
 import net.exent.harmonisk.audio.SoundFontSynthesizer
 import net.exent.harmonisk.data.DevModeState
+import net.exent.harmonisk.data.createProfileWithInstrument
 import net.exent.harmonisk.data.MelodySettingsRepository
 import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.ScoreHistoryRepository
@@ -406,14 +407,8 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.updateInstrument(instrument.name) }
     }
 
-    fun createProfile(name: String, emoji: String, instrument: Instrument): Boolean {
-        val created = profileRepository.createProfile(name, emoji, makeActive = false) ?: return false
-        viewModelScope.launch {
-            settingsRepository.updateInstrument(created.id, instrument.name)
-            profileRepository.selectProfile(created.id)
-        }
-        return true
-    }
+    fun createProfile(name: String, emoji: String, instrument: Instrument): Boolean =
+        createProfileWithInstrument(viewModelScope, profileRepository, settingsRepository, name, emoji, instrument)
 
     fun updateProfile(id: String, name: String, emoji: String, instrument: Instrument): Boolean {
         if (!profileRepository.updateProfile(id, name, emoji)) return false
