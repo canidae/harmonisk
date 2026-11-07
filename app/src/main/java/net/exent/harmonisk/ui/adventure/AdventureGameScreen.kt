@@ -57,6 +57,8 @@ fun AdventureGameScreen(
     var songAnchor by remember { mutableStateOf(Offset.Unspecified) }
     var tokenAnchor by remember { mutableStateOf(Offset.Unspecified) }
     var origin by remember { mutableStateOf(Offset.Zero) }
+    var turnStage by remember { mutableStateOf(TurnIntroStage.INTRO) }
+    var panelDiceAnchor by remember { mutableStateOf(Offset.Unspecified) }
     val latestToken = remember { TokenPosition() }
     val tokenPositions = remember { mutableMapOf<String, Offset>() }
     val reportTokenPosition = state.phase == AdventureTurnPhase.ROLLING ||
@@ -65,6 +67,17 @@ fun AdventureGameScreen(
     LaunchedEffect(state.phase) {
         if (reportTokenPosition && latestToken.position.isSpecified) {
             tokenAnchor = latestToken.position
+        }
+    }
+    LaunchedEffect(state.phase, state.currentPlayerIndex) {
+        if (state.phase == AdventureTurnPhase.ROLLING) {
+            turnStage = TurnIntroStage.INTRO
+            delay(AdventureTiming.TURN_FLASH_MS)
+            turnStage = TurnIntroStage.HANDOFF
+            delay(AdventureTiming.TURN_HANDOFF_MS)
+            turnStage = TurnIntroStage.PANEL
+        } else {
+            turnStage = TurnIntroStage.PANEL
         }
     }
     val context = LocalContext.current
@@ -163,7 +176,10 @@ fun AdventureGameScreen(
             }
             CurrentTurnCard(
                 state = state,
-                onSongAnchor = { songAnchor = it }
+                stage = turnStage,
+                onSongAnchor = { songAnchor = it },
+                onDiceAnchor = { panelDiceAnchor = it },
+                onRoll = onRoll
             )
         }
 
@@ -171,8 +187,9 @@ fun AdventureGameScreen(
             state = state,
             mapCenter = mapCenter,
             diceTarget = tokenAnchor,
+            panelDiceAnchor = panelDiceAnchor,
             origin = origin,
-            onRoll = onRoll
+            stage = turnStage
         )
         SongRevealOverlay(
             state = state,
@@ -203,13 +220,18 @@ fun AdventureGameScreen(
 @Composable
 private fun CurrentTurnCard(
     state: AdventureState,
-    onSongAnchor: (Offset) -> Unit
+    stage: TurnIntroStage,
+    onSongAnchor: (Offset) -> Unit,
+    onDiceAnchor: (Offset) -> Unit,
+    onRoll: () -> Unit
 ) {
     val player = state.currentPlayer ?: return
     val color = ADVENTURE_PLAYER_COLORS[player.colorIndex % ADVENTURE_PLAYER_COLORS.size]
     val status = when (state.phase) {
         AdventureTurnPhase.ROLLING -> stringResource(R.string.adventure_throw_dice)
-        AdventureTurnPhase.DICE, AdventureTurnPhase.DELIVERING, AdventureTurnPhase.MOVING -> ""
+        AdventureTurnPhase.DICE, AdventureTurnPhase.DELIVERING ->
+            state.diceValue?.let { stringResource(R.string.adventure_move, it) }.orEmpty()
+        AdventureTurnPhase.MOVING -> ""
         AdventureTurnPhase.EVENT -> when {
             state.finisherId != null -> stringResource(R.string.adventure_castle_reached)
             state.turnScore != null -> stringResource(R.string.adventure_score)
@@ -221,7 +243,12 @@ private fun CurrentTurnCard(
             stringResource(R.string.adventure_choose_song)
         AdventureTurnPhase.REVEALED -> state.currentSong?.name.orEmpty()
     }
-    StorybookCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
+    val rollEnabled = state.phase == AdventureTurnPhase.ROLLING &&
+        stage == TurnIntroStage.PANEL && !state.loading
+    StorybookCard(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+        onClick = if (rollEnabled) onRoll else null
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AdventureAvatar(player.emoji, player.colorIndex, size = 48.dp, selected = true)
             Spacer(Modifier.width(12.dp))
@@ -266,6 +293,46 @@ private fun CurrentTurnCard(
                     }
                 }
             }
+            if (state.phase == AdventureTurnPhase.ROLLING ||
+                state.phase == AdventureTurnPhase.DICE ||
+                state.phase == AdventureTurnPhase.DELIVERING
+            ) {
+                Spacer(Modifier.width(8.dp))
+                TurnDice(
+                    diceValue = state.diceValue,
+                    visible = state.phase == AdventureTurnPhase.DICE ||
+                        (state.phase == AdventureTurnPhase.ROLLING && stage == TurnIntroStage.PANEL),
+                    onAnchor = onDiceAnchor
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TurnDice(
+    diceValue: Int?,
+    visible: Boolean,
+    onAnchor: (Offset) -> Unit
+) {
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(diceValue) {
+        progress.snapTo(0f)
+        if (diceValue != null) {
+            progress.animateTo(
+                1f,
+                tween(AdventureTiming.DICE_SHOW_MS.toInt(), easing = FastOutSlowInEasing)
+            )
+        }
+    }
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .onGloballyPositioned { onAnchor(it.boundsInRoot().center) },
+        contentAlignment = Alignment.Center
+    ) {
+        if (visible) {
+            Dice3D(value = diceValue, progress = progress.value, modifier = Modifier.fillMaxSize())
         }
     }
 }

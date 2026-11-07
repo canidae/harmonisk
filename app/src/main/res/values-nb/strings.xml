@@ -259,7 +259,6 @@
     <string name="adventure_go_again">Igjen</string>
     <string name="adventure_pull_lever">Dra i spaken</string>
     <string name="adventure_throw_dice">Kast terningen</string>
-    <string name="adventure_tap_to_throw">Trykk for å kaste terningen</string>
     <string name="adventure_choose_song">Velg en sang</string>
     <string name="adventure_song_complete">Sang ferdig</string>
     <string name="adventure_castle_reached">Slottet er nådd</string>

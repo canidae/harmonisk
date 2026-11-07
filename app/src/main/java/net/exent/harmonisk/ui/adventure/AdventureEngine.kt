@@ -28,6 +28,8 @@ object AdventureTiming {
     const val DICE_SHOW_MS = 900L
     const val DICE_PAUSE_MS = 1_000L
     const val DICE_HANDOFF_MS = 600L
+    const val TURN_FLASH_MS = 1_000L
+    const val TURN_HANDOFF_MS = 500L
     const val SPIN_MS = 2800L
     const val SPIN_EXTRA_MS = 1_000L
     const val HOLD_MS = 400L
