@@ -14,6 +14,10 @@ internal class YinPitchDetector(
     private val tauMax = max(tauMin + 1, (sampleRate / minFrequency).toInt())
     private val cmnd = FloatArray(tauMax + 2)
 
+    companion object {
+        private const val OCTAVE_PREFERENCE_FACTOR = 6f
+    }
+
     fun detect(samples: FloatArray): PitchDetectionResult {
         val limitTau = min(tauMax, samples.size / 2)
         if (limitTau <= tauMin) return PitchDetectionResult.NONE
@@ -40,6 +44,7 @@ internal class YinPitchDetector(
         while (tau < limitTau) {
             if (cmnd[tau] < threshold) {
                 while (tau + 1 < limitTau && cmnd[tau + 1] < cmnd[tau]) tau++
+                tau = preferShorterPeriod(tau, limitTau)
                 val previous = cmnd[tau - 1]
                 val current = cmnd[tau]
                 val next = cmnd[tau + 1]
@@ -58,5 +63,17 @@ internal class YinPitchDetector(
             tau++
         }
         return PitchDetectionResult.NONE
+    }
+
+    private fun preferShorterPeriod(tau: Int, limitTau: Int): Int {
+        val half = tau / 2
+        if (half < tauMin) return tau
+        val start = max(tauMin, half - 2)
+        val end = min(limitTau - 1, half + 2)
+        var best = start
+        for (i in start..end) {
+            if (cmnd[i] < cmnd[best]) best = i
+        }
+        return if (cmnd[best] <= cmnd[tau] * OCTAVE_PREFERENCE_FACTOR) best else tau
     }
 }
