@@ -23,17 +23,6 @@ import kotlin.math.cos
 import kotlin.math.sin
 import java.util.concurrent.TimeUnit
 
-private val CELEBRATION_COLORS = listOf(
-    0xFFCFBCFF.toInt(),
-    0xFFA5D6A7.toInt(),
-    0xFF80CBC4.toInt(),
-    0xFFFFF59D.toInt(),
-    0xFFFFCC80.toInt(),
-    0xFFFF80AB.toInt(),
-    0xFF80D8FF.toInt(),
-    0xFFCCFF90.toInt()
-)
-
 @Composable
 fun ScoreCelebrationOverlay(
     celebrationLevel: CelebrationLevel,
@@ -129,7 +118,7 @@ fun ScoreCelebrationOverlay(
                     .setSpeedBetween(10f, 25f)
                     .setDamping(0.85f)
                     .sizes(celebrationLevel.confettiSizes)
-                    .colors(CELEBRATION_COLORS)
+                    .colors(CELEBRATION_COLOR_INTS)
                     .shapes(listOf(Shape.Circle, Shape.Square, Shape.Rectangle(0.5f)))
                     .timeToLive(5000L)
                     .fadeOutEnabled(true)
@@ -142,7 +131,7 @@ fun ScoreCelebrationOverlay(
                     .setSpeedBetween(15f, 30f)
                     .setDamping(0.85f)
                     .sizes(celebrationLevel.confettiSizes)
-                    .colors(CELEBRATION_COLORS)
+                    .colors(CELEBRATION_COLOR_INTS)
                     .shapes(listOf(Shape.Circle, Shape.Square, Shape.Rectangle(0.5f)))
                     .timeToLive(5000L)
                     .fadeOutEnabled(true)
@@ -155,7 +144,7 @@ fun ScoreCelebrationOverlay(
                     .setSpeedBetween(15f, 30f)
                     .setDamping(0.85f)
                     .sizes(celebrationLevel.confettiSizes)
-                    .colors(CELEBRATION_COLORS)
+                    .colors(CELEBRATION_COLOR_INTS)
                     .shapes(listOf(Shape.Circle, Shape.Square, Shape.Rectangle(0.5f)))
                     .timeToLive(5000L)
                     .fadeOutEnabled(true)
@@ -239,7 +228,7 @@ private fun FireworkBurst(
 
         // Expanding ring
         drawCircle(
-            color = Color(0xFFCFBCFF).copy(alpha = ringAlpha * 0.4f),
+            color = CELEBRATION_COLORS[0].copy(alpha = ringAlpha * 0.4f),
             radius = maxRadius,
             center = Offset(cx, cy),
             style = androidx.compose.ui.graphics.drawscope.Stroke(
@@ -273,12 +262,4 @@ private fun FireworkBurst(
     }
 }
 
-private fun fireworkColor(index: Int): Color = when (index % 6) {
-    0 -> Color(0xFFCFBCFF)
-    1 -> Color(0xFFA5D6A7)
-    2 -> Color(0xFF80CBC4)
-    3 -> Color(0xFFFFF59D)
-    4 -> Color(0xFFFFCC80)
-    5 -> Color(0xFFFF80AB)
-    else -> Color(0xFFCFBCFF)
-}
+private fun fireworkColor(index: Int): Color = CELEBRATION_COLORS[index % 6]

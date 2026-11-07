@@ -8,20 +8,19 @@ import java.util.zip.ZipInputStream
 object MelodyFolderImporter {
     private const val IMPORTED_DIR = "imported"
     private const val ZIP_EXTENSION = ".zip"
-    private val MELODY_EXTENSIONS = listOf(".mid", ".midi", ".xml", ".musicxml", ".abc")
 
     data class ExtractedMelody(val name: String, val file: File)
 
     fun melodyFileName(entryName: String): String? {
         val fileName = entryName.substringAfterLast('/').trim()
-        return fileName.takeIf { name -> MELODY_EXTENSIONS.any { name.endsWith(it, true) } }
+        return fileName.takeIf { name -> MelodyNames.extensions.any { name.endsWith(it, true) } }
     }
 
     fun displayName(fileName: String): String =
-        fileName.substringBeforeLast('.').replace('_', ' ').trim()
+        MelodyNames.displayName(fileName.substringBeforeLast('.')).orEmpty()
 
     fun folderName(name: String): String {
-        val base = (MELODY_EXTENSIONS + ZIP_EXTENSION)
+        val base = (MelodyNames.extensions + ZIP_EXTENSION)
             .firstOrNull { name.endsWith(it, true) }
             ?.let { name.dropLast(it.length) }
             ?: name
@@ -29,11 +28,7 @@ object MelodyFolderImporter {
         return if (sanitized == MelodyRepository.IMPORTED_FOLDER) "${sanitized}_zip" else sanitized
     }
 
-    fun safeFileName(name: String): String =
-        name.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
-            .replace(Regex("_+"), "_")
-            .trim('_')
-            .ifEmpty { "songs" }
+    fun safeFileName(name: String): String = MelodyNames.safeFileName(name)
 
     fun directory(filesDir: File, folder: String): File = File(filesDir, "$IMPORTED_DIR/$folder")
 

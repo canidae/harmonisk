@@ -19,17 +19,6 @@ import kotlin.random.Random
 
 private val MUSIC_SYMBOLS = listOf("\u266A", "\u266B", "\u266C", "\uD83C\uDFB5", "\uD83C\uDFB6")
 
-private val MUSIC_NOTE_COLORS = listOf(
-    Color(0xFFCFBCFF),
-    Color(0xFFA5D6A7),
-    Color(0xFF80CBC4),
-    Color(0xFFFFF59D),
-    Color(0xFFFFCC80),
-    Color(0xFFFF80AB),
-    Color(0xFF80D8FF),
-    Color(0xFFCCFF90)
-)
-
 private data class MusicParticle(
     val x: Float,
     val y: Float,
@@ -69,7 +58,7 @@ fun MusicNoteParticles(
                 alpha = 0f,
                 scale = Random.nextFloat() * 0.9f + 0.6f,
                 bitmapIndex = Random.nextInt(bitmaps.size),
-                color = MUSIC_NOTE_COLORS[Random.nextInt(MUSIC_NOTE_COLORS.size)],
+                color = CELEBRATION_COLORS[Random.nextInt(CELEBRATION_COLORS.size)],
                 elapsed = 0f,
                 duration = 4f + Random.nextFloat() * 1f
             )
