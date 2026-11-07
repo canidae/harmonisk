@@ -90,8 +90,6 @@ class MelodyPlayer(
     fun updateGameTime(gameTimeSeconds: Double, tracks: List<MelodyTrack>) {
         if (!notePlayer.isReady) return
 
-        val effectiveTime = gameTimeSeconds
-
         // Collect all notes that should be active at the current time,
         // keyed by compound key, tracking the originating NoteEvent.
         val nextActive = mutableMapOf<Int, NoteEvent>()
@@ -100,7 +98,7 @@ class MelodyPlayer(
             for (note in track.notes) {
                 val start = track.noteStartSeconds(note)
                 val end = start + track.noteDurationSeconds(note)
-                if (effectiveTime >= start && effectiveTime < end) {
+                if (gameTimeSeconds >= start && gameTimeSeconds < end) {
                     val key = noteKey(channel, note.noteNumber)
                     if (key !in nextActive) {
                         nextActive[key] = note

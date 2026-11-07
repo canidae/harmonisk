@@ -683,8 +683,7 @@ class MelodyViewModel @Inject constructor(
                 tempoChanges = metronome.tempoChanges,
                 timeSignatures = metronome.timeSignatures,
                 ticksPerQuarterNote = metronome.ticksPerQuarterNote,
-                channel = metronome.channel,
-                isMetronome = true
+                channel = metronome.channel
             )
         )
     }
@@ -822,8 +821,7 @@ class MelodyViewModel @Inject constructor(
             tempoChanges = track.tempoChanges,
             timeSignatures = track.timeSignatures,
             ticksPerQuarterNote = ppq,
-            channel = MelodyViewModel.DRUM_CHANNEL,
-            isMetronome = true
+            channel = MelodyViewModel.DRUM_CHANNEL
         )
     }
 

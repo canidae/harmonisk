@@ -399,7 +399,7 @@ fun SharedNoteCanvas(
                     )
                     drawBowedPitchIndicator(mode, density, nowLineY)
                 } else {
-                    drawBarLines(mode, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density, textMeasurer, playableBottom)
+                    drawBarLines(mode, pianoEdgeY, canvasFarEdgeY, density, textMeasurer, playableBottom)
                     drawMelodyNotes(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
                     drawPitchIndicator(mode, layout, pianoEdgeY, pianoAtBottom, density)
                     // Single piano for Melody mode
@@ -511,7 +511,6 @@ private fun DrawScope.drawBarLines(
     mode: CanvasMode.Melody,
     pianoEdgeY: Float,
     canvasFarEdgeY: Float,
-    pianoAtBottom: Boolean,
     density: Float,
     textMeasurer: TextMeasurer,
     playableBottom: Float

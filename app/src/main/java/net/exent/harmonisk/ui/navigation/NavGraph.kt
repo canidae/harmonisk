@@ -75,7 +75,6 @@ fun NavGraph() {
                 val viewModel: MelodyViewModel = hiltViewModel(parentEntry)
                 MelodyPlayScreen(
                     onBack = { navController.popBackStack() },
-                    onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS) },
                     viewModel = viewModel
                 )
             }

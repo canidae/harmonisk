@@ -9,9 +9,7 @@ import javax.inject.Singleton
 data class AdventureTurn(
     val id: Long,
     val playerId: String,
-    val playerName: String,
     val melodyId: String,
-    val melodyName: String,
     val level: Int
 )
 

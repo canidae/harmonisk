@@ -133,17 +133,6 @@ Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeUnload(
     LOGD("SoundFont unloaded");
 }
 
-extern "C" JNIEXPORT jint JNICALL
-Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeGetPresetIndex(
-    JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_, jint bank, jint preset)
-{
-    auto* h = reinterpret_cast<SynthHandle*>(handle_);
-    if (!h) return -1;
-    int idx = tsf_get_presetindex(h->synth, bank, preset);
-    LOGD("nativeGetPresetIndex(bank=%d preset=%d) -> %d", bank, preset, idx);
-    return idx;
-}
-
 extern "C" JNIEXPORT void JNICALL
 Java_net_exent_harmonisk_audio_SoundFontSynthesizer_nativeChannelNoteOn(
     JNIEnv* /*env*/, jclass /*clazz*/, jlong handle_, jint channel, jint key, jfloat velocity)

@@ -379,9 +379,7 @@ class AdventureViewModel @Inject constructor(
         val turn = AdventureTurn(
             id = turnIds.incrementAndGet(),
             playerId = player.profileId,
-            playerName = player.name,
             melodyId = song.id,
-            melodyName = song.name,
             level = snapshot.currentLevel
         )
         session.begin(turn)

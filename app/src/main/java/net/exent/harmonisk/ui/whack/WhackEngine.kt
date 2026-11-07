@@ -8,7 +8,7 @@ import kotlin.random.Random
 
 data class WhackHole(val stringIndex: Int, val finger: Int, val midi: Int)
 
-enum class WhackEmoji(val emoji: String, @RawRes vararg val sounds: Int) {
+enum class WhackEmoji(val emoji: String, @param:RawRes vararg val sounds: Int) {
     Sheep("🐑", R.raw.whack_baa),
     Cow("🐄", R.raw.whack_moo),
     Pig("🐷", R.raw.whack_oink),

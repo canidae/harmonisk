@@ -6,7 +6,7 @@ import android.media.SoundPool
 import androidx.annotation.RawRes
 import net.exent.harmonisk.R
 
-enum class WhackSfx(@RawRes val resource: Int) {
+enum class WhackSfx(@param:RawRes val resource: Int) {
     Thud(R.raw.sfx_whack_thud),
     Level(R.raw.sfx_whack_level)
 }

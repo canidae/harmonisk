@@ -6,7 +6,7 @@ import android.media.SoundPool
 import androidx.annotation.RawRes
 import net.exent.harmonisk.R
 
-enum class AdventureSound(@RawRes val resource: Int) {
+enum class AdventureSound(@param:RawRes val resource: Int) {
     Step(R.raw.sfx_step),
     Lever(R.raw.sfx_lever),
     Collect(R.raw.sfx_collect),

@@ -86,7 +86,7 @@ android {
             merges += "**/*.sf2"
         }
     }
-    aaptOptions {
+    androidResources {
         noCompress += listOf("tflite", "sf2")
     }
 
@@ -107,7 +107,6 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     // Activity & Lifecycle
     implementation("androidx.activity:activity-compose:1.13.0")
@@ -149,7 +148,6 @@ dependencies {
 
     // Testing
     testImplementation("junit:junit:4.13.2")
-    testImplementation("io.mockk:mockk:1.14.11")
 }
 
 
