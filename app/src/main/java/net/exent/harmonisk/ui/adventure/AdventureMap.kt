@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import net.exent.harmonisk.ui.theme.AdventureGold
 import net.exent.harmonisk.ui.whack.WhackPressIcon
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -74,7 +75,7 @@ private val CASTLE_STONE = Color(0xFFB5AFA1)
 private val CASTLE_DARK = Color(0xFF817B70)
 
 private val FIELD_STICKERS = Color(0xFF3FC7C0)
-private val FIELD_SONG = Color(0xFFFFC857)
+private val FIELD_SONG = AdventureGold
 private val FIELD_GO_AGAIN = Color(0xFF9B7BFF)
 private val FIELD_WHACK = Color(0xFFE05D5D)
 private val FIELD_START = Color(0xFF8DE8C4)
@@ -692,7 +693,7 @@ private fun DrawScope.drawCastle(center: Offset) {
             lineTo(center.x + dx * unit, center.y - 26 * unit)
             close()
         }
-        drawPath(flag, Color(0xFFFFC857))
+        drawPath(flag, AdventureGold)
     }
 }
 

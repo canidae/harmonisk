@@ -34,6 +34,7 @@ import androidx.compose.ui.state.ToggleableState
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.harmonisk.R
+import net.exent.harmonisk.ui.theme.AdventureInk
 import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.ui.utils.folderDisplayName
@@ -339,7 +340,7 @@ private fun PlayerSetupScreen(
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = StorybookGold, contentColor = Color(0xFF23163E))
+                colors = ButtonDefaults.buttonColors(containerColor = StorybookGold, contentColor = AdventureInk)
             ) {
                 Text(
                     text = stringResource(R.string.adventure_choose_songs),
@@ -502,7 +503,7 @@ private fun SongSetupScreen(
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = StorybookGold, contentColor = Color(0xFF23163E))
+                colors = ButtonDefaults.buttonColors(containerColor = StorybookGold, contentColor = AdventureInk)
             ) {
                 Text(
                     text = stringResource(R.string.adventure_start),

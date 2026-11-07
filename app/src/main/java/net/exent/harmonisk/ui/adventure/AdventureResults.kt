@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import net.exent.harmonisk.R
+import net.exent.harmonisk.ui.theme.AdventureInk
 import net.exent.harmonisk.ui.celebration.CelebrationLevel
 import net.exent.harmonisk.ui.celebration.ScoreCelebrationOverlay
 import net.exent.harmonisk.ui.components.KeepScreenOn
@@ -116,7 +117,7 @@ fun AdventureResultsScreen(
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = StorybookGold,
-                        contentColor = Color(0xFF23163E)
+                        contentColor = AdventureInk
                     )
                 ) {
                     Text(stringResource(R.string.adventure_results_new), fontWeight = FontWeight.Bold)

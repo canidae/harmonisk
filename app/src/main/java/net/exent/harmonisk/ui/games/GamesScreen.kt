@@ -16,9 +16,10 @@ import androidx.compose.ui.unit.sp
 import net.exent.harmonisk.R
 import net.exent.harmonisk.ui.adventure.AdventureBackdrop
 import net.exent.harmonisk.ui.components.BrandTopBar
+import net.exent.harmonisk.ui.theme.AdventureGold
 import net.exent.harmonisk.ui.whack.WhackPressIcon
 
-private val ADVENTURE_ACCENT = Color(0xFFFFC857)
+private val ADVENTURE_ACCENT = AdventureGold
 private val WHACK_ACCENT = Color(0xFF7FB3C8)
 
 @Composable
