@@ -50,9 +50,9 @@ import net.exent.harmonisk.R
 import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.components.brandBackground
-import net.exent.harmonisk.ui.profile.CreateProfileDialog
 import net.exent.harmonisk.ui.profile.ProfileButton
-import net.exent.harmonisk.ui.profile.ProfileSwitchDialog
+import net.exent.harmonisk.ui.profile.ProfileDialogs
+import net.exent.harmonisk.ui.profile.rememberProfileDialogState
 import net.exent.harmonisk.ui.theme.BrandPurple
 import net.exent.harmonisk.ui.utils.folderDisplayName
 import net.exent.harmonisk.ui.utils.formatScore
@@ -85,8 +85,7 @@ fun MelodyScreen(
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
     val instrument by viewModel.currentInstrument.collectAsStateWithLifecycle()
-    var showProfileDialog by remember { mutableStateOf(false) }
-    var showCreateProfileDialog by remember { mutableStateOf(false) }
+    val profileDialogs = rememberProfileDialogState()
 
     LaunchedEffect(Unit) {
         viewModel.initSynthesizer()
@@ -267,7 +266,7 @@ fun MelodyScreen(
                 },
                 actions = {
                     profile?.let {
-                        ProfileButton(it.name, it.emoji, onClick = { showProfileDialog = true })
+                        ProfileButton(it.name, it.emoji, onClick = { profileDialogs.open(false) })
                     }
                 }
             )
@@ -400,31 +399,14 @@ fun MelodyScreen(
         )
     }
 
-    if (showProfileDialog) {
-        ProfileSwitchDialog(
-            profiles = profiles,
-            activeProfileId = profile?.id,
-            onSelect = { id ->
-                viewModel.selectProfile(id)
-                showProfileDialog = false
-            },
-            onAdd = {
-                showProfileDialog = false
-                showCreateProfileDialog = true
-            },
-            onDismiss = { showProfileDialog = false }
-        )
-    }
-
-    if (showCreateProfileDialog) {
-        CreateProfileDialog(
-            initialInstrument = instrument,
-            onCreate = { name, emoji, selected ->
-                viewModel.createProfile(name, emoji, selected)
-            },
-            onDismiss = { showCreateProfileDialog = false }
-        )
-    }
+    ProfileDialogs(
+        state = profileDialogs,
+        profiles = profiles,
+        activeProfileId = profile?.id,
+        initialInstrument = instrument,
+        onSelect = viewModel::selectProfile,
+        onCreate = viewModel::createProfile
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)

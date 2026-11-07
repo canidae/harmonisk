@@ -269,17 +269,56 @@ fun CreateProfileDialog(
     showInstrument: Boolean = true,
     onCreate: (String, String, Instrument) -> Boolean,
     onDismiss: () -> Unit
+) = ProfileFormDialog(
+    titleRes = R.string.profile_add_title,
+    confirmRes = R.string.profile_create,
+    initialName = "",
+    initialEmoji = ProfileRepository.DEFAULT_EMOJI,
+    initialInstrument = initialInstrument,
+    showInstrument = showInstrument,
+    onSubmit = onCreate,
+    onDismiss = onDismiss
+)
+
+@Composable
+fun ProfileEditDialog(
+    profile: ProfileRepository.Profile,
+    instrument: Instrument,
+    onSave: (String, String, Instrument) -> Boolean,
+    onDismiss: () -> Unit
+) = ProfileFormDialog(
+    titleRes = R.string.profile_edit,
+    confirmRes = R.string.profile_save,
+    initialName = profile.name,
+    initialEmoji = profile.emoji,
+    initialInstrument = instrument,
+    onSubmit = onSave,
+    onDismiss = onDismiss
+)
+
+@Composable
+private fun ProfileFormDialog(
+    titleRes: Int,
+    confirmRes: Int,
+    initialName: String,
+    initialEmoji: String,
+    initialInstrument: Instrument,
+    showInstrument: Boolean = true,
+    onSubmit: (String, String, Instrument) -> Boolean,
+    onDismiss: () -> Unit
 ) {
-    var name by rememberSaveable { mutableStateOf("") }
-    var emoji by rememberSaveable { mutableStateOf(ProfileRepository.DEFAULT_EMOJI) }
-    var instrument by rememberSaveable { mutableStateOf(initialInstrument.name) }
-    var errorRes by rememberSaveable { mutableStateOf<Int?>(null) }
+    var name by rememberSaveable(initialName, initialEmoji, initialInstrument.name) {
+        mutableStateOf(initialName)
+    }
+    var emoji by rememberSaveable(initialName, initialEmoji) { mutableStateOf(initialEmoji) }
+    var instrument by rememberSaveable(initialInstrument.name) { mutableStateOf(initialInstrument.name) }
+    var errorRes by rememberSaveable(initialName, initialEmoji) { mutableStateOf<Int?>(null) }
 
     fun submit() {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) {
             errorRes = R.string.profile_name_required
-        } else if (!onCreate(trimmed, emoji, Instrument.fromName(instrument))) {
+        } else if (!onSubmit(trimmed, emoji, Instrument.fromName(instrument))) {
             errorRes = R.string.profile_name_taken
         } else {
             onDismiss()
@@ -288,7 +327,7 @@ fun CreateProfileDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.profile_add_title)) },
+        title = { Text(stringResource(titleRes)) },
         text = {
             Column {
                 ProfileNameField(
@@ -313,68 +352,7 @@ fun CreateProfileDialog(
         },
         confirmButton = {
             TextButton(onClick = ::submit, enabled = name.isNotBlank()) {
-                Text(stringResource(R.string.profile_create))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-        }
-    )
-}
-
-@Composable
-fun ProfileEditDialog(
-    profile: ProfileRepository.Profile,
-    instrument: Instrument,
-    onSave: (String, String, Instrument) -> Boolean,
-    onDismiss: () -> Unit
-) {
-    var name by rememberSaveable(profile.id) { mutableStateOf(profile.name) }
-    var emoji by rememberSaveable(profile.id) { mutableStateOf(profile.emoji) }
-    var selectedInstrument by rememberSaveable(profile.id, instrument.name) {
-        mutableStateOf(instrument.name)
-    }
-    var errorRes by rememberSaveable(profile.id) { mutableStateOf<Int?>(null) }
-
-    fun submit() {
-        val trimmed = name.trim()
-        if (trimmed.isEmpty()) {
-            errorRes = R.string.profile_name_required
-        } else if (!onSave(trimmed, emoji, Instrument.fromName(selectedInstrument))) {
-            errorRes = R.string.profile_name_taken
-        } else {
-            onDismiss()
-        }
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.profile_edit)) },
-        text = {
-            Column {
-                ProfileNameField(
-                    name = name,
-                    error = errorRes?.let { stringResource(it) },
-                    onNameChange = {
-                        name = it.take(ProfileRepository.MAX_NAME_LENGTH)
-                        errorRes = null
-                    },
-                    onSubmit = ::submit
-                )
-                Spacer(Modifier.height(8.dp))
-                EmojiPicker(selected = emoji, onSelect = { emoji = it })
-                Spacer(Modifier.height(8.dp))
-                InstrumentField(
-                    instrument = Instrument.fromName(selectedInstrument),
-                    onSelect = { selectedInstrument = it.name }
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = ::submit, enabled = name.isNotBlank()) {
-                Text(stringResource(R.string.profile_save))
+                Text(stringResource(confirmRes))
             }
         },
         dismissButton = {

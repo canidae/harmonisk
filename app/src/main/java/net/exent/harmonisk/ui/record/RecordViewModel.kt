@@ -12,6 +12,7 @@ import net.exent.harmonisk.audio.PitchProcessor
 import net.exent.harmonisk.data.AudioDelayRepository
 import net.exent.harmonisk.data.AppSettings
 import net.exent.harmonisk.data.ProfileRepository
+import net.exent.harmonisk.data.createProfileWithInstrument
 import net.exent.harmonisk.data.SettingsRepository
 import net.exent.harmonisk.midi.MidiDeviceManager
 import net.exent.harmonisk.midi.MidiImporter
@@ -211,14 +212,8 @@ class RecordViewModel @Inject constructor(
         profileRepository.selectProfile(id)
     }
 
-    fun createProfile(name: String, emoji: String, instrument: Instrument): Boolean {
-        val created = profileRepository.createProfile(name, emoji, makeActive = false) ?: return false
-        viewModelScope.launch {
-            settingsRepository.updateInstrument(created.id, instrument.name)
-            profileRepository.selectProfile(created.id)
-        }
-        return true
-    }
+    fun createProfile(name: String, emoji: String, instrument: Instrument): Boolean =
+        createProfileWithInstrument(viewModelScope, profileRepository, settingsRepository, name, emoji, instrument)
 
     private fun applySettings(settings: AppSettings) {
         _state.update {

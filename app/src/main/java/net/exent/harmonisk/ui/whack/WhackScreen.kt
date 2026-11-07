@@ -44,9 +44,9 @@ import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.components.KeepScreenOn
 import net.exent.harmonisk.ui.components.RequireMicPermission
 import net.exent.harmonisk.ui.components.labelRes
-import net.exent.harmonisk.ui.profile.CreateProfileDialog
 import net.exent.harmonisk.ui.profile.ProfileButton
-import net.exent.harmonisk.ui.profile.ProfileSwitchDialog
+import net.exent.harmonisk.ui.profile.ProfileDialogs
+import net.exent.harmonisk.ui.profile.rememberProfileDialogState
 import net.exent.harmonisk.ui.theme.FingerColors
 
 private val BOARD_PADDING = 16.dp
@@ -70,9 +70,7 @@ fun WhackScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
-    var showProfileDialog by remember { mutableStateOf(false) }
-    var showCreateProfileDialog by remember { mutableStateOf(false) }
-    var showSwitchConfirm by remember { mutableStateOf(false) }
+    val profileDialogs = rememberProfileDialogState()
     val context = LocalContext.current
     val sounds = remember(context) { WhackSounds(context) }
     DisposableEffect(Unit) {
@@ -113,7 +111,7 @@ fun WhackScreen(
                     if (!adventure) {
                         profile?.let {
                             ProfileButton(it.name, it.emoji, onClick = {
-                                if (state.playing) showSwitchConfirm = true else showProfileDialog = true
+                                profileDialogs.open(state.playing)
                             })
                         }
                     }
@@ -141,7 +139,7 @@ fun WhackScreen(
                             adventure = adventure,
                             profile = profile,
                             onProfileClick = {
-                                if (state.playing) showSwitchConfirm = true else showProfileDialog = true
+                                profileDialogs.open(state.playing)
                             },
                             onStart = startGame,
                             onFinished = onFinished
@@ -153,52 +151,14 @@ fun WhackScreen(
         }
     }
 
-    if (showSwitchConfirm) {
-        AlertDialog(
-            onDismissRequest = { showSwitchConfirm = false },
-            title = { Text(stringResource(R.string.profile_switch_confirm_title)) },
-            text = { Text(stringResource(R.string.profile_switch_confirm_body)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showSwitchConfirm = false
-                        showProfileDialog = true
-                    }
-                ) { Text(stringResource(R.string.profile_switch)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSwitchConfirm = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
-
-    if (showProfileDialog) {
-        ProfileSwitchDialog(
-            profiles = profiles,
-            activeProfileId = profile?.id,
-            onSelect = { id ->
-                viewModel.selectProfile(id)
-                showProfileDialog = false
-            },
-            onAdd = {
-                showProfileDialog = false
-                showCreateProfileDialog = true
-            },
-            onDismiss = { showProfileDialog = false }
-        )
-    }
-
-    if (showCreateProfileDialog) {
-        CreateProfileDialog(
-            initialInstrument = state.instrument,
-            onCreate = { name, emoji, selected ->
-                viewModel.createProfile(name, emoji, selected)
-            },
-            onDismiss = { showCreateProfileDialog = false }
-        )
-    }
+    ProfileDialogs(
+        state = profileDialogs,
+        profiles = profiles,
+        activeProfileId = profile?.id,
+        initialInstrument = state.instrument,
+        onSelect = viewModel::selectProfile,
+        onCreate = viewModel::createProfile
+    )
 }
 
 @Composable
