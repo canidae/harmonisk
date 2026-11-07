@@ -135,6 +135,7 @@ class MelodyViewModel @Inject constructor(
 
     // Per-note tracking state (encapsulated for a single reset() call)
     private val noteTracking = NoteTrackingState()
+    private var latestPitchResult: PitchResult = PitchResult.SILENT
 
     private var currentNoteDetectedCorrectly = false
     // Indices of all notes active at the current time (chords = multiple)
@@ -861,6 +862,7 @@ class MelodyViewModel @Inject constructor(
         _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
 
         noteTracking.reset()
+        latestPitchResult = PitchResult.SILENT
         currentChordIndices = emptyList()
         currentNoteDetectedCorrectly = false
         waitStartWallMs = 0L
@@ -1060,6 +1062,7 @@ class MelodyViewModel @Inject constructor(
             // for initial start, it starts at time 0.
             val pitchStartThreshold = _gameState.value.countdownResumeTarget.let { if (it > 0.0) it else 0.0 }
             var pitchDetectionStarted = false
+            var lastStateUpdate = 0L
 
             while (isActive) {
                 // Waiting for the player: the clock holds where the last tick left it.
@@ -1069,7 +1072,8 @@ class MelodyViewModel @Inject constructor(
                     continue
                 }
 
-                val elapsed = (SystemClock.elapsedRealtime() - playbackStartTime) / 1000.0
+                val now = SystemClock.elapsedRealtime()
+                val elapsed = (now - playbackStartTime) / 1000.0
                 val currentTime = pauseOffset + elapsed
 
                 // Start pitch detection when time reaches the threshold
@@ -1084,7 +1088,10 @@ class MelodyViewModel @Inject constructor(
                     break
                 }
 
-                _gameState.update { it.copy(currentTimeSeconds = currentTime) }
+                if (now - lastStateUpdate >= 33L) {
+                    lastStateUpdate = now
+                    _gameState.update { it.copy(currentTimeSeconds = currentTime) }
+                }
 
                 // Only track notes once pitch detection is active
                 if (pitchDetectionStarted) {
@@ -1150,38 +1157,52 @@ class MelodyViewModel @Inject constructor(
                         is MidiNoteEvent.NoteOn -> {
                             heldNotes.add(event.noteNumber)
                             val result = pitchResultFromMidi(event.noteNumber)
+                            latestPitchResult = result
                             _gameState.update { it.copy(pitchResult = result) }
                             for (idx in currentChordIndices) {
-                                updateNoteProgress(idx, result.centsOff)
+                                updateNoteProgress(idx, result.centsOff, result.frequency)
                             }
                             evaluateNote(result)
                         }
                         is MidiNoteEvent.NoteOff -> {
                             heldNotes.remove(event.noteNumber)
                             if (heldNotes.isEmpty()) {
+                                latestPitchResult = PitchResult.SILENT
                                 _gameState.update { it.copy(pitchResult = PitchResult.SILENT) }
                                 noteTracking.wasPauseSinceLastWrong = true
                             } else {
                                 val result = pitchResultFromMidi(heldNotes.last())
+                                latestPitchResult = result
                                 _gameState.update { it.copy(pitchResult = result) }
                             }
                         }
                     }
                 }
             } else {
+                var lastPitchUiUpdate = 0L
                 pitchProcessor.pitchFlow().collect { result ->
-                    _gameState.update { it.copy(pitchResult = result) }
+                    latestPitchResult = result
+                    val now = SystemClock.elapsedRealtime()
+                    val updateUi = now - lastPitchUiUpdate >= 33L
+                    if (updateUi) {
+                        lastPitchUiUpdate = now
+                        _gameState.update { it.copy(pitchResult = result) }
+                    }
                     if (result.isValid) {
                         if (noteTracking.hasSeenSilenceSinceLastValid) {
                             noteTracking.wasPauseSinceLastWrong = true
                             noteTracking.hasSeenSilenceSinceLastValid = false
                         }
-                        for (idx in currentChordIndices) {
-                            updateNoteProgress(idx, result.centsOff)
+                        if (updateUi && result.sounding) {
+                            for (idx in currentChordIndices) {
+                                updateNoteProgress(idx, result.centsOff, result.frequency)
+                            }
                         }
                         evaluateNote(result)
                     } else {
                         noteTracking.hasSeenSilenceSinceLastValid = true
+                        noteTracking.lastPitchAtMs = 0L
+                        noteTracking.lastCorrectAtMs = 0L
                     }
                 }
             }
@@ -1239,21 +1260,40 @@ class MelodyViewModel @Inject constructor(
         val centsOff = expectedNotes.minOf { note ->
             abs(noteUtils.frequencyToCents(result.frequency, NoteUtils.midiToFrequency(note.noteNumber, referenceA4)))
         }
-
-        if (result.isValid) {
-            noteTracking.detectedPitchFrameCount++
-        }
-
-        if (abs(centsOff) <= 50f) {
-            noteTracking.centsOffSum += abs(centsOff)
-            noteTracking.centsOffCount++
-            noteTracking.correctPitchFrameCount++
-        }
-
         val isCorrectNote = abs(centsOff) <= 50f
         val isMidi = _deviceState.value.midiInputEnabled
         val frameDurationMs = AudioConstants.FRAME_DURATION_MS
-        val isNoise = !isMidi && noteTracking.detectedPitchFrameCount * frameDurationMs < current48thNoteMs()
+
+        if (result.isValid) {
+            noteTracking.detectedPitchFrameCount++
+            if (result.sounding) {
+                val now = SystemClock.elapsedRealtime()
+                noteTracking.detectedPitchMs += if (noteTracking.lastPitchAtMs == 0L) {
+                    frameDurationMs
+                } else {
+                    (now - noteTracking.lastPitchAtMs).coerceIn(frameDurationMs, 150L)
+                }
+                noteTracking.lastPitchAtMs = now
+                if (isCorrectNote) {
+                    noteTracking.centsOffSum += abs(centsOff)
+                    noteTracking.centsOffCount++
+                    noteTracking.correctPitchFrameCount++
+                    noteTracking.correctPitchMs += if (noteTracking.lastCorrectAtMs == 0L) {
+                        frameDurationMs
+                    } else {
+                        (now - noteTracking.lastCorrectAtMs).coerceIn(frameDurationMs, 150L)
+                    }
+                    noteTracking.lastCorrectAtMs = now
+                } else {
+                    noteTracking.lastCorrectAtMs = 0L
+                }
+            } else {
+                noteTracking.lastPitchAtMs = 0L
+                noteTracking.lastCorrectAtMs = 0L
+            }
+        }
+
+        val isNoise = !isMidi && noteTracking.detectedPitchMs < current48thNoteMs()
 
         if (noteTracking.isWaitingForNote) {
             if (isCorrectNote) {
@@ -1303,7 +1343,7 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
-    private fun updateNoteProgress(noteIndex: Int, centsOff: Float) {
+    private fun updateNoteProgress(noteIndex: Int, centsOff: Float, frequency: Float) {
         _gameState.update { current ->
             val track = current.melodyTrack ?: return@update current
             if (noteIndex < 0 || noteIndex >= track.notes.size) return@update current
@@ -1312,7 +1352,7 @@ class MelodyViewModel @Inject constructor(
             if (noteDurationSeconds <= 0.0) return@update current
             val noteStartSeconds = track.noteStartSeconds(note)
             val expectedFreq = NoteUtils.midiToFrequency(note.noteNumber, referenceA4)
-            if (abs(noteUtils.frequencyToCents(current.pitchResult.frequency, expectedFreq)) > 50f) {
+            if (abs(noteUtils.frequencyToCents(frequency, expectedFreq)) > 50f) {
                 return@update current
             }
             val pos = ((current.currentTimeSeconds - noteStartSeconds) / noteDurationSeconds).toFloat().coerceIn(0f, 1f)
@@ -1336,12 +1376,14 @@ class MelodyViewModel @Inject constructor(
         val track = _gameState.value.melodyTrack ?: return
         val level = _gameState.value.currentLevel
         val expectedDurationMs = (track.noteDurationSeconds(expectedNote) * 1000).toLong()
-        // Duration = time player held correct pitch, derived from the actual audio chunk size
+        val isMidi = _deviceState.value.midiInputEnabled
         val frameDurationMs = AudioConstants.FRAME_DURATION_MS
+        val detectedDurationMs = if (isMidi) noteTracking.detectedPitchFrameCount * frameDurationMs else noteTracking.detectedPitchMs
+        val correctDurationMs = if (isMidi) noteTracking.correctPitchFrameCount * frameDurationMs else noteTracking.correctPitchMs
 
         val score = if (level == 1) {
             // Level 1: only duration matters, pitch is ignored
-            val actualDurationMs = noteTracking.detectedPitchFrameCount * frameDurationMs
+            val actualDurationMs = detectedDurationMs
             val durationScore = scoringEngine.scoreDuration(actualDurationMs, expectedDurationMs)
             NoteScore(
                 pitchScore = 100f,
@@ -1350,11 +1392,11 @@ class MelodyViewModel @Inject constructor(
                 pitchAccuracy = PitchAccuracy.PERFECT
             )
         } else {
-            val actualDurationMs = noteTracking.correctPitchFrameCount * frameDurationMs
+            val actualDurationMs = correctDurationMs
             val effectiveCentsOff = if (noteTracking.centsOffCount > 0) noteTracking.centsOffSum / noteTracking.centsOffCount else 100f
             val performance = NotePerformance(
                 expectedMidiNote = expectedNote.noteNumber,
-                detectedMidiNote = _gameState.value.pitchResult.midiNoteNumber,
+                detectedMidiNote = latestPitchResult.midiNoteNumber,
                 centsOff = effectiveCentsOff,
                 expectedDurationMs = expectedDurationMs,
                 actualDurationMs = actualDurationMs
@@ -1362,7 +1404,7 @@ class MelodyViewModel @Inject constructor(
             scoringEngine.scoreNote(performance)
         }
 
-        val actualDurationMs = (noteTracking.correctPitchFrameCount * frameDurationMs).coerceAtLeast(1L)
+        val actualDurationMs = correctDurationMs.coerceAtLeast(1L)
         val resultState = when (score.pitchAccuracy) {
             PitchAccuracy.PERFECT -> NoteResultState.PERFECT
             PitchAccuracy.GREAT -> NoteResultState.GREAT
@@ -1590,6 +1632,10 @@ private class NoteTrackingState {
     var centsOffCount = 0
     var correctPitchFrameCount = 0
     var detectedPitchFrameCount = 0
+    var correctPitchMs = 0L
+    var detectedPitchMs = 0L
+    var lastPitchAtMs = 0L
+    var lastCorrectAtMs = 0L
     var isWaitingForNote = false
     var wasWaitingForNote = false
 
@@ -1605,6 +1651,10 @@ private class NoteTrackingState {
         centsOffCount = 0
         correctPitchFrameCount = 0
         detectedPitchFrameCount = 0
+        correctPitchMs = 0L
+        detectedPitchMs = 0L
+        lastPitchAtMs = 0L
+        lastCorrectAtMs = 0L
         isWaitingForNote = false
         wasWaitingForNote = false
         lastWrongMidiNote = -1
@@ -1618,5 +1668,9 @@ private class NoteTrackingState {
         centsOffCount = 0
         correctPitchFrameCount = 0
         detectedPitchFrameCount = 0
+        correctPitchMs = 0L
+        detectedPitchMs = 0L
+        lastPitchAtMs = 0L
+        lastCorrectAtMs = 0L
     }
 }

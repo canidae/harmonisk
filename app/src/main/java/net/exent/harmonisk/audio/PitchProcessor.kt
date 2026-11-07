@@ -5,7 +5,10 @@ import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.music.PitchResult
 import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
+
+private data class PitchWindow(val samples: FloatArray, val sounding: Boolean)
 
 class PitchProcessor(
     private val audioCaptureService: AudioCaptureService,
@@ -43,6 +46,9 @@ class PitchProcessor(
          * input detection latency for real instruments.
          */
         const val INPUT_ONSET_MS = (ONSET_DEBOUNCE_CHUNKS * AudioConstants.BUFFER_SIZE_SAMPLES * 1000 + AudioConstants.SAMPLE_RATE / 2) / AudioConstants.SAMPLE_RATE
+
+        private const val RELEASE_PEAK_RATIO = 0.3f
+        private const val RELEASE_DEBOUNCE_CHUNKS = 4
     }
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB
@@ -87,9 +93,11 @@ class PitchProcessor(
         var windowFilled = 0
         var prevChunkRms = 0f
         var onsetStreak = 0
+        var releaseStreak = 0
+        var peakRms = 0f
 
         return source
-            .map { chunk ->
+            .mapNotNull { chunk ->
                 val chunkSize = chunk.size.coerceAtMost(ANALYSIS_WINDOW_SIZE)
                 val chunkRms = AudioUtils.rms(chunk)
                 val prevDb = AudioUtils.linearToDb(prevChunkRms)
@@ -102,20 +110,29 @@ class PitchProcessor(
 
                 if (isOnset) {
                     onsetStreak = 0
+                    releaseStreak = 0
+                    peakRms = chunkRms
                     slidingWindow.fill(0f)
                     System.arraycopy(chunk, 0, slidingWindow, 0, chunkSize)
                     windowFilled = chunkSize
-                } else if (windowFilled >= ANALYSIS_WINDOW_SIZE) {
-                    System.arraycopy(slidingWindow, chunkSize, slidingWindow, 0, ANALYSIS_WINDOW_SIZE - chunkSize)
-                    System.arraycopy(chunk, 0, slidingWindow, ANALYSIS_WINDOW_SIZE - chunkSize, chunkSize)
                 } else {
-                    val toCopy = chunkSize.coerceAtMost(ANALYSIS_WINDOW_SIZE - windowFilled)
-                    System.arraycopy(chunk, 0, slidingWindow, windowFilled, toCopy)
-                    windowFilled += toCopy
+                    if (chunkRms > peakRms) peakRms = chunkRms
+                    val releasing = peakRms > 0f && chunkRms < peakRms * RELEASE_PEAK_RATIO
+                    releaseStreak = if (releasing) releaseStreak + 1 else 0
+                    if (windowFilled >= ANALYSIS_WINDOW_SIZE) {
+                        System.arraycopy(slidingWindow, chunkSize, slidingWindow, 0, ANALYSIS_WINDOW_SIZE - chunkSize)
+                        System.arraycopy(chunk, 0, slidingWindow, ANALYSIS_WINDOW_SIZE - chunkSize, chunkSize)
+                    } else {
+                        val toCopy = chunkSize.coerceAtMost(ANALYSIS_WINDOW_SIZE - windowFilled)
+                        System.arraycopy(chunk, 0, slidingWindow, windowFilled, toCopy)
+                        windowFilled += toCopy
+                    }
                 }
-                if (windowFilled < ANALYSIS_WINDOW_SIZE) PitchResult.SILENT
-                else processBuffer(slidingWindow)
+                if (windowFilled < ANALYSIS_WINDOW_SIZE) null
+                else PitchWindow(slidingWindow.copyOf(), releaseStreak < RELEASE_DEBOUNCE_CHUNKS)
             }
+            .buffer(Channel.CONFLATED)
+            .map { window -> processBuffer(window.samples).copy(sounding = window.sounding) }
             .flowOn(Dispatchers.Default)
     }
 
