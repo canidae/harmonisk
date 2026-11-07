@@ -40,6 +40,9 @@ val TunerGreen = Color(0xFF69F0AE)
 val TunerAmber = Color(0xFFFFC107)
 val DarkBg = Color(0xFF1A1A2E)
 
+val AdventureGold = Color(0xFFFFC857)
+val AdventureInk = Color(0xFF23163E)
+
 // Backgrounds
 val DarkBackground = Color(0xFF121218)
 val DarkSurface = Color(0xFF1E1E2A)

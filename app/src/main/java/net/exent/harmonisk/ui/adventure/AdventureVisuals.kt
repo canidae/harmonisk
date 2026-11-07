@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import net.exent.harmonisk.ui.theme.AdventureGold
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -35,7 +36,7 @@ val ADVENTURE_PLAYER_COLORS = listOf(
     Color(0xFF9B7BFF),
     Color(0xFFFF8E72),
     Color(0xFF48D1CC),
-    Color(0xFFFFC857)
+    AdventureGold
 )
 
 private val GROUND_TOP = Color(0xFF24432F)

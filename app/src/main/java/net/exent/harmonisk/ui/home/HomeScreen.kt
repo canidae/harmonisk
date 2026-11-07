@@ -44,6 +44,7 @@ import net.exent.harmonisk.ui.profile.ProfileButton
 import net.exent.harmonisk.ui.profile.ProfileDialog
 import net.exent.harmonisk.ui.profile.ProfileEditDialog
 import net.exent.harmonisk.ui.profile.ProfileSetupScreen
+import net.exent.harmonisk.ui.theme.AdventureGold
 import net.exent.harmonisk.ui.theme.BrandBlue
 import net.exent.harmonisk.ui.theme.BrandPurple
 import net.exent.harmonisk.ui.theme.BrandTeal
@@ -108,7 +109,7 @@ fun HomeScreen(
         ModeItem(
             emoji = "🏆",
             title = stringResource(R.string.games_title),
-            accent = Color(0xFFFFC857),
+            accent = AdventureGold,
             onClick = onNavigateToGames
         ),
         ModeItem(
