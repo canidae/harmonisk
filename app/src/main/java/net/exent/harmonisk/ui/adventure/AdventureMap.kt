@@ -741,6 +741,10 @@ private fun FieldBadge(
     size: Dp,
     modifier: Modifier = Modifier
 ) {
+    if (index == 0) {
+        CampBadge(badgeSize = size, modifier = modifier)
+        return
+    }
     val pulse = if (active) {
         val transition = rememberInfiniteTransition(label = "field_pulse")
         val value by transition.animateFloat(
@@ -799,6 +803,59 @@ private fun FieldBadge(
                 Text(icon, fontSize = 8.sp)
             }
         }
+    }
+}
+
+@Composable
+private fun CampBadge(badgeSize: Dp, modifier: Modifier = Modifier) {
+    Canvas(modifier.size(badgeSize)) {
+        val w = size.width
+        val h = size.height
+        val fabric = Color(0xFFF2D9A6)
+        val shade = Color(0xFFC9A267)
+        val door = Color(0xFF3A2A20)
+
+        fun tent(cx: Float, baseY: Float, tw: Float, th: Float) {
+            val left = cx - tw / 2
+            val right = cx + tw / 2
+            val top = baseY - th
+            drawPath(Path().apply {
+                moveTo(cx, top)
+                lineTo(left, baseY)
+                lineTo(right, baseY)
+                close()
+            }, fabric)
+            drawPath(Path().apply {
+                moveTo(cx, top)
+                lineTo(left, baseY)
+                lineTo(cx, baseY)
+                close()
+            }, shade)
+            drawPath(Path().apply {
+                moveTo(cx, baseY - th * 0.5f)
+                lineTo(cx - tw * 0.14f, baseY)
+                lineTo(cx + tw * 0.14f, baseY)
+                close()
+            }, door)
+        }
+
+        drawOval(
+            color = Color(0xFF2E4628),
+            topLeft = Offset(w * 0.06f, h * 0.7f),
+            size = androidx.compose.ui.geometry.Size(w * 0.88f, h * 0.24f)
+        )
+        tent(w * 0.34f, h * 0.78f, w * 0.42f, h * 0.4f)
+        tent(w * 0.7f, h * 0.74f, w * 0.34f, h * 0.32f)
+
+        val fx = w * 0.52f
+        val fy = h * 0.88f
+        drawCircle(Color(0xFF5A3B22), w * 0.13f, Offset(fx, fy))
+        drawPath(Path().apply {
+            moveTo(fx, fy - h * 0.2f)
+            quadraticBezierTo(fx + w * 0.1f, fy - h * 0.04f, fx, fy - h * 0.01f)
+            quadraticBezierTo(fx - w * 0.1f, fy - h * 0.04f, fx, fy - h * 0.2f)
+        }, Color(0xFFFFA53D))
+        drawCircle(Color(0xFFFFE08A), w * 0.035f, Offset(fx, fy - h * 0.09f))
     }
 }
 

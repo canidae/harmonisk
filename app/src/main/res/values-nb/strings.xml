@@ -238,8 +238,6 @@
         <item quantity="other">%1$d sanger</item>
     </plurals>
     <string name="adventure_turn">%1$s sin tur</string>
-    <string name="adventure_field">Felt %1$d av %2$d</string>
-    <string name="adventure_level">Nivå %1$d</string>
     <string name="adventure_move">Flytt %1$d</string>
     <string name="adventure_load_failed">Kunne ikke starte sangen</string>
     <string name="adventure_results_title">Eventyret er over</string>

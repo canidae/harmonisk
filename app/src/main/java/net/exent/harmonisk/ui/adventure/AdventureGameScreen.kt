@@ -3,7 +3,6 @@ package net.exent.harmonisk.ui.adventure
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -20,7 +19,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
@@ -57,7 +55,6 @@ fun AdventureGameScreen(
     var mapCenter by remember { mutableStateOf(Offset.Unspecified) }
     var songAnchor by remember { mutableStateOf(Offset.Unspecified) }
     var tokenAnchor by remember { mutableStateOf(Offset.Unspecified) }
-    var avatarAnchor by remember { mutableStateOf(Offset.Unspecified) }
     var origin by remember { mutableStateOf(Offset.Zero) }
     val latestToken = remember { TokenPosition() }
     val reportTokenPosition = state.phase == AdventureTurnPhase.ROLLING ||
@@ -137,12 +134,6 @@ fun AdventureGameScreen(
                         color = Color.White.copy(alpha = 0.6f)
                     )
                 }
-                state.currentPlayer?.let { player ->
-                    AdventurePill(
-                        text = stringResource(R.string.adventure_field, player.position.coerceAtMost(ADVENTURE_FIELD_COUNT), ADVENTURE_FIELD_COUNT),
-                        color = ADVENTURE_PLAYER_COLORS[player.colorIndex % ADVENTURE_PLAYER_COLORS.size]
-                    )
-                }
             }
             Box(
                 Modifier
@@ -166,8 +157,7 @@ fun AdventureGameScreen(
             }
             CurrentTurnCard(
                 state = state,
-                onSongAnchor = { songAnchor = it },
-                onAvatarAnchor = { avatarAnchor = it }
+                onSongAnchor = { songAnchor = it }
             )
         }
 
@@ -189,7 +179,7 @@ fun AdventureGameScreen(
         )
         RewardOverlay(
             state = state,
-            avatarAnchor = avatarAnchor,
+            mapAnchor = { latestToken.position },
             origin = origin,
             onStored = { sounds.play(AdventureSound.Pouch, 0.65f) }
         )
@@ -199,13 +189,10 @@ fun AdventureGameScreen(
 @Composable
 private fun CurrentTurnCard(
     state: AdventureState,
-    onSongAnchor: (Offset) -> Unit,
-    onAvatarAnchor: (Offset) -> Unit
+    onSongAnchor: (Offset) -> Unit
 ) {
     val player = state.currentPlayer ?: return
     val color = ADVENTURE_PLAYER_COLORS[player.colorIndex % ADVENTURE_PLAYER_COLORS.size]
-    val levelVisible = state.currentSong != null && !state.loading
-    val levelAlpha by animateFloatAsState(if (levelVisible) 1f else 0f, label = "level_alpha")
     val status = when (state.phase) {
         AdventureTurnPhase.ROLLING -> stringResource(R.string.adventure_throw_dice)
         AdventureTurnPhase.DICE, AdventureTurnPhase.DELIVERING, AdventureTurnPhase.MOVING -> ""
@@ -222,13 +209,7 @@ private fun CurrentTurnCard(
     }
     StorybookCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.onGloballyPositioned { coordinates ->
-                    onAvatarAnchor(coordinates.boundsInRoot().center)
-                }
-            ) {
-                AdventureAvatar(player.emoji, player.colorIndex, size = 48.dp, selected = true)
-            }
+            AdventureAvatar(player.emoji, player.colorIndex, size = 48.dp, selected = true)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -271,14 +252,6 @@ private fun CurrentTurnCard(
                     }
                 }
             }
-            Spacer(Modifier.width(8.dp))
-            Column(horizontalAlignment = Alignment.End) {
-                AdventurePill(
-                    text = stringResource(R.string.adventure_level, state.currentLevel),
-                    color = color,
-                    modifier = Modifier.alpha(levelAlpha)
-                )
-            }
         }
     }
 }
@@ -318,7 +291,7 @@ private fun StickerStrip(stickers: List<AdventureSticker>, modifier: Modifier = 
 @Composable
 private fun RewardOverlay(
     state: AdventureState,
-    avatarAnchor: Offset,
+    mapAnchor: () -> Offset,
     origin: Offset,
     onStored: () -> Unit
 ) {
@@ -355,9 +328,10 @@ private fun RewardOverlay(
         ) {
             RewardCard(reward = reward, score = score, levelUp = levelUp)
         }
-        if (flying && center.isSpecified && avatarAnchor.isSpecified) {
+        val target = mapAnchor()
+        if (flying && center.isSpecified && target.isSpecified) {
             val from = center - origin
-            val to = avatarAnchor - origin
+            val to = target - origin
             val progress = fly.value
             if (emojis.isNotEmpty()) {
                 emojis.forEachIndexed { index, emoji ->
