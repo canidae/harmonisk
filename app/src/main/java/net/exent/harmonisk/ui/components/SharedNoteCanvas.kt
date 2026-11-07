@@ -1257,7 +1257,7 @@ private fun DrawScope.drawVerticalPitchLine(
 
     val centerX = barLeft + barThickness / 2f
     val maxDeviationPx = barThickness / 2f - 2f
-    val gapThreshold = 0.05f
+    val gapThreshold = 0.2f
 
     val path = Path()
     for (i in centsHistory.indices) {
@@ -1426,7 +1426,7 @@ private fun DrawScope.drawWigglyPitchLine(
     val path = Path()
     val centerX = barX + barW / 2f
     val maxDeviationPx = barW / 2f - 2f
-    val gapThreshold = 0.05f
+    val gapThreshold = 0.2f
 
     for (i in centsHistory.indices) {
         val t = centsPositions[i].coerceIn(0f, 1f)
