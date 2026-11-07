@@ -79,7 +79,7 @@ fun ProfileDialogs(
     }
 
     if (state.showProfile) {
-        ProfileSwitchDialog(
+        ProfileDialog(
             profiles = profiles,
             activeProfileId = activeProfileId,
             onSelect = {

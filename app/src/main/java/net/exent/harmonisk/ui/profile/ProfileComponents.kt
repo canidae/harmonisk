@@ -241,15 +241,6 @@ fun ProfileDialog(
 }
 
 @Composable
-fun ProfileSwitchDialog(
-    profiles: List<ProfileRepository.Profile>,
-    activeProfileId: String?,
-    onSelect: (String) -> Unit,
-    onAdd: () -> Unit,
-    onDismiss: () -> Unit
-) = ProfileDialog(profiles, activeProfileId, onSelect, onAdd, onDismiss)
-
-@Composable
 fun ProfileIconButton(emoji: String, name: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
