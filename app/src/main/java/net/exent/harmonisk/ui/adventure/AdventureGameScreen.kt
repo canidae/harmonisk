@@ -227,9 +227,19 @@ private fun CurrentTurnCard(
 ) {
     val player = state.currentPlayer ?: return
     val color = ADVENTURE_PLAYER_COLORS[player.colorIndex % ADVENTURE_PLAYER_COLORS.size]
+    var diceStopped by remember { mutableStateOf(false) }
+    LaunchedEffect(state.diceValue) {
+        diceStopped = false
+        if (state.diceValue != null) {
+            delay(AdventureTiming.DICE_SHOW_MS)
+            diceStopped = true
+        }
+    }
     val status = when (state.phase) {
         AdventureTurnPhase.ROLLING -> stringResource(R.string.adventure_throw_dice)
-        AdventureTurnPhase.DICE, AdventureTurnPhase.DELIVERING ->
+        AdventureTurnPhase.DICE ->
+            if (diceStopped) state.diceValue?.let { stringResource(R.string.adventure_move, it) }.orEmpty() else ""
+        AdventureTurnPhase.DELIVERING ->
             state.diceValue?.let { stringResource(R.string.adventure_move, it) }.orEmpty()
         AdventureTurnPhase.MOVING -> ""
         AdventureTurnPhase.EVENT -> when {
