@@ -246,7 +246,7 @@ class AdventureViewModel @Inject constructor(
             }
             resultJob?.cancel()
             resultJob = viewModelScope.launch {
-                delay(900)
+                delay(AdventureTiming.CASTLE_RESULT_MS)
                 _state.update { it.copy(step = AdventureStep.RESULTS) }
             }
             return
@@ -261,23 +261,13 @@ class AdventureViewModel @Inject constructor(
                         reward = reward
                     )
                 }
-                resultJob?.cancel()
-                resultJob = viewModelScope.launch {
-                    delay(AdventureTiming.REWARD_MS + AdventureTiming.REWARD_FLY_MS + 250L)
-                    _state.update { it.copy(reward = null) }
-                    advanceAfterReward(reward)
-                }
+                scheduleRewardAdvance(reward)
             }
             AdventureReward.GoAgain -> {
                 _state.update {
                     it.copy(phase = AdventureTurnPhase.EVENT, reward = AdventureReward.GoAgain)
                 }
-                resultJob?.cancel()
-                resultJob = viewModelScope.launch {
-                    delay(AdventureTiming.REWARD_MS + AdventureTiming.REWARD_FLY_MS + 250L)
-                    _state.update { it.copy(reward = null) }
-                    advanceAfterReward(AdventureReward.GoAgain)
-                }
+                scheduleRewardAdvance(AdventureReward.GoAgain)
             }
             AdventureReward.Whack -> {
                 _state.update {
@@ -336,9 +326,18 @@ class AdventureViewModel @Inject constructor(
         }
     }
 
-    private fun advanceAfterReward(reward: AdventureReward?) {
+    private fun scheduleRewardAdvance(reward: AdventureReward) {
+        resultJob?.cancel()
+        resultJob = viewModelScope.launch {
+            delay(AdventureTiming.REWARD_TOTAL_MS)
+            _state.update { it.copy(reward = null) }
+            advanceAfterReward(reward is AdventureReward.GoAgain)
+        }
+    }
+
+    private fun advanceAfterReward(goAgain: Boolean) {
         val snapshot = _state.value
-        if (reward is AdventureReward.GoAgain) {
+        if (goAgain) {
             beginTurn(goAgain = true)
         } else {
             val next = nextPlayerIndex(snapshot.currentPlayerIndex, snapshot.players.size)
@@ -457,7 +456,7 @@ class AdventureViewModel @Inject constructor(
     private fun advanceAfterScore(playerIndex: Int, playerCount: Int) {
         resultJob?.cancel()
         resultJob = viewModelScope.launch {
-            delay(AdventureTiming.REWARD_MS + AdventureTiming.REWARD_FLY_MS + 250L)
+            delay(AdventureTiming.REWARD_TOTAL_MS)
             _state.update { it.copy(currentPlayerIndex = nextPlayerIndex(playerIndex, playerCount)) }
             beginTurn()
         }
@@ -468,28 +467,7 @@ class AdventureViewModel @Inject constructor(
         turnJob?.cancel()
         spinJob?.cancel()
         session.clear()
-        _state.update {
-            it.copy(
-                step = AdventureStep.PLAYERS,
-                players = emptyList(),
-                currentPlayerIndex = 0,
-                currentSong = null,
-                songPool = emptyList(),
-                phase = AdventureTurnPhase.ROLLING,
-                diceValue = null,
-                goAgain = false,
-                moveFrom = 0,
-                spinDurationMs = AdventureTiming.SPIN_MS,
-                fieldRewards = emptyList(),
-                currentLevel = 1,
-                mapSeed = 0L,
-                reward = null,
-                finisherId = null,
-                levelUp = null,
-                turnScore = null,
-                loading = false
-            )
-        }
+        _state.value = AdventureState()
     }
 
     fun clear() {

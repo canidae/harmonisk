@@ -21,6 +21,7 @@ class NoteUtils {
         const val GREAT_CENTS = 20f
         const val GOOD_CENTS = 30f
         const val OK_CENTS = 40f
+        const val MAX_CENTS_OFF = 50f
 
         fun midiToFrequency(midiNumber: Int, refA4: Float = DEFAULT_A4_FREQ): Float =
             (refA4.toDouble() * 2.0.pow((midiNumber - A4_MIDI_NUMBER).toDouble() / 12.0)).toFloat()

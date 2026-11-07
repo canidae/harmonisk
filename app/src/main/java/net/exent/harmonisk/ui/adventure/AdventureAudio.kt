@@ -3,6 +3,7 @@ package net.exent.harmonisk.ui.adventure
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import net.exent.harmonisk.audio.AudioConstants
 import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.min
@@ -96,7 +97,7 @@ class AdventureFanfarePlayer {
     }
 
     private companion object {
-        const val SAMPLE_RATE = 44_100
+        const val SAMPLE_RATE = AudioConstants.SAMPLE_RATE
         const val DURATION = 3.3f
     }
 }

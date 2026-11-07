@@ -34,8 +34,8 @@ import net.exent.harmonisk.R
 import net.exent.harmonisk.ui.celebration.CelebrationLevel
 import net.exent.harmonisk.ui.celebration.ScoreCelebrationOverlay
 import net.exent.harmonisk.ui.components.KeepScreenOn
+import net.exent.harmonisk.ui.utils.formatScore
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 @Composable
 fun AdventureResultsScreen(
@@ -190,8 +190,10 @@ private fun ScoreChart(
                             )
                         }
                         Text(
-                            text = ((player.stickerScore + player.bonusScore) * stickerProgress + player.songScore * songProgress)
-                                .roundToInt().toString(),
+                            text = formatScore(
+                                (player.stickerScore + player.bonusScore) * stickerProgress +
+                                    player.songScore * songProgress
+                            ),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Black,
                             color = color

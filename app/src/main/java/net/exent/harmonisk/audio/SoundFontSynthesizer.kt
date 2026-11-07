@@ -18,8 +18,8 @@ class SoundFontSynthesizer(
     companion object {
         private const val TAG = "SoundFontSynthesizer"
         private const val SF2_ASSET = "GeneralUser-GS.sf2"
-        private const val BUFFER_FRAMES = 512
-        private const val DEFAULT_OUTPUT_SAMPLE_RATE = 44100
+        private const val BUFFER_FRAMES = AudioConstants.BUFFER_SIZE_SAMPLES
+        private const val DEFAULT_OUTPUT_SAMPLE_RATE = AudioConstants.SAMPLE_RATE
         private const val REBUILD_DELAY_MS = 150L
         private const val REBUILD_RETRY_MS = 300L
         private const val REBUILD_MAX_ATTEMPTS = 3

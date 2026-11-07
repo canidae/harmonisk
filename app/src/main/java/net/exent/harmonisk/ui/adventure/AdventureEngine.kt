@@ -34,6 +34,8 @@ object AdventureTiming {
     const val AUTO_PLAY_MS = 2_000L
     const val REWARD_MS = 2900L
     const val REWARD_FLY_MS = 700L
+    const val REWARD_TOTAL_MS = REWARD_MS + REWARD_FLY_MS + 250L
+    const val CASTLE_RESULT_MS = 900L
 
     fun walkMs(steps: Int): Long =
         (WALK_MS + (steps - 1).coerceAtLeast(0) * STEP_MS).coerceAtMost(MAX_WALK_MS)

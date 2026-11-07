@@ -38,7 +38,6 @@ class MelodyPlayer(
     fun playWithTiming(
         melodyTracks: List<MelodyTrack>,
         scope: CoroutineScope,
-        tempo: Float = 1.0f,
         leadInSeconds: Double = 0.0,
         startSeconds: Double = 0.0
     ) {
@@ -58,8 +57,8 @@ class MelodyPlayer(
                         if (noteEnd <= startSeconds) continue
                         val localStart = (noteStart - startSeconds).coerceAtLeast(0.0) + leadInSeconds
                         val localEnd = (noteEnd - startSeconds).coerceAtLeast(0.0) + leadInSeconds
-                        val startMs = (localStart / tempo * 1000).toLong()
-                        val endMs = (localEnd / tempo * 1000).toLong()
+                        val startMs = (localStart * 1000).toLong()
+                        val endMs = (localEnd * 1000).toLong()
                         events.add(TimedEvent(startMs, note.noteNumber, true, note.velocity.coerceIn(1, 127), channel))
                         events.add(TimedEvent(endMs, note.noteNumber, false, 0, channel))
                     }

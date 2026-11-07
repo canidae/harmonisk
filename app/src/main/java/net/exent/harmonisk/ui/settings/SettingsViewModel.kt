@@ -14,6 +14,7 @@ import net.exent.harmonisk.audio.AudioInputDevice
 import net.exent.harmonisk.audio.AudioOutputDevice
 import net.exent.harmonisk.audio.PitchProcessor
 import net.exent.harmonisk.audio.SoundFontSynthesizer
+import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.data.AppSettings
 import net.exent.harmonisk.data.AudioDelayRepository
 import net.exent.harmonisk.data.SettingsRepository
@@ -34,9 +35,7 @@ class SettingsViewModel @Inject constructor(
     companion object {
         private const val TONE_ON_MS = 500L
         private const val TONE_OFF_MS = 1000L
-        private const val MIDI_NOTE = 69
         private const val MIDI_VELOCITY = 100
-        private const val TARGET_FREQ = 440f
         private const val FREQ_TOLERANCE = 30f
         private const val REQUIRED_DETECTIONS = 5
         /** Calibration rounds delays to the steps the delay sliders can express. */
@@ -138,9 +137,9 @@ class SettingsViewModel @Inject constructor(
                 while (measurements.size < REQUIRED_DETECTIONS) {
                     val playTime = System.currentTimeMillis()
 
-                    soundFontSynthesizer.noteOn(0, MIDI_NOTE, MIDI_VELOCITY)
+                    soundFontSynthesizer.noteOn(0, NoteUtils.A4_MIDI_NUMBER, MIDI_VELOCITY)
                     delay(TONE_ON_MS)
-                    soundFontSynthesizer.noteOff(0, MIDI_NOTE)
+                    soundFontSynthesizer.noteOff(0, NoteUtils.A4_MIDI_NUMBER)
 
                     val deadline = playTime + TONE_ON_MS + TONE_OFF_MS
                     var detected: Pair<Long, Float>? = null
@@ -148,7 +147,7 @@ class SettingsViewModel @Inject constructor(
                         if (detected == null) {
                             val det = detectionChannel.tryReceive().getOrNull()
                             if (det != null && det.first >= playTime &&
-                                abs(det.second - TARGET_FREQ) < FREQ_TOLERANCE
+                                abs(det.second - NoteUtils.DEFAULT_A4_FREQ) < FREQ_TOLERANCE
                             ) {
                                 detected = det
                             }

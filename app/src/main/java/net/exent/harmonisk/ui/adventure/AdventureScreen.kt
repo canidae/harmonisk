@@ -35,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.harmonisk.R
 import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.data.ProfileRepository
+import net.exent.harmonisk.ui.utils.folderDisplayName
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.melody.MelodyPlayScreen
@@ -451,7 +452,7 @@ private fun SongSetupScreen(
             val (bundled, folder) = key
             val title = when {
                 folder == null -> context.getString(R.string.adventure_folder_other)
-                else -> folderName(context, folder)
+                else -> folderDisplayName(context, folder)
             }
             SongGroup(
                 key = "${bundled}:${folder ?: ""}",
@@ -604,8 +605,3 @@ private fun SongGroupCard(
     }
 }
 
-private fun folderName(context: android.content.Context, folder: String): String {
-    val resId = context.resources.getIdentifier("melody_folder_$folder", "string", context.packageName)
-    return if (resId != 0) context.getString(resId)
-    else folder.replace('_', ' ').replaceFirstChar { it.uppercase() }
-}

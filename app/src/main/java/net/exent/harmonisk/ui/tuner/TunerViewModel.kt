@@ -133,7 +133,7 @@ class TunerViewModel @Inject constructor(
                 else -> {
                     val displayedCenter = NoteUtils.midiToFrequency(displayedMidi, referenceA4)
                     val centsFromDisplayed = noteUtils.frequencyToCents(smoothedFreq, displayedCenter)
-                    if (abs(centsFromDisplayed) > 50f + HYSTERESIS_CENTS) {
+                    if (abs(centsFromDisplayed) > NoteUtils.MAX_CENTS_OFF + HYSTERESIS_CENTS) {
                         // Crossed decisively into the adjacent semitone — switch.
                         displayedMidi = rawNoteInfo.midiNumber
                         rawNoteInfo

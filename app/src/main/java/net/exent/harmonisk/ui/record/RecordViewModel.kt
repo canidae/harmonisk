@@ -1095,9 +1095,9 @@ class RecordViewModel @Inject constructor(
                 val outputOffsetMs = (inputDelayMs + outputDelayMs).toLong()
                 while (eventIndex < events.size && events[eventIndex].timeMs - outputOffsetMs <= audioPositionMs) {
                     val ev = events[eventIndex++]
-                    if (ev.trackOrigin == 9) {
-                        if (ev.isOn) soundFontSynthesizer.noteOn(9, ev.midiNote, 80)
-                        else if (soundFontSynthesizer.isReady) soundFontSynthesizer.noteOff(9, ev.midiNote)
+                    if (ev.trackOrigin == SoundFontSynthesizer.DRUM_CHANNEL) {
+                        if (ev.isOn) soundFontSynthesizer.noteOn(SoundFontSynthesizer.DRUM_CHANNEL, ev.midiNote, 80)
+                        else if (soundFontSynthesizer.isReady) soundFontSynthesizer.noteOff(SoundFontSynthesizer.DRUM_CHANNEL, ev.midiNote)
                     } else {
                         if (ev.isOn) player?.noteOn(ev.trackOrigin, ev.midiNote, 80)
                         else player?.noteOff(ev.trackOrigin, ev.midiNote)
