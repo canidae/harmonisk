@@ -7,6 +7,11 @@
     <string name="settings">Innstillinger</string>
     <string name="microphone">mikrofon</string>
     <string name="speaker">høyttaler</string>
+    <string name="device_bluetooth">Bluetooth</string>
+    <string name="device_phone_speaker">Telefonhøyttaler</string>
+    <string name="device_wired_headphones">Kablede hodetelefoner</string>
+    <string name="device_wired_headset_mic">Kablet hodesettmikrofon</string>
+    <string name="device_builtin_mic">Innebygd mikrofon</string>
     <string name="cancel">Avbryt</string>
     <string name="delete">Slett</string>
     <string name="start">Start</string>

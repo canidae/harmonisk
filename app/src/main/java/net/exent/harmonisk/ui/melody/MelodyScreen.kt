@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -70,6 +71,7 @@ fun MelodyScreen(
     viewModel: MelodyViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsStateWithLifecycle()
     val scores by viewModel.allMelodyScores.collectAsStateWithLifecycle()
     val difficulties by viewModel.allMelodyDifficulties.collectAsStateWithLifecycle()
@@ -115,18 +117,18 @@ fun MelodyScreen(
             when (val result = viewModel.importFromUrl(url)) {
                 null -> Toast.makeText(
                     context,
-                    context.getString(R.string.melody_failed_load_url),
+                    resources.getString(R.string.melody_failed_load_url),
                     Toast.LENGTH_SHORT
                 ).show()
                 is MelodyRepository.ImportResult.Song -> {
                     currentFolder = MelodyRepository.IMPORTED_FOLDER
                     currentSubfolder = null
-                    Toast.makeText(context, context.getString(R.string.melody_import_success), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, resources.getString(R.string.melody_import_success), Toast.LENGTH_SHORT).show()
                 }
                 is MelodyRepository.ImportResult.Folder -> {
                     currentFolder = MelodyRepository.IMPORTED_FOLDER
                     currentSubfolder = result.folder
-                    Toast.makeText(context, context.getString(R.string.melody_import_folder_success), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, resources.getString(R.string.melody_import_folder_success), Toast.LENGTH_SHORT).show()
                 }
             }
             importingUrl = null
@@ -146,17 +148,17 @@ fun MelodyScreen(
                         viewModel.stopPreview()
                         previewingMelody = null
                         if (viewModel.loadMelody(result.info)) {
-                            Toast.makeText(context, context.getString(R.string.melody_import_success), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, resources.getString(R.string.melody_import_success), Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(context, context.getString(R.string.melody_failed_load_melody), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, resources.getString(R.string.melody_failed_load_melody), Toast.LENGTH_SHORT).show()
                         }
                     }
                     is MelodyRepository.ImportResult.Folder -> {
                         currentFolder = MelodyRepository.IMPORTED_FOLDER
                         currentSubfolder = result.folder
-                        Toast.makeText(context, context.getString(R.string.melody_import_folder_success), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, resources.getString(R.string.melody_import_folder_success), Toast.LENGTH_SHORT).show()
                     }
-                    null -> Toast.makeText(context, context.getString(R.string.melody_failed_load_midi), Toast.LENGTH_SHORT).show()
+                    null -> Toast.makeText(context, resources.getString(R.string.melody_failed_load_midi), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -194,7 +196,7 @@ fun MelodyScreen(
                 if (viewModel.loadMelody(info)) {
                     onStartPlay()
                 } else {
-                    Toast.makeText(context, context.getString(R.string.melody_failed_load_melody), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, resources.getString(R.string.melody_failed_load_melody), Toast.LENGTH_SHORT).show()
                 }
             },
             onTogglePreview = {
@@ -241,7 +243,7 @@ fun MelodyScreen(
                         qrScanLauncher.launch(
                             ScanOptions().apply {
                                 setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                                setPrompt(context.getString(R.string.melody_import_qr_prompt))
+                                setPrompt(resources.getString(R.string.melody_import_qr_prompt))
                                 setBeepEnabled(false)
                             }
                         )
@@ -252,11 +254,9 @@ fun MelodyScreen(
         topBar = {
             BrandTopBar(
                 title = stringResource(R.string.melody_title),
-                subtitle = when {
-                    currentSubfolder != null -> folderDisplayName(context, currentSubfolder!!)
-                    currentFolder != null -> folderDisplayName(context, currentFolder!!)
-                    else -> stringResource(R.string.melody_choose)
-                },
+                subtitle = currentSubfolder?.let { folderDisplayName(context, it) }
+                    ?: currentFolder?.let { folderDisplayName(context, it) }
+                    ?: stringResource(R.string.melody_choose),
                 onBack = {
                     when {
                         currentSubfolder != null -> currentSubfolder = null
@@ -320,7 +320,7 @@ fun MelodyScreen(
                         if (browsingImported && currentFolderSongs.isEmpty() && importedSubfolders.isEmpty()) {
                             item {
                                 Text(
-                                    text = context.getString(R.string.melody_no_imported),
+                                    text = stringResource(R.string.melody_no_imported),
                                     style = MaterialTheme.typography.bodyLarge,
                                     textAlign = TextAlign.Center,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,

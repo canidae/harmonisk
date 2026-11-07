@@ -7,6 +7,11 @@
     <string name="settings">Settings</string>
     <string name="microphone">Microphone</string>
     <string name="speaker">speaker</string>
+    <string name="device_bluetooth">Bluetooth</string>
+    <string name="device_phone_speaker">Phone speaker</string>
+    <string name="device_wired_headphones">Wired headphones</string>
+    <string name="device_wired_headset_mic">Wired headset mic</string>
+    <string name="device_builtin_mic">Built-in microphone</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
     <string name="start">Start</string>

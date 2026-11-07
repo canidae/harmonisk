@@ -199,7 +199,7 @@ class MelodyRepository(
         }?.let { raw -> MelodyNames.displayName(raw) } ?: run {
             // Fallback: decode last path segment
             val rawPath = uri.lastPathSegment ?: return "Imported song"
-            MelodyNames.displayName(android.net.Uri.decode(rawPath).substringAfterLast('/'))
+            MelodyNames.displayName(Uri.decode(rawPath).substringAfterLast('/'))
                 ?: "Imported song"
         }
     }
@@ -355,11 +355,11 @@ class MelodyRepository(
 
     /** Write [bytes] into the local melody directory, keyed by [seed] so a re-import replaces its file. */
     private fun writeMelodyFile(seed: Int, displayName: String, bytes: ByteArray): Uri {
-        val melodiesDir = java.io.File(context.filesDir, "melodies")
+        val melodiesDir = File(context.filesDir, "melodies")
         if (!melodiesDir.exists()) melodiesDir.mkdirs()
         val safeName = MelodyNames.safeFileName(displayName)
         val extension = MelodyFileFormat.detect(bytes).extension
-        val targetFile = java.io.File(melodiesDir, "${safeName}_${seed.toLong() and 0xFFFFFFFFL}.$extension")
+        val targetFile = File(melodiesDir, "${safeName}_${seed.toLong() and 0xFFFFFFFFL}.$extension")
         targetFile.writeBytes(bytes)
         return Uri.fromFile(targetFile)
     }
@@ -367,7 +367,7 @@ class MelodyRepository(
     private fun deleteLocalFile(uri: Uri) {
         if (uri.scheme == "file") {
             val path = uri.path ?: return
-            val file = java.io.File(path)
+            val file = File(path)
             if (file.exists()) file.delete()
         }
     }

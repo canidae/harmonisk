@@ -122,7 +122,7 @@ class MelodyViewModel @Inject constructor(
     private var scoreHistoryJob: Job? = null
     private var previewClockJob: Job? = null
     private var previewSavedOffset: Double? = null
-    private var playbackStartTime = 0L
+    private var playbackStartWallMs = 0L
     private var pauseOffset = 0.0
 
     // Play time for time-based scoring. A song that waits for the player holds its clock for them,
@@ -1047,7 +1047,7 @@ class MelodyViewModel @Inject constructor(
     private fun startPlaybackTimer() {
         // Outside developer mode a preview may not ring on into the take that is being scored.
         if (!devModeState.isEnabled) melodyPlayer.stop()
-        playbackStartTime = SystemClock.elapsedRealtime()
+        playbackStartWallMs = SystemClock.elapsedRealtime()
         playbackJob = viewModelScope.launch {
             val track = _gameState.value.melodyTrack ?: return@launch
             // For mid-song countdown resumes, pitch scoring starts at the resume target time;
@@ -1065,7 +1065,7 @@ class MelodyViewModel @Inject constructor(
                 }
 
                 val now = SystemClock.elapsedRealtime()
-                val elapsed = (now - playbackStartTime) / 1000.0
+                val elapsed = (now - playbackStartWallMs) / 1000.0
                 val currentTime = pauseOffset + elapsed
 
                 // Start pitch detection when time reaches the threshold
@@ -1234,7 +1234,7 @@ class MelodyViewModel @Inject constructor(
                 noteTracking.isWaitingForNote = true
                 beginWait()
                 pauseOffset = noteStart
-                playbackStartTime = SystemClock.elapsedRealtime()
+                playbackStartWallMs = SystemClock.elapsedRealtime()
                 _gameState.update {
                     it.copy(currentTimeSeconds = noteStart, phase = PlayPhase.WAITING_FOR_NOTE)
                 }
@@ -1295,7 +1295,7 @@ class MelodyViewModel @Inject constructor(
                 noteTracking.lastWrongMidiNote = -1
                 noteTracking.wasPauseSinceLastWrong = false
                 pauseOffset = _gameState.value.currentTimeSeconds
-                playbackStartTime = SystemClock.elapsedRealtime()
+                playbackStartWallMs = SystemClock.elapsedRealtime()
                 _gameState.update { it.copy(phase = PlayPhase.PLAYING) }
             } else if (_gameState.value.currentLevel >= 3 && !isNoise) {
                 val isSameHeldWrong = result.midiNoteNumber == noteTracking.lastWrongMidiNote
@@ -1307,7 +1307,7 @@ class MelodyViewModel @Inject constructor(
                     noteTracking.lastWrongMidiNote = result.midiNoteNumber
                     noteTracking.wasPauseSinceLastWrong = false
                     pauseOffset = _gameState.value.currentTimeSeconds
-                    playbackStartTime = SystemClock.elapsedRealtime()
+                    playbackStartWallMs = SystemClock.elapsedRealtime()
                     _gameState.update { it.copy(phase = PlayPhase.PLAYING) }
                 }
                 // If same held wrong pitch or isNoise: keep waiting
@@ -1364,7 +1364,7 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
-    private fun scoreCurrentNote(expectedNote: net.exent.harmonisk.midi.NoteEvent, noteIndex: Int) {
+    private fun scoreCurrentNote(expectedNote: NoteEvent, noteIndex: Int) {
         val track = _gameState.value.melodyTrack ?: return
         val level = _gameState.value.currentLevel
         val expectedDurationMs = (track.noteDurationSeconds(expectedNote) * 1000).toLong()
