@@ -175,14 +175,14 @@ private fun crossings(pathSamples: List<Offset>, river: List<Offset>): Int {
 
 fun generateMapSpec(random: Random, columns: Int = 4): AdventureMapSpec {
     val columnCount = columns.coerceAtLeast(3)
-    val rows = (ADVENTURE_FIELD_COUNT + columnCount - 1) / columnCount
+    val rows = (ADVENTURE_GOAL + columnCount - 1) / columnCount
     val contentUnits = rows + MAP_TOP_UNITS + MAP_BOTTOM_UNITS
     val cellW = 1f / columnCount
     val cellH = 1f / contentUnits
     val contentAspect = contentUnits / columnCount
 
     fun rowY(row: Int) = (contentUnits - MAP_BOTTOM_UNITS - (row + 0.5f)) / contentUnits
-    val fields = (0 until ADVENTURE_FIELD_COUNT).map { index ->
+    val fields = (0 until ADVENTURE_GOAL).map { index ->
         val row = index / columnCount
         val positionInRow = index % columnCount
         val column = if (row % 2 == 0) positionInRow else columnCount - 1 - positionInRow
@@ -327,8 +327,8 @@ fun AdventureMap(
         val pointsDp = remember(spec, contentWidth, contentHeight) {
             spec.points.map { Offset(contentWidth.value * it.x, contentHeight.value * it.y) }
         }
-        val initialField = players.firstOrNull { it.profileId == currentPlayerId }?.position ?: 1
-        val initialPoint = spec.points.getOrNull((initialField - 1).coerceIn(0, spec.points.lastIndex))
+        val initialField = players.firstOrNull { it.profileId == currentPlayerId }?.position ?: 0
+        val initialPoint = spec.points.getOrNull(initialField.coerceIn(0, spec.points.lastIndex))
         val initialScroll = (
             (initialPoint?.y ?: 1f) * contentHeightPx - viewportHeightPx / 2f
             ).coerceAtLeast(0f).roundToInt()
@@ -370,10 +370,10 @@ fun AdventureMap(
         val animalLayouts = remember(spec) {
             spec.animals.map { measurer.measure(it.emoji, TextStyle(fontSize = 20.sp)) }
         }
-        val currentField = players.firstOrNull { it.profileId == currentPlayerId }?.position ?: 1
+        val currentField = players.firstOrNull { it.profileId == currentPlayerId }?.position ?: 0
         LaunchedEffect(currentPlayerId, currentField, columns, contentHeightPx) {
             withFrameNanos { }
-            val point = spec.points.getOrNull((currentField - 1).coerceIn(0, spec.points.lastIndex)) ?: return@LaunchedEffect
+            val point = spec.points.getOrNull(currentField.coerceIn(0, spec.points.lastIndex)) ?: return@LaunchedEffect
             val maxScroll = (contentHeightPx - viewportHeightPx).coerceAtLeast(0f)
             val target = (point.y * contentHeightPx - viewportHeightPx / 2f).coerceIn(0f, maxScroll)
             scroll.animateScrollTo(target.roundToInt())
@@ -423,8 +423,8 @@ fun AdventureMap(
                 }
 
                 pointsDp.forEachIndexed { index, point ->
-                    if (index < ADVENTURE_FIELD_COUNT) {
-                        val field = index + 1
+                    if (index <= ADVENTURE_FIELD_COUNT) {
+                        val field = index
                         val reached = players.any { it.position >= field }
                         val active = !moving && players.any { it.position == field && it.profileId == currentPlayerId }
                         FieldBadge(
@@ -445,9 +445,9 @@ fun AdventureMap(
                     val atField = players.count { it.position == player.position }
                     val indexInField = players.filter { it.position == player.position }.indexOf(player)
                     val startAt = if (player.profileId == currentPlayerId && moving && moveFrom < player.position) {
-                        (moveFrom - 1).toFloat()
+                        moveFrom.toFloat()
                     } else {
-                        (player.position - 1).toFloat()
+                        player.position.toFloat()
                     }
                     val steps = if (player.profileId == currentPlayerId && moving && player.position > moveFrom) {
                         player.position - moveFrom
@@ -857,7 +857,7 @@ private fun AnimatedPlayerToken(
     val animated = remember(player.profileId) { Animatable(startAt) }
     LaunchedEffect(player.position) {
         animated.animateTo(
-            (player.position - 1).toFloat(),
+            player.position.toFloat(),
             tween(walkMs.toInt(), easing = FastOutSlowInEasing)
         )
     }

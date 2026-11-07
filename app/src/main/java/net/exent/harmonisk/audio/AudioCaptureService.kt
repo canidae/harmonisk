@@ -82,16 +82,20 @@ class AudioCaptureService(
 
         audioRecord.startRecording()
         val readLoop = launch(Dispatchers.IO) {
-            val buffer = FloatArray(AudioConstants.BUFFER_SIZE_SAMPLES)
-            while (isActive) {
-                val read = runCatching {
-                    audioRecord.read(buffer, 0, AudioConstants.BUFFER_SIZE_SAMPLES, AudioRecord.READ_BLOCKING)
-                }.getOrElse { break }
-                if (read > 0) {
-                    totalFramesRead += read
-                    updateCaptureLatency(audioRecord)
-                    trySend(buffer.copyOf(read))
+            try {
+                val buffer = FloatArray(AudioConstants.BUFFER_SIZE_SAMPLES)
+                while (isActive) {
+                    val read = runCatching {
+                        audioRecord.read(buffer, 0, AudioConstants.BUFFER_SIZE_SAMPLES, AudioRecord.READ_BLOCKING)
+                    }.getOrElse { break }
+                    if (read > 0) {
+                        totalFramesRead += read
+                        updateCaptureLatency(audioRecord)
+                        trySend(buffer.copyOf(read))
+                    }
                 }
+            } finally {
+                close()
             }
         }
 

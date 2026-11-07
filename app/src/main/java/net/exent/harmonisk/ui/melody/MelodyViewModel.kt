@@ -1139,7 +1139,9 @@ class MelodyViewModel @Inject constructor(
 
     private fun startPitchDetection() {
         if (pitchJob?.isActive == true) return
+        val previous = pitchJob
         pitchJob = viewModelScope.launch {
+            previous?.cancelAndJoin()
             if (_deviceState.value.midiInputEnabled) {
                 // MIDI input: convert note events to PitchResult
                 val heldNotes = mutableSetOf<Int>()

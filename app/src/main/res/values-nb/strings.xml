@@ -273,13 +273,10 @@
     <string name="adventure_tap_to_throw">Trykk for å kaste terningen</string>
     <string name="adventure_choose_song">Velg en sang</string>
     <string name="adventure_song_complete">Sang ferdig</string>
-    <string name="adventure_castle_reached">Borgen er nådd</string>
+    <string name="adventure_castle_reached">Slottet er nådd</string>
     <string name="adventure_legend_song">Sang</string>
     <string name="adventure_legend_stickers">Klistremerker</string>
     <string name="adventure_legend_whack">Tonedengeren</string>
-    <string name="adventure_castle_bonus">Borgbonus +%1$d</string>
-    <string name="adventure_winner">%1$s vinner!</string>
-    <string name="adventure_tie">Det ble uavgjort!</string>
 
     <string name="whack_title">Tonedengeren</string>
     <string name="whack_start">Start</string>
