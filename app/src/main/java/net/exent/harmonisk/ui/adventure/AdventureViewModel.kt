@@ -424,12 +424,12 @@ class AdventureViewModel @Inject constructor(
         beginTurn()
     }
 
-    fun finishWhack(hits: Int) {
+    fun finishWhack(points: Int) {
         val snapshot = _state.value
         if (snapshot.step != AdventureStep.WHACK) return
         val index = snapshot.currentPlayerIndex
         val player = snapshot.players.getOrNull(index) ?: return
-        val rewarded = player.withBonus(hits.coerceAtLeast(0))
+        val rewarded = player.withBonus(points.coerceAtLeast(0))
         val players = snapshot.players.toMutableList().also { list -> list[index] = rewarded }
         val next = nextPlayerIndex(index, players.size)
         _state.update {

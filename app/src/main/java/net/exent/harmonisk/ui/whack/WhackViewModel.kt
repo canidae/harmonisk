@@ -22,11 +22,11 @@ import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.PitchResult
 import javax.inject.Inject
 
-data class WhackTarget(val id: Long, val hole: WhackHole, val emoji: WhackEmoji)
+data class WhackTarget(val id: Long, val hole: WhackHole, val emoji: WhackEmoji, val shownAt: Long)
 
 data class WhackHammer(val id: Long, val hole: WhackHole, val hit: Boolean)
 
-data class WhackScored(val id: Long, val hole: WhackHole, val emoji: WhackEmoji)
+data class WhackScored(val id: Long, val hole: WhackHole, val emoji: WhackEmoji, val points: Int)
 
 data class WhackLevelUp(val id: Long, val level: Int)
 
@@ -36,6 +36,7 @@ data class WhackState(
     val finished: Boolean = false,
     val level: Int = 1,
     val hits: Int = 0,
+    val score: Int = 0,
     val best: Int = 0,
     val remainingMs: Long = WhackRules.GAME_MS,
     val durationMs: Long = WhackRules.GAME_MS,
@@ -133,6 +134,7 @@ class WhackViewModel @Inject constructor(
                 finished = false,
                 level = 1,
                 hits = 0,
+                score = 0,
                 best = best,
                 remainingMs = durationMs,
                 durationMs = durationMs,
@@ -169,6 +171,7 @@ class WhackViewModel @Inject constructor(
             it.copy(
                 level = 1,
                 hits = 0,
+                score = 0,
                 remainingMs = durationMs,
                 durationMs = durationMs,
                 target = null,
@@ -204,6 +207,7 @@ class WhackViewModel @Inject constructor(
                 finished = false,
                 level = 1,
                 hits = 0,
+                score = 0,
                 remainingMs = it.durationMs,
                 target = null,
                 hammer = null,
@@ -288,7 +292,7 @@ class WhackViewModel @Inject constructor(
             val visible = visibleHoles(current.level)
             val emoji = WhackEmoji.pick(previousEmoji)
             previousEmoji = emoji
-            val target = WhackTarget(nextId++, visible.random(), emoji)
+            val target = WhackTarget(nextId++, visible.random(), emoji, SystemClock.elapsedRealtime())
             wrongsMutedUntil = SystemClock.elapsedRealtime() + WhackRules.EMOJI_RISE_MS
             _state.update { it.copy(target = target, hammer = null, scored = null) }
             awaitJudgement(target)
@@ -322,7 +326,7 @@ class WhackViewModel @Inject constructor(
 
     private fun swingPress(hole: WhackHole, hit: Boolean) {
         val press = WhackHammer(nextId++, hole, hit)
-        _state.update { it.copy(hammer = press) }
+        _state.update { it.copy(hammer = press, scored = if (hit) it.scored else null) }
         viewModelScope.launch {
             delay(WhackRules.PRESS_MS)
             _state.update { if (it.hammer?.id == press.id) it.copy(hammer = null) else it }
@@ -331,11 +335,13 @@ class WhackViewModel @Inject constructor(
 
     private fun score(target: WhackTarget) {
         val current = _state.value
+        val points = WhackRules.pointsFor(SystemClock.elapsedRealtime() - target.shownAt)
+        val score = current.score + points
         val hits = current.hits + 1
-        if (hits > best) {
-            best = hits
+        if (score > best) {
+            best = score
             if (persistBest) {
-                profileRepository.activeProfileId?.let { whackRepository.saveBest(it, hits) }
+                profileRepository.activeProfileId?.let { whackRepository.saveBest(it, score) }
             }
         }
         val level = WhackRules.levelFor(hits)
@@ -343,9 +349,10 @@ class WhackViewModel @Inject constructor(
         _state.update {
             it.copy(
                 hits = hits,
+                score = score,
                 best = maxOf(it.best, best),
                 level = level,
-                scored = WhackScored(nextId++, target.hole, target.emoji),
+                scored = WhackScored(nextId++, target.hole, target.emoji, points),
                 levelUp = if (level > current.level) WhackLevelUp(nextId++, level) else it.levelUp
             )
         }

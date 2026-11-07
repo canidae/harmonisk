@@ -68,13 +68,41 @@ class AdventureEngineTest {
     }
 
     @Test
+    fun `sticker rewards are worth at least forty points`() {
+        repeat(500) { seed ->
+            val stickers = randomStickers(Random(seed))
+            assertTrue(stickers.size in 1..3)
+            assertTrue(stickers.all { it.value > 0 })
+            assertTrue(stickers.sumOf { it.value } >= 40)
+            assertEquals(stickers.size, stickers.distinct().size)
+        }
+    }
+
+    @Test
+    fun `lucky sticker rewards can exceed a hundred points`() {
+        val totals = List(5_000) { randomStickers(Random(it)).sumOf { sticker -> sticker.value } }
+        assertTrue(totals.any { it > 100 })
+    }
+
+    @Test
+    fun `the same sticker kind always has the same value`() {
+        val seen = mutableMapOf<AdventureSticker, Int>()
+        repeat(500) { seed ->
+            randomStickers(Random(seed)).forEach { sticker ->
+                val previous = seen.putIfAbsent(sticker, sticker.value)
+                if (previous != null) assertEquals(previous, sticker.value)
+            }
+        }
+    }
+
+    @Test
     fun `sticker rewards add their hidden values to the sticker score`() {
         val stickers = listOf(AdventureSticker.MUSHROOM, AdventureSticker.CRYSTAL)
         val player = player("A", songScore = 80f).withReward(AdventureReward.Stickers(stickers))
         assertEquals(80f, player.songScore)
-        assertEquals(16f, player.stickerScore)
+        assertEquals(70f, player.stickerScore)
         assertEquals(stickers, player.stickers)
-        assertEquals(96f, player.total)
+        assertEquals(150f, player.total)
     }
 
     @Test
@@ -102,7 +130,7 @@ class AdventureEngineTest {
     }
 
     @Test
-    fun `whack hits are added to the total score`() {
+    fun `whack points are added to the total score`() {
         val player = player("A", songScore = 42f).withBonus(7)
         assertEquals(7f, player.bonusScore)
         assertEquals(49f, player.total)
@@ -111,10 +139,15 @@ class AdventureEngineTest {
     @Test
     fun `the dice moves the player and returns the landing reward`() {
         val rewards = MutableList<AdventureReward?>(ADVENTURE_GOAL) { null }
-        rewards[5] = AdventureReward.Stickers(listOf(AdventureSticker.MUSHROOM))
+        rewards[5] = AdventureReward.Stickers(
+            listOf(AdventureSticker.MUSHROOM, AdventureSticker.CRYSTAL)
+        )
         val landing = resolveLanding(player("A", position = 1), dice = 4, fieldRewards = rewards)
         assertEquals(5, landing.player.position)
-        assertEquals(AdventureReward.Stickers(listOf(AdventureSticker.MUSHROOM)), landing.reward)
+        assertEquals(
+            AdventureReward.Stickers(listOf(AdventureSticker.MUSHROOM, AdventureSticker.CRYSTAL)),
+            landing.reward
+        )
         assertFalse(landing.reachedGoal)
     }
 

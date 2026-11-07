@@ -49,6 +49,20 @@ class WhackEngineTest {
     }
 
     @Test
+    fun `faster whacks score more points`() {
+        assertEquals(5, WhackRules.pointsFor(0))
+        assertEquals(5, WhackRules.pointsFor(1_000))
+        assertEquals(4, WhackRules.pointsFor(1_001))
+        assertEquals(4, WhackRules.pointsFor(2_000))
+        assertEquals(3, WhackRules.pointsFor(2_001))
+        assertEquals(3, WhackRules.pointsFor(3_000))
+        assertEquals(2, WhackRules.pointsFor(3_001))
+        assertEquals(2, WhackRules.pointsFor(4_000))
+        assertEquals(1, WhackRules.pointsFor(4_001))
+        assertEquals(1, WhackRules.pointsFor(60_000))
+    }
+
+    @Test
     fun `playing the target note counts as a hit`() {
         val holes = whackHoles(Instrument.CELLO)
         val target = holes.first { it.finger == 2 && it.stringIndex == 1 }

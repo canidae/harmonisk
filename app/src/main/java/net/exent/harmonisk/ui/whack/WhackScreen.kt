@@ -95,7 +95,7 @@ fun WhackScreen(
     val leave = {
         when {
             state.playing -> viewModel.stop()
-            adventure && state.finished -> onFinished(state.hits)
+            adventure && state.finished -> onFinished(state.score)
             else -> onBack()
         }
     }
@@ -212,11 +212,22 @@ private fun WhackHeader(state: WhackState, adventure: Boolean) {
             .padding(horizontal = BOARD_PADDING, vertical = 8.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "${state.hits}",
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Black
-            )
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = "${state.score}",
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Black
+                )
+                state.scored?.let { scored ->
+                    Text(
+                        text = "+${scored.points}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 6.dp, bottom = 4.dp)
+                    )
+                }
+            }
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -481,12 +492,12 @@ private fun WhackOverlay(
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        text = "${state.hits}",
+                        text = "${state.score}",
                         style = MaterialTheme.typography.displayMedium,
                         fontWeight = FontWeight.Black
                     )
                     Text(
-                        text = stringResource(R.string.whack_hits),
+                        text = stringResource(R.string.whack_points),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -530,7 +541,7 @@ private fun WhackOverlay(
                 Spacer(Modifier.height(18.dp))
                 Button(
                     onClick = {
-                        if (state.finished && adventure) onFinished(state.hits) else onStart()
+                        if (state.finished && adventure) onFinished(state.score) else onStart()
                     },
                     modifier = Modifier
                         .fillMaxWidth()

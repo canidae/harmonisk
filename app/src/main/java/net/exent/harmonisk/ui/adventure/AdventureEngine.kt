@@ -40,26 +40,26 @@ object AdventureTiming {
 }
 
 enum class AdventureSticker(val emoji: String, val value: Int) {
-    MUSHROOM("🍄", 4),
-    ACORN("🌰", 3),
-    FEATHER("🪶", 6),
-    LANTERN("🏮", 7),
-    COMPASS("🧭", 8),
-    MAP("🗺️", 9),
-    CRYSTAL("💎", 12),
-    KEY("🗝️", 14),
-    SHIELD("🛡️", 10),
-    BOW("🏹", 11),
-    POTION("🧪", 8),
-    CROWN("👑", 18),
-    SCROLL("📜", 7),
-    COIN("🪙", 5),
-    FLAME("🔥", 9),
-    LEAF("🌿", 4),
-    ROCK("🪨", 5),
-    FLOWER("🌸", 3),
-    CLOVER("🍀", 6),
-    CANDLE("🕯️", 7)
+    MUSHROOM("🍄", 15),
+    ACORN("🌰", 14),
+    FEATHER("🪶", 17),
+    LANTERN("🏮", 24),
+    COMPASS("🧭", 22),
+    MAP("🗺️", 40),
+    CRYSTAL("💎", 55),
+    KEY("🗝️", 45),
+    SHIELD("🛡️", 30),
+    BOW("🏹", 28),
+    POTION("🧪", 21),
+    CROWN("👑", 75),
+    SCROLL("📜", 19),
+    COIN("🪙", 16),
+    FLAME("🔥", 20),
+    LEAF("🌿", 15),
+    ROCK("🪨", 16),
+    FLOWER("🌸", 14),
+    CLOVER("🍀", 17),
+    CANDLE("🕯️", 18)
 }
 
 sealed interface AdventureReward {
@@ -143,11 +143,18 @@ fun generateFieldRewards(random: Random): List<AdventureReward?> =
 
 fun randomFieldReward(random: Random): AdventureReward = when (random.nextInt(100)) {
     in 0 until 55 -> AdventureReward.Song
-    in 55 until 75 -> AdventureReward.Stickers(
-        AdventureSticker.entries.shuffled(random).take(1 + random.nextInt(3))
-    )
+    in 55 until 75 -> AdventureReward.Stickers(randomStickers(random))
     in 75 until 90 -> AdventureReward.Whack
     else -> AdventureReward.GoAgain
+}
+
+fun randomStickers(random: Random): List<AdventureSticker> {
+    val stickers = AdventureSticker.entries.shuffled(random).take(1 + random.nextInt(3)).toMutableList()
+    if (stickers.sumOf { it.value } >= 40) return stickers
+    val cheapest = stickers.minBy { it.value }
+    val replacement = AdventureSticker.entries.filter { it !in stickers && it.value >= 40 }.random(random)
+    stickers[stickers.indexOf(cheapest)] = replacement
+    return stickers
 }
 
 fun nextPlayerIndex(current: Int, playerCount: Int): Int =
