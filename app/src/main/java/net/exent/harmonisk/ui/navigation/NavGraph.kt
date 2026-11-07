@@ -7,8 +7,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
-import net.exent.harmonisk.ui.freeplay.FreePlayScreen
-import net.exent.harmonisk.ui.gamemode.GameModeScreen
+import net.exent.harmonisk.ui.record.RecordScreen
+import net.exent.harmonisk.ui.games.GamesScreen
 import net.exent.harmonisk.ui.home.HomeScreen
 import net.exent.harmonisk.ui.melody.MelodyPlayScreen
 import net.exent.harmonisk.ui.melody.MelodyScreen
@@ -29,19 +29,19 @@ fun NavGraph() {
     ) {
         composable(NavRoutes.HOME) {
             HomeScreen(
-                onNavigateToFreePlay = { navController.navigate(NavRoutes.FREEPLAY) },
+                onNavigateToRecord = { navController.navigate(NavRoutes.RECORD) },
                 onNavigateToMelody = { navController.navigate(NavRoutes.MELODY_GRAPH) },
-                onNavigateToGameMode = { navController.navigate(NavRoutes.GAME_MODE) },
+                onNavigateToGames = { navController.navigate(NavRoutes.GAMES) },
                 onNavigateToMetronome = { navController.navigate(NavRoutes.METRONOME) },
                 onNavigateToTuner = { navController.navigate(NavRoutes.TUNER) },
                 onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS) }
             )
         }
-        composable(NavRoutes.FREEPLAY) {
-            FreePlayScreen(onBack = { navController.popBackStack() })
+        composable(NavRoutes.RECORD) {
+            RecordScreen(onBack = { navController.popBackStack() })
         }
-        composable(NavRoutes.GAME_MODE) {
-            GameModeScreen(
+        composable(NavRoutes.GAMES) {
+            GamesScreen(
                 onBack = { navController.popBackStack() },
                 onAdventure = { navController.navigate(NavRoutes.ADVENTURE) },
                 onWhack = { navController.navigate(NavRoutes.WHACK) }

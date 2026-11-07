@@ -3,7 +3,7 @@ package net.exent.harmonisk.midi
 import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.ui.MAX_BPM
 import net.exent.harmonisk.ui.MIN_BPM
-import net.exent.harmonisk.ui.freeplay.PlayedNote
+import net.exent.harmonisk.ui.record.PlayedNote
 import java.io.InputStream
 import java.util.UUID
 

@@ -468,7 +468,7 @@ private fun SongSetupScreen(
         containerColor = Color.Transparent,
         topBar = {
             BrandTopBar(
-                title = stringResource(R.string.adventure_songs_title),
+                title = stringResource(R.string.adventure_choose_songs),
                 subtitle = stringResource(R.string.adventure_selected_songs, selectedIds.size),
                 onBack = onBack
             )

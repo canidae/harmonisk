@@ -1,4 +1,4 @@
-package net.exent.harmonisk.ui.gamemode
+package net.exent.harmonisk.ui.games
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,7 +22,7 @@ private val ADVENTURE_ACCENT = Color(0xFFFFC857)
 private val WHACK_ACCENT = Color(0xFF7FB3C8)
 
 @Composable
-fun GameModeScreen(
+fun GamesScreen(
     onBack: () -> Unit,
     onAdventure: () -> Unit,
     onWhack: () -> Unit
@@ -33,7 +33,7 @@ fun GameModeScreen(
             containerColor = Color.Transparent,
             topBar = {
                 BrandTopBar(
-                    title = stringResource(R.string.game_mode_title),
+                    title = stringResource(R.string.games_title),
                     onBack = onBack
                 )
             }
@@ -44,15 +44,15 @@ fun GameModeScreen(
                     .padding(padding)
                     .padding(24.dp)
             ) {
-                ModeCard(
-                    title = stringResource(R.string.game_mode_adventure),
+                GameCard(
+                    title = stringResource(R.string.adventure_title),
                     accent = ADVENTURE_ACCENT,
                     onClick = onAdventure,
                     icon = { Text("🗺️", fontSize = 40.sp) }
                 )
                 Spacer(Modifier.height(14.dp))
-                ModeCard(
-                    title = stringResource(R.string.game_mode_whack),
+                GameCard(
+                    title = stringResource(R.string.whack_title),
                     accent = WHACK_ACCENT,
                     onClick = onWhack,
                     icon = { WhackPressIcon(Modifier.size(width = 34.dp, height = 46.dp)) }
@@ -63,7 +63,7 @@ fun GameModeScreen(
 }
 
 @Composable
-fun ModeCard(
+private fun GameCard(
     title: String,
     accent: Color,
     onClick: () -> Unit,

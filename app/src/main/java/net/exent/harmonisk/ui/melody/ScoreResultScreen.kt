@@ -81,7 +81,7 @@ fun ScoreResultModal(
                             Spacer(modifier = Modifier.height(6.dp))
                         }
                         Text(
-                            text = stringResource(R.string.score_level, currentLevel),
+                            text = stringResource(R.string.level, currentLevel),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

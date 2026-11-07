@@ -55,7 +55,7 @@ fun SettingsScreen(
         containerColor = Color.Transparent,
         topBar = {
             BrandTopBar(
-                title = stringResource(R.string.settings_title),
+                title = stringResource(R.string.settings),
                 onBack = onBack
             )
         }
@@ -193,7 +193,7 @@ fun SettingsScreen(
                                 permissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
                             }
                         }
-                    ) { Text(if (isCalibrating) stringResource(R.string.settings_calibrating_stop) else stringResource(R.string.settings_auto_calibrate)) }
+                    ) { Text(if (isCalibrating) stringResource(R.string.stop) else stringResource(R.string.settings_auto_calibrate)) }
                 }
 
                 if (isCalibrating) {
@@ -329,7 +329,7 @@ private fun HelpButton(helpText: String) {
     var showHelp by remember { mutableStateOf(false) }
 
     IconButton(onClick = { showHelp = true }) {
-        Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = stringResource(R.string.settings_help))
+        Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = stringResource(R.string.help))
     }
 
     if (showHelp) {
@@ -337,7 +337,7 @@ private fun HelpButton(helpText: String) {
             onDismissRequest = { showHelp = false },
             text = { Text(helpText) },
             confirmButton = {
-                TextButton(onClick = { showHelp = false }) { Text(stringResource(R.string.settings_help_got_it)) }
+                TextButton(onClick = { showHelp = false }) { Text(stringResource(R.string.got_it)) }
             }
         )
     }

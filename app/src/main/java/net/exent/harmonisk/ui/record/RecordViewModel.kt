@@ -1,4 +1,4 @@
-package net.exent.harmonisk.ui.freeplay
+package net.exent.harmonisk.ui.record
 
 import android.content.Context
 import android.media.midi.MidiDeviceInfo
@@ -47,7 +47,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 @HiltViewModel
-class FreePlayViewModel @Inject constructor(
+class RecordViewModel @Inject constructor(
     @param:ApplicationContext private val appContext: Context,
     private val pitchProcessor: PitchProcessor,
     private val settingsRepository: SettingsRepository,
@@ -64,11 +64,11 @@ class FreePlayViewModel @Inject constructor(
         const val MIN_VISIBLE_KEYS = 5f
         const val MAX_VISIBLE_KEYS = 48f
         const val MIN_AUTO_FIT_RANGE = 12f
-        private const val TAG = "FreePlayVM"
+        private const val TAG = "RecordVM"
     }
 
-    private val _state = MutableStateFlow(FreePlayState())
-    val state: StateFlow<FreePlayState> = _state.asStateFlow()
+    private val _state = MutableStateFlow(RecordState())
+    val state: StateFlow<RecordState> = _state.asStateFlow()
 
     val profiles: StateFlow<List<ProfileRepository.Profile>> = profileRepository.profiles
     val activeProfile: StateFlow<ProfileRepository.Profile?> = profileRepository.activeProfile
@@ -223,12 +223,12 @@ class FreePlayViewModel @Inject constructor(
     private fun applySettings(settings: AppSettings) {
         _state.update {
             it.copy(
-                fallSpeedPxPerSec = settings.freeplayFallSpeed,
-                beatsPerBar = settings.freeplayBeatsPerBar,
-                bpm = settings.freeplayBpm,
-                minNoteDivision = settings.freeplayMinNoteDivision,
-                snapEnabled = settings.freeplaySnapEnabled,
-                metronomeEnabled = settings.freeplayMetronomeEnabled
+                fallSpeedPxPerSec = settings.recordFallSpeed,
+                beatsPerBar = settings.recordBeatsPerBar,
+                bpm = settings.recordBpm,
+                minNoteDivision = settings.recordMinNoteDivision,
+                snapEnabled = settings.recordSnapEnabled,
+                metronomeEnabled = settings.recordMetronomeEnabled
             )
         }
     }
@@ -317,7 +317,7 @@ class FreePlayViewModel @Inject constructor(
     fun setBeatsPerBar(beats: Int) {
         val clamped = beats.coerceIn(1, 16)
         _state.update { it.copy(beatsPerBar = clamped) }
-        viewModelScope.launch { settingsRepository.updateFreeplayBeatsPerBar(clamped) }
+        viewModelScope.launch { settingsRepository.updateRecordBeatsPerBar(clamped) }
     }
 
     fun setBarDivision(division: Int) {
@@ -328,20 +328,20 @@ class FreePlayViewModel @Inject constructor(
     fun setBpm(bpm: Float) {
         val clamped = bpm.coerceIn(MIN_BPM, MAX_BPM)
         _state.update { it.copy(bpm = clamped) }
-        viewModelScope.launch { settingsRepository.updateFreeplayBpm(clamped) }
+        viewModelScope.launch { settingsRepository.updateRecordBpm(clamped) }
     }
 
     fun setMinNoteDivision(division: Int) {
         val valid = listOf(4, 8, 16, 32)
         val clamped = valid.minByOrNull { abs(it - division) } ?: 16
         _state.update { it.copy(minNoteDivision = clamped) }
-        viewModelScope.launch { settingsRepository.updateFreeplayMinNoteDivision(clamped) }
+        viewModelScope.launch { settingsRepository.updateRecordMinNoteDivision(clamped) }
     }
 
     fun toggleSnap() {
         val newValue = !_state.value.snapEnabled
         _state.update { it.copy(snapEnabled = newValue) }
-        viewModelScope.launch { settingsRepository.updateFreeplaySnapEnabled(newValue) }
+        viewModelScope.launch { settingsRepository.updateRecordSnapEnabled(newValue) }
     }
 
     // region Voice management
@@ -394,7 +394,7 @@ class FreePlayViewModel @Inject constructor(
             val lastNoteEnd = s.playedNotes.mapNotNull { it.endTimeMs }.maxOrNull() ?: 0L
             val defaultEndBar = (ceil(lastNoteEnd.toDouble() / barMs).toInt() + 3).coerceAtLeast(3)
             if (nowBar > defaultEndBar) {
-                _snackbarMessage.tryEmit(appContext.getString(R.string.freeplay_start_bar_exceeds_end))
+                _snackbarMessage.tryEmit(appContext.getString(R.string.record_start_bar_exceeds_end))
                 return
             }
         }
@@ -409,7 +409,7 @@ class FreePlayViewModel @Inject constructor(
         // Unlock if tapping the already-locked bar
         if (locked != null && locked == nowBar) { _state.update { it.copy(loopEndBar = null) }; return }
         val effectiveStart = s.loopStartBar ?: 1
-        if (nowBar == effectiveStart) { _snackbarMessage.tryEmit(appContext.getString(R.string.freeplay_end_bar_mismatch)); return }
+        if (nowBar == effectiveStart) { _snackbarMessage.tryEmit(appContext.getString(R.string.record_end_bar_mismatch)); return }
         if (s.loopStartBar != null && nowBar < s.loopStartBar) {
             _state.update { it.copy(loopStartBar = nowBar, loopEndBar = s.loopStartBar) }; return
         }
@@ -572,7 +572,7 @@ class FreePlayViewModel @Inject constructor(
                     .coerceAtMost(MAX_MIDI)
 
                 _state.update { current ->
-                    FreePlayState(
+                    RecordState(
                         songPositionMs = maxMs + barMs.toLong(),
                         playedNotes = notes,
                         bpm = importedBpm,
@@ -666,7 +666,7 @@ class FreePlayViewModel @Inject constructor(
             val newSpeed = (current.fallSpeedPxPerSec * scaleFactor).coerceIn(MIN_FALL_SPEED, MAX_FALL_SPEED)
             current.copy(fallSpeedPxPerSec = newSpeed)
         }
-        viewModelScope.launch { settingsRepository.updateFreeplayFallSpeed(_state.value.fallSpeedPxPerSec) }
+        viewModelScope.launch { settingsRepository.updateRecordFallSpeed(_state.value.fallSpeedPxPerSec) }
     }
 
     fun onHorizontalScroll(deltaMidi: Float) {
@@ -1166,7 +1166,7 @@ class FreePlayViewModel @Inject constructor(
     fun toggleMetronome() {
         val newState = !_state.value.metronomeEnabled
         _state.update { it.copy(metronomeEnabled = newState) }
-        viewModelScope.launch { settingsRepository.updateFreeplayMetronomeEnabled(newState) }
+        viewModelScope.launch { settingsRepository.updateRecordMetronomeEnabled(newState) }
     }
 
     fun stopMetronome() {

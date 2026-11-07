@@ -22,12 +22,12 @@ class SettingsRepository(
 ) {
     companion object {
         private const val SILENCE_THRESHOLD_DB = "silence_threshold_db"
-        private const val FREEPLAY_FALL_SPEED = "freeplay_fall_speed"
-        private const val FREEPLAY_BEATS_PER_BAR = "freeplay_beats_per_bar"
-        private const val FREEPLAY_BPM = "freeplay_bpm"
-        private const val FREEPLAY_MIN_NOTE_DIVISION = "freeplay_min_note_division"
-        private const val FREEPLAY_SNAP_ENABLED = "freeplay_snap_enabled"
-        private const val FREEPLAY_METRONOME_ENABLED = "freeplay_metronome_enabled"
+        private const val RECORD_FALL_SPEED = "freeplay_fall_speed"
+        private const val RECORD_BEATS_PER_BAR = "freeplay_beats_per_bar"
+        private const val RECORD_BPM = "freeplay_bpm"
+        private const val RECORD_MIN_NOTE_DIVISION = "freeplay_min_note_division"
+        private const val RECORD_SNAP_ENABLED = "freeplay_snap_enabled"
+        private const val RECORD_METRONOME_ENABLED = "freeplay_metronome_enabled"
         private const val MELODY_METRONOME_ENABLED = "melody_metronome_enabled"
         private const val METRONOME_BPM = "metronome_bpm"
         private const val METRONOME_BEATS_PER_BAR = "metronome_beats_per_bar"
@@ -42,12 +42,12 @@ class SettingsRepository(
 
         private val PROFILE_SETTING_KEYS = setOf(
             SILENCE_THRESHOLD_DB,
-            FREEPLAY_FALL_SPEED,
-            FREEPLAY_BEATS_PER_BAR,
-            FREEPLAY_BPM,
-            FREEPLAY_MIN_NOTE_DIVISION,
-            FREEPLAY_SNAP_ENABLED,
-            FREEPLAY_METRONOME_ENABLED,
+            RECORD_FALL_SPEED,
+            RECORD_BEATS_PER_BAR,
+            RECORD_BPM,
+            RECORD_MIN_NOTE_DIVISION,
+            RECORD_SNAP_ENABLED,
+            RECORD_METRONOME_ENABLED,
             MELODY_METRONOME_ENABLED,
             METRONOME_BPM,
             METRONOME_BEATS_PER_BAR,
@@ -77,12 +77,12 @@ class SettingsRepository(
 
     private fun Preferences.toSettings(profileId: String) = AppSettings(
         silenceThresholdDb = readFloat(profileId, SILENCE_THRESHOLD_DB, -45f).coerceIn(-65f, -25f),
-        freeplayFallSpeed = readFloat(profileId, FREEPLAY_FALL_SPEED, 75f),
-        freeplayBeatsPerBar = readInt(profileId, FREEPLAY_BEATS_PER_BAR, 4),
-        freeplayBpm = readFloat(profileId, FREEPLAY_BPM, 120f),
-        freeplayMinNoteDivision = readInt(profileId, FREEPLAY_MIN_NOTE_DIVISION, 16),
-        freeplaySnapEnabled = readBoolean(profileId, FREEPLAY_SNAP_ENABLED, true),
-        freeplayMetronomeEnabled = readBoolean(profileId, FREEPLAY_METRONOME_ENABLED, true),
+        recordFallSpeed = readFloat(profileId, RECORD_FALL_SPEED, 75f),
+        recordBeatsPerBar = readInt(profileId, RECORD_BEATS_PER_BAR, 4),
+        recordBpm = readFloat(profileId, RECORD_BPM, 120f),
+        recordMinNoteDivision = readInt(profileId, RECORD_MIN_NOTE_DIVISION, 16),
+        recordSnapEnabled = readBoolean(profileId, RECORD_SNAP_ENABLED, true),
+        recordMetronomeEnabled = readBoolean(profileId, RECORD_METRONOME_ENABLED, true),
         melodyMetronomeEnabled = readBoolean(profileId, MELODY_METRONOME_ENABLED, true),
         metronomeBpm = readInt(profileId, METRONOME_BPM, 100),
         metronomeBeatsPerBar = readInt(profileId, METRONOME_BEATS_PER_BAR, 4),
@@ -111,17 +111,17 @@ class SettingsRepository(
 
     suspend fun updateSilenceThreshold(db: Float) = setFloat(SILENCE_THRESHOLD_DB, db)
 
-    suspend fun updateFreeplayFallSpeed(speed: Float) = setFloat(FREEPLAY_FALL_SPEED, speed)
+    suspend fun updateRecordFallSpeed(speed: Float) = setFloat(RECORD_FALL_SPEED, speed)
 
-    suspend fun updateFreeplayBeatsPerBar(beats: Int) = setInt(FREEPLAY_BEATS_PER_BAR, beats)
+    suspend fun updateRecordBeatsPerBar(beats: Int) = setInt(RECORD_BEATS_PER_BAR, beats)
 
-    suspend fun updateFreeplayBpm(bpm: Float) = setFloat(FREEPLAY_BPM, bpm)
+    suspend fun updateRecordBpm(bpm: Float) = setFloat(RECORD_BPM, bpm)
 
-    suspend fun updateFreeplayMinNoteDivision(division: Int) = setInt(FREEPLAY_MIN_NOTE_DIVISION, division)
+    suspend fun updateRecordMinNoteDivision(division: Int) = setInt(RECORD_MIN_NOTE_DIVISION, division)
 
-    suspend fun updateFreeplaySnapEnabled(enabled: Boolean) = setBoolean(FREEPLAY_SNAP_ENABLED, enabled)
+    suspend fun updateRecordSnapEnabled(enabled: Boolean) = setBoolean(RECORD_SNAP_ENABLED, enabled)
 
-    suspend fun updateFreeplayMetronomeEnabled(enabled: Boolean) = setBoolean(FREEPLAY_METRONOME_ENABLED, enabled)
+    suspend fun updateRecordMetronomeEnabled(enabled: Boolean) = setBoolean(RECORD_METRONOME_ENABLED, enabled)
 
     suspend fun updateMelodyMetronomeEnabled(enabled: Boolean) = setBoolean(MELODY_METRONOME_ENABLED, enabled)
 
@@ -203,12 +203,12 @@ class SettingsRepository(
 
 data class AppSettings(
     val silenceThresholdDb: Float = -45f,
-    val freeplayFallSpeed: Float = 75f,
-    val freeplayBeatsPerBar: Int = 4,
-    val freeplayBpm: Float = 120f,
-    val freeplayMinNoteDivision: Int = 16,
-    val freeplaySnapEnabled: Boolean = true,
-    val freeplayMetronomeEnabled: Boolean = true,
+    val recordFallSpeed: Float = 75f,
+    val recordBeatsPerBar: Int = 4,
+    val recordBpm: Float = 120f,
+    val recordMinNoteDivision: Int = 16,
+    val recordSnapEnabled: Boolean = true,
+    val recordMetronomeEnabled: Boolean = true,
     val melodyMetronomeEnabled: Boolean = true,
     val metronomeBpm: Int = 100,
     val metronomeBeatsPerBar: Int = 4,

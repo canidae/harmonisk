@@ -1,6 +1,6 @@
 package net.exent.harmonisk.midi
 
-import net.exent.harmonisk.ui.freeplay.PlayedNote
+import net.exent.harmonisk.ui.record.PlayedNote
 import java.io.ByteArrayOutputStream
 
 class MidiWriter {

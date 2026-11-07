@@ -1,4 +1,4 @@
-package net.exent.harmonisk.ui.freeplay
+package net.exent.harmonisk.ui.record
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
