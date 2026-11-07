@@ -274,9 +274,8 @@
     <string name="adventure_choose_song">Velg en sang</string>
     <string name="adventure_song_complete">Sang ferdig</string>
     <string name="adventure_castle_reached">Slottet er nådd</string>
-    <string name="adventure_legend_song">Sang</string>
-    <string name="adventure_legend_stickers">Klistremerker</string>
-    <string name="adventure_legend_whack">Tonedengeren</string>
+    <string name="adventure_score">Poeng</string>
+    <string name="adventure_reward_stickers">Klistremerker</string>
 
     <string name="whack_title">Tonedengeren</string>
     <string name="whack_start">Start</string>

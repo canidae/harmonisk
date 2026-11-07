@@ -159,7 +159,7 @@ fun AdventureScreen(
             state = state,
             instrument = currentPlayerInstrument,
             onFinished = viewModel::finishWhack,
-            onBack = { viewModel.finishWhack(0) }
+            onBack = viewModel::abandonWhack
         )
         return
     }

@@ -144,9 +144,6 @@ fun AdventureGameScreen(
                     )
                 }
             }
-            AdventureLegend(
-                Modifier.padding(start = 12.dp, top = 2.dp, bottom = 2.dp)
-            )
             Box(
                 Modifier
                     .weight(1f)
@@ -214,7 +211,8 @@ private fun CurrentTurnCard(
         AdventureTurnPhase.DICE, AdventureTurnPhase.DELIVERING, AdventureTurnPhase.MOVING -> ""
         AdventureTurnPhase.EVENT -> when {
             state.finisherId != null -> stringResource(R.string.adventure_castle_reached)
-            state.reward is AdventureReward.Stickers -> stringResource(R.string.adventure_legend_stickers)
+            state.turnScore != null -> stringResource(R.string.adventure_score)
+            state.reward is AdventureReward.Stickers -> stringResource(R.string.adventure_reward_stickers)
             state.reward is AdventureReward.GoAgain -> stringResource(R.string.adventure_reward_go_again_short)
             else -> stringResource(R.string.adventure_song_complete)
         }
@@ -325,6 +323,7 @@ private fun RewardOverlay(
     onStored: () -> Unit
 ) {
     val reward = state.reward
+    val score = state.turnScore
     val levelUp = state.levelUp
     val emojis = when (reward) {
         is AdventureReward.Stickers -> reward.stickers.map { it.emoji }
@@ -333,15 +332,15 @@ private fun RewardOverlay(
     var center by remember { mutableStateOf(Offset.Unspecified) }
     var flying by remember { mutableStateOf(false) }
     val fly = remember { Animatable(0f) }
-    LaunchedEffect(reward, levelUp) {
+    LaunchedEffect(reward, score, levelUp) {
         flying = false
         fly.snapTo(0f)
-        if (reward == null && levelUp == null) return@LaunchedEffect
+        if (reward == null && score == null && levelUp == null) return@LaunchedEffect
         delay(AdventureTiming.REWARD_MS)
-        if (emojis.isEmpty()) return@LaunchedEffect
+        if (emojis.isEmpty() && score == null) return@LaunchedEffect
         flying = true
         fly.animateTo(1f, tween(AdventureTiming.REWARD_FLY_MS.toInt(), easing = FastOutSlowInEasing))
-        onStored()
+        if (emojis.isNotEmpty()) onStored()
     }
     Box(
         Modifier
@@ -349,28 +348,52 @@ private fun RewardOverlay(
             .onGloballyPositioned { center = it.boundsInRoot().center }
     ) {
         AnimatedVisibility(
-            visible = (reward != null || levelUp != null) && !flying,
+            visible = (reward != null || score != null || levelUp != null) && !flying,
             enter = fadeIn() + scaleIn(initialScale = 0.85f),
             exit = fadeOut() + scaleOut(targetScale = 0.9f),
             modifier = Modifier.align(Alignment.Center)
         ) {
-            RewardCard(reward = reward, levelUp = levelUp)
+            RewardCard(reward = reward, score = score, levelUp = levelUp)
         }
-        if (flying && emojis.isNotEmpty() && center.isSpecified && avatarAnchor.isSpecified) {
+        if (flying && center.isSpecified && avatarAnchor.isSpecified) {
             val from = center - origin
             val to = avatarAnchor - origin
             val progress = fly.value
-            emojis.forEachIndexed { index, emoji ->
-                val spread = (index - (emojis.size - 1) / 2f) * 34f * (1f - progress)
-                val x = from.x + (to.x - from.x) * progress + spread
+            if (emojis.isNotEmpty()) {
+                emojis.forEachIndexed { index, emoji ->
+                    val spread = (index - (emojis.size - 1) / 2f) * 34f * (1f - progress)
+                    val x = from.x + (to.x - from.x) * progress + spread
+                    val y = from.y + (to.y - from.y) * progress - sin(progress * PI).toFloat() * 70f
+                    Text(
+                        emoji,
+                        fontSize = 30.sp,
+                        modifier = Modifier
+                            .offset {
+                                IntOffset(
+                                    x.roundToInt() - 15.dp.roundToPx(),
+                                    y.roundToInt() - 15.dp.roundToPx()
+                                )
+                            }
+                            .graphicsLayer {
+                                val scale = 1f - 0.5f * progress
+                                scaleX = scale
+                                scaleY = scale
+                                alpha = 1f - progress * progress
+                            }
+                    )
+                }
+            } else if (score != null) {
+                val x = from.x + (to.x - from.x) * progress
                 val y = from.y + (to.y - from.y) * progress - sin(progress * PI).toFloat() * 70f
                 Text(
-                    emoji,
+                    text = "+$score",
                     fontSize = 30.sp,
+                    fontWeight = FontWeight.Black,
+                    color = StorybookGold,
                     modifier = Modifier
                         .offset {
                             IntOffset(
-                                x.roundToInt() - 15.dp.roundToPx(),
+                                x.roundToInt() - 30.dp.roundToPx(),
                                 y.roundToInt() - 15.dp.roundToPx()
                             )
                         }
@@ -387,13 +410,31 @@ private fun RewardOverlay(
 }
 
 @Composable
-private fun RewardCard(reward: AdventureReward?, levelUp: Int?) {
+private fun RewardCard(reward: AdventureReward?, score: Int?, levelUp: Int?) {
     StorybookCard(
         modifier = Modifier
             .widthIn(max = 420.dp)
             .padding(horizontal = 16.dp)
     ) {
-        ClapBurst(Modifier.align(Alignment.CenterHorizontally))
+        if (score != null) {
+            ClapBurst(Modifier.align(Alignment.CenterHorizontally))
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.adventure_score),
+                style = MaterialTheme.typography.labelMedium,
+                color = StorybookGold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                text = "$score",
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Black,
+                color = StorybookGold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,

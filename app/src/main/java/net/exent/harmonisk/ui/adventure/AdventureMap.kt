@@ -14,7 +14,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -38,7 +37,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -47,7 +45,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import net.exent.harmonisk.R
 import net.exent.harmonisk.ui.whack.WhackPressIcon
 import kotlin.math.PI
 import kotlin.math.abs
@@ -472,43 +469,6 @@ fun AdventureMap(
                 }
             }
         }
-    }
-}
-
-@Composable
-fun AdventureLegend(modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(50))
-            .background(Color(0xCC1B1733))
-            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(50))
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        LegendItem(FIELD_SONG, stringResource(R.string.adventure_legend_song))
-        LegendItem(FIELD_STICKERS, stringResource(R.string.adventure_legend_stickers))
-        LegendItem(FIELD_WHACK, stringResource(R.string.adventure_legend_whack))
-        LegendItem(FIELD_GO_AGAIN, stringResource(R.string.adventure_reward_go_again_short))
-        Text("🏰", fontSize = 12.sp)
-    }
-}
-
-@Composable
-private fun LegendItem(color: Color, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(color)
-        )
-        Spacer(Modifier.width(3.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.8f)
-        )
     }
 }
 

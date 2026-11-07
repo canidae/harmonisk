@@ -27,6 +27,7 @@ import net.exent.harmonisk.data.SettingsRepository
 import net.exent.harmonisk.music.Instrument
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 enum class AdventureStep { PLAYERS, SONGS, MAP, PLAY, WHACK, RESULTS }
@@ -50,6 +51,7 @@ data class AdventureState(
     val reward: AdventureReward? = null,
     val finisherId: String? = null,
     val levelUp: Int? = null,
+    val turnScore: Int? = null,
     val loading: Boolean = false,
     val error: Int? = null,
     val turnId: Long = 0
@@ -196,6 +198,7 @@ class AdventureViewModel @Inject constructor(
                 reward = null,
                 finisherId = null,
                 levelUp = null,
+                turnScore = null,
                 loading = false,
                 error = null
             )
@@ -361,6 +364,7 @@ class AdventureViewModel @Inject constructor(
                 spinDurationMs = AdventureTiming.SPIN_MS,
                 reward = null,
                 levelUp = null,
+                turnScore = null,
                 loading = false
             )
         }
@@ -429,20 +433,36 @@ class AdventureViewModel @Inject constructor(
         if (snapshot.step != AdventureStep.WHACK) return
         val index = snapshot.currentPlayerIndex
         val player = snapshot.players.getOrNull(index) ?: return
-        val rewarded = player.withBonus(points.coerceAtLeast(0))
+        val gained = points.coerceAtLeast(0)
+        val rewarded = player.withBonus(gained)
         val players = snapshot.players.toMutableList().also { list -> list[index] = rewarded }
-        val next = nextPlayerIndex(index, players.size)
         _state.update {
             it.copy(
                 step = AdventureStep.MAP,
                 players = players,
-                currentPlayerIndex = next,
                 reward = null,
                 currentSong = null,
-                phase = AdventureTurnPhase.ROLLING
+                phase = AdventureTurnPhase.EVENT,
+                turnScore = gained,
+                levelUp = null,
+                loading = false
             )
         }
-        beginTurn()
+        advanceAfterScore(index, players.size)
+    }
+
+    fun abandonWhack() {
+        if (_state.value.step != AdventureStep.WHACK) return
+        advanceToNextPlayer()
+    }
+
+    private fun advanceAfterScore(playerIndex: Int, playerCount: Int) {
+        resultJob?.cancel()
+        resultJob = viewModelScope.launch {
+            delay(AdventureTiming.REWARD_MS + AdventureTiming.REWARD_FLY_MS + 250L)
+            _state.update { it.copy(currentPlayerIndex = nextPlayerIndex(playerIndex, playerCount)) }
+            beginTurn()
+        }
     }
 
     fun restart() {
@@ -468,6 +488,7 @@ class AdventureViewModel @Inject constructor(
                 reward = null,
                 finisherId = null,
                 levelUp = null,
+                turnScore = null,
                 loading = false
             )
         }
@@ -486,7 +507,6 @@ class AdventureViewModel @Inject constructor(
         if (index < 0) return
         val played = snapshot.players[index].withScore(result.rawScore)
         session.consumeResult()
-        resultJob?.cancel()
         _state.update {
             it.copy(
                 step = AdventureStep.MAP,
@@ -494,15 +514,11 @@ class AdventureViewModel @Inject constructor(
                 phase = AdventureTurnPhase.EVENT,
                 reward = null,
                 levelUp = result.newlyUnlockedLevel,
+                turnScore = result.rawScore.roundToInt(),
                 currentSong = null,
                 loading = false
             )
         }
-        resultJob = viewModelScope.launch {
-            delay(900)
-            val next = nextPlayerIndex(index, snapshot.players.size)
-            _state.update { it.copy(currentPlayerIndex = next, currentSong = null, levelUp = null) }
-            beginTurn()
-        }
+        advanceAfterScore(index, snapshot.players.size)
     }
 }
