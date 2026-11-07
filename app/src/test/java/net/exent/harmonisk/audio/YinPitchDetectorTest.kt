@@ -77,26 +77,35 @@ class YinPitchDetectorTest {
         assertFixture("/audio/violin_g.wav", 196.0)
     }
 
-    private fun assertFixture(resource: String, expected: Double) {
+    @Test
+    fun keepsTheFundamentalOnSpeakerRecordedViolin() {
+        assertFixture("/audio/yin_octave_down.wav", 369.99, 15.0, start = 0)
+    }
+
+    private fun assertFixture(
+        resource: String,
+        expected: Double,
+        toleranceCents: Double = 5.0,
+        start: Int = SOURCE_RATE
+    ) {
         val audio = WavTestAudio.load(resource)
-        val start = SOURCE_RATE
         val window = audio.copyOfRange(start, start + ANALYSIS_WINDOW)
         val resampled = FloatArray(PitchResampler.TARGET_SAMPLES)
         PitchResampler.resample(window, resampled)
-        assertFrequency(expected, resampled)
+        assertFrequency(expected, resampled, toleranceCents)
     }
 
     private fun assertTone(frequency: Double, harmonics: DoubleArray) {
         assertFrequency(frequency, tone(frequency, harmonics))
     }
 
-    private fun assertFrequency(expected: Double, samples: FloatArray) {
+    private fun assertFrequency(expected: Double, samples: FloatArray, toleranceCents: Double = 5.0) {
         val result = detector.detect(samples)
         val cents = if (result.frequency <= 0f) Double.MAX_VALUE else
             1200.0 * ln(result.frequency / expected) / ln(2.0)
         assertTrue(
             "Expected ${"%.2f".format(expected)} Hz, got ${"%.2f".format(result.frequency)} Hz (${"%.1f".format(cents)} cents)",
-            abs(cents) < 5.0
+            abs(cents) < toleranceCents
         )
     }
 

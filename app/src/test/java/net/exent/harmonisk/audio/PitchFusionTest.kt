@@ -48,6 +48,17 @@ class PitchFusionTest {
     }
 
     @Test
+    fun ignoresLowerYinWithoutSubharmonicEvidence() {
+        val result = PitchFusion.combine(
+            crepe = PitchDetectionResult(438f, 0.9f),
+            corrected = PitchDetectionResult(438f, 0.9f),
+            yin = PitchDetectionResult(219f, 0.98f),
+            trustLowerYin = false
+        )
+        assertEquals(438f, result.frequency, 0.01f)
+    }
+
+    @Test
     fun keepsCrepePrecisionWhenDetectorsAgree() {
         val result = PitchFusion.combine(
             crepe = PitchDetectionResult(440f, 0.9f),
