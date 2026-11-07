@@ -106,7 +106,6 @@ These are not part of the APK/AAB and are never distributed.
 | KSP | 2.3.9 | Apache-2.0 |
 | Hilt Gradle plugin | 2.59.2 | Apache-2.0 |
 | JUnit | 4.13.2 | EPL-1.0 |
-| MockK | 1.14.11 | Apache-2.0 |
 
 JUnit 4 is licensed under the Eclipse Public License 1.0, which is not
 compatible with the AGPL-3.0. It is used for unit tests only and is not linked
