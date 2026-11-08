@@ -40,12 +40,13 @@ object AdventureTiming {
     const val REWARD_FLY_MS = 700L
     const val REWARD_TOTAL_MS = REWARD_MS + REWARD_FLY_MS + 250L
     const val CASTLE_RESULT_MS = 900L
-    const val FAERIE_ENTER_MS = 900L
-    const val FAERIE_POP_MS = 260L
-    const val FAERIE_HOLD_MS = 1_000L
-    const val FAERIE_FLY_MS = 800L
-    const val FAERIE_EXIT_MS = 700L
-    const val FAERIE_TIMEOUT_MS = 10_000L
+    const val FAERIE_ENTER_MS = 2_000L
+    const val FAERIE_APPEAR_HOLD_MS = 1_300L
+    const val FAERIE_POP_MS = 320L
+    const val FAERIE_FLY_MS = 1_500L
+    const val FAERIE_BLESS_HOLD_MS = 600L
+    const val FAERIE_EXIT_MS = 1_300L
+    const val FAERIE_TIMEOUT_MS = 15_000L
 
     fun walkMs(steps: Int): Long =
         (WALK_MS + (steps - 1).coerceAtLeast(0) * STEP_MS).coerceAtMost(MAX_WALK_MS)
