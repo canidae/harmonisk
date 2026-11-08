@@ -217,8 +217,9 @@ class AdventureViewModel @Inject constructor(
                 error = null
             )
         }
-        cues.play(MidiCues.TurnChime)
     }
+
+    fun playTurnChime() = cues.play(MidiCues.TurnChime)
 
     fun rollDice() {
         val snapshot = _state.value
@@ -422,7 +423,6 @@ class AdventureViewModel @Inject constructor(
                 loading = false
             )
         }
-        if (!goAgain) cues.play(MidiCues.TurnChime)
     }
 
     fun playCurrentSong() {

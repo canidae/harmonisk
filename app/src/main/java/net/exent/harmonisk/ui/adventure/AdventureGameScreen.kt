@@ -56,6 +56,7 @@ fun AdventureGameScreen(
     onPull: () -> Unit,
     onRoll: () -> Unit,
     onBack: () -> Unit,
+    onTurnChime: () -> Unit,
     onFaerieFinished: () -> Unit = {}
 ) {
     KeepScreenOn()
@@ -68,7 +69,9 @@ fun AdventureGameScreen(
     LaunchedEffect(state.phase, state.currentPlayerIndex) {
         if (state.phase == AdventureTurnPhase.ROLLING && !state.goAgain) {
             turnStage = TurnIntroStage.INTRO
-            delay(AdventureTiming.TURN_FLASH_MS)
+            delay(INTRO_SOUND_DELAY_MS)
+            onTurnChime()
+            delay(AdventureTiming.TURN_FLASH_MS - INTRO_SOUND_DELAY_MS)
             turnStage = TurnIntroStage.PANEL
         } else {
             turnStage = TurnIntroStage.PANEL
@@ -608,6 +611,8 @@ private fun CastleCelebration(player: AdventurePlayer) {
         }
     }
 }
+
+private const val INTRO_SOUND_DELAY_MS = 120L
 
 private class TokenPosition {
     var position: Offset = Offset.Unspecified
