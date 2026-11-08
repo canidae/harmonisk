@@ -17,6 +17,7 @@ import net.exent.harmonisk.ui.metronome.MetronomeScreen
 import net.exent.harmonisk.ui.settings.SettingsScreen
 import net.exent.harmonisk.ui.tuner.TunerScreen
 import net.exent.harmonisk.ui.adventure.AdventureScreen
+import net.exent.harmonisk.ui.soundtest.SoundTestScreen
 import net.exent.harmonisk.ui.whack.WhackScreen
 
 @Composable
@@ -44,8 +45,12 @@ fun NavGraph() {
             GamesScreen(
                 onBack = { navController.popBackStack() },
                 onAdventure = { navController.navigate(NavRoutes.ADVENTURE) },
-                onWhack = { navController.navigate(NavRoutes.WHACK) }
+                onWhack = { navController.navigate(NavRoutes.WHACK) },
+                onSoundTest = { navController.navigate(NavRoutes.SOUND_TEST) }
             )
+        }
+        composable(NavRoutes.SOUND_TEST) {
+            SoundTestScreen(onBack = { navController.popBackStack() })
         }
         composable(NavRoutes.WHACK) {
             WhackScreen(onBack = { navController.popBackStack() })
