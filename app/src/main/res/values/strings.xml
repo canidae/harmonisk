@@ -265,6 +265,7 @@
     <string name="adventure_score">Score</string>
     <string name="adventure_reward_stickers">Stickers</string>
     <string name="adventure_faerie_blessing">A faerie grants %2$d points to %1$s</string>
+    <string name="adventure_faerie_appears">A musical faerie appears</string>
 
     <string name="whack_title">Whack a Tone</string>
     <string name="whack_hint">Play the note hiding under the emoji. The belt colour shows the finger: blue open string, green first, yellow second, orange third, red fourth. Answer faster to score more points.</string>

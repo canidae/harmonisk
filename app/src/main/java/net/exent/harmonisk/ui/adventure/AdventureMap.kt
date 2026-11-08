@@ -362,6 +362,15 @@ fun AdventureMap(
             ),
             label = "river_flow_value"
         )
+        val ringPulse by rememberInfiniteTransition(label = "faerie_ring").animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(900, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "faerie_ring_value"
+        )
         val measurer = rememberTextMeasurer()
         val animalLayouts = remember(spec) {
             spec.animals.map { measurer.measure(it.emoji, TextStyle(fontSize = 20.sp)) }
@@ -416,6 +425,23 @@ fun AdventureMap(
                             radius = 30.dp.toPx(),
                             center = pointsPx.last(),
                             style = Stroke(width = 3.dp.toPx())
+                        )
+                    }
+                    val focused = focusPlayerId?.let { id -> players.firstOrNull { it.profileId == id } }
+                    val focusPoint = focused?.let { pointsPx.getOrNull(it.position.coerceIn(0, pointsPx.lastIndex)) }
+                    if (focusPoint != null) {
+                        val ringCenter = focusPoint - Offset(0f, tokenSize.toPx() * 0.5f)
+                        drawCircle(
+                            color = StorybookGold.copy(alpha = 0.55f - 0.35f * ringPulse),
+                            radius = tokenSize.toPx() * (0.72f + 0.22f * ringPulse),
+                            center = ringCenter,
+                            style = Stroke(width = 2.5.dp.toPx())
+                        )
+                        drawCircle(
+                            color = StorybookGold.copy(alpha = 0.18f * (1f - ringPulse)),
+                            radius = tokenSize.toPx() * (0.9f + 0.4f * ringPulse),
+                            center = ringCenter,
+                            style = Stroke(width = 6.dp.toPx())
                         )
                     }
                 }

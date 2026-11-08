@@ -1,5 +1,6 @@
 package net.exent.harmonisk.ui.adventure
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -8,23 +9,36 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.isSpecified
@@ -73,25 +87,29 @@ fun FaerieOverlay(
     DisposableEffect(Unit) {
         onDispose { fanfare.release() }
     }
+    var blessed by remember { mutableStateOf(false) }
     LaunchedEffect(faerie) {
         enter.snapTo(0f)
         pop.snapTo(0f)
         fly.snapTo(0f)
         exit.snapTo(0f)
+        blessed = false
         fanfare.play()
         enter.animateTo(
             1f,
             tween(AdventureTiming.FAERIE_ENTER_MS.toInt(), easing = FastOutSlowInEasing)
         )
+        delay(AdventureTiming.FAERIE_APPEAR_HOLD_MS)
+        blessed = true
         pop.animateTo(
             1f,
             tween(AdventureTiming.FAERIE_POP_MS.toInt(), easing = FastOutSlowInEasing)
         )
-        delay(AdventureTiming.FAERIE_HOLD_MS)
         fly.animateTo(
             1f,
             tween(AdventureTiming.FAERIE_FLY_MS.toInt(), easing = FastOutSlowInEasing)
         )
+        delay(AdventureTiming.FAERIE_BLESS_HOLD_MS)
         exit.animateTo(
             1f,
             tween(AdventureTiming.FAERIE_EXIT_MS.toInt(), easing = FastOutSlowInEasing)
@@ -154,6 +172,42 @@ fun FaerieOverlay(
             drawFaerie(faeriePosition, faerieScale, flap, time)
             if (flyProgress > 0.7f) {
                 drawArrivalBurst(target, (flyProgress - 0.7f) / 0.3f)
+            }
+        }
+        val bannerAlpha = if (exit.value > 0f) (1f - exit.value).coerceIn(0f, 1f) else 1f
+        Box(
+            modifier = Modifier
+                .offset {
+                    IntOffset(
+                        (center.x - 160.dp.toPx()).roundToInt(),
+                        (center.y - 230.dp.toPx()).roundToInt()
+                    )
+                }
+                .width(320.dp)
+                .graphicsLayer { alpha = bannerAlpha }
+        ) {
+            AnimatedContent(
+                targetState = blessed,
+                transitionSpec = { fadeIn(tween(260)) togetherWith fadeOut(tween(200)) },
+                label = "faerie_banner"
+            ) { blessing ->
+                Text(
+                    text = if (blessing) {
+                        stringResource(R.string.adventure_faerie_blessing, player.name, faerie.points)
+                    } else {
+                        stringResource(R.string.adventure_faerie_appears)
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color(0xE61B1733))
+                        .border(1.dp, StorybookGold.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                )
             }
         }
         if (pop.value > 0f && flyProgress < 1f) {
