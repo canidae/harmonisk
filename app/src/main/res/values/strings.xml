@@ -272,8 +272,6 @@
     <string name="whack_time_up">Time’s up!</string>
     <string name="whack_points">Points</string>
     <string name="whack_duration_three_minutes">Three minutes</string>
-    <string name="whack_duration_one_minute">One minute</string>
-    <string name="whack_continue">Continue</string>
 </resources>
 
 

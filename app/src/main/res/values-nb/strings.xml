@@ -272,6 +272,4 @@
     <string name="whack_time_up">Tiden er ute!</string>
     <string name="whack_points">Poeng</string>
     <string name="whack_duration_three_minutes">Tre minutter</string>
-    <string name="whack_duration_one_minute">Ett minutt</string>
-    <string name="whack_continue">Fortsett</string>
 </resources>
