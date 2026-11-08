@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.exent.harmonisk.R
+import net.exent.harmonisk.ui.celebration.CelebrationLevel
+import net.exent.harmonisk.ui.celebration.ScoreCelebrationOverlay
 import net.exent.harmonisk.ui.components.KeepScreenOn
 import kotlin.math.PI
 import kotlin.math.roundToInt
@@ -211,6 +213,9 @@ fun AdventureGameScreen(
             origin = origin,
             onFinished = onFaerieFinished
         )
+        state.players.firstOrNull { it.profileId == state.finisherId }?.let {
+            CastleCelebration(it)
+        }
     }
 }
 
@@ -561,6 +566,50 @@ private fun RewardCard(reward: AdventureReward?, score: Int?, levelUp: Int?) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
+        }
+    }
+}
+
+@Composable
+private fun CastleCelebration(player: AdventurePlayer) {
+    val fanfare = remember { CastleFanfarePlayer() }
+    DisposableEffect(Unit) {
+        onDispose { fanfare.release() }
+    }
+    LaunchedEffect(player.profileId) {
+        fanfare.play()
+    }
+    ScoreCelebrationOverlay(
+        celebrationLevel = CelebrationLevel.EXTREME,
+        score = 100f,
+        level = 1,
+        modifier = Modifier.fillMaxSize()
+    ) { pulse ->
+        Box(
+            Modifier.fillMaxSize().then(pulse),
+            contentAlignment = Alignment.Center
+        ) {
+            StorybookCard(
+                modifier = Modifier
+                    .widthIn(max = 360.dp)
+                    .padding(horizontal = 24.dp)
+            ) {
+                Text(
+                    text = "🏰",
+                    fontSize = 64.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = stringResource(R.string.adventure_castle_win, player.name),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black,
+                    color = StorybookGold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }
