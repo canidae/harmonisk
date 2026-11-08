@@ -38,7 +38,7 @@ object AdventureTiming {
     const val REWARD_MS = 2900L
     const val REWARD_FLY_MS = 700L
     const val REWARD_TOTAL_MS = REWARD_MS + REWARD_FLY_MS + 250L
-    const val CASTLE_RESULT_MS = 900L
+    const val CASTLE_CELEBRATION_MS = 4_400L
     const val FAERIE_ENTER_MS = 2_000L
     const val FAERIE_APPEAR_HOLD_MS = 1_300L
     const val FAERIE_POP_MS = 320L

@@ -7,6 +7,16 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.random.Random
 
+private fun brassSample(time: Float, frequency: Float): Float {
+    val envelope = min(1f, time / 0.018f) * exp(-2.2f * time)
+    val phase = 2.0 * PI * frequency * time
+    return (
+        sin(phase) * 0.58 +
+            sin(phase * 2.0) * 0.25 +
+            sin(phase * 3.0) * 0.12
+        ).toFloat() * envelope
+}
+
 class AdventureFanfarePlayer : SynthesizedPlayer(3.3f) {
     private val random = Random(11)
 
@@ -31,27 +41,47 @@ class AdventureFanfarePlayer : SynthesizedPlayer(3.3f) {
             val local = time - fanfareStart
             melody.forEach { (frequency, start) ->
                 if (local >= start && local < start + 0.23f) {
-                    sample += brass(local - start, frequency) * 0.34f
+                    sample += brassSample(local - start, frequency) * 0.34f
                 }
             }
             if (local >= 0.9f) {
                 val chord = listOf(523.25f, 659.25f, 783.99f, 1046.50f)
                 chord.forEach { frequency ->
-                    sample += brass(local - 0.9f, frequency) * 0.16f
+                    sample += brassSample(local - 0.9f, frequency) * 0.16f
                 }
             }
         }
         return sample
     }
+}
 
-    private fun brass(time: Float, frequency: Float): Float {
-        val envelope = min(1f, time / 0.018f) * exp(-2.2f * time)
-        val phase = 2.0 * PI * frequency * time
-        return (
-            sin(phase) * 0.58 +
-                sin(phase * 2.0) * 0.25 +
-                sin(phase * 3.0) * 0.12
-            ).toFloat() * envelope
+class CastleFanfarePlayer : SynthesizedPlayer(1.9f, 0.7f) {
+    private val random = Random(7)
+    private val melody = listOf(
+        523.25f to 0f,
+        659.25f to 0.13f,
+        783.99f to 0.26f,
+        1046.50f to 0.39f
+    )
+    private val chord = listOf(523.25f, 659.25f, 783.99f, 1046.50f)
+
+    override fun sample(time: Float): Float {
+        var sample = 0f
+        if (time < 0.75f) {
+            val noise = random.nextFloat() * 2f - 1f
+            val pulse = 0.45f + 0.55f * ((sin(2.0 * PI * 22.0 * time) + 1.0) / 2.0).toFloat()
+            val envelope = 1f - time / 0.75f * 0.6f
+            sample += noise * pulse * envelope * 0.32f
+        }
+        melody.forEach { (frequency, start) ->
+            if (time >= start) sample += brassSample(time - start, frequency) * 0.3f
+        }
+        if (time >= 0.55f) {
+            chord.forEach { frequency ->
+                sample += brassSample(time - 0.55f, frequency) * 0.14f
+            }
+        }
+        return sample
     }
 }
 

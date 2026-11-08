@@ -262,7 +262,9 @@
     <string name="adventure_choose_song">Velg en sang</string>
     <string name="adventure_song_complete">Sang ferdig</string>
     <string name="adventure_castle_reached">Slottet er nådd</string>
+    <string name="adventure_castle_win">%1$s nådde slottet</string>
     <string name="adventure_score">Poeng</string>
+    <string name="adventure_bonus">Bonus</string>
     <string name="adventure_reward_stickers">Klistremerker</string>
     <string name="adventure_faerie_blessing">En fe gir %2$d poeng til %1$s</string>
     <string name="adventure_faerie_appears">En musikalsk fe dukker opp</string>

@@ -255,7 +255,7 @@ class AdventureViewModel @Inject constructor(
             }
             resultJob?.cancel()
             resultJob = viewModelScope.launch {
-                delay(AdventureTiming.CASTLE_RESULT_MS)
+                delay(AdventureTiming.CASTLE_CELEBRATION_MS)
                 _state.update { it.copy(step = AdventureStep.RESULTS) }
             }
             return

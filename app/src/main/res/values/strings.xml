@@ -262,7 +262,9 @@
     <string name="adventure_choose_song">Choose a song</string>
     <string name="adventure_song_complete">Song complete</string>
     <string name="adventure_castle_reached">Castle reached</string>
+    <string name="adventure_castle_win">%1$s reached the castle</string>
     <string name="adventure_score">Score</string>
+    <string name="adventure_bonus">Bonus</string>
     <string name="adventure_reward_stickers">Stickers</string>
     <string name="adventure_faerie_blessing">A faerie grants %2$d points to %1$s</string>
     <string name="adventure_faerie_appears">A musical faerie appears</string>
