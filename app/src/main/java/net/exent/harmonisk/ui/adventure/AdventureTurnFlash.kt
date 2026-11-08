@@ -7,8 +7,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,7 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
 import net.exent.harmonisk.R
 import kotlin.math.roundToInt
 
@@ -72,13 +69,6 @@ fun TurnFlashOverlay(
                 textAlign = TextAlign.Center,
                 maxLines = 2
             )
-            if (state.goAgain) {
-                Spacer(Modifier.height(10.dp))
-                AdventurePill(
-                    text = stringResource(R.string.adventure_go_again),
-                    color = StorybookGold
-                )
-            }
         }
     }
 }
