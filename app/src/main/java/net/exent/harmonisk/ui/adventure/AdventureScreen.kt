@@ -77,7 +77,7 @@ fun AdventureScreen(
     }
 
     LaunchedEffect(state.step) {
-        if (state.step != AdventureStep.PLAY) {
+        if (state.step != AdventureStep.PLAY && playingLoaded) {
             melodyViewModel.stop()
             playingLoaded = false
         }
@@ -192,6 +192,7 @@ fun AdventureScreen(
                 onPull = viewModel::pullLever,
                 onRoll = viewModel::rollDice,
                 onBack = { showExitDialog = true },
+                onTurnChime = viewModel::playTurnChime,
                 onFaerieFinished = viewModel::finishFaerie
             )
         }
