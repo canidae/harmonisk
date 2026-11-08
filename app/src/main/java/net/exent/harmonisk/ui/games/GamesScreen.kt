@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -13,6 +14,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.harmonisk.R
 import net.exent.harmonisk.ui.adventure.AdventureBackdrop
 import net.exent.harmonisk.ui.components.BrandTopBar
@@ -21,13 +24,17 @@ import net.exent.harmonisk.ui.whack.WhackPressIcon
 
 private val ADVENTURE_ACCENT = AdventureGold
 private val WHACK_ACCENT = Color(0xFF7FB3C8)
+private val SOUND_TEST_ACCENT = Color(0xFFB39DDB)
 
 @Composable
 fun GamesScreen(
     onBack: () -> Unit,
     onAdventure: () -> Unit,
-    onWhack: () -> Unit
+    onWhack: () -> Unit,
+    onSoundTest: () -> Unit,
+    viewModel: GamesViewModel = hiltViewModel()
 ) {
+    val devModeEnabled by viewModel.devModeEnabled.collectAsStateWithLifecycle()
     AdventureBackdrop(Modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -58,6 +65,15 @@ fun GamesScreen(
                     onClick = onWhack,
                     icon = { WhackPressIcon(Modifier.size(width = 34.dp, height = 46.dp)) }
                 )
+                if (devModeEnabled) {
+                    Spacer(Modifier.height(14.dp))
+                    GameCard(
+                        title = stringResource(R.string.sound_test_title),
+                        accent = SOUND_TEST_ACCENT,
+                        onClick = onSoundTest,
+                        icon = { Text("🔔", fontSize = 36.sp) }
+                    )
+                }
             }
         }
     }

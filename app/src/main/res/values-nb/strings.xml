@@ -275,4 +275,14 @@
     <string name="whack_time_up">Tiden er ute!</string>
     <string name="whack_points">Poeng</string>
     <string name="whack_duration_three_minutes">Tre minutter</string>
+    <string name="sound_test_title">Lydtest</string>
+    <string name="sound_test_turn">Neste spiller-lyd</string>
+    <string name="sound_test_dice">Terningkast</string>
+    <string name="sound_test_applause">Applaus</string>
+    <string name="sound_test_whistle">Tiden er ute-fløyte</string>
+    <string name="sound_test_faerie">Fe</string>
+    <string name="sound_test_castle">Slottsfanfare</string>
+    <string name="sound_test_fanfare">Resultatfanfare</string>
+    <string name="sound_test_play_all">Spill alle</string>
+    <string name="sound_test_stop">Stopp</string>
 </resources>

@@ -12,7 +12,9 @@ data class MidiCue(
     val notes: List<MidiCueNote>,
     val programs: Map<Int, Int>,
     val drumChannels: Set<Int>
-)
+) {
+    val durationMs: Int get() = notes.maxOfOrNull { it.startMs + it.lengthMs } ?: 0
+}
 
 class MidiCueBuilder internal constructor() {
     private val notes = mutableListOf<MidiCueNote>()

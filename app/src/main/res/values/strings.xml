@@ -275,6 +275,16 @@
     <string name="whack_time_up">Time’s up!</string>
     <string name="whack_points">Points</string>
     <string name="whack_duration_three_minutes">Three minutes</string>
+    <string name="sound_test_title">Sound test</string>
+    <string name="sound_test_turn">Next player chime</string>
+    <string name="sound_test_dice">Dice rattle</string>
+    <string name="sound_test_applause">Applause</string>
+    <string name="sound_test_whistle">Time’s up whistle</string>
+    <string name="sound_test_faerie">Faerie</string>
+    <string name="sound_test_castle">Castle fanfare</string>
+    <string name="sound_test_fanfare">Results fanfare</string>
+    <string name="sound_test_play_all">Play all</string>
+    <string name="sound_test_stop">Stop</string>
 </resources>
 
 
