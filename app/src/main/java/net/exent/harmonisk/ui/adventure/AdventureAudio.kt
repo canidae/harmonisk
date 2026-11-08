@@ -1,80 +1,11 @@
 package net.exent.harmonisk.ui.adventure
 
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
-import net.exent.harmonisk.audio.AudioConstants
+import net.exent.harmonisk.audio.SynthesizedPlayer
 import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.random.Random
-
-abstract class SynthesizedPlayer(
-    private val durationSeconds: Float,
-    private val volume: Float = 0.75f
-) {
-    private var track: AudioTrack? = null
-    private var released = false
-
-    fun play() {
-        release()
-        released = false
-        Thread {
-            val samples = ShortArray((SAMPLE_RATE * durationSeconds).toInt()) { index ->
-                (sample(index / SAMPLE_RATE.toFloat()).coerceIn(-1f, 1f) * Short.MAX_VALUE).toInt().toShort()
-            }
-            val audio = AudioTrack.Builder()
-                .setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_GAME)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
-                .setAudioFormat(
-                    AudioFormat.Builder()
-                        .setSampleRate(SAMPLE_RATE)
-                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                        .build()
-                )
-                .setBufferSizeInBytes(samples.size * 2)
-                .setTransferMode(AudioTrack.MODE_STATIC)
-                .build()
-            audio.write(samples, 0, samples.size)
-            synchronized(this) {
-                if (released) {
-                    audio.release()
-                    return@Thread
-                }
-                audio.setVolume(volume)
-                audio.play()
-                track = audio
-            }
-        }.apply {
-            name = "synthesized-player"
-            isDaemon = true
-            start()
-        }
-    }
-
-    fun release() {
-        synchronized(this) {
-            released = true
-            track?.let {
-                runCatching { it.stop() }
-                it.release()
-            }
-            track = null
-        }
-    }
-
-    protected abstract fun sample(time: Float): Float
-
-    private companion object {
-        const val SAMPLE_RATE = AudioConstants.SAMPLE_RATE
-    }
-}
 
 class AdventureFanfarePlayer : SynthesizedPlayer(3.3f) {
     private val random = Random(11)
