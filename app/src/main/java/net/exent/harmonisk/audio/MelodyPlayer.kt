@@ -45,6 +45,7 @@ class MelodyPlayer(
         _isPlaying.value = true
 
         playJob = scope.launch {
+            val sounding = mutableSetOf<Int>()
             try {
                 val startTimeMs = System.currentTimeMillis()
 
@@ -69,11 +70,16 @@ class MelodyPlayer(
                     if (!isActive) break
                     val waitMs = startTimeMs + event.timeMs - System.currentTimeMillis()
                     if (waitMs > 0) delay(waitMs)
-                    if (event.isOn) notePlayer.noteOn(event.channel, event.noteNumber, event.velocity)
-                    else notePlayer.noteOff(event.channel, event.noteNumber)
+                    if (event.isOn) {
+                        notePlayer.noteOn(event.channel, event.noteNumber, event.velocity)
+                        sounding.add(noteKey(event.channel, event.noteNumber))
+                    } else {
+                        notePlayer.noteOff(event.channel, event.noteNumber)
+                        sounding.remove(noteKey(event.channel, event.noteNumber))
+                    }
                 }
             } finally {
-                notePlayer.allNotesOff()
+                sounding.releaseWith(notePlayer)
                 _isPlaying.value = false
             }
         }
@@ -139,8 +145,16 @@ class MelodyPlayer(
     }
 
     private fun resetNoteTracking() {
+        activeSynthNotes.keys.releaseWith(notePlayer)
         activeSynthNotes.clear()
-        if (notePlayer.isReady) notePlayer.allNotesOff()
+    }
+
+    /**
+     * Releases only the notes this player started. A synthesizer-wide silence would also cut notes
+     * queued by other players, such as adventure cues.
+     */
+    private fun Set<Int>.releaseWith(player: NotePlayer) {
+        for (key in this) player.noteOff(key shr 7, key and 0x7F)
     }
 
     companion object {
