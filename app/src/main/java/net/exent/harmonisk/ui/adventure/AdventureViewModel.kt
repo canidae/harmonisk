@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.exent.harmonisk.R
+import net.exent.harmonisk.audio.MidiCuePlayer
+import net.exent.harmonisk.audio.MidiCues
 import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.data.MelodySettingsRepository
 import net.exent.harmonisk.data.ProfileRepository
@@ -68,7 +70,8 @@ class AdventureViewModel @Inject constructor(
     private val melodyRepository: MelodyRepository,
     private val melodySettingsRepository: MelodySettingsRepository,
     private val settingsRepository: SettingsRepository,
-    private val session: AdventureSessionRepository
+    private val session: AdventureSessionRepository,
+    private val cues: MidiCuePlayer
 ) : ViewModel() {
 
     private val random = Random.Default
@@ -165,6 +168,8 @@ class AdventureViewModel @Inject constructor(
         }
     }
 
+    fun prepareAudio() = cues.prepare()
+
     fun startGame() {
         val snapshot = _state.value
         val selectedProfiles = profiles.value.filter { it.id in snapshot.selectedPlayerIds }
@@ -212,6 +217,7 @@ class AdventureViewModel @Inject constructor(
                 error = null
             )
         }
+        cues.play(MidiCues.TurnChime)
     }
 
     fun rollDice() {
@@ -220,6 +226,7 @@ class AdventureViewModel @Inject constructor(
         val player = snapshot.currentPlayer ?: return
         val dice = random.nextInt(1, 7)
         _state.update { it.copy(diceValue = dice, phase = AdventureTurnPhase.DICE) }
+        cues.play(MidiCues.DiceRattle)
         turnJob?.cancel()
         turnJob = viewModelScope.launch {
             delay(AdventureTiming.DICE_SHOW_MS + AdventureTiming.DICE_PAUSE_MS)
@@ -253,10 +260,13 @@ class AdventureViewModel @Inject constructor(
                     finisherId = finished.profileId
                 )
             }
+            cues.play(MidiCues.CastleFanfare)
             resultJob?.cancel()
             resultJob = viewModelScope.launch {
                 delay(AdventureTiming.CASTLE_CELEBRATION_MS)
                 _state.update { it.copy(step = AdventureStep.RESULTS) }
+                delay(450)
+                cues.play(MidiCues.Fanfare)
             }
             return
         }
@@ -280,6 +290,7 @@ class AdventureViewModel @Inject constructor(
             finishLanding(landing)
             return
         }
+        cues.play(MidiCues.Faerie)
         pendingLanding = landing
         faerieJob?.cancel()
         faerieJob = viewModelScope.launch {
@@ -411,6 +422,7 @@ class AdventureViewModel @Inject constructor(
                 loading = false
             )
         }
+        if (!goAgain) cues.play(MidiCues.TurnChime)
     }
 
     fun playCurrentSong() {
@@ -489,6 +501,7 @@ class AdventureViewModel @Inject constructor(
                 loading = false
             )
         }
+        cues.play(MidiCues.Applause)
         advanceAfterScore(index, players.size)
     }
 
@@ -512,6 +525,7 @@ class AdventureViewModel @Inject constructor(
         spinJob?.cancel()
         faerieJob?.cancel()
         pendingLanding = null
+        cues.stopAll()
         session.clear()
         _state.value = AdventureState()
     }
@@ -522,6 +536,7 @@ class AdventureViewModel @Inject constructor(
         spinJob?.cancel()
         faerieJob?.cancel()
         pendingLanding = null
+        cues.stopAll()
         session.clear()
     }
 
@@ -543,6 +558,11 @@ class AdventureViewModel @Inject constructor(
                 loading = false
             )
         }
+        cues.play(MidiCues.Applause)
         advanceAfterScore(index, snapshot.players.size)
+    }
+
+    override fun onCleared() {
+        cues.stopAll()
     }
 }

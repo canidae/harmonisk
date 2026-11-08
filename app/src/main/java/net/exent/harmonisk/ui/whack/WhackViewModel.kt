@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import net.exent.harmonisk.audio.MidiCuePlayer
+import net.exent.harmonisk.audio.MidiCues
 import net.exent.harmonisk.audio.PitchProcessor
 import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.createProfileWithInstrument
@@ -52,7 +54,8 @@ class WhackViewModel @Inject constructor(
     private val pitchProcessor: PitchProcessor,
     private val settingsRepository: SettingsRepository,
     private val profileRepository: ProfileRepository,
-    private val whackRepository: WhackRepository
+    private val whackRepository: WhackRepository,
+    private val cues: MidiCuePlayer
 ) : ViewModel() {
 
     companion object {
@@ -83,6 +86,7 @@ class WhackViewModel @Inject constructor(
     private var instrumentOverride: Instrument? = null
     private var best = 0
     private var persistBest = true
+    private var timeUpCue = false
     private var wrongsMutedUntil = 0L
 
     fun setInstrumentOverride(instrument: Instrument?) {
@@ -122,10 +126,12 @@ class WhackViewModel @Inject constructor(
 
     fun start(
         durationMs: Long = _state.value.durationMs,
-        persistBest: Boolean = this.persistBest
+        persistBest: Boolean = this.persistBest,
+        timeUpCue: Boolean = false
     ) {
         if (_state.value.playing) return
         reset(durationMs, persistBest)
+        this.timeUpCue = timeUpCue
         resetPitch()
         while (judgements.tryReceive().isSuccess) Unit
         previousEmoji = null
@@ -176,6 +182,7 @@ class WhackViewModel @Inject constructor(
         createProfileWithInstrument(viewModelScope, profileRepository, settingsRepository, name, emoji, instrument)
 
     fun stop() {
+        timeUpCue = false
         gameJob?.cancel()
         gameJob = null
         timerJob?.cancel()
@@ -213,6 +220,7 @@ class WhackViewModel @Inject constructor(
                 levelUp = null
             )
         }
+        if (timeUpCue) cues.play(MidiCues.Whistle)
     }
 
     override fun onCleared() {

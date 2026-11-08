@@ -11,7 +11,7 @@ Harmonisk is licensed under the [GNU Affero General Public License v3.0](LICENSE
 This app ships and uses the following third-party works:
 
 - **GeneralUser GS** SoundFont by **S. Christian Collins**, used for melody
-  playback and note previews. Licensed under the GeneralUser GS License v2.0
+  playback, note previews and adventure cues. Licensed under the GeneralUser GS License v2.0
   (see <https://schristiancollins.com/generaluser.php>).
 - **TinySoundFont** by Bernhard Schelling (based on SFZero by Steve Folta),
   which synthesises the soundfont. Licensed under the MIT License.

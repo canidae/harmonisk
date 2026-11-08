@@ -66,6 +66,10 @@ fun AdventureScreen(
     var showCreatePlayer by remember { mutableStateOf(false) }
     var playingLoaded by rememberSaveable(state.turnId) { mutableStateOf(false) }
 
+    LaunchedEffect(Unit) {
+        viewModel.prepareAudio()
+    }
+
     LaunchedEffect(state.error) {
         val error = state.error ?: return@LaunchedEffect
         Toast.makeText(context, resources.getString(error), Toast.LENGTH_SHORT).show()

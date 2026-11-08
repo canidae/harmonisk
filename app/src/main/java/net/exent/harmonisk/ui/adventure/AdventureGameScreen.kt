@@ -65,18 +65,9 @@ fun AdventureGameScreen(
     var turnStage by remember { mutableStateOf(TurnIntroStage.INTRO) }
     val latestToken = remember { TokenPosition() }
     val tokenPositions = remember { mutableMapOf<String, Offset>() }
-    val chime = remember { TurnChimePlayer() }
-    val diceRattle = remember { DiceRattlePlayer() }
-    DisposableEffect(Unit) {
-        onDispose {
-            chime.release()
-            diceRattle.release()
-        }
-    }
     LaunchedEffect(state.phase, state.currentPlayerIndex) {
         if (state.phase == AdventureTurnPhase.ROLLING && !state.goAgain) {
             turnStage = TurnIntroStage.INTRO
-            chime.play()
             delay(AdventureTiming.TURN_FLASH_MS)
             turnStage = TurnIntroStage.PANEL
         } else {
@@ -92,7 +83,6 @@ fun AdventureGameScreen(
         when (state.phase) {
             AdventureTurnPhase.MOVING -> sounds.play(AdventureSound.Step, 0.55f)
             AdventureTurnPhase.SPINNING -> sounds.play(AdventureSound.Lever, 0.7f)
-            AdventureTurnPhase.DICE -> diceRattle.play()
             else -> Unit
         }
     }
@@ -426,13 +416,6 @@ private fun RewardOverlay(
     var center by remember { mutableStateOf(Offset.Unspecified) }
     var flying by remember { mutableStateOf(false) }
     val fly = remember { Animatable(0f) }
-    val applause = remember { ApplausePlayer() }
-    DisposableEffect(Unit) {
-        onDispose { applause.release() }
-    }
-    LaunchedEffect(score) {
-        if (score != null) applause.play()
-    }
     LaunchedEffect(reward, score, levelUp) {
         flying = false
         fly.snapTo(0f)
@@ -591,13 +574,6 @@ private fun RewardCard(reward: AdventureReward?, score: Int?, levelUp: Int?) {
 
 @Composable
 private fun CastleCelebration(player: AdventurePlayer) {
-    val fanfare = remember { CastleFanfarePlayer() }
-    DisposableEffect(Unit) {
-        onDispose { fanfare.release() }
-    }
-    LaunchedEffect(player.profileId) {
-        fanfare.play()
-    }
     ScoreCelebrationOverlay(
         celebrationLevel = CelebrationLevel.EXTREME,
         score = 100f,
