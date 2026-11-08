@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -172,6 +173,7 @@ fun WhackScreen(
                             .weight(1f)
                             .fillMaxWidth()
                     ) {
+                        WhackStrings(state.instrument, Modifier.fillMaxSize())
                         WhackBands(state, Modifier.align(Alignment.TopCenter).fillMaxWidth())
                         if (adventure) {
                             if (countdown > 0) WhackCountdown(countdown)
@@ -307,6 +309,25 @@ private fun WhackHeader(state: WhackState, adventure: Boolean) {
 }
 
 private fun formatTime(seconds: Long): String = "%d:%02d".format(seconds / 60, seconds % 60)
+
+@Composable
+private fun WhackStrings(instrument: Instrument, modifier: Modifier = Modifier) {
+    val color = MaterialTheme.colorScheme.onSurface
+    Canvas(modifier) {
+        val count = instrument.stringLabels.size
+        if (count == 0) return@Canvas
+        val inset = (BOARD_PADDING + BADGE_SIZE + BADGE_GAP * 2).toPx()
+        val column = (size.width - inset * 2) / count
+        val brush = Brush.verticalGradient(
+            0f to color.copy(alpha = 0.05f),
+            1f to color.copy(alpha = 0.20f)
+        )
+        for (index in 0 until count) {
+            val x = inset + column * (index + 0.5f)
+            drawLine(brush, Offset(x, 0f), Offset(x, size.height), strokeWidth = 2.dp.toPx())
+        }
+    }
+}
 
 @Composable
 private fun WhackBands(state: WhackState, modifier: Modifier) {
