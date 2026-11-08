@@ -74,7 +74,7 @@ fun AdventureGameScreen(
         }
     }
     LaunchedEffect(state.phase, state.currentPlayerIndex) {
-        if (state.phase == AdventureTurnPhase.ROLLING) {
+        if (state.phase == AdventureTurnPhase.ROLLING && !state.goAgain) {
             turnStage = TurnIntroStage.INTRO
             chime.play()
             delay(AdventureTiming.TURN_FLASH_MS)
@@ -319,8 +319,13 @@ private fun CurrentTurnCard(
             Spacer(Modifier.width(8.dp))
             TurnDice(
                 diceValue = state.diceValue,
-                visible = state.diceValue != null ||
-                    (state.phase == AdventureTurnPhase.ROLLING && stage == TurnIntroStage.PANEL),
+                visible = when (state.phase) {
+                    AdventureTurnPhase.ROLLING -> stage == TurnIntroStage.PANEL
+                    AdventureTurnPhase.DICE,
+                    AdventureTurnPhase.DELIVERING,
+                    AdventureTurnPhase.MOVING -> state.diceValue != null
+                    else -> false
+                },
                 highlight = moveHighlight
             )
         }
@@ -334,6 +339,15 @@ private fun TurnDice(
     highlight: Boolean
 ) {
     val progress = remember { Animatable(0f) }
+    val glow = remember { Animatable(1f) }
+    LaunchedEffect(highlight) {
+        if (highlight) {
+            glow.animateTo(1.2f, tween(150, easing = FastOutSlowInEasing))
+            glow.animateTo(1f, tween(320, easing = FastOutSlowInEasing))
+        } else {
+            glow.snapTo(1f)
+        }
+    }
     LaunchedEffect(diceValue) {
         progress.snapTo(0f)
         if (diceValue != null) {
@@ -344,7 +358,12 @@ private fun TurnDice(
         }
     }
     Box(
-        modifier = Modifier.size(56.dp),
+        modifier = Modifier
+            .size(56.dp)
+            .graphicsLayer {
+                scaleX = glow.value
+                scaleY = glow.value
+            },
         contentAlignment = Alignment.Center
     ) {
         if (visible) {

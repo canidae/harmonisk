@@ -267,7 +267,7 @@
     <string name="adventure_bonus">Bonus</string>
     <string name="adventure_reward_stickers">Klistremerker</string>
     <string name="adventure_faerie_blessing">En fe gir %2$d poeng til %1$s</string>
-    <string name="adventure_faerie_appears">En musikalsk fe dukker opp</string>
+    <string name="adventure_faerie_appears">Den musikalske feen dukker opp</string>
 
     <string name="whack_title">Tonedengeren</string>
     <string name="whack_hint">Spill tonen som gjemmer seg under emojien. Fargen på beltet viser fingeren: blå løs streng, grønn første, gul andre, oransje tredje, rød fjerde. Svar raskere for å få flere poeng.</string>
