@@ -79,5 +79,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun toggleDevMode(): Boolean = devModeState.toggle()
+    fun enableDevMode() = devModeState.enable()
+
+    fun disableDevMode() = devModeState.disable()
 }
