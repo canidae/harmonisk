@@ -73,16 +73,12 @@ fun WhackScreen(
     val profileDialogs = rememberProfileDialogState()
     val context = LocalContext.current
     val sounds = remember(context) { WhackSounds(context) }
-    val whistle = remember { WhistlePlayer() }
     val fade = remember { Animatable(1f) }
     var countdown by remember { mutableStateOf(0) }
     var started by remember { mutableStateOf(false) }
     var returned by remember { mutableStateOf(false) }
     DisposableEffect(Unit) {
-        onDispose {
-            sounds.release()
-            whistle.release()
-        }
+        onDispose { sounds.release() }
     }
     LaunchedEffect(state.scored?.id) {
         state.scored?.let { sounds.play(it.emoji, 0.85f) }
@@ -98,7 +94,6 @@ fun WhackScreen(
     }
     LaunchedEffect(state.finished) {
         if (!adventure || !state.finished || !started) return@LaunchedEffect
-        whistle.play()
         delay(1_700)
         fade.animateTo(0f, tween(450))
         if (!returned) {
@@ -162,7 +157,7 @@ fun WhackScreen(
                             countdown -= 1
                         }
                         started = true
-                        viewModel.start(durationMs, persistBest = false)
+                        viewModel.start(durationMs, persistBest = false, timeUpCue = true)
                     }
                 }
                 Column(

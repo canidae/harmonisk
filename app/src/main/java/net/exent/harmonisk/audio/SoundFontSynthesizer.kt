@@ -119,6 +119,7 @@ class SoundFontSynthesizer(
 
     override val isReady: Boolean get() = nativeHandle != 0L && renderThread.running
 
+    @Synchronized
     fun open() {
         if (nativeHandle != 0L) return
         val sf2File = extractSf2()
@@ -189,6 +190,22 @@ class SoundFontSynthesizer(
         }
     }
 
+    fun setChannelPreset(channel: Int, bank: Int, program: Int) {
+        val h = nativeHandle
+        if (h == 0L) return
+        ensureChannels(h)
+        nativeSetChannelPreset(h, channel, bank, program)
+    }
+
+    fun setChannelDrum(channel: Int) {
+        val h = nativeHandle
+        if (h == 0L) return
+        ensureChannels(h)
+        nativeSetChannelDrum(h, channel)
+    }
+
+    fun restoreInstrument() = setInstrument(currentBank, currentProgram)
+
     override fun noteOn(channel: Int, note: Int, velocity: Int) {
         val h = nativeHandle
         if (h == 0L) return
@@ -210,6 +227,7 @@ class SoundFontSynthesizer(
         nativeAllNotesOff(h)
     }
 
+    @Synchronized
     fun close() {
         renderThread.close()
         val h = nativeHandle

@@ -94,13 +94,8 @@ fun AdventureResultsScreen(
     var current by remember { mutableStateOf<TallyItem?>(null) }
     var overlaySize by remember { mutableStateOf(IntSize.Zero) }
     var showWinner by remember { mutableStateOf(false) }
-    val fanfare = remember { AdventureFanfarePlayer() }
-    DisposableEffect(Unit) {
-        onDispose { fanfare.release() }
-    }
     LaunchedEffect(items) {
         delay(450)
-        fanfare.play()
         songProgress.animateTo(1f, tween(2200, easing = FastOutSlowInEasing))
         delay(300)
         items.forEach { item ->

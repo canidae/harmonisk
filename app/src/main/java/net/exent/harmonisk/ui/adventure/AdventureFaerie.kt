@@ -30,7 +30,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -79,14 +78,10 @@ fun FaerieOverlay(
     onFinished: () -> Unit = {}
 ) {
     if (faerie == null || player == null || !mapCenter.isSpecified) return
-    val fanfare = remember { FaerieFanfarePlayer() }
     val enter = remember { Animatable(0f) }
     val pop = remember { Animatable(0f) }
     val fly = remember { Animatable(0f) }
     val exit = remember { Animatable(0f) }
-    DisposableEffect(Unit) {
-        onDispose { fanfare.release() }
-    }
     var blessed by remember { mutableStateOf(false) }
     LaunchedEffect(faerie) {
         enter.snapTo(0f)
@@ -94,7 +89,6 @@ fun FaerieOverlay(
         fly.snapTo(0f)
         exit.snapTo(0f)
         blessed = false
-        fanfare.play()
         enter.animateTo(
             1f,
             tween(AdventureTiming.FAERIE_ENTER_MS.toInt(), easing = FastOutSlowInEasing)
