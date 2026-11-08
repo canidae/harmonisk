@@ -28,9 +28,9 @@
     <!-- Home screen -->
     <string name="record_title">Opptak</string>
     <string name="games_title">Spill</string>
-    <string name="dev_mode_enabled">Utviklermodus slått på</string>
+    <string name="dev_mode_enabled">Utviklermodus er på</string>
     <string name="home_version">Versjon %1$s</string>
-    <string name="dev_mode_disabled">Utviklermodus slått av</string>
+    <string name="dev_mode_turn_off">Slå av</string>
 
     <!-- Profiles -->
     <string name="profile_setup_title">Opprett en profil</string>

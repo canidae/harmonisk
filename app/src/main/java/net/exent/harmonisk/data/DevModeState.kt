@@ -7,8 +7,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Developer mode, enabled by holding the home heading, and kept in memory only: closing the app
- * turns it off again.
+ * Developer mode, enabled by holding the home version number, and kept in memory only: closing the
+ * app turns it off again.
  */
 @Singleton
 class DevModeState @Inject constructor() {
@@ -18,10 +18,11 @@ class DevModeState @Inject constructor() {
 
     val isEnabled: Boolean get() = _enabled.value
 
-    /** Enable or disable developer mode, returning the new state. */
-    fun toggle(): Boolean {
-        val next = !_enabled.value
-        _enabled.value = next
-        return next
+    fun enable() {
+        _enabled.value = true
+    }
+
+    fun disable() {
+        _enabled.value = false
     }
 }

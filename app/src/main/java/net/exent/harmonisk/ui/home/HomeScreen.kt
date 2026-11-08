@@ -1,7 +1,6 @@
 package net.exent.harmonisk.ui.home
 
 import android.content.res.Configuration
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -19,8 +18,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -70,8 +67,6 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
-    val resources = LocalResources.current
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val snackbarHostState = remember { SnackbarHostState() }
     val selectedInstrument by viewModel.instrument.collectAsStateWithLifecycle()
@@ -125,15 +120,6 @@ fun HomeScreen(
             onClick = onNavigateToTuner
         )
     )
-    val toggleDevMode = {
-        val enabled = viewModel.toggleDevMode()
-        Toast.makeText(
-            context,
-            resources.getString(if (enabled) R.string.dev_mode_enabled else R.string.dev_mode_disabled),
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -145,7 +131,6 @@ fun HomeScreen(
             BrandTopBar(
                 title = stringResource(R.string.app_name),
                 leading = { AppLogo() },
-                titleModifier = Modifier.devModeToggle(toggleDevMode),
                 actions = {
                     ProfileButton(
                         name = profile.name,
@@ -192,15 +177,40 @@ fun HomeScreen(
                     )
                 }
             }
-            Text(
-                text = stringResource(R.string.home_version, BuildConfig.VERSION_NAME),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (devModeEnabled) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(R.string.dev_mode_enabled),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        TextButton(
+                            onClick = viewModel::disableDevMode,
+                            contentPadding = PaddingValues(horizontal = 8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.dev_mode_turn_off),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+                Text(
+                    text = stringResource(R.string.home_version, BuildConfig.VERSION_NAME),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                        .devModeUnlock(viewModel::enableDevMode)
+                )
+            }
         }
     }
 
@@ -349,12 +359,10 @@ private fun ModeIcon(mode: ModeItem, size: Dp, fontSize: TextUnit) {
     }
 }
 
-private fun Modifier.devModeToggle(onToggle: () -> Unit) = pointerInput(onToggle) {
+private fun Modifier.devModeUnlock(onUnlock: () -> Unit) = pointerInput(onUnlock) {
     detectTapGestures(
         onPress = {
-            if (withTimeoutOrNull(DEV_MODE_HOLD_MS) { tryAwaitRelease() } == null) {
-                onToggle()
-            }
+            if (withTimeoutOrNull(DEV_MODE_HOLD_MS) { tryAwaitRelease() } == null) onUnlock()
         }
     )
 }

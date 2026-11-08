@@ -68,7 +68,6 @@ fun BrandTopBar(
     subtitle: String? = null,
     onBack: (() -> Unit)? = null,
     leading: (@Composable () -> Unit)? = null,
-    titleModifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     BrandStatusBarEffect()
@@ -108,8 +107,7 @@ fun BrandTopBar(
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = titleModifier
+                    overflow = TextOverflow.Ellipsis
                 )
                 if (subtitle != null) {
                     Text(

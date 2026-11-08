@@ -28,9 +28,9 @@
     <!-- Home screen -->
     <string name="record_title">Record</string>
     <string name="games_title">Games</string>
-    <string name="dev_mode_enabled">Developer mode enabled</string>
+    <string name="dev_mode_enabled">Developer mode is on</string>
     <string name="home_version">Version %1$s</string>
-    <string name="dev_mode_disabled">Developer mode disabled</string>
+    <string name="dev_mode_turn_off">Turn off</string>
 
     <!-- Profiles -->
     <string name="profile_setup_title">Create a profile</string>
