@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -53,6 +54,8 @@ private const val PIP_RADIUS = 0.15f
 private const val PIP_SEGMENTS = 18
 private val DIE_BASE = Color(0xFFF6EEDF)
 private val DIE_SHADE = Color(0xFF8A7A66)
+private val DIE_GOLD = Color(0xFFFFD166)
+private val DIE_GOLD_SHADE = Color(0xFFC9891F)
 private val PIP_DARK = Color(0xFF5B1818)
 private val PIP_LIGHT = Color(0xFFC05252)
 private val PIP_RIM = Color(0xFF3E0C0C).copy(alpha = 0.75f)
@@ -92,7 +95,12 @@ private data class ProjectedFace(
 )
 
 @Composable
-fun Dice3D(value: Int?, progress: Float, modifier: Modifier = Modifier) {
+fun Dice3D(
+    value: Int?,
+    progress: Float,
+    modifier: Modifier = Modifier,
+    highlight: Boolean = false
+) {
     val rolled = value ?: 1
     val (targetX, targetY) = targetAngles(rolled)
     val turnsX = if (rolled % 2 == 0) 1f else 2f
@@ -100,13 +108,28 @@ fun Dice3D(value: Int?, progress: Float, modifier: Modifier = Modifier) {
     val rest = 1f - progress
     val angleX = IDLE_TILT_X * rest + (targetX + 360f * turnsX) * progress
     val angleY = IDLE_TILT_Y * rest + (targetY + 360f * turnsY) * progress
-    Canvas(modifier) { drawDie(angleX, angleY) }
+    Canvas(modifier) { drawDie(angleX, angleY, highlight) }
 }
 
-private fun DrawScope.drawDie(angleX: Float, angleY: Float) {
+private fun DrawScope.drawDie(angleX: Float, angleY: Float, highlight: Boolean) {
     val center = Offset(size.width / 2f, size.height / 2f)
     val scale = size.minDimension * 0.32f
     val camera = 5.5f
+    if (highlight) {
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    StorybookGold.copy(alpha = 0.42f),
+                    StorybookGold.copy(alpha = 0.12f),
+                    Color.Transparent
+                ),
+                center = center,
+                radius = size.minDimension * 0.72f
+            ),
+            radius = size.minDimension * 0.72f,
+            center = center
+        )
+    }
 
     fun project(p: Vec3): Offset {
         val f = camera / (camera - p.z)
@@ -147,7 +170,11 @@ private fun DrawScope.drawDie(angleX: Float, angleY: Float) {
     faces.filter { it.normal.z > 0.02f }.sortedBy { it.normal.z }.forEach { face ->
         val light = (0.55f + 0.45f * (face.normal.x * DIE_LIGHT.x +
             face.normal.y * DIE_LIGHT.y + face.normal.z * DIE_LIGHT.z)).coerceIn(0.55f, 1f)
-        val color = lerp(DIE_SHADE, DIE_BASE, light)
+        val color = lerp(
+            if (highlight) DIE_GOLD_SHADE else DIE_SHADE,
+            if (highlight) DIE_GOLD else DIE_BASE,
+            light
+        )
         val path = Path().apply {
             moveTo(face.corners[0].x, face.corners[0].y)
             for (i in 1..3) lineTo(face.corners[i].x, face.corners[i].y)

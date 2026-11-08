@@ -3,6 +3,10 @@ package net.exent.harmonisk.ui.adventure
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -57,15 +61,21 @@ fun AdventureGameScreen(
     var songAnchor by remember { mutableStateOf(Offset.Unspecified) }
     var origin by remember { mutableStateOf(Offset.Zero) }
     var turnStage by remember { mutableStateOf(TurnIntroStage.INTRO) }
-    var panelDiceAnchor by remember { mutableStateOf(Offset.Unspecified) }
     val latestToken = remember { TokenPosition() }
     val tokenPositions = remember { mutableMapOf<String, Offset>() }
+    val chime = remember { TurnChimePlayer() }
+    val diceRattle = remember { DiceRattlePlayer() }
+    DisposableEffect(Unit) {
+        onDispose {
+            chime.release()
+            diceRattle.release()
+        }
+    }
     LaunchedEffect(state.phase, state.currentPlayerIndex) {
         if (state.phase == AdventureTurnPhase.ROLLING) {
             turnStage = TurnIntroStage.INTRO
+            chime.play()
             delay(AdventureTiming.TURN_FLASH_MS)
-            turnStage = TurnIntroStage.HANDOFF
-            delay(AdventureTiming.TURN_HANDOFF_MS)
             turnStage = TurnIntroStage.PANEL
         } else {
             turnStage = TurnIntroStage.PANEL
@@ -80,7 +90,7 @@ fun AdventureGameScreen(
         when (state.phase) {
             AdventureTurnPhase.MOVING -> sounds.play(AdventureSound.Step, 0.55f)
             AdventureTurnPhase.SPINNING -> sounds.play(AdventureSound.Lever, 0.7f)
-            AdventureTurnPhase.DICE -> sounds.play(AdventureSound.Tick, 0.4f)
+            AdventureTurnPhase.DICE -> diceRattle.play()
             else -> Unit
         }
     }
@@ -168,7 +178,6 @@ fun AdventureGameScreen(
                 state = state,
                 stage = turnStage,
                 onSongAnchor = { songAnchor = it },
-                onDiceAnchor = { panelDiceAnchor = it },
                 onRoll = onRoll
             )
         }
@@ -176,7 +185,6 @@ fun AdventureGameScreen(
         TurnFlashOverlay(
             state = state,
             mapCenter = mapCenter,
-            panelDiceAnchor = panelDiceAnchor,
             origin = origin,
             stage = turnStage
         )
@@ -211,7 +219,6 @@ private fun CurrentTurnCard(
     state: AdventureState,
     stage: TurnIntroStage,
     onSongAnchor: (Offset) -> Unit,
-    onDiceAnchor: (Offset) -> Unit,
     onRoll: () -> Unit
 ) {
     val player = state.currentPlayer ?: return
@@ -224,6 +231,16 @@ private fun CurrentTurnCard(
             diceStopped = true
         }
     }
+    val moveHighlight = diceStopped
+    val movePulse by rememberInfiniteTransition(label = "move_highlight").animateFloat(
+        initialValue = 0.7f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(700, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "move_highlight_value"
+    )
     val status = when (state.phase) {
         AdventureTurnPhase.ROLLING -> stringResource(R.string.adventure_throw_dice)
         AdventureTurnPhase.DICE ->
@@ -284,10 +301,12 @@ private fun CurrentTurnCard(
                         Text(
                             text = status,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = color,
+                            color = if (moveHighlight) StorybookGold else color,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .graphicsLayer { alpha = if (moveHighlight) movePulse else 1f }
                         )
                     }
                 }
@@ -297,7 +316,7 @@ private fun CurrentTurnCard(
                 diceValue = state.diceValue,
                 visible = state.diceValue != null ||
                     (state.phase == AdventureTurnPhase.ROLLING && stage == TurnIntroStage.PANEL),
-                onAnchor = onDiceAnchor
+                highlight = moveHighlight
             )
         }
     }
@@ -307,7 +326,7 @@ private fun CurrentTurnCard(
 private fun TurnDice(
     diceValue: Int?,
     visible: Boolean,
-    onAnchor: (Offset) -> Unit
+    highlight: Boolean
 ) {
     val progress = remember { Animatable(0f) }
     LaunchedEffect(diceValue) {
@@ -320,13 +339,16 @@ private fun TurnDice(
         }
     }
     Box(
-        modifier = Modifier
-            .size(56.dp)
-            .onGloballyPositioned { onAnchor(it.boundsInRoot().center) },
+        modifier = Modifier.size(56.dp),
         contentAlignment = Alignment.Center
     ) {
         if (visible) {
-            Dice3D(value = diceValue, progress = progress.value, modifier = Modifier.fillMaxSize())
+            Dice3D(
+                value = diceValue,
+                progress = progress.value,
+                modifier = Modifier.fillMaxSize(),
+                highlight = highlight
+            )
         }
     }
 }
@@ -380,6 +402,13 @@ private fun RewardOverlay(
     var center by remember { mutableStateOf(Offset.Unspecified) }
     var flying by remember { mutableStateOf(false) }
     val fly = remember { Animatable(0f) }
+    val applause = remember { ApplausePlayer() }
+    DisposableEffect(Unit) {
+        onDispose { applause.release() }
+    }
+    LaunchedEffect(score) {
+        if (score != null) applause.play()
+    }
     LaunchedEffect(reward, score, levelUp) {
         flying = false
         fly.snapTo(0f)
