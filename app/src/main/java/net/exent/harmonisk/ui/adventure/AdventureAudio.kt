@@ -90,3 +90,78 @@ class FaerieFanfarePlayer : SynthesizedPlayer(3f, 0.62f) {
             ).toFloat() * envelope
     }
 }
+
+class TurnChimePlayer : SynthesizedPlayer(1.1f, 0.5f) {
+    private val notes = listOf(
+        783.99f to 0f,
+        987.77f to 0.13f,
+        1174.66f to 0.26f
+    )
+
+    override fun sample(time: Float): Float {
+        var sample = 0f
+        notes.forEach { (frequency, start) ->
+            if (time >= start) sample += marimba(time - start, frequency) * 0.3f
+        }
+        return sample
+    }
+
+    private fun marimba(time: Float, frequency: Float): Float {
+        val envelope = min(1f, time / 0.008f) * exp(-5.5f * time)
+        val phase = 2.0 * PI * frequency * time
+        return (sin(phase) * 0.7 + sin(phase * 4.0) * 0.18 + sin(phase * 9.2) * 0.07).toFloat() * envelope
+    }
+}
+
+class ApplausePlayer : SynthesizedPlayer(2.6f, 0.5f) {
+    private val random = Random(29)
+    private val claps = buildList {
+        var at = 0.04f
+        while (at < 2.3f) {
+            val swell = sin((at / 2.3f) * PI).toFloat()
+            add(at to (0.3f + random.nextFloat() * 0.5f) * (0.4f + 0.6f * swell))
+            at += 0.014f + random.nextFloat() * 0.05f
+        }
+    }
+    private var tone = 0f
+
+    override fun sample(time: Float): Float {
+        val noise = random.nextFloat() * 2f - 1f
+        tone = tone * 0.62f + noise * 0.38f
+        var sample = tone * 0.16f
+        claps.forEach { (start, gain) ->
+            val dt = time - start
+            if (dt >= 0f && dt < 0.08f) sample += tone * exp(-dt * 85f) * gain
+        }
+        val envelope = (time / 0.16f).coerceAtMost(1f) * ((2.6f - time) / 0.6f).coerceIn(0f, 1f)
+        return sample * envelope * 0.85f
+    }
+}
+
+class DiceRattlePlayer : SynthesizedPlayer(1.0f, 0.55f) {
+    private val random = Random(5)
+    private val clicks = buildList {
+        var at = 0.02f
+        var gap = 0.03f
+        while (at < 0.85f) {
+            add(at)
+            at += gap
+            gap *= 1.16f
+        }
+        add(0.92f)
+    }
+
+    override fun sample(time: Float): Float {
+        val noise = random.nextFloat() * 2f - 1f
+        var sample = 0f
+        clicks.forEach { start ->
+            val dt = time - start
+            if (dt >= 0f && dt < 0.06f) {
+                val last = start > 0.9f
+                sample += noise * exp(-dt * (if (last) 45f else 75f)) * (if (last) 0.9f else 0.55f)
+                sample += sin(2.0 * PI * 1400.0 * dt).toFloat() * exp(-dt * 120f) * 0.12f
+            }
+        }
+        return sample
+    }
+}
