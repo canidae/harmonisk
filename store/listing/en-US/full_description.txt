@@ -1,12 +1,15 @@
 Harmonisk is a practice companion for musicians who want to hear themselves improve. It listens while you play, shows your pitch in real time, and turns everyday practice into clear, measurable progress.
 
-Whether you play violin, cello, piano or another melodic instrument, Harmonisk gives you the feedback, structure and tools to make every session count.
+Whether you play violin, viola or cello, Harmonisk gives you the feedback, structure and tools to make every session count.
 
 LEARN A MELODY
-Follow along with real sheet music and scrolling note bars. Harmonisk scores each attempt on pitch accuracy, timing and correct notes, while five difficulty levels guide you from a relaxed pace to full tempo. Practise with the microphone or a MIDI instrument, transpose to a key that suits you, and track your progress over time. Start with the bundled traditional tunes and scale exercise, or import your own songs from a MIDI file, URL or QR code.
+Follow along with real sheet music and scrolling note bars. Harmonisk scores each attempt on pitch accuracy, timing and correct notes, while five difficulty levels guide you from a relaxed pace to full tempo. Practise with the microphone or a MIDI instrument, transpose to a key that suits you, and track your progress over time. Start with the bundled traditional tunes and scale exercise, or import your own songs from a MIDI, ABC or MusicXML file, a URL or a QR code.
 
-FREE PLAY
-Play and record without limits. Edit your recording note by note: move notes in time or pitch, split them, delete them, and add extra voices. Set tempo, time signature and note snapping, loop a section, switch on the metronome, and import or export MIDI files.
+ADVENTURE
+Set out on a musical board game: roll the die, move your token across the map and collect stickers. Land on a whack-a-tone field or a song field, meet the faerie, and see every reward on the end-of-game tally. A playful way to practise listening, note finding and playing under a little friendly pressure.
+
+WHACK A TONE
+An emoji pops up on the string board. Find its note and play it — the piston comes down on the string you played, and the faster you hit the emoji, the more points you score. Five levels add more notes as you improve. Play it on its own or as part of an adventure.
 
 METRONOME
 Keep steady time from 30 to 250 BPM, with up to 12 beats per bar. Tap any beat to accent it, or hold it to silence it — useful for practising unusual accents and subdivisions.
@@ -17,6 +20,7 @@ Tune with a clear, responsive gauge that shows the detected note, frequency and 
 BUILT FOR REAL PRACTICE
 • Real-time pitch detection
 • Microphone or MIDI input
+• Separate profiles for each player, with their own instrument, settings and scores
 • Practice history and progress graphs for every melody
 • Audio input and output delay calibration for your device
 • Import songs from a file, URL or QR code

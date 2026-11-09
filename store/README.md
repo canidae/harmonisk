@@ -16,19 +16,22 @@ leaves beta.
 
 ## Screenshots — `screenshots/phone/en-US/`
 
-Four phone screenshots, in the order they should appear in the listing:
+Six phone screenshots, in the order they should appear in the listing:
 
 1. `01-home.png` — the four modes
-2. `02-learn-a-melody.png` — Ode To Joy being played, with timing colours
-3. `03-metronome.png` — the metronome running with an accented beat
-4. `04-tuner.png` — the tuner showing an in-tune A4
+2. `02-adventure.png` — the adventure map with the die and a token
+3. `03-whack-a-tone.png` — an emoji on the string board
+4. `04-learn-a-melody.png` — Ode To Joy being played, with timing colours
+5. `05-metronome.png` — the metronome running with an accented beat
+6. `06-tuner.png` — the tuner showing an in-tune A4
 
 Specs: 1080x1920 (9:16), 24-bit PNG without alpha. Play accepts 2-8 phone
 screenshots, minimum 320 px, maximum 3840 px, no side longer than twice the
 other, and at most 8 MB per image. These were captured on a Pixel 7 Pro running
-app version `2026.10.30` in English, with the status bar set to 09:41 and 100%
+app version `2026.11.09` in English, with the status bar set to 09:41 and 100%
 battery. The listing is English-only, so keep the app language set to English
-when recapturing.
+when recapturing. The captures use a neutral profile named Alex; create a
+temporary one and delete it afterwards.
 
 To regenerate them, install a release APK, set the app language to English, then
 capture at 9:16:
@@ -63,9 +66,10 @@ Exit demo mode afterwards with `-e command exit` and
 Both derive from the same artwork as the launcher icon
 (`app/src/main/res/drawable/ic_launcher_background.xml` and
 `ic_launcher_foreground.xml`): a purple-to-teal gradient with white beamed
-eighth notes. The feature graphic also shows `02-learn-a-melody.png` in a phone
-mockup, so regenerate it when the practice screen changes. Keep the icon in sync
-if the launcher artwork changes.
+eighth notes. The feature graphic shows `02-adventure.png` in a phone mockup
+with the tagline "Practice pitch. Learn melodies. Play games. Tune up." and the
+mode line, so regenerate it when the adventure map or the mode list changes.
+Keep the icon in sync if the launcher artwork changes.
 
 ## Still required by Google Play
 
