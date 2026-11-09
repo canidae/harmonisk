@@ -51,6 +51,7 @@ class SoundTestViewModel @Inject constructor(
         val ALL = listOf(
             MidiCues.TurnChime,
             MidiCues.DiceRattle,
+            MidiCues.DrumRoll,
             MidiCues.Applause,
             MidiCues.Whistle,
             MidiCues.Faerie,

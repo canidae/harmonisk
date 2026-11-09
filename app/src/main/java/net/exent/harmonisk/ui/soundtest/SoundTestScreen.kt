@@ -57,6 +57,7 @@ fun SoundTestScreen(
             ) {
                 CueCard(R.string.sound_test_turn, MidiCues.TurnChime, viewModel)
                 CueCard(R.string.sound_test_dice, MidiCues.DiceRattle, viewModel)
+                CueCard(R.string.sound_test_drumroll, MidiCues.DrumRoll, viewModel)
                 CueCard(R.string.sound_test_applause, MidiCues.Applause, viewModel)
                 CueCard(R.string.sound_test_whistle, MidiCues.Whistle, viewModel)
                 CueCard(R.string.sound_test_faerie, MidiCues.Faerie, viewModel)

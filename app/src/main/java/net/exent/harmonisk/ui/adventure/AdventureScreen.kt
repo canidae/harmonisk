@@ -153,6 +153,8 @@ fun AdventureScreen(
     if (state.step == AdventureStep.RESULTS) {
         AdventureResultsScreen(
             state = state,
+            onDrumRoll = viewModel::playTallyDrumRoll,
+            onFanfare = viewModel::playTallyFanfare,
             onNewAdventure = viewModel::restart,
             onHome = onHome
         )

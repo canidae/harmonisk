@@ -222,6 +222,10 @@ class AdventureViewModel @Inject constructor(
 
     fun playTurnChime() = cues.play(MidiCues.TurnChime)
 
+    fun playTallyDrumRoll() = cues.play(MidiCues.DrumRoll)
+
+    fun playTallyFanfare() = cues.play(MidiCues.Fanfare)
+
     fun rollDice() {
         val snapshot = _state.value
         if (snapshot.phase != AdventureTurnPhase.ROLLING || snapshot.loading) return
@@ -267,8 +271,6 @@ class AdventureViewModel @Inject constructor(
             resultJob = viewModelScope.launch {
                 delay(AdventureTiming.CASTLE_CELEBRATION_MS)
                 _state.update { it.copy(step = AdventureStep.RESULTS) }
-                delay(450)
-                cues.play(MidiCues.Fanfare)
             }
             return
         }
