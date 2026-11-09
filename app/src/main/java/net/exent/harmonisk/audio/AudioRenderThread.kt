@@ -29,8 +29,6 @@ class AudioRenderThread(
             AudioFormat.CHANNEL_OUT_MONO,
             AudioFormat.ENCODING_PCM_16BIT
         )
-        // getMinBufferSize reports a doubled minimum for mono; a quarter of it is the fast mixer's
-        // minimum, which is what keeps the track off the resampling path and out of a deep buffer.
         val fastTrackBufferBytes = minBufferSize / 4 / BYTES_PER_FRAME * BYTES_PER_FRAME
         val track = createTrack(maxOf(bufferFrames * BYTES_PER_FRAME, fastTrackBufferBytes))
             ?: createTrack(minBufferSize)

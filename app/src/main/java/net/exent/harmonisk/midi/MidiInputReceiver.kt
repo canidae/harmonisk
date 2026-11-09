@@ -6,20 +6,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.collectLatest
 
-/**
- * Receives MIDI note-on/off events from the connected device's output port.
- *
- * Call [midiEventFlow] to get a [Flow] that automatically reconnects when the
- * selected device changes (via [MidiDeviceManager.selectedInputDevice]).
- */
 class MidiInputReceiver(
     private val midiDeviceManager: MidiDeviceManager
 ) {
 
-    /**
-     * A cold flow of [MidiNoteEvent]s from the currently connected MIDI input device.
-     * Reconnects automatically when the device changes. Emits nothing when no device is connected.
-     */
     fun midiEventFlow(): Flow<MidiNoteEvent> = channelFlow {
         midiDeviceManager.selectedInputDevice.collectLatest { deviceInfo ->
             if (deviceInfo == null) return@collectLatest

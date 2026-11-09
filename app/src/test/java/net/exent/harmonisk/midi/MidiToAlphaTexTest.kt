@@ -52,7 +52,6 @@ class MidiToAlphaTexTest {
 
     @Test
     fun `gate time durations are quantized to the grid`() {
-        // MIDI files start notes on the grid but often end them ~5% early (gate time)
         val tex = MidiToAlphaTex.generate(
             track(
                 listOf(
@@ -70,9 +69,9 @@ class MidiToAlphaTexTest {
         val tex = MidiToAlphaTex.generate(
             track(
                 listOf(
-                    note(60, 0, 240),   // eighth
-                    note(62, 240, 240), // eighth
-                    note(64, 480, 720)  // dotted quarter
+                    note(60, 0, 240),
+                    note(62, 240, 240),
+                    note(64, 480, 720)
                 )
             )
         )
@@ -89,7 +88,6 @@ class MidiToAlphaTexTest {
 
     @Test
     fun `long note decomposes into tied pieces within bar`() {
-        // Starts on the second sixteenth of the bar, lasts a quarter
         val tex = MidiToAlphaTex.generate(
             track(listOf(note(60, 120, 480)))
         )
@@ -187,9 +185,6 @@ class MidiToAlphaTexTest {
 
     @Test
     fun `truncated quarter notes read as plain quarters`() {
-        // MuseScore exports a quarter note as 470 ticks with a 10 tick gap, so quantizing its
-        // end lands one grid step early and the note used to become a dotted note tied to a
-        // sixteenth. Only the last note still carries the shortened duration.
         val tex = MidiToAlphaTex.generate(
             track(
                 listOf(
@@ -219,7 +214,6 @@ class MidiToAlphaTexTest {
 
     @Test
     fun `a gap of a grid step is left as a rest`() {
-        // A rest that can be written must not be filled in, even at the merge limit.
         val tex = MidiToAlphaTex.generate(
             track(
                 listOf(
@@ -233,7 +227,6 @@ class MidiToAlphaTexTest {
 
     @Test
     fun `a clipped half note is not written as a double dot tied to a sliver`() {
-        // godnatt has a note of 959 ticks in 3/4: it must not come out as D4.4{dd} D4{t}.16.
         val tex = MidiToAlphaTex.generate(
             track(
                 notes = listOf(
@@ -248,7 +241,6 @@ class MidiToAlphaTexTest {
 
     @Test
     fun `a note that stops well short is not extended`() {
-        // A staccato quarter leaves an audible gap, far larger than any gate time.
         val tex = MidiToAlphaTex.generate(
             track(
                 listOf(

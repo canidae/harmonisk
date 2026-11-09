@@ -1,6 +1,5 @@
 package net.exent.harmonisk.midi
 
-/** Shared byte-reading helpers for Standard MIDI File (SMF) parsing. */
 
 internal fun readMidiString(data: ByteArray, pos: Int, length: Int): String =
     String(data, pos, length, Charsets.US_ASCII)

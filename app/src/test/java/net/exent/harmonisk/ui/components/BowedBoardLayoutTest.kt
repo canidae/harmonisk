@@ -3,10 +3,8 @@ package net.exent.harmonisk.ui.components
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** The bowed board is four blocks of semitone slots, one block per string. */
 class BowedBoardLayoutTest {
 
-    // 29 slots of 10 px (the E string carries one more than the rest) and three 5 px gaps.
     private val gapPx = 5f
     private val boardWidth = 29 * 10f + 3 * gapPx
 
@@ -16,19 +14,19 @@ class BowedBoardLayoutTest {
 
     @Test
     fun eachOpenStringSitsInTheFirstSlotOfItsBlock() {
-        assertEquals(5f, slotX(55), 0.01f)   // G3, the first slot
-        assertEquals(80f, slotX(62), 0.01f)  // D4, one slot after the first gap
-        assertEquals(155f, slotX(69), 0.01f) // A4
-        assertEquals(230f, slotX(76), 0.01f) // E5
+        assertEquals(5f, slotX(55), 0.01f)
+        assertEquals(80f, slotX(62), 0.01f)
+        assertEquals(155f, slotX(69), 0.01f)
+        assertEquals(230f, slotX(76), 0.01f)
     }
 
     @Test
     fun everySemitoneHasItsOwnColumnRunningLeftToRight() {
         assertEquals(15f, slotX(56), 0.01f)
-        assertEquals(65f, slotX(61), 0.01f) // C#4, last slot of the G block
+        assertEquals(65f, slotX(61), 0.01f)
         assertEquals(280f, slotX(81), 0.01f)
-        assertEquals(290f, slotX(82), 0.01f) // A#5
-        assertEquals(300f, slotX(83), 0.01f) // B5, the E block's eighth slot
+        assertEquals(290f, slotX(82), 0.01f)
+        assertEquals(300f, slotX(83), 0.01f)
     }
 
     @Test
@@ -49,12 +47,12 @@ class BowedBoardLayoutTest {
 
     @Test
     fun withoutOpenStringsTheGBlockCarriesTheExtraSlot() {
-        assertEquals(5f, closedSlotX(55), 0.01f)   // G3, still the first slot
-        assertEquals(75f, closedSlotX(62), 0.01f)  // D4 is the fourth finger on G, the G block's last slot
-        assertEquals(90f, closedSlotX(63), 0.01f)  // D#4 starts the D block
-        assertEquals(150f, closedSlotX(69), 0.01f) // A4 is the fourth finger on D, the D block's last slot
-        assertEquals(225f, closedSlotX(76), 0.01f) // E5 is the fourth finger on A, the A block's last slot
-        assertEquals(240f, closedSlotX(77), 0.01f) // F5 starts the E block
+        assertEquals(5f, closedSlotX(55), 0.01f)
+        assertEquals(75f, closedSlotX(62), 0.01f)
+        assertEquals(90f, closedSlotX(63), 0.01f)
+        assertEquals(150f, closedSlotX(69), 0.01f)
+        assertEquals(225f, closedSlotX(76), 0.01f)
+        assertEquals(240f, closedSlotX(77), 0.01f)
     }
 
     @Test

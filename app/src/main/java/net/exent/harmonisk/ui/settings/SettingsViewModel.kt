@@ -38,9 +38,7 @@ class SettingsViewModel @Inject constructor(
         private const val MIDI_VELOCITY = 100
         private const val FREQ_TOLERANCE = 30f
         private const val REQUIRED_DETECTIONS = 5
-        /** Calibration rounds delays to the steps the delay sliders can express. */
         const val DELAY_STEP_MS = 25
-        // Fallbacks when the device doesn't report capture/inference latency
         private const val FALLBACK_CAPTURE_LATENCY_MS = 15
         private const val FALLBACK_INFERENCE_LATENCY_MS = 40
     }
@@ -169,9 +167,6 @@ class SettingsViewModel @Inject constructor(
                     }
                 }
 
-                // The round trip is everything the tone spends getting out of the speaker, through
-                // the air, and back through the mic and pitch detection. Only what is left after
-                // the input side is the app's own playback delay.
                 val roundTripMs = roundToStep(measurements.average().toInt())
                 val inputMs = measureInputDelayMs()
                 audioDelayRepository.setInputDelayForCurrentDevices(inputMs)
@@ -199,10 +194,6 @@ class SettingsViewModel @Inject constructor(
         _calibrationNoDetection.value = false
     }
 
-    /**
-     * Input delay = mic capture latency + analysis window + CREPE inference time.
-     * Sampled from the live capture pipeline after the round-trip measurement.
-     */
     private suspend fun measureInputDelayMs(): Int {
         var captureSum = 0
         var inferenceSum = 0
@@ -229,6 +220,5 @@ class SettingsViewModel @Inject constructor(
     }
 }
 
-/** Rounds a delay to the nearest step the delay sliders can express. */
 internal fun roundToStep(ms: Int): Int =
     (ms + SettingsViewModel.DELAY_STEP_MS / 2) / SettingsViewModel.DELAY_STEP_MS * SettingsViewModel.DELAY_STEP_MS

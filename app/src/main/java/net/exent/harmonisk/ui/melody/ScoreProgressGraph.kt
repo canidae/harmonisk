@@ -67,7 +67,6 @@ fun ScoreProgressGraph(
             val chartWidth = size.width
             val chartHeight = size.height
 
-            // Grid lines and Y-axis labels
             val gridSteps = 4
             for (i in 0..gridSteps) {
                 val y = chartTop + chartHeight * (1f - i.toFloat() / gridSteps)
@@ -92,7 +91,6 @@ fun ScoreProgressGraph(
                 )
             }
 
-            // Plot points
             val points = scores.mapIndexed { index, entry ->
                 val t = if (scores.size == 1) 1f else index.toFloat() / (scores.size - 1)
                 val x = chartLeft + chartWidth * t
@@ -100,9 +98,6 @@ fun ScoreProgressGraph(
                 Offset(x, y.coerceIn(chartTop, chartTop + chartHeight))
             }
 
-            // Level-change markers, drawn behind the data. Replays of an older level
-            // get a lighter, shorter dash and a downward arrow so a step back is
-            // distinct from unlocking the next level.
             for (change in levelChanges(scores)) {
                 val markerColor = if (change.isReplay) levelReplayColor else levelUpColor
                 val dashHeight = if (change.isReplay) 3f else 5f
@@ -137,7 +132,6 @@ fun ScoreProgressGraph(
                 )
             }
 
-            // Draw connecting line
             if (points.size >= 2) {
                 val path = Path().apply {
                     moveTo(points[0].x, points[0].y)
@@ -156,7 +150,6 @@ fun ScoreProgressGraph(
                 )
             }
 
-            // Draw dots
             val dotRadius = if (compact) 5f else 6f
             for (i in points.indices) {
                 val dotColor = scoreColor(scores[i].overallScore)
@@ -164,7 +157,6 @@ fun ScoreProgressGraph(
                 drawCircle(Color.White, dotRadius * 0.5f, points[i])
             }
 
-            // X-axis labels
             if (!compact) {
                 val step = when {
                     scores.size <= 6 -> 1
@@ -190,7 +182,6 @@ fun ScoreProgressGraph(
     }
 }
 
-/** A run played at a different level than the run before, where the graph marks a level change. */
 data class LevelChange(val index: Int, val level: Int, val previousLevel: Int) {
     val isReplay: Boolean get() = level < previousLevel
 }

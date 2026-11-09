@@ -2,7 +2,6 @@ package net.exent.harmonisk.ui.record
 
 enum class PianoVisibility { NONE, UPPER_ONLY, LOWER_ONLY, BOTH }
 
-/** Audio output routing for playback. */
 enum class OutputDevice { SYNTH, NONE, MIDI }
 
 data class RecordState(
@@ -22,17 +21,13 @@ data class RecordState(
     val loopStartBar: Int? = null,
     val loopEndBar: Int? = null,
     val selectedNoteId: String? = null,
-    // MIDI state
     val midiInputEnabled: Boolean = false,
     val outputDevice: OutputDevice = OutputDevice.SYNTH,
     val midiInputDeviceName: String? = null,
     val midiOutputDeviceName: String? = null,
     val isPlaying: Boolean = false,
-    // Piano visibility
     val pianoVisibility: PianoVisibility = PianoVisibility.UPPER_ONLY,
-    // Meter denominator (time signature note value: 2, 4, 8, 16, 32)
     val barDivision: Int = 4,
-    // Metronome
     val metronomeEnabled: Boolean = true
 )
 

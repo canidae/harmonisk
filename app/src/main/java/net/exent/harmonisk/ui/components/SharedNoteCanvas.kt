@@ -59,10 +59,7 @@ private const val BAR_GAP_PX = 2f
 private const val INDICATOR_HEIGHT_PX = 8f
 private const val CORNER_RADIUS_DP = 4f
 
-// Bowed fingering board
-// Reference portrait canvas width (dp) the horizontal time scale is normalized to
 private const val BOWED_REFERENCE_WIDTH_DP = 411f
-// The now line and the dividers between string blocks share one weight.
 private const val BOWED_LINE_ALPHA = 0.55f
 private const val BOWED_LINE_WIDTH_DP = 2f
 private val FINGER_COLORS = FingerColors.withIndex().associate { it.index to it.value }
@@ -70,41 +67,30 @@ private val OUT_OF_RANGE_GREY = Color(0xFF9E9E9E)
 private val BLACK_KEY_INDICES = setOf(1, 3, 6, 8, 10)
 private const val WHITE_KEYS_PER_OCTAVE = 7f
 private const val BLACK_KEY_WIDTH_FRACTION = 0.6f
-// Unit directions the finger number is repeated in behind itself, giving it a halo so it reads on
-// every bar colour.
 private val LABEL_OUTLINE_DIRECTIONS = listOf(
     Offset(-1f, -1f), Offset(0f, -1f), Offset(1f, -1f),
     Offset(-1f, 0f), Offset(1f, 0f),
     Offset(-1f, 1f), Offset(0f, 1f), Offset(1f, 1f)
 )
 private const val LABEL_OUTLINE_DP = 1.25f
-// The digits are drawn at this share of the bar's width, which is what limits their size.
 private const val LABEL_SIZE_RATIO = 1.2f
 
-// Semitone slot columns per string block. One block carries an extra slot: the highest string when
-// open strings are preferred, otherwise the lowest string (which then holds the fourth finger note
-// and the next block starts one semitone later).
 private const val BOWED_SLOTS_PER_STRING = 7
 private const val BOWED_BLOCK_COUNT = 4
 private const val BOWED_SLOT_COUNT = BOWED_BLOCK_COUNT * BOWED_SLOTS_PER_STRING + 1
-// Narrow gap between two string blocks, so the four blocks read as separate strings.
 private const val BOWED_BLOCK_GAP_DP = 2.5f
 private val BOWED_BLOCK_GAP_COLOR = Color(0xFF05050C)
-/** Width of one semitone slot, allowing for the gaps between the string blocks. */
 internal fun bowedSlotWidth(canvasWidth: Float, gapPx: Float): Float =
     ((canvasWidth - gapPx * (BOWED_BLOCK_COUNT - 1)) / BOWED_SLOT_COUNT).coerceAtLeast(0f)
 
-/** Number of semitone slots in a string's block. */
 private fun bowedSlotsInBlock(stringIndex: Int, preferOpenStrings: Boolean): Int =
     if (stringIndex == if (preferOpenStrings) BOWED_BLOCK_COUNT - 1 else 0) BOWED_SLOTS_PER_STRING + 1
     else BOWED_SLOTS_PER_STRING
 
-/** Slot index a string's block starts at. */
 private fun bowedBlockStartSlot(stringIndex: Int, preferOpenStrings: Boolean): Int =
     if (preferOpenStrings) stringIndex * BOWED_SLOTS_PER_STRING
     else if (stringIndex == 0) 0 else stringIndex * BOWED_SLOTS_PER_STRING + 1
 
-/** Left edge of a string's block of semitone slots. */
 internal fun bowedBlockLeft(
     stringIndex: Int,
     canvasWidth: Float,
@@ -115,13 +101,6 @@ internal fun bowedBlockLeft(
     return bowedBlockStartSlot(stringIndex, preferOpenStrings) * slotWidth + stringIndex * gapPx
 }
 
-/**
- * Horizontal centre of the column a pitch falls in.
- *
- * The board runs chromatically from the instrument's lowest open string at the far left to its
- * highest first-position note at the far right, one slot per semitone in four blocks. Pitches
- * outside the board stop at the outer columns.
- */
 internal fun bowedSlotCenterX(
     midi: Int,
     canvasWidth: Float,
@@ -137,22 +116,20 @@ internal fun bowedSlotCenterX(
         (withinBlock + 0.5f) * bowedSlotWidth(canvasWidth, gapPx)
 }
 
-/** Time scale for the bowed board, normalized to the canvas span so the
- *  visible time window stays consistent across portrait and landscape. */
 private fun bowedPixelsPerSecond(fallSpeedPxPerSec: Float, canvasSpan: Float): Float =
     fallSpeedPxPerSec * canvasSpan / BOWED_REFERENCE_WIDTH_DP
 
 val VOICE_COLORS = listOf(
-    Color(0xFF4FC3F7), // Teal/light blue
-    Color(0xFFFFB74D), // Amber
-    Color(0xFFCE93D8), // Purple
-    Color(0xFFF48FB1), // Pink
-    Color(0xFF81C784), // Green
-    Color(0xFFFF8A65), // Orange
-    Color(0xFF80CBC4), // Teal
-    Color(0xFFFFF176), // Yellow
-    Color(0xFF80DEEA), // Cyan
-    Color(0xFFBCAAA4), // Brown
+    Color(0xFF4FC3F7),
+    Color(0xFFFFB74D),
+    Color(0xFFCE93D8),
+    Color(0xFFF48FB1),
+    Color(0xFF81C784),
+    Color(0xFFFF8A65),
+    Color(0xFF80CBC4),
+    Color(0xFFFFF176),
+    Color(0xFF80DEEA),
+    Color(0xFFBCAAA4),
 )
 
 sealed interface CanvasMode {
@@ -217,9 +194,6 @@ internal fun computeRecordNoteRects(
     return result
 }
 
-/**
- * A unified note canvas used by both Record and Melody Play modes.
- */
 @OptIn(ExperimentalTextApi::class)
 @Composable
 fun SharedNoteCanvas(
@@ -237,7 +211,6 @@ fun SharedNoteCanvas(
     val fontScale = localDensity.fontScale
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
-    // Emit note rects for edit-mode hit testing (Record only)
     if (onNoteRects != null && mode is CanvasMode.Record && canvasSize != IntSize.Zero) {
         val w = canvasSize.width.toFloat()
         val pianoEdgeY = canvasSize.height / 2f
@@ -257,7 +230,6 @@ fun SharedNoteCanvas(
         val height = size.height
         val pianoHeight = PIANO_HEIGHT_DP * density
 
-        // Extend viewMaxMidi so content fits in (width - rightPaddingPx)
         val effectiveViewMaxMidi = if (rightPaddingPx > 0f && width > rightPaddingPx) {
             val contentWidth = width - rightPaddingPx
             val midiPerPx = (viewMaxMidi - viewMinMidi) / contentWidth
@@ -275,12 +247,10 @@ fun SharedNoteCanvas(
         val showBottomPiano = pianoVisibility == PianoVisibility.BOTH || pianoVisibility == PianoVisibility.LOWER_ONLY
         val bowedMode = mode is CanvasMode.Melody
 
-        // Piano edge and far edge Y coordinates
-        val pianoEdgeY: Float   // the "now" line or melody piano edge
+        val pianoEdgeY: Float
         val canvasFarEdgeY: Float
-        // For Record: two pianos (top + bottom), now-line at height/2
-        val noteAreaTop: Float  // top of the note drawing area (bottom of top piano)
-        val noteAreaBottom: Float  // bottom of the note drawing area (top of bottom piano)
+        val noteAreaTop: Float
+        val noteAreaBottom: Float
         if (mode is CanvasMode.Record) {
             pianoEdgeY = height / 2f
             canvasFarEdgeY = height
@@ -298,10 +268,8 @@ fun SharedNoteCanvas(
             noteAreaBottom = canvasFarEdgeY
         }
 
-        // Draw background
         drawRect(CANVAS_BG)
 
-        // Compute playable-area bottom (before bar 1 = black, no columns/grid)
         val playableBottom: Float = when {
             mode is CanvasMode.Record && mode.fallSpeedPxPerSec > 0f -> {
                 val pxPerMs = mode.fallSpeedPxPerSec * density / 1000f
@@ -318,7 +286,6 @@ fun SharedNoteCanvas(
             else -> noteAreaBottom
         }
 
-        // Draw black-key column backgrounds (clipped to playable area)
         if (!bowedMode) {
             for (midi in minMidi..maxMidi) {
                 val key = layout[midi] ?: continue
@@ -332,7 +299,6 @@ fun SharedNoteCanvas(
             }
         }
 
-        // Draw subtle grid lines at white key boundaries (clipped to playable area)
         if (!bowedMode && playableBottom > noteAreaTop) {
             for (midi in minMidi..maxMidi) {
                 val key = layout[midi] ?: continue
@@ -347,12 +313,10 @@ fun SharedNoteCanvas(
             }
         }
 
-        // Mode-specific rendering
         when (mode) {
             is CanvasMode.Record -> {
                 drawBarLines(mode, pianoEdgeY, noteAreaTop, noteAreaBottom, density, textMeasurer)
                 drawRecordNotes(mode, layout, pianoEdgeY, noteAreaTop, noteAreaBottom, density)
-                // "Now" line — thin bright marker in the center
                 drawLine(
                     color = Color.White.copy(alpha = 0.55f),
                     start = Offset(0f, pianoEdgeY),
@@ -386,8 +350,6 @@ fun SharedNoteCanvas(
                     val nowLineY = size.height - keyboardAreaPx
                     drawBowedBoard(mode, density, fontScale, textMeasurer, nowLineY)
                     drawBowedKeyboard(mode, density, textMeasurer, nowLineY)
-                    // Clip bars and notes to the playable area so they never
-                    // obscure the keyboard below the play line.
                     clipRect(left = 0f, top = 0f, right = width, bottom = nowLineY) {
                         drawBowedBarLines(mode, density, textMeasurer, nowLineY)
                         drawBowedMelodyNotes(mode, density, textMeasurer, nowLineY)
@@ -403,7 +365,6 @@ fun SharedNoteCanvas(
                     drawBarLines(mode, pianoEdgeY, canvasFarEdgeY, density, textMeasurer, playableBottom)
                     drawMelodyNotes(mode, layout, pianoEdgeY, canvasFarEdgeY, pianoAtBottom, density)
                     drawPitchIndicator(mode, layout, pianoEdgeY, pianoAtBottom, density)
-                    // Single piano for Melody mode
                     drawPianoKeyboard(
                         textMeasurer = textMeasurer,
                         layout = layout,
@@ -418,7 +379,6 @@ fun SharedNoteCanvas(
     }
 }
 
-// region Bar/beat line rendering
 
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawBarLines(
@@ -440,14 +400,12 @@ private fun DrawScope.drawBarLines(
     val visibleTop = noteAreaTop
     val visibleBottom = noteAreaBottom
 
-    // Clip all drawing to the playable area — nothing drawn below the bar-1 line
     val bar1Y = (nowY + now * pxPerMs).toFloat()
     val clipBottom = bar1Y.coerceIn(visibleTop, visibleBottom)
     if (clipBottom <= visibleTop) return
 
     clipRect(left = 0f, top = visibleTop, right = size.width, bottom = clipBottom) {
 
-    // Draw loop bar line markers (start and end lines in distinct color)
     val loopStartMs = mode.loopStartMs
     val loopEndMs = mode.loopEndMs
 
@@ -462,7 +420,6 @@ private fun DrawScope.drawBarLines(
 
     var beatIndex = firstBeatIndex
     var safetyCounter = 0
-    // Pre-compute loop bar-line indices (0-based) for fast comparison
     val loopStartBeatIndex = loopStartMs?.let { (it / beatDurationMs).roundToLong() }
     val loopEndBeatIndex   = loopEndMs?.let   { (it / beatDurationMs).roundToLong() }
     val loopBarLineStyle = TextStyle(
@@ -472,7 +429,6 @@ private fun DrawScope.drawBarLines(
     )
     while (safetyCounter++ < 2000) {
         val beatTimeMs = beatIndex * beatDurationMs
-        // Skip beats before session start (bar 1)
         if (beatIndex < 0) {
             beatIndex++
             continue
@@ -504,7 +460,7 @@ private fun DrawScope.drawBarLines(
         }
         beatIndex++
     }
-    } // end clipRect
+    }
 }
 
 @OptIn(ExperimentalTextApi::class)
@@ -602,9 +558,7 @@ private fun DrawScope.drawBarLines(
     }
 }
 
-// endregion
 
-// region Record rendering
 
 private fun DrawScope.drawRecordNotes(
     mode: CanvasMode.Record,
@@ -623,7 +577,6 @@ private fun DrawScope.drawRecordNotes(
         mode.activeNote?.let { add(it) }
     }
 
-    // Pass 1: draw all note bars and selection glows
     for (note in allNotes) {
         val key = layout[note.midiNumber] ?: continue
 
@@ -631,13 +584,9 @@ private fun DrawScope.drawRecordNotes(
         val ageOfEndMs = now - noteEndMs
         val ageOfStartMs = now - note.startTimeMs
 
-        // Notes fall downward: past (positive age) → below now-line, future (negative age) → above
         val rawTopY = pianoEdgeY + ageOfEndMs * pxPerMs
         val rawBottomY = pianoEdgeY + ageOfStartMs * pxPerMs
 
-        // Color based on voice; non-active voices are slightly dimmed, black keys slightly darker.
-        // No position-based color changes: all notes look the same regardless of where they are
-        // relative to the now-line (avoids jarring colour shift as notes scroll past).
         val baseVoiceColor = VOICE_COLORS[note.trackOrigin % VOICE_COLORS.size]
         val isActiveVoice = note.voiceIndex == mode.activeVoiceIndex || note.isActive
         var barColor = if (isActiveVoice) baseVoiceColor else baseVoiceColor.copy(alpha = 0.6f)
@@ -659,13 +608,12 @@ private fun DrawScope.drawRecordNotes(
             visibleTop = noteAreaTop,
             visibleBottom = noteAreaBottom,
             color = barColor,
-            borderAlpha = if (isSelected) 0.0f else 0.25f,  // selection glow replaces border
+            borderAlpha = if (isSelected) 0.0f else 0.25f,
             centsHistory = note.centsHistory,
             density = density,
-            wigglyPianoAtBottom = true  // Record notes scroll down: sample 0 (start) is at rawBottomY
+            wigglyPianoAtBottom = true
         )
 
-        // Selection glow: bright thick rounded outline drawn on top of the note bar
         if (isSelected) {
             val barX = key.x + BAR_GAP_PX
             val barW = key.width - BAR_GAP_PX * 2f
@@ -685,16 +633,13 @@ private fun DrawScope.drawRecordNotes(
                             bottomRightCornerRadius = CornerRadius(bottomR, bottomR)
                         ))
                     }
-                    // Soft outer glow
                     drawPath(selPath, Color.White.copy(alpha = 0.30f), style = Stroke(width = 5f * density))
-                    // Crisp bright inner border
                     drawPath(selPath, Color.White.copy(alpha = 0.90f), style = Stroke(width = 1.5f * density))
                 }
             }
         }
     }
 
-    // Pass 2: draw handles for the selected note on top of all bars
     val selectedNote = allNotes.firstOrNull { it.id == mode.selectedNoteId }
     if (selectedNote != null && selectedNote.endTimeMs != null) {
         val key = layout[selectedNote.midiNumber]
@@ -709,11 +654,9 @@ private fun DrawScope.drawRecordNotes(
                            else baseVoiceColor.copy(alpha = 0.6f)
             if (key.isBlack) barColor = barColor.copy(red = barColor.red * 0.75f, green = barColor.green * 0.75f, blue = barColor.blue * 0.75f)
 
-            // End handle: centered on top-right corner
             val endHandleX = barX + barW
             drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,                center = Offset(endHandleX, rawTopY))
             drawCircle(color = barColor,                        radius = handleRadius - 3f * density, center = Offset(endHandleX, rawTopY))
-            // Start handle: centered on bottom-left corner
             val startHandleX = barX
             drawCircle(color = Color.White.copy(alpha = 0.9f), radius = handleRadius,                center = Offset(startHandleX, rawBottomY))
             drawCircle(color = barColor,                        radius = handleRadius - 3f * density, center = Offset(startHandleX, rawBottomY))
@@ -721,9 +664,7 @@ private fun DrawScope.drawRecordNotes(
     }
 }
 
-// endregion
 
-// region Melody rendering
 
 private fun DrawScope.drawMelodyNotes(
     mode: CanvasMode.Melody,
@@ -818,9 +759,7 @@ private fun DrawScope.drawPitchIndicator(
     )
 }
 
-// endregion
 
-// region Bowed board rendering
 
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawBowedBoard(
@@ -836,7 +775,6 @@ private fun DrawScope.drawBowedBoard(
     val slotWidth = bowedSlotWidth(width, gapPx)
     val preferOpenStrings = mode.preferOpenStrings
 
-    // One block per string, separated by a gap and alternating tint
     for (i in 0 until BOWED_BLOCK_COUNT) {
         val left = bowedBlockLeft(i, width, gapPx, preferOpenStrings)
         if (i % 2 == 0) {
@@ -861,7 +799,6 @@ private fun DrawScope.drawBowedBoard(
         }
     }
 
-    // A big dim string letter behind the notes, centred over the playable area of its block
     val labels = mode.instrument.stringLabels
     val letterPx = minOf(slotWidth * BOWED_SLOTS_PER_STRING, nowLineY / 3f)
     val letterStyle = TextStyle(
@@ -1047,7 +984,6 @@ private fun DrawScope.drawBowedMelodyNotes(
     val positions = mode.bowedPositions
     val minGapPx = 4f * density
     val barThickness = (slotWidth * 0.9f).coerceAtLeast(4f * density)
-    // The digits sit in a white halo; measure them once for the whole pass
     val labelStyle = TextStyle(
         color = Color.Black,
         fontSize = (barThickness * LABEL_SIZE_RATIO / density).sp,
@@ -1067,7 +1003,6 @@ private fun DrawScope.drawBowedMelodyNotes(
         val relativeStart = noteStartTime - viewTimeSeconds
         val relativeEnd = noteEndTime - viewTimeSeconds
 
-        // Notes fall toward the play line: future times sit above it
         var rawBottomY = (nowLineY - relativeStart * pixelsPerSecond).toFloat()
         var rawTopY = (nowLineY - relativeEnd * pixelsPerSecond).toFloat()
 
@@ -1087,7 +1022,6 @@ private fun DrawScope.drawBowedMelodyNotes(
         var barLen = rawBottomY - rawTopY
         if (barLen < 2f) return@forEachIndexed
 
-        // Ensure a minimum visible length that adapts to the canvas
         val minBarLen = maxOf(barThickness, nowLineY * 0.035f)
         var barTop = rawTopY
         if (barLen < minBarLen) {
@@ -1102,9 +1036,6 @@ private fun DrawScope.drawBowedMelodyNotes(
         val r = CORNER_RADIUS_DP * density
         val visuallyActive = viewTimeSeconds >= noteStartTime && viewTimeSeconds < noteEndTime
         val color = FINGER_COLORS[pos?.finger] ?: OUT_OF_RANGE_GREY
-        // A low or high finger placement is striped with the neighbouring finger's colour, and the
-        // stripes lean the way the finger moves: rising for a raised (sharp) placement, falling for
-        // a lowered (flat) one.
         val deviation = if (pos == null) 0
         else BowedAlgorithm.fingerOffsetDeviation(
             note.noteNumber,
@@ -1161,7 +1092,6 @@ private fun DrawScope.drawBowedMelodyNotes(
             )
         }
 
-        // Wiggly pitch line along the vertical bar
         val centsHistory = mode.noteCentsHistory[index] ?: emptyList()
         val centsPositions = mode.noteCentsPositions[index] ?: emptyList()
         val playProgress = mode.notePlayProgress[index] ?: 0f
@@ -1180,10 +1110,7 @@ private fun DrawScope.drawBowedMelodyNotes(
             )
         }
 
-        // Finger number label (no number for open strings), white halo behind black digits so it
-        // stays readable on every finger colour
         val (textLayout, outlineLayout) = labels[pos?.finger] ?: return@forEachIndexed
-        // The number belongs inside the bar, which may run off the top edge or past the play line
         val barVisibleTop = barTop.coerceAtLeast(0f)
         val barVisibleBottom = (barTop + barLen).coerceAtMost(nowLineY)
         val textHeight = textLayout.size.height
@@ -1264,8 +1191,6 @@ private fun DrawScope.drawVerticalPitchLine(
         val t = centsPositions[i].coerceIn(0f, 1f)
         val normalized = (centsHistory[i] / NoteUtils.MAX_CENTS_OFF).coerceIn(-1f, 1f)
         val x = centerX + normalized * maxDeviationPx
-        // Bowed bars fall toward the play line: the note starts at the bar
-        // bottom, so the pitch line grows upward from detection start.
         val y = barBottom - t * (barBottom - barTop)
         if (i == 0) {
             path.moveTo(x, y)
@@ -1281,11 +1206,8 @@ private fun DrawScope.drawVerticalPitchLine(
     }
 }
 
-// endregion
 
-// region Shared note bar rendering
 
-/** Diagonal stripes across a note bar, used for low and high finger placements. */
 private fun DrawScope.drawDiagonalStripes(
     topLeft: Offset,
     barSize: Size,
@@ -1295,8 +1217,6 @@ private fun DrawScope.drawDiagonalStripes(
     density: Float
 ) {
     val stripeWidth = (barSize.width * 0.22f).coerceAtLeast(1.5f * density)
-    // Step along x rather than perpendicular to the stripes, so the 45° stripes cover about a third
-    // of the bar and the finger's own colour stays dominant.
     val step = stripeWidth * 3.6f
     val shape = Path().apply {
         addRoundRect(
@@ -1351,7 +1271,6 @@ private fun DrawScope.drawNoteBar(
 
     val r = CORNER_RADIUS_DP * density
 
-    // Square corners when the bar is clipped at an edge (continuous with the boundary)
     val topR = if (rawTopY <= visibleTop) 0f else r
     val bottomR = if (rawBottomY >= visibleBottom) 0f else r
 
@@ -1393,9 +1312,7 @@ private fun DrawScope.drawNoteBar(
     }
 }
 
-// endregion
 
-// region Wiggly pitch line
 
 private fun DrawScope.drawWigglyPitchLine(
     barX: Float,
@@ -1447,17 +1364,13 @@ private fun DrawScope.drawWigglyPitchLine(
     }
 }
 
-// endregion
 
-// region Color helpers
 
-/** Two-pass glow stroke: wide translucent halo + narrow bright line. */
 private fun DrawScope.drawGlowPath(path: Path, density: Float) {
     drawPath(path, Color.White.copy(alpha = 0.15f), style = Stroke(width = 4f * density, cap = StrokeCap.Round, join = StrokeJoin.Round))
     drawPath(path, Color.White.copy(alpha = 0.7f),  style = Stroke(width = 1.5f * density, cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 
-/** Color for the pitch indicator based on proximity to expected note */
 private fun getIndicatorColor(
     detectedMidi: Int,
     centsOff: Float?,
@@ -1481,4 +1394,3 @@ private fun getIndicatorColor(
     }
 }
 
-// endregion

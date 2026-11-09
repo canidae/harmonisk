@@ -66,11 +66,6 @@ class SoundFontSynthesizer(
     private var currentBank: Int = Instrument.VIOLIN.midiBank
     private var currentProgram: Int = Instrument.VIOLIN.midiProgram
 
-    /**
-     * The mixer both the synth and the track must agree on. Rendering at the device's own rate is
-     * what lets the track onto the fast mixer; a mismatch sends it through the resampling path and
-     * costs a couple of hundred milliseconds.
-     */
     private val outputSampleRate: Int =
         (context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager)
             ?.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)

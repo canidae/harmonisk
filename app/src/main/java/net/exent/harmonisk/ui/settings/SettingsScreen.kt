@@ -90,7 +90,6 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Language
             SettingSection(
                 title = stringResource(R.string.settings_language),
                 icon = Icons.Filled.Language
@@ -131,8 +130,6 @@ fun SettingsScreen(
                 }
             }
 
-            // Microphone sensitivity, the negated silence threshold: -25 dB at the left,
-            // -65 dB at the right, so moving right detects fainter sounds.
             SettingSection(
                 title = stringResource(R.string.settings_mic_sensitivity),
                 icon = Icons.Filled.Mic
@@ -163,7 +160,6 @@ fun SettingsScreen(
                 }
             }
 
-            // Audio delay calibration
             SettingSection(
                 title = stringResource(R.string.settings_delay_title),
                 icon = Icons.Filled.Timer,
@@ -236,7 +232,6 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Reset button
             OutlinedButton(
                 onClick = { showResetConfirm = true },
                 modifier = Modifier.align(Alignment.CenterHorizontally)

@@ -13,12 +13,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
-/**
- * Tracks connected MIDI devices and exposes enable/disable state for input and output.
- *
- * Auto-behaviour: MIDI is used when a compatible device is connected.
- * Override: null = auto, true = always on, false = always off (mic fallback).
- */
 class MidiDeviceManager(context: Context) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -28,15 +22,12 @@ class MidiDeviceManager(context: Context) {
 
     private val _devices = MutableStateFlow<List<MidiDeviceInfo>>(emptyList())
 
-    /** All currently connected MIDI devices. */
     val devices: StateFlow<List<MidiDeviceInfo>> = _devices.asStateFlow()
 
-    /** First connected device that has output ports (app can receive MIDI from it). */
     val selectedInputDevice: StateFlow<MidiDeviceInfo?> = _devices
         .map { list -> list.firstOrNull { it.outputPortCount > 0 } }
         .stateIn(scope, SharingStarted.Eagerly, null)
 
-    /** First connected device that has input ports (app can send MIDI to it). */
     val selectedOutputDevice: StateFlow<MidiDeviceInfo?> = _devices
         .map { list -> list.firstOrNull { it.inputPortCount > 0 } }
         .stateIn(scope, SharingStarted.Eagerly, null)
@@ -49,20 +40,17 @@ class MidiDeviceManager(context: Context) {
         .map { it != null }
         .stateIn(scope, SharingStarted.Eagerly, false)
 
-    // Per-feature overrides: null = auto (follow device availability)
     private val _inputOverride = MutableStateFlow<Boolean?>(null)
     private val _outputOverride = MutableStateFlow<Boolean?>(null)
 
     val inputOverride: StateFlow<Boolean?> = _inputOverride.asStateFlow()
     val outputOverride: StateFlow<Boolean?> = _outputOverride.asStateFlow()
 
-    /** True when MIDI input should be used (auto or forced on). */
     val effectiveMidiInputEnabled: StateFlow<Boolean> = combine(
         isMidiInputAvailable, _inputOverride
     ) { available, override -> override ?: available }
         .stateIn(scope, SharingStarted.Eagerly, false)
 
-    /** True when MIDI output should be used (auto or forced on). */
     val effectiveMidiOutputEnabled: StateFlow<Boolean> = combine(
         isMidiOutputAvailable, _outputOverride
     ) { available, override -> override ?: available }
@@ -87,19 +75,10 @@ class MidiDeviceManager(context: Context) {
         }
     }
 
-    /**
-     * Override MIDI input source. Pass null to restore auto behaviour (use MIDI when available).
-     * Pass true to force MIDI even if no device is connected (will effectively be no-op until connected).
-     * Pass false to force microphone even when a device is connected.
-     */
     fun setInputOverride(enabled: Boolean?) {
         _inputOverride.value = enabled
     }
 
-    /**
-     * Override MIDI output. Pass null to restore auto behaviour.
-     * Pass false to use internal synthesizer even when a MIDI device is connected.
-     */
     fun setOutputOverride(enabled: Boolean?) {
         _outputOverride.value = enabled
     }

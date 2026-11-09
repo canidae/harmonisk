@@ -5,16 +5,6 @@ import net.exent.harmonisk.midi.KeySignature
 import net.exent.harmonisk.midi.NoteEvent
 import kotlin.math.abs
 
-/**
- * Chooses the transposition that is easiest for a beginner to finger in first position.
- *
- * Every shift from -6 to +6 semitones is scored through the bowed fingering algorithm:
- * a note on the default finger placement costs nothing, a low or high placement costs by
- * the semitones it deviates, the fourth finger costs a little, each open-string pitch earns
- * a reward and notes outside first position cost the most. Keys with two or three sharps (D and A
- * major and their relative minors) get a small bonus, because their scales sit under the
- * default finger placements. The shift closest to the written key wins a tie.
- */
 class BeginnerKey(private val bowedAlgorithm: BowedAlgorithm) {
 
     fun offset(
@@ -67,7 +57,6 @@ class BeginnerKey(private val bowedAlgorithm: BowedAlgorithm) {
         return cost
     }
 
-    /** D and A major (and B and F# minor) share the beginner-friendly finger patterns. */
     private fun keyBonus(key: KeySignature?): Double = when (key?.fifths) {
         2 -> -D_MAJOR_REWARD
         3 -> -A_MAJOR_REWARD

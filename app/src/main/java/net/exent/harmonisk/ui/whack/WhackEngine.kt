@@ -43,7 +43,6 @@ object WhackRules {
     const val RISE_DELAY_MS = 140L
     const val EMOJI_RISE_MS = 700L
 
-    /** Hits needed to reach level 2, 3, 4 and 5. */
     val LEVEL_HITS = listOf(8, 18, 30, 45)
 
     fun levelFor(hits: Int): Int = 1 + LEVEL_HITS.count { hits >= it }
@@ -57,7 +56,6 @@ object WhackRules {
     }
 }
 
-/** Every first-position note, one row per finger, one column per string. */
 fun whackHoles(instrument: Instrument): List<WhackHole> = (0..4).flatMap { finger ->
     val offset = BowedAlgorithm.defaultFingerOffset(instrument, finger) ?: return@flatMap emptyList()
     instrument.tuning.mapIndexed { stringIndex, open ->
@@ -74,10 +72,6 @@ sealed interface WhackJudgement {
     data class Wrong(override val hole: WhackHole) : WhackJudgement
 }
 
-/**
- * Grades a played note against the hole holding the emoji. Only a note that is actually on the
- * board counts as an attempt, so the press never lands on a hole the player did not play.
- */
 fun judgeNote(midi: Int, target: WhackHole, visible: List<WhackHole>): WhackJudgement? {
     if (midi == target.midi) return WhackJudgement.Hit(target)
     val played = visible.filter { it.midi == midi }.minByOrNull { it.finger } ?: return null

@@ -8,9 +8,9 @@ class MelodyTrackTest {
     private val track = MelodyTrack(
         name = "test",
         notes = listOf(
-            NoteEvent(60, 100, 0L, 480L),      // 0.0s - 0.5s
-            NoteEvent(64, 100, 240L, 720L),    // 0.25s - 1.0s
-            NoteEvent(67, 100, 480L, 480L)     // 0.5s - 1.0s
+            NoteEvent(60, 100, 0L, 480L),
+            NoteEvent(64, 100, 240L, 720L),
+            NoteEvent(67, 100, 480L, 480L)
         ),
         tempoChanges = listOf(TempoEvent(0L, 500_000L)),
         timeSignatures = listOf(TimeSignatureEvent(0L, 4, 4)),

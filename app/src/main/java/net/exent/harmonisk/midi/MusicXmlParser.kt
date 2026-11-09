@@ -6,19 +6,8 @@ import java.io.InputStream
 import java.io.StringReader
 import javax.xml.parsers.DocumentBuilderFactory
 
-/**
- * Reads a MusicXML score (score-partwise) into one [MelodyTrack] per `<part>`, so each part
- * behaves like a MIDI track/voice. Note durations, chords, ties, tempo, time signatures and
- * the key signature are carried over; repeat barlines are unrolled. Voltas and multi-measure
- * tempo maps are not interpreted.
- */
 object MusicXmlParser {
 
-    /**
-     * MusicXML measures durations in arbitrary divisions per quarter note, while the rest of
-     * the app expects a realistic MIDI tick resolution; 480 divides every note value a score
-     * can write.
-     */
     private const val PPQ = 480
 
     private val STEP_PITCH_CLASS = mapOf("C" to 0, "D" to 2, "E" to 4, "F" to 5, "G" to 7, "A" to 9, "B" to 11)
@@ -27,7 +16,6 @@ object MusicXmlParser {
         val document = try {
             val factory = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = false }
             factory.newDocumentBuilder().apply {
-                // MusicXML points at a DTD on the web; never let the parser go fetch it.
                 setEntityResolver { _, _ -> InputSource(StringReader("")) }
             }.parse(input)
         } catch (e: Exception) {
@@ -144,17 +132,12 @@ object MusicXmlParser {
         )
     }
 
-    /** First `<divisions>` anywhere in the part, so positions can be read before the attribute appears. */
     private fun firstDivisions(measures: List<Element>): Int? =
         measures.asSequence()
             .flatMap { it.children("attributes").asSequence() }
             .mapNotNull { it.childText("divisions")?.toIntOrNull() }
             .firstOrNull { it > 0 }
 
-    /**
-     * The order measures are played in: repeat barlines (forward/backward with `times`) are
-     * unrolled, everything else plays once in written order.
-     */
     private fun playbackOrder(measures: List<Element>): List<Element> {
         val order = mutableListOf<Element>()
         val played = mutableMapOf<Int, Int>()
@@ -204,7 +187,6 @@ object MusicXmlParser {
         return ((octave + 1) * 12 + pitchClass + alter).coerceIn(0, 127)
     }
 
-    /** `<sound tempo="…">` is in quarter notes per minute. */
     private fun Element.tempoFromSound(): Long? {
         val tempo = getAttribute("tempo").toDoubleOrNull() ?: return null
         return if (tempo > 0) (60_000_000.0 / tempo).toLong() else null

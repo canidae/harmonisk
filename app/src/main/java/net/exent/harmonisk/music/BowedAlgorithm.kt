@@ -6,13 +6,9 @@ import kotlin.math.abs
 
 data class BowedPosition(
     val stringIndex: Int,
-    val finger: Int // 0 = open string, 1-4 = fingers
+    val finger: Int
 )
 
-/**
- * Recommends fingerings for a sequence of notes in first position, using the
- * instrument's tuning and first-position finger spacing.
- */
 class BowedAlgorithm {
 
     private fun getAllValidPositions(
@@ -34,7 +30,6 @@ class BowedAlgorithm {
         return spelled.filter { it.finger != 0 }.ifEmpty { spelled.filter { it.finger == 0 } }
     }
 
-    /** True when the key spells [midi] as a flat, so the low fourth finger is the natural choice. */
     private fun isFlatSpelled(midi: Int, key: KeySignature?): Boolean {
         if (key == null) return true
         if (KeySignature.keyAlteration(midi - 1, key.fifths) > 0) return false
@@ -51,14 +46,6 @@ class BowedAlgorithm {
         return (stringDiff * 3) + fingerDiff
     }
 
-    /**
-     * Recommends a fingering for every note in a melody.
-     *
-     * Uses dynamic programming over the whole sequence so that each choice is
-     * influenced by both the previous and the upcoming notes (minimizes the
-     * total transition cost plus per-note open-string/pinky biases).
-     * Out-of-range notes (no valid first-position fingering) map to null.
-     */
     fun recommendPositions(
         instrument: Instrument,
         notes: List<Int>,
@@ -163,11 +150,6 @@ class BowedAlgorithm {
 
         fun semitoneOffset(midi: Int, openMidi: Int): Int = midi - openMidi
 
-        /**
-         * The default (natural) first-position semitone offset for a finger:
-         * the placement that sits right on the string line on the board.
-         * Finger 3 low (+5) is the default C, while finger 3 high (+6) is C#.
-         */
         fun defaultFingerOffset(instrument: Instrument, finger: Int): Int? = when (finger) {
             0 -> 0
             1 -> 2
@@ -177,11 +159,6 @@ class BowedAlgorithm {
             else -> null
         }
 
-        /**
-         * Semitone deviation of a note's placement from the finger's default on
-         * the given string: negative = low (flat) placement, positive = high
-         * (sharp) placement.
-         */
         fun fingerOffsetDeviation(
             midi: Int,
             openMidi: Int,

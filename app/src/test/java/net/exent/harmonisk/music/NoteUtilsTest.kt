@@ -43,7 +43,6 @@ class NoteUtilsTest {
 
     @Test
     fun `frequency slightly sharp reports positive cents`() {
-        // 445 Hz is about 20 cents sharp of A4
         val info = noteUtils.frequencyToNote(445f)
         assertEquals("A", info.name)
         assertEquals(4, info.octave)
@@ -53,7 +52,6 @@ class NoteUtilsTest {
 
     @Test
     fun `frequency slightly flat reports negative cents`() {
-        // 435 Hz is about 20 cents flat of A4
         val info = noteUtils.frequencyToNote(435f)
         assertEquals("A", info.name)
         assertEquals(4, info.octave)
@@ -106,11 +104,9 @@ class NoteUtilsTest {
 
     @Test
     fun `frequencyToCents calculates correctly`() {
-        // One semitone up = 100 cents
-        val cents = noteUtils.frequencyToCents(466.16f, 440f) // A#4 vs A4
+        val cents = noteUtils.frequencyToCents(466.16f, 440f)
         assertEquals(100f, cents, 2f)
 
-        // One octave up = 1200 cents
         val octaveCents = noteUtils.frequencyToCents(880f, 440f)
         assertEquals(1200f, octaveCents, 1f)
     }
@@ -123,8 +119,7 @@ class NoteUtilsTest {
 
     @Test
     fun `frequencyToCents flat note returns negative cents`() {
-        // A note below the reference should give negative cents
-        val cents = noteUtils.frequencyToCents(415.30f, 440f) // G#4 vs A4 = -100 cents
+        val cents = noteUtils.frequencyToCents(415.30f, 440f)
         assertTrue("Expected negative cents for flat note, got $cents", cents < 0f)
         assertEquals(-100f, cents, 2f)
     }

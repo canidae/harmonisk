@@ -1,14 +1,7 @@
 package net.exent.harmonisk.midi
 
-/**
- * Estimates the key of a melody from its pitch content with the Krumhansl-Schmuckler
- * algorithm: a duration-weighted pitch-class histogram is correlated with the major and
- * minor key profiles, and the best-correlating key wins. Used only when the file itself
- * carries no key, so a notated key is never second-guessed.
- */
 object KeyDetector {
 
-    /** Fewer notes than this cannot say anything useful about a key. */
     private const val MIN_NOTES = 6
 
     private val MAJOR_PROFILE = doubleArrayOf(
@@ -42,7 +35,6 @@ object KeyDetector {
         return best
     }
 
-    /** Pearson correlation between the histogram and a key profile. */
     private inline fun correlation(histogram: DoubleArray, profile: (Int) -> Double): Double {
         val values = DoubleArray(12) { profile(it) }
         val meanHistogram = histogram.average()

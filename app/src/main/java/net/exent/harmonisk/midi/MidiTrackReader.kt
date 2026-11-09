@@ -17,7 +17,6 @@ internal class MidiTrackReader(private val data: ByteArray) {
         fun onTimeSignature(tick: Long, numerator: Int, denominator: Int)
         fun onEndOfTrack(tick: Long, activeNotes: List<ActiveNote>)
 
-        /** Key signature meta (0xFF 0x59): [fifths] is signed, positive for sharps. */
         fun onKeySignature(tick: Long, fifths: Int, isMinor: Boolean) {}
     }
 

@@ -37,7 +37,6 @@ class SubharmonicCorrectorTest {
 
     @Test
     fun requiresALocalMaximumAtTheSubharmonic() {
-        // A monotonic slope has no peak an octave down, so the top peak stands.
         val act = FloatArray(360) { if (it <= 200) it / 200f else 1f }
         assertEquals(200, SubharmonicCorrector.fundamentalBin(act, 200))
     }

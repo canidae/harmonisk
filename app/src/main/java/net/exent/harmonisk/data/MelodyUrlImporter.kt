@@ -7,9 +7,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLDecoder
 
-/**
- * Fetches a melody (or a zip of melodies) over https. Only the user-supplied link is contacted.
- */
 object MelodyUrlImporter {
     private const val MAX_BYTES = 32 * 1024 * 1024
     private const val CONNECT_TIMEOUT_MS = 15_000
@@ -24,15 +21,12 @@ object MelodyUrlImporter {
 
     data class Download(val name: String, val bytes: ByteArray)
 
-    /** True for the plain https links the app is willing to fetch. */
     fun isSupported(url: String): Boolean = url.trim().startsWith("https://", ignoreCase = true)
 
-    /** True when [bytes] start with the zip local-file, central-directory or end-of-directory header. */
     fun isZip(bytes: ByteArray): Boolean =
         bytes.size >= 4 && bytes[0] == 'P'.code.toByte() && bytes[1] == 'K'.code.toByte() &&
             bytes[2].toInt() in intArrayOf(3, 5, 7)
 
-    /** Rewrite a Google Drive share link to its direct download, leaving other links untouched. */
     fun directUrl(url: String): String {
         val trimmed = url.trim()
         if (!trimmed.contains("drive.google.com/")) return trimmed
@@ -42,7 +36,6 @@ object MelodyUrlImporter {
         return "$DRIVE_DOWNLOAD$id&export=download"
     }
 
-    /** Fetch [url], following redirects, and name the result after its header hint or the URL path. */
     fun download(url: String): Download {
         require(isSupported(url)) { "Only https:// URLs are supported" }
         var target = directUrl(url)
@@ -70,7 +63,6 @@ object MelodyUrlImporter {
         throw IOException("Server returned a web page instead of a file")
     }
 
-    /** Derive the display name from the Content-Disposition header, falling back to the URL path. */
     fun displayName(url: String, contentDisposition: String? = null): String {
         val raw = contentDisposition?.let { HEADER_FILENAME.find(it)?.groupValues?.get(1) }
             ?: runCatching { URL(url).path }.getOrNull()?.substringAfterLast('/')

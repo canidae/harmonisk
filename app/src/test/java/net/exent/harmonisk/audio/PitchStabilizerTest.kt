@@ -8,14 +8,9 @@ import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-/**
- * Behavioural contract of [PitchStabilizer]: kill needle wobble, never introduce a reading
- * error, and stay quick when the player actually changes pitch.
- */
 class PitchStabilizerTest {
 
     private companion object {
-        /** Frame interval matching the real capture hop plus detector cost on the test device. */
         const val DT = 0.0185
 
         const val CENTS_PER_SEMITONE = 100.0
@@ -80,7 +75,6 @@ class PitchStabilizerTest {
         val random = Random(3)
         val trueCents = 5.0
 
-        // One badly wrong frame (an octave slip) surrounded by otherwise steady input.
         val out = feed(stabilizer, 200) { i ->
             when {
                 i == 150 -> 100.0 to 0.9f
@@ -135,8 +129,6 @@ class PitchStabilizerTest {
         val confident = PitchStabilizer()
         val unsure = PitchStabilizer()
 
-        // A short 30 cent drift stays inside the snap window, so only the smoothing
-        // weight decides how far the needle travels — and that weight follows confidence.
         val settled = 60
         val driftFrames = 5
         val confidentOut = feed(confident, settled + driftFrames) { i ->
@@ -159,7 +151,6 @@ class PitchStabilizerTest {
         val fast = PitchStabilizer()
         val slow = PitchStabilizer()
 
-        // A 20 cent drift sits below the snap threshold, so both filters must ease into it.
         val fastOut = feed(fast, 30, dt = 0.01) { 20.0 to 0.95f }
         val slowOut = feed(slow, 15, dt = 0.02) { 20.0 to 0.95f }
 

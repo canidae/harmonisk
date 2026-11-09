@@ -19,44 +19,18 @@ class PitchProcessor(
     companion object {
         const val SILENCE_THRESHOLD_DB = AudioConstants.DEFAULT_SILENCE_THRESHOLD_DB
 
-        /**
-         * Analysis window size in 44100 Hz samples.
-         * Must cover at least CREPE's required 64 ms window:
-         *   1024 samples @ 16 kHz = 64 ms → 44100 × 0.064 ≈ 2822 samples.
-         */
         const val ANALYSIS_WINDOW_SIZE = 2822
 
-        /** Duration of the analysis window in ms — part of the input detection latency. */
         const val ANALYSIS_WINDOW_MS = (ANALYSIS_WINDOW_SIZE * 1000 + AudioConstants.SAMPLE_RATE / 2) / AudioConstants.SAMPLE_RATE
 
-        /**
-         * Energy rise (in dB) within one chunk that triggers an onset reset.
-         * On onset the sliding window is cleared so the very first pitch detection
-         * reflects only the new note's signal — reduces transition ambiguity.
-         * The onset condition must persist for ONSET_DEBOUNCE_CHUNKS consecutive
-         * chunks to filter single-chunk amplitude modulation blips. 5 dB with a
-         * debounce of 2 beats both 3 dB (constant false resets, window starvation)
-         * and 8 dB (misses gradual onsets) on real instrument recordings.
-         */
         private const val ONSET_DB_THRESHOLD = 5f
         private const val ONSET_DEBOUNCE_CHUNKS = 2
 
-        /**
-         * Onset detection delay in ms. A fresh note needs this many consecutive
-         * chunks of rising energy before the sliding window resets, adding to the
-         * input detection latency for real instruments.
-         */
         const val INPUT_ONSET_MS = (ONSET_DEBOUNCE_CHUNKS * AudioConstants.BUFFER_SIZE_SAMPLES * 1000 + AudioConstants.SAMPLE_RATE / 2) / AudioConstants.SAMPLE_RATE
 
         private const val RELEASE_PEAK_RATIO = 0.3f
         private const val RELEASE_DEBOUNCE_CHUNKS = 4
 
-        /**
-         * How far below the instrument's lowest open string a reading may sit and still count.
-         * The lowest string is the one a player is most likely to leave a little flat, and its
-         * note sits exactly on the range floor, so a few cents of tuning error or detector jitter
-         * would otherwise throw every frame away.
-         */
         private const val LOWEST_NOTE_MARGIN_CENTS = 100f
 
         internal fun lowestDetectableFrequency(instrument: Instrument, referenceA4: Float): Float =
@@ -70,7 +44,6 @@ class PitchProcessor(
     @Volatile
     private var lowestFrequency = NoteUtils.midiToFrequency(instrument.tuning.first(), referenceA4)
 
-    /** Duration of the most recent pitch detection, used for input-delay calibration. */
     @Volatile
     var inferenceLatencyMs: Int = 0
         private set
@@ -91,16 +64,6 @@ class PitchProcessor(
         lowestFrequency = lowestDetectableFrequency(instrument, referenceA4)
     }
 
-    /**
-     * Sliding-window pitch flow using the pitch detector.
-     *
-     * Each incoming chunk (512 samples at 44100 Hz = ~11.6 ms) shifts the 2822-sample
-     * analysis window. On energy onset the window is reset so the detector receives a clean
-     * frame for the new note as quickly as possible.
-     *
-     * @param source Raw 44100 Hz chunks. Defaults to the microphone; tests inject recorded audio
-     *               to drive this exact framing with repeatable input.
-     */
     fun pitchFlow(source: Flow<FloatArray> = audioCaptureService.audioFlow()): Flow<PitchResult> {
         val slidingWindow = FloatArray(ANALYSIS_WINDOW_SIZE)
         var windowFilled = 0

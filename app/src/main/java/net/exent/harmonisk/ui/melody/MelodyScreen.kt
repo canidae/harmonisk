@@ -60,7 +60,6 @@ import net.exent.harmonisk.ui.utils.formatScore
 import net.exent.harmonisk.ui.utils.scoreColor
 import kotlinx.coroutines.launch
 
-/** The importer sniffs the file's content, so the picker accepts any file. */
 private val IMPORT_MIME_TYPES = arrayOf("*/*")
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,8 +76,6 @@ fun MelodyScreen(
     val difficulties by viewModel.allMelodyDifficulties.collectAsStateWithLifecycle()
     var previewingMelody by remember { mutableStateOf<String?>(null) }
     var expandedMelodyId by remember { mutableStateOf<String?>(null) }
-    // The folder the player was in has to outlive the trip into a song, or coming back lists the
-    // folders again instead of the songs that were being chosen from.
     var currentFolder by rememberSaveable { mutableStateOf<String?>(null) }
     var currentSubfolder by rememberSaveable { mutableStateOf<String?>(null) }
     var showUrlDialog by remember { mutableStateOf(false) }

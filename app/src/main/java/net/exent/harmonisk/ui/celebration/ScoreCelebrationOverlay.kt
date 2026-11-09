@@ -33,7 +33,6 @@ fun ScoreCelebrationOverlay(
 ) {
     val payloads = remember(celebrationLevel, score, level) { celebrationLevel.toPayloads(score, level) }
 
-    // ── Haptics ──────────────────────────────────────────────────────────
     val hapticPayload = payloads.filterIsInstance<CelebrationPayload.Haptic>().firstOrNull()
     if (hapticPayload != null) {
         val haptic = LocalHapticFeedback.current
@@ -44,7 +43,6 @@ fun ScoreCelebrationOverlay(
         }
     }
 
-    // ── Pulsing + Jitter animation ─────────────────────────────────────
     val pulseScale = payloads.filterIsInstance<CelebrationPayload.Pulsing>().firstOrNull()?.scale
     val jitterPayload = payloads.filterIsInstance<CelebrationPayload.Jitter>().firstOrNull()
 
@@ -103,7 +101,6 @@ fun ScoreCelebrationOverlay(
         Modifier
     }
 
-    // ── Konfetti ────────────────────────────────────────────────────────
     val confettiPayload = payloads.filterIsInstance<CelebrationPayload.Confetti>().firstOrNull()
     val burstCount = confettiPayload?.count ?: 0
 
@@ -157,23 +154,18 @@ fun ScoreCelebrationOverlay(
         }
     }
 
-    // ── Fireworks ──────────────────────────────────────────────────────
     val fireworksPayload = payloads.filterIsInstance<CelebrationPayload.Fireworks>().firstOrNull()
     val fireworkBursts = fireworksPayload?.burstCount ?: 0
 
-    // ── Layout ──────────────────────────────────────────────────────────
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        // Content with pulsing + jitter (bottom layer)
         content(pulseModifier)
 
-        // Konfetti layer (on top of content)
         KonfettiView(
             Modifier.fillMaxSize(),
             parties,
             null
         )
 
-        // Music note particles
         val musicNotePayload = payloads.filterIsInstance<CelebrationPayload.MusicNotes>().firstOrNull()
         if (musicNotePayload != null) {
             MusicNoteParticles(
@@ -183,7 +175,6 @@ fun ScoreCelebrationOverlay(
             )
         }
 
-        // Firework bursts (on top of everything)
         if (fireworkBursts > 0) {
             val alignments = listOf(
                 Alignment.TopStart, Alignment.TopEnd,
@@ -226,7 +217,6 @@ private fun FireworkBurst(
         val sparkCount = 12
         val ringAlpha = (1f - progress).coerceIn(0f, 1f)
 
-        // Expanding ring
         drawCircle(
             color = CELEBRATION_COLORS[0].copy(alpha = ringAlpha * 0.4f),
             radius = maxRadius,
@@ -236,7 +226,6 @@ private fun FireworkBurst(
             )
         )
 
-        // Radial spark lines
         for (i in 0 until sparkCount) {
             val angle = (Math.PI * 2 / sparkCount) * i + progress * 2f
             val length = maxRadius * (0.6f + 0.4f * (1f - progress))
@@ -253,7 +242,6 @@ private fun FireworkBurst(
             )
         }
 
-        // Center glow
         drawCircle(
             color = Color(0xFFFFD700).copy(alpha = ringAlpha * 0.8f),
             radius = 4f + (1f - progress) * 8f,

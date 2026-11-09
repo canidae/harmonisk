@@ -7,11 +7,6 @@ import alphaTab.importer.AlphaTexImporter
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/**
- * The alphaTex we generate is fed straight to alphaTab, so the key signature we write has to
- * be one alphaTab understands and has to land on the first bar. alphaTab stores a minor key
- * as its relative major plus a minor key-signature type.
- */
 class AlphaTexKeySignatureTest {
 
     private fun firstBar(tex: String) = AlphaTexImporter().let { importer ->

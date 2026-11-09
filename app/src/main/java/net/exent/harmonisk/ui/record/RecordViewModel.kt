@@ -93,21 +93,17 @@ class RecordViewModel @Inject constructor(
     private var previewJob: Job? = null
     private var previewMidiNote: Int = -1
 
-    // Output device saved before auto-switch on record start (null = no auto-switch done)
     private var outputDeviceBeforeRecord: OutputDevice? = null
 
 
-    // Mic input tracking — committed (currently held) note
     private var currentNoteMidi: Int? = null
     private var currentNoteStartMs: Long = 0L
     private var centsSamples = mutableListOf<Float>()
 
-    // Snap ON: honing window accumulates frequencies to average before committing
     private var honingActive = false
     private var honingStartSongMs: Long = 0L
     private var honingFreqs = mutableListOf<Float>()
 
-    // MIDI input tracking (polyphonic: key = MIDI note number, value = active PlayedNote)
     private val activeMidiNotes = mutableMapOf<Int, PlayedNote>()
 
     private var inputDelayMs: Int = 0
@@ -143,7 +139,6 @@ class RecordViewModel @Inject constructor(
                     settingsRepository.settings.first().let(::applySettings)
                 }
         }
-        // Observe MIDI device availability and switch input source automatically
         viewModelScope.launch {
             combine(
                 midiDeviceManager.effectiveMidiInputEnabled,
@@ -164,14 +159,12 @@ class RecordViewModel @Inject constructor(
                         outputDevice = newOutputDevice
                     )
                 }
-                // Re-start audio pipeline with the correct source if currently recording
                 if (wasRecording) {
                     stopListeningInternal()
                     startListeningInternal()
                 }
             }
         }
-        // Track connected MIDI device names for UI display
         viewModelScope.launch {
             midiDeviceManager.devices.collect { devices ->
                 val inputDevice = devices.firstOrNull { it.outputPortCount > 0 }
@@ -196,7 +189,6 @@ class RecordViewModel @Inject constructor(
         }
     }
 
-    /** Open the synthesizer for replay fallback. */
     fun initSynthesizer() {
         if (soundFontSynthesizer.isReady || synthOpenJob?.isActive == true) return
         synthOpenJob = viewModelScope.launch {
@@ -251,7 +243,6 @@ class RecordViewModel @Inject constructor(
         }
         startListeningInternal()
         _state.update { it.copy(isRecording = true) }
-        // Use the same event-driven engine as playback for time advancement + metronome
         replayNotes()
     }
 
@@ -290,7 +281,6 @@ class RecordViewModel @Inject constructor(
         listeningJob = null
         midiListeningJob?.cancel()
         midiListeningJob = null
-        // Finalize any open MIDI notes
         activeMidiNotes.values.forEach { note ->
             val finalized = note.copy(endTimeMs = _state.value.songPositionMs)
             _state.update { current ->
@@ -339,7 +329,6 @@ class RecordViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.updateRecordSnapEnabled(newValue) }
     }
 
-    // region Voice management
 
     fun setActiveVoice(index: Int) {
         val s = _state.value
@@ -356,13 +345,10 @@ class RecordViewModel @Inject constructor(
         }
     }
 
-    // endregion
 
-    // region Loop
 
     private fun barDurationMs(): Double = _state.value.beatsPerBar * (60000.0 / _state.value.bpm)
 
-    /** Returns (loopStartMs, loopEndMs) based on locked bars or sensible defaults. */
     private fun effectiveLoopBounds(): Pair<Long, Long> {
         val s = _state.value
         val bMs = barDurationMs().toLong()
@@ -382,9 +368,7 @@ class RecordViewModel @Inject constructor(
         val s = _state.value
         val nowBar = (s.songPositionMs / barMs).roundToInt() + 1
         val locked = s.loopStartBar
-        // Unlock if tapping the already-locked bar
         if (locked != null && locked == nowBar) { _state.update { it.copy(loopStartBar = null) }; return }
-        // If end is not explicitly set, check that start doesn't exceed default end
         if (s.loopEndBar == null) {
             val lastNoteEnd = s.playedNotes.mapNotNull { it.endTimeMs }.maxOrNull() ?: 0L
             val defaultEndBar = (ceil(lastNoteEnd.toDouble() / barMs).toInt() + 3).coerceAtLeast(3)
@@ -401,7 +385,6 @@ class RecordViewModel @Inject constructor(
         val s = _state.value
         val nowBar = (s.songPositionMs / barMs).roundToInt() + 1
         val locked = s.loopEndBar
-        // Unlock if tapping the already-locked bar
         if (locked != null && locked == nowBar) { _state.update { it.copy(loopEndBar = null) }; return }
         val effectiveStart = s.loopStartBar ?: 1
         if (nowBar == effectiveStart) { _snackbarMessage.tryEmit(appContext.getString(R.string.record_end_bar_mismatch)); return }
@@ -411,9 +394,7 @@ class RecordViewModel @Inject constructor(
         _state.update { it.copy(loopEndBar = nowBar) }
     }
 
-    // endregion
 
-    // region Note editing
 
     fun selectNote(id: String?) {
         _state.update { it.copy(selectedNoteId = id) }
@@ -465,7 +446,6 @@ class RecordViewModel @Inject constructor(
         }
     }
 
-    /** Move note body: rawStartMs is the ABSOLUTE target start (pre-snap), newMidi is the absolute target MIDI note. */
     fun moveNote(id: String, newMidi: Int, rawStartMs: Long) {
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
@@ -485,7 +465,6 @@ class RecordViewModel @Inject constructor(
         }
     }
 
-    /** Set start handle: rawStartMs is the ABSOLUTE target start (pre-snap). */
     fun extendNoteStart(id: String, rawStartMs: Long) {
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
@@ -495,7 +474,6 @@ class RecordViewModel @Inject constructor(
         }
     }
 
-    /** Set end handle: rawEndMs is the ABSOLUTE target end (pre-snap). */
     fun extendNoteEnd(id: String, rawEndMs: Long) {
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
@@ -504,7 +482,6 @@ class RecordViewModel @Inject constructor(
         }
     }
 
-    /** Snap final position and remove overlapping notes in the same voice. */
     fun commitNoteEdit(id: String) {
         _state.update { current ->
             val note = current.playedNotes.find { it.id == id } ?: return@update current
@@ -523,15 +500,12 @@ class RecordViewModel @Inject constructor(
         }
     }
 
-    // endregion
 
-    // region Import / Export
 
     fun exportToMidi(uri: Uri, context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val s = _state.value
-                // Note timestamps are already song-relative (0-based)
                 val bytes = MidiWriter().write(s.playedNotes, s.bpm, s.beatsPerBar)
                 context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
             } catch (e: IOException) {
@@ -553,11 +527,9 @@ class RecordViewModel @Inject constructor(
 
                 finalizeCurrentNote()
 
-                // Imported notes have 0-based timestamps
                 val maxMs = notes.maxOfOrNull { it.endTimeMs ?: it.startTimeMs } ?: 0L
                 val barMs = importedBeatsPerBar * (60000.0 / importedBpm)
 
-                // Auto-fit view range to imported note range
                 val minMidi = (notes.minOfOrNull { it.midiNumber }?.toFloat() ?: 60f) - RANGE_PADDING
                 val maxMidi = (notes.maxOfOrNull { it.midiNumber }?.toFloat() ?: 72f) + RANGE_PADDING
                 val range = maxMidi - minMidi
@@ -591,7 +563,6 @@ class RecordViewModel @Inject constructor(
         }
     }
 
-    // endregion
 
     private fun gridIntervalMs(): Long {
         val s = _state.value
@@ -605,7 +576,6 @@ class RecordViewModel @Inject constructor(
 
     private fun snapToGrid(timeMs: Long): Long {
         val interval = gridIntervalMs()
-        // Nearest-neighbour snap (rounds to closest grid point)
         val snapped = Math.round(timeMs.toDouble() / interval) * interval
         return snapped.coerceAtLeast(0L)
     }
@@ -741,7 +711,6 @@ class RecordViewModel @Inject constructor(
         }
     }
 
-    /** Snap OFF: register note on the very first frame the semitone changes. No debounce, no minimum. */
     private fun processResultNoSnap(result: PitchResult) {
         if (result.isValid) {
             val midi = result.midiNoteNumber
@@ -768,11 +737,6 @@ class RecordViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Snap ON: collect frequency samples for one grid interval (min note duration), then commit the
-     * note whose average frequency best matches the collected data. Shows a tentative note visually
-     * during the honing window.
-     */
     private fun processResultSnap(result: PitchResult) {
         if (result.isValid) {
             val midi = result.midiNoteNumber
@@ -780,12 +744,10 @@ class RecordViewModel @Inject constructor(
             if (honingActive) {
                 val elapsed = _state.value.songPositionMs - honingStartSongMs
                 if (midi != currentNoteMidi) {
-                    // Pitch changed mid-window: restart honing for the new pitch
                     finalizeCurrentNote()
                     abortHoning()
                     startHoning(result)
                 } else {
-                    // Continue accumulating
                     honingFreqs.add(result.frequency)
                     appendCentsSample(result.centsOff)
                     if (elapsed >= gridIntervalMs()) {
@@ -794,18 +756,15 @@ class RecordViewModel @Inject constructor(
                 }
             } else {
                 if (currentNoteMidi == null || midi != currentNoteMidi) {
-                    // New pitch: finalize any open committed note, start honing
                     finalizeCurrentNote()
                     startHoning(result)
                 } else {
-                    // Same pitch, note already committed — just extend it
                     appendCentsSample(result.centsOff)
                 }
             }
         } else {
             if (honingActive) {
                 val elapsed = _state.value.songPositionMs - honingStartSongMs
-                // Accept note if played for at least half the min duration (leeway for near-misses)
                 if (elapsed >= gridIntervalMs() / 2 && honingFreqs.isNotEmpty()) {
                     commitHoning()
                     finalizeCurrentNote()
@@ -874,7 +833,6 @@ class RecordViewModel @Inject constructor(
             } else now
             val finalNote = activeNote.copy(endTimeMs = snappedEnd)
 
-            // Noise filter: discard notes shorter than a 48th note
             if (snappedEnd - activeNote.startTimeMs < min48thNoteMs()) {
                 _state.update { it.copy(activeNote = null) }
                 currentNoteMidi = null
@@ -882,8 +840,6 @@ class RecordViewModel @Inject constructor(
                 return
             }
 
-            // Remove overlapping same-pitch notes in the same voice (legato retrigger).
-            // Different-pitch overlaps are kept for polyphony.
             val voice = finalNote.voiceIndex
             val newStart = finalNote.startTimeMs
             val newEnd = snappedEnd
@@ -902,11 +858,6 @@ class RecordViewModel @Inject constructor(
         centsSamples.clear()
     }
 
-    /**
-     * Handles a MIDI note event from a connected device.
-     * NoteOn starts a [PlayedNote] (immediately added to playedNotes unfinalized).
-     * NoteOff finalizes it.
-     */
     private fun processMidiEvent(event: MidiNoteEvent) {
         if (isPausedByGesture) return
         when (event) {
@@ -970,14 +921,12 @@ class RecordViewModel @Inject constructor(
         replayGeneration++
         val gen = replayGeneration
 
-        // Ensure the synthesizer is open — it may have been closed by Settings calibration
         if (!soundFontSynthesizer.isReady) {
             try { soundFontSynthesizer.open() } catch (_: Exception) {}
         }
 
         val isRecordMode = _state.value.isRecording
 
-        // Snap to loop start if current position is outside the loop area
         val (initialStart, initialEnd) = effectiveLoopBounds()
         val currentPos = _state.value.songPositionMs
         if (currentPos < initialStart || currentPos >= initialEnd) {
@@ -1028,7 +977,6 @@ class RecordViewModel @Inject constructor(
                 val (loopStartMs, loopEndMs) = effectiveLoopBounds()
                 val rawVisualMs = audioPositionMs - visualStartOffsetMs
 
-                // Seek detection — only before first loop completes
                 val stateVisualPosition = _state.value.songPositionMs
                 val expectedVisual = rawVisualMs.coerceIn(maxOf(seekAnchorMs, loopStartMs), loopEndMs)
                 val currentBpm = _state.value.bpm
@@ -1062,8 +1010,6 @@ class RecordViewModel @Inject constructor(
 
                 audioPositionMs += delta
 
-                // Fire due events the input and output delays early so notes are heard
-                // when the bar crosses the now line.
                 val outputOffsetMs = (inputDelayMs + outputDelayMs).toLong()
                 while (eventIndex < events.size && events[eventIndex].timeMs - outputOffsetMs <= audioPositionMs) {
                     val ev = events[eventIndex++]
@@ -1076,7 +1022,6 @@ class RecordViewModel @Inject constructor(
                     }
                 }
 
-                // Compute visual position
                 val rawVisualMsPostDelta = audioPositionMs - visualStartOffsetMs
                 val visualLowerBound = maxOf(seekAnchorMs, loopStartMs)
                 val visualPositionMs =
@@ -1087,7 +1032,6 @@ class RecordViewModel @Inject constructor(
                     }
                 _state.update { it.copy(songPositionMs = visualPositionMs) }
 
-                // Loop when audio wraps around
                 if (audioPositionMs >= loopEndMs) {
                     if (isRecordMode) {
                         finalizeCurrentNote()

@@ -26,7 +26,6 @@ enum class CelebrationLevel(
         fun fromScore(score: Float): CelebrationLevel =
             entries.lastOrNull { score >= it.scoreThreshold } ?: NONE
 
-        /** The Konfetti drizzle for the score band, multiplied by the level the run was played at. */
         fun confettiCount(score: Float, level: Int): Int = when {
             score < 1f -> 0
             score < 60f -> DRIZZLE_CONFETTI

@@ -2,24 +2,11 @@ package net.exent.harmonisk.midi
 
 import kotlin.math.roundToInt
 
-/**
- * Converts a [MelodyTrack] into alphaTex notation for sheet music rendering with
- * alphaTab. Note timings are quantized to a sixteenth-note grid, arbitrary
- * durations are decomposed into standard note values joined by ties, and
- * simultaneous notes are rendered as chords.
- *
- * Exporters such as MuseScore cut notes short by around 5% (gate time), which
- * leaves a gap that is far smaller than the grid. Quantizing such a note ends it
- * one grid early, so it renders as a dotted note tied to a sliver. Notes are
- * therefore held until the next onset when the gap between them is smaller than
- * one grid step, which is what the gap is too small to notate anyway.
- */
 object MidiToAlphaTex {
 
     private val NOTE_NAMES = arrayOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
     private val FLAT_NOTE_NAMES = arrayOf("C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B")
 
-    /** alphaTab's key signature names by fifths, -7..7; minor keys carry the "minor" suffix. */
     private val MAJOR_KEY_NAMES = arrayOf(
         "cb", "gb", "db", "ab", "eb", "bb", "f", "c", "g", "d", "a", "e", "b", "f#", "c#"
     )
@@ -28,7 +15,6 @@ object MidiToAlphaTex {
         "aminor", "eminor", "bminor", "f#minor", "c#minor", "g#minor", "d#minor", "a#minor"
     )
 
-    /** Standard durations in sixteenth-note units; [align] restricts where a piece may start (bar-relative grid position). */
     private data class DurationPiece(val gridLength: Long, val value: Int, val dots: Int, val align: Long)
 
     private val DURATION_PIECES = listOf(
@@ -44,20 +30,12 @@ object MidiToAlphaTex {
         DurationPiece(1, 16, 0, 1)
     )
 
-    /**
-     * Gaps shorter than half a grid step are cut-short notes; anything longer is a rest that
-     * can be written, and filling it would change the music. Exporter gate times come to
-     * well under this: a quarter note exported at 470 ticks leaves an eighth of a step.
-     */
     private const val GAP_MERGE_LIMIT_GRID = 0.5
 
-    /** Grid steps in one beat; four grid steps make a quarter note. */
     private const val BEAT_GRID = 4L
 
-    /** Note with start/end quantized to grid units (one grid unit = a sixteenth note). */
     private data class QNote(val noteNumber: Int, val start: Long, val end: Long)
 
-    /** A note within a chord together with its tie state. */
     private data class ChordNote(val name: String, val tied: Boolean)
 
     private data class Bar(
@@ -74,7 +52,6 @@ object MidiToAlphaTex {
         return "${if (flats) FLAT_NOTE_NAMES[index] else NOTE_NAMES[index]}$octave"
     }
 
-    /** The key's alphaTab name, e.g. "d" for D major or "f#minor". */
     private fun keyName(key: KeySignature): String {
         val names = if (key.isMinor) MINOR_KEY_NAMES else MAJOR_KEY_NAMES
         return names[key.fifths.coerceIn(-7, 7) + 7]
@@ -91,11 +68,7 @@ object MidiToAlphaTex {
         val bars = buildBars(track, ppq, ::tickToGrid, notes.maxOfOrNull { it.end } ?: 0L)
 
         val tokens = mutableListOf<String>()
-        // Score-level metadata must be terminated by a dot before the first bar (alphaTex < 1.7 format)
         tokens.add("\\tempo ${track.bpmAt(0).roundToInt()}")
-        // Declare a piano instrument so alphaTab does not default to a guitar
-        // program, which would apply a -12 display transposition and render
-        // every note one octave higher.
         tokens.add("\\instrument piano")
         tokens.add(".")
         val ts0 = track.timeSignatureAt(0)
@@ -118,15 +91,12 @@ object MidiToAlphaTex {
             val midBarTempos = mutableMapOf<Long, Int>()
             for (tempo in tempoChanges) {
                 if (barIndex > 0 && tempo.tick == bar.startTick) {
-                    // Tempo change at a bar boundary: bar metadata
                     tokens.add("\\tempo ${tempo.bpm.roundToInt()}")
                 } else if (tempo.tick in (bar.startTick + 1) until barEndTick) {
-                    // Mid-bar tempo change: beat effect at the (quantized) change position
                     midBarTempos[tickToGrid(tempo.tick)] = tempo.bpm.roundToInt()
                 }
             }
 
-            // Emit the bar's beats
             var pos = bar.startGrid
             val barEndGrid = bar.startGrid + bar.lengthGrid
             while (pos < barEndGrid) {
@@ -160,8 +130,6 @@ object MidiToAlphaTex {
     }
 
     private fun quantizeNotes(track: MelodyTrack, grid: Long, tickToGrid: (Long) -> Long): List<QNote> {
-        // Both ends are rounded against the grid itself rather than the duration being rounded,
-        // so a note that starts a little off the grid still reaches its own grid position.
         fun tickToGridAbsolute(tick: Long) = (tick + grid / 2) / grid
         val quantized = track.notes
             .sortedBy { it.startTick }
@@ -171,7 +139,6 @@ object MidiToAlphaTex {
                 val end = maxOf(start + 1, tickToGridAbsolute(note.endTick))
                 if (end > start) QNote(note.noteNumber, start, end) else null
             }
-        // Merge same-pitch overlapping notes so a pitch appears at most once in a chord
         val merged = mutableListOf<QNote>()
         for (note in quantized) {
             val last = merged.lastOrNull()
@@ -184,12 +151,6 @@ object MidiToAlphaTex {
         return merged
     }
 
-    /**
-     * Holds a note until the next onset when the gap between them is smaller than one grid
-     * step. Such a gap is too small to notate: leaving it turns a plain note into a dotted
-     * note tied to a sliver. A whole grid step is left alone, because a rest that can be
-     * written must not be filled in.
-     */
     private fun normalizeGaps(notes: List<QNote>): List<QNote> {
         if (notes.isEmpty()) return notes
         val startsAfter = notes.map { note -> notes.filter { it.start >= note.end }.minOfOrNull { it.start } }
@@ -211,7 +172,6 @@ object MidiToAlphaTex {
             val ts = track.timeSignatureAt(barStartTick)
             var barTicks = (ppq * 4L * ts.numerator) / ts.denominator
             if (barTicks <= 0) barTicks = ppq * 4L
-            // A time signature change inside this bar ends it early
             val nextTs = track.timeSignatures.firstOrNull { it.tick > barStartTick }
             if (nextTs != null && nextTs.tick < barStartTick + barTicks) {
                 barTicks = nextTs.tick - barStartTick
@@ -231,11 +191,6 @@ object MidiToAlphaTex {
         return bars
     }
 
-    /**
-     * Decomposes [gridLength] into tied chord pieces, respecting beat alignment.
-     * All notes in the chord share the same duration; a note carries a tie marker
-     * when it continues from a previous segment.
-     */
     private fun chordTokens(
         notes: List<ChordNote>,
         startGridInBar: Long,
@@ -265,18 +220,12 @@ object MidiToAlphaTex {
         return tokens
     }
 
-    /**
-     * Largest piece that fits and is aligned, but one that uses up whole beats is preferred
-     * over a longer one that eats into the next beat. Without that preference a note of two
-     * beats is written as a double-dotted note tied to a thirty-second instead of two quarters.
-     */
     private fun pickPiece(remaining: Long, pos: Long): DurationPiece {
         val candidates = DURATION_PIECES.filter { it.gridLength <= remaining && pos % it.align == 0L }
         val (endsOnBeat, rest) = candidates.partition { (pos + it.gridLength) % BEAT_GRID == 0L }
         return endsOnBeat.firstOrNull() ?: rest.first()
     }
 
-    /** Decomposes [gridLength] into rest pieces (largest first, no alignment needed). */
     private fun restTokens(gridLength: Long, firstPieceBeatProps: String = ""): List<String> {
         val tokens = mutableListOf<String>()
         var remaining = gridLength

@@ -6,10 +6,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Developer mode, enabled by holding the home version number, and kept in memory only: closing the
- * app turns it off again.
- */
 @Singleton
 class DevModeState @Inject constructor() {
 

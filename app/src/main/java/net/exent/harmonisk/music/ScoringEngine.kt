@@ -4,10 +4,6 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.max
 
-/**
- * Scoring engine for the Learn a Melody mode.
- * Uses a 5-tier accuracy system with weighted pitch and duration scores.
- */
 class ScoringEngine {
 
     companion object {
@@ -16,16 +12,10 @@ class ScoringEngine {
         private val GOOD_CENTS = NoteUtils.GOOD_CENTS
         private val OK_CENTS = NoteUtils.OK_CENTS
 
-        // Duration scoring ratio thresholds
         const val PERFECT_DURATION_RATIO = 0.85f
 
-        /** Score needed on the highest reached level to unlock the next one. */
         const val LEVEL_UP_SCORE = 90f
 
-        /**
-         * The highest level reached after a run. A run below the highest level already reached
-         * leaves the unlock untouched, so the next level is not lost by retrying an easier one.
-         */
         fun unlockedLevelAfterRun(currentLevel: Int, unlockedLevel: Int, score: Float): Int {
             val current = currentLevel.coerceIn(1, 5)
             val unlocked = unlockedLevel.coerceIn(current, 5)
@@ -33,35 +23,22 @@ class ScoringEngine {
             else unlocked
         }
 
-        // Playing the song up to this much longer than its own duration scores full marks, with more
-        // leeway the lower the level
         const val TIME_GRACE_RATIO_LEVEL_1 = 1.20
         const val TIME_GRACE_RATIO_LEVEL_2 = 1.10
         const val TIME_GRACE_RATIO_LEVEL_3 = 1.05
 
-        /** How much longer than the song itself a player may take and still score full marks. */
         fun timeGraceRatio(level: Int): Double = when (level) {
             1 -> TIME_GRACE_RATIO_LEVEL_1
             2 -> TIME_GRACE_RATIO_LEVEL_2
             else -> TIME_GRACE_RATIO_LEVEL_3
         }
 
-        // Scoring weights — timing excluded (latency-agnostic)
         const val PITCH_WEIGHT = 0.6f
         const val DURATION_WEIGHT = 0.4f
 
         fun bestScoreForLevel(levelScores: List<Pair<Int, Float>>, level: Int): Float =
             levelScores.filter { it.first == level }.maxOfOrNull { it.second } ?: 0f
 
-        /**
-         * Averages the category scores that are in play at [level] — the note score always,
-         * the song-duration score up to level 3, the correct-notes score from level 3 up —
-         * so two half marks give 50 rather than compounding into 25.
-         *
-         * @param noteScore      0f–100f, pitch and duration averaged per note
-         * @param timeScore      0f–1f from [scoreTime]
-         * @param wrongNoteScore 0f–100f share of notes hit
-         */
         fun combineScores(noteScore: Float, timeScore: Float, wrongNoteScore: Float, level: Int): Float {
             var total = noteScore
             var categories = 1
@@ -76,17 +53,6 @@ class ScoringEngine {
             return total / categories
         }
 
-        /**
-         * Computes a time score (0–1) based on how long the user took relative
-         * to the song's real duration: min(1, songDuration * grace / playTime).
-         * Full marks up to the level's grace over the song's duration — 20% at level 1,
-         * 10% at level 2, 5% at level 3 — then the score decays with the overrun but never
-         * reaches zero.  Levels 4–5 ignore time.
-         *
-         * @param ratio  playTimeSeconds / songPlayingSeconds  (≥ 0)
-         * @param level  game level (1–5)
-         * @return       0f–1f time-score multiplier
-         */
         fun scoreTime(ratio: Double, level: Int): Float {
             if (level >= 4) return 1f
             if (ratio <= 0.0) return 1f

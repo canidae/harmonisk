@@ -8,16 +8,11 @@ import net.exent.harmonisk.music.BowedPosition
 
 enum class AccompanimentMode { ALL, EXCEPT, SELECTED_ONLY, NONE }
 
-/** Active session tracking state. */
 data class MelodyGameState(
     val phase: PlayPhase = PlayPhase.NOT_STARTED,
-    /** Primary melody track used for scoring (the active voice). */
     val melodyTrack: MelodyTrack? = null,
-    /** One track per voice/staff; each entry is indexed by its voice number. */
     val melodyTracks: List<MelodyTrack> = emptyList(),
-    /** Which voice the user has selected to sing (index into melodyTracks). */
     val activeVoiceIndex: Int = 0,
-    /** Whether to play all voices, only the selected one, or none. */
     val accompanimentMode: AccompanimentMode = AccompanimentMode.ALL,
     val currentTimeSeconds: Double = 0.0,
     val noteResults: Map<Int, NoteResultState> = emptyMap(),
@@ -33,26 +28,17 @@ data class MelodyGameState(
     val noteCentsPositions: Map<Int, List<Float>> = emptyMap(),
     val notePlayProgress: Map<Int, Float> = emptyMap(),
     val noteFirstDetectionStart: Map<Int, Float> = emptyMap(),
-    // Non-zero during a mid-song countdown resume: the game-time value at which scoring starts
     val countdownResumeTarget: Double = 0.0,
-    /** Song time of a running melody preview, or null when nothing is being previewed. */
     val previewTimeSeconds: Double? = null,
-    // Metronome
     val metronomeEnabled: Boolean = true,
     val metronomeTrack: MelodyTrack? = null,
     val currentLevel: Int = 1,
     val unlockedLevel: Int = 1,
-    /** Level the latest finished run was played at. */
     val playedLevel: Int = 1,
-    /** Level unlocked by the latest run, or null when it reached no new level. */
     val newlyUnlockedLevel: Int? = null,
     val melodyName: String? = null,
     val hideNoteBars: Boolean = false
 ) {
-    /**
-     * True when the view is already scrolled to (or before) the first note.
-     * Used in FINISHED state to hide the "Scroll to start" button once there.
-     */
     fun isAtScrollStart(songTimeOffsetSeconds: Double): Boolean {
         val track = melodyTrack ?: return true
         val firstNoteStart = track.notes.firstOrNull()?.let { track.noteStartSeconds(it) } ?: 0.0
@@ -60,17 +46,14 @@ data class MelodyGameState(
     }
 }
 
-/** Rendering and scroll parameters. */
 data class MelodyViewState(
     val fallSpeedPxPerSec: Float = 75f,
     val songTimeOffsetSeconds: Double = 0.0,
     val viewMinMidi: Float = 60f,
     val viewMaxMidi: Float = 72f,
-    /** Recommended fingerings per active melody note (null = not playable in first position). */
     val bowedPositions: List<BowedPosition?> = emptyList()
 )
 
-/** MIDI device availability state. */
 data class MelodyDeviceState(
     val midiAvailable: Boolean = false,
     val midiInputEnabled: Boolean = false,
@@ -90,40 +73,12 @@ enum class NoteResultState {
     ACTIVE, PERFECT, GREAT, GOOD, OK, MISS
 }
 
-/**
- * How far the bars run ahead of the game clock.
- *
- * The bars lead the beat by the input delay, so that a note played as a bar reaches the now line is
- * scored against that note once the microphone and the detector have caught up: the sound arrives
- * that much later than the player made it.
- *
- * A song that stops for the player leads the same way. The clock comes to rest on the note one input
- * delay after its bar reached the line, so the bar runs on that much past the line before it stops,
- * and the wait is timed from where it comes to rest. By then the sound the player made as the bar
- * reached the line has been detected, so the input delay is already out of the time the song waited
- * and must not be taken off it again.
- *
- * READY is a still picture of the music, a song the player has not started, and is drawn on the now
- * line.
- */
 fun nowLineLeadSeconds(phase: PlayPhase, inputDelayMs: Int): Double =
     if (phase == PlayPhase.READY) 0.0 else inputDelayMs / 1000.0
 
-/**
- * How far ahead of the game clock the app's own notes are handed to the synthesizer.
- *
- * A note is only heard one output delay after it is played, and its bar reaches the now line one
- * input delay before the song reaches the note. Handing it over that much of both ahead of the clock
- * puts the sound at the moment its bar crosses the line, which is also where the player's own sound
- * is taken to be.
- */
 fun audioLeadSeconds(inputDelayMs: Int, outputDelayMs: Int): Double =
     (inputDelayMs + outputDelayMs) / 1000.0
 
-/**
- * The canvas time a preview stands at. A preview plays at the song's own pace, one output delay
- * ahead of what is heard, so the canvas runs that much behind the notes it schedules.
- */
 fun previewClockSeconds(
     startSeconds: Double,
     leadInSeconds: Double,
@@ -131,13 +86,6 @@ fun previewClockSeconds(
     outputDelayMs: Int
 ): Double = startSeconds + elapsedSeconds - leadInSeconds - outputDelayMs / 1000.0
 
-/**
- * The voices the app may sound while the player is being scored.
- *
- * Playing voices is a developer feature: outside developer mode the song stays silent under the
- * player's own take, so the melody has to be played by ear. Listening to the song first is a preview,
- * which is played before the take starts.
- */
 fun audibleMelodyTracks(
     melodyTracks: List<MelodyTrack>,
     activeVoiceIndex: Int,
@@ -154,17 +102,11 @@ fun audibleMelodyTracks(
     }
 }
 
-/** The music the player has to play: from the first note of the song to the end of the last one. */
 fun songPlayingSeconds(track: MelodyTrack): Double {
     val firstNote = track.notes.minByOrNull { it.startTick } ?: return 0.0
     return (track.durationSeconds - track.noteStartSeconds(firstNote)).coerceAtLeast(0.0)
 }
 
-/**
- * Where a mid-song preview drops in: the first beat of the bar before the one [timeSeconds] sits
- * in, so the player hears the bar they were at from its first beat with a bar of run-up. Times in
- * the opening bars, or before the music, start at the top of the song.
- */
 fun previewStartSeconds(track: MelodyTrack, timeSeconds: Double): Double {
     if (timeSeconds <= 0.0) return 0.0
     val tick = track.secondsToTick(timeSeconds)
@@ -175,14 +117,6 @@ fun previewStartSeconds(track: MelodyTrack, timeSeconds: Double): Double {
     return if (previousBarTick <= 0) 0.0 else track.tickToSeconds(previousBarTick)
 }
 
-/**
- * How long the player took, against the music they had to play.
- *
- * A song that waits for the player holds its clock for them, so that time is added to the music's
- * own length. The two bars counted in before the first note, any rest the song opens with, and the
- * slack the song lingers for after its last note are the song's own time, not the player's, and are
- * left out of both the measurement and the song length it is measured against.
- */
 fun songTimeRatio(track: MelodyTrack, waitMs: Long): Double {
     val songSeconds = songPlayingSeconds(track)
     if (songSeconds <= 0.0) return 0.0

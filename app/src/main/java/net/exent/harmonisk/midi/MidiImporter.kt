@@ -78,7 +78,6 @@ object MidiImporter {
 
         val playedNotes = mutableListOf<PlayedNote>()
 
-        // Each MIDI track is one voice/staff; a track may contain chords (simultaneous notes).
         for ((voiceIdx, trackNotes) in multiTrackMidi.voiceTracks.withIndex()) {
             for (note in trackNotes) {
                 val startMs = tickToMs(note.startTick)
