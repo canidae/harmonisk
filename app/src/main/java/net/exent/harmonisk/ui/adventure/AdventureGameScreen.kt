@@ -44,7 +44,6 @@ import net.exent.harmonisk.R
 import net.exent.harmonisk.ui.celebration.CelebrationLevel
 import net.exent.harmonisk.ui.celebration.ScoreCelebrationOverlay
 import net.exent.harmonisk.ui.components.KeepScreenOn
-import net.exent.harmonisk.ui.whack.WhackPressIcon
 import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -555,10 +554,13 @@ private fun RewardCard(reward: AdventureReward?, score: Int?, levelUp: Int?) {
                 RewardCardLabel(stringResource(R.string.adventure_throw_again))
             }
             AdventureReward.Whack -> {
-                WhackPressIcon(
-                    Modifier.align(Alignment.CenterHorizontally).size(width = 56.dp, height = 41.dp)
+                Text(
+                    text = "🎯",
+                    fontSize = 40.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
                 RewardCardLabel(stringResource(R.string.whack_title))
                 Text(
                     text = stringResource(R.string.adventure_whack_ready),
