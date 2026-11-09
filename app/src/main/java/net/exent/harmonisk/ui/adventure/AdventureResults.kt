@@ -33,28 +33,36 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import net.exent.harmonisk.R
-import net.exent.harmonisk.ui.theme.AdventureInk
 import net.exent.harmonisk.ui.celebration.CelebrationLevel
 import net.exent.harmonisk.ui.celebration.ScoreCelebrationOverlay
 import net.exent.harmonisk.ui.components.KeepScreenOn
+import net.exent.harmonisk.ui.theme.AdventureInk
 import net.exent.harmonisk.ui.utils.formatScore
 import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
+private enum class TallyKind(val color: Color) {
+    STICKER(StorybookGold),
+    WHACK(Color(0xFFE05D5D)),
+    FAERIE(StorybookMint),
+    CASTLE(Color(0xFFB5AFA1))
+}
+
 private data class TallyItem(
     val playerId: String,
     val emoji: String,
     val count: Int,
     val points: Int,
-    val bonus: Boolean
+    val kind: TallyKind
 )
 
 private fun tallyItems(players: List<AdventurePlayer>): List<TallyItem> =
@@ -65,14 +73,25 @@ private fun tallyItems(players: List<AdventurePlayer>): List<TallyItem> =
             .entries
             .sortedBy { it.key.ordinal }
             .map { (sticker, count) ->
-                TallyItem(player.profileId, sticker.emoji, count, sticker.value * count, false)
+                TallyItem(
+                    playerId = player.profileId,
+                    emoji = sticker.emoji,
+                    count = count,
+                    points = sticker.value * count,
+                    kind = TallyKind.STICKER
+                )
             }
-        stickers + if (player.bonusScore > 0f) {
-            listOf(TallyItem(player.profileId, "✨", 1, player.bonusScore.roundToInt(), true))
-        } else {
-            emptyList()
-        }
+        stickers + listOfNotNull(
+            bonusItem(player.profileId, "🎯", player.whackScore, TallyKind.WHACK),
+            bonusItem(player.profileId, "🧚", player.faerieScore, TallyKind.FAERIE),
+            bonusItem(player.profileId, "🏰", player.castleScore, TallyKind.CASTLE)
+        )
     }
+
+private fun bonusItem(playerId: String, emoji: String, score: Float, kind: TallyKind): TallyItem? {
+    val points = score.roundToInt()
+    return if (points > 0) TallyItem(playerId, emoji, 1, points, kind) else null
+}
 
 @Composable
 fun AdventureResultsScreen(
@@ -88,7 +107,6 @@ fun AdventureResultsScreen(
     val songProgress = remember { Animatable(0f) }
     val pop = remember { Animatable(0f) }
     val fly = remember { Animatable(0f) }
-    val gold = remember { mutableStateMapOf<String, Float>() }
     val landed = remember { mutableStateMapOf<String, List<TallyItem>>() }
     val anchors = remember { mutableStateMapOf<String, Offset>() }
     var current by remember { mutableStateOf<TallyItem?>(null) }
@@ -105,7 +123,6 @@ fun AdventureResultsScreen(
             pop.animateTo(1f, tween(160))
             delay(220)
             fly.animateTo(1f, tween(330, easing = FastOutSlowInEasing))
-            gold[item.playerId] = (gold[item.playerId] ?: 0f) + item.points
             landed[item.playerId] = landed[item.playerId].orEmpty() + item
             current = null
             delay(60)
@@ -144,7 +161,6 @@ fun AdventureResultsScreen(
             ScoreChart(
                 standings = standings,
                 songProgress = songProgress.value,
-                gold = gold,
                 landed = landed,
                 maxTotal = maxTotal,
                 showWinner = showWinner,
@@ -239,10 +255,7 @@ private fun TallyFlight(
         Canvas(Modifier.fillMaxSize()) {
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(
-                        StorybookGold.copy(alpha = 0.22f),
-                        Color.Transparent
-                    )
+                    colors = listOf(item.kind.color.copy(alpha = 0.24f), Color.Transparent)
                 ),
                 radius = size.minDimension / 2f
             )
@@ -256,7 +269,7 @@ private fun TallyFlight(
                         text = "×${item.count}",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Black,
-                        color = StorybookGold
+                        color = item.kind.color
                     )
                 }
             }
@@ -264,11 +277,12 @@ private fun TallyFlight(
                 text = "+${item.points}",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Black,
-                color = StorybookGold
+                color = item.kind.color
             )
-            if (item.bonus) {
+            val label = item.kind.label()
+            if (label != null) {
                 Text(
-                    text = stringResource(R.string.adventure_bonus),
+                    text = label,
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White.copy(alpha = 0.8f)
                 )
@@ -278,10 +292,17 @@ private fun TallyFlight(
 }
 
 @Composable
+private fun TallyKind.label(): String? = when (this) {
+    TallyKind.STICKER -> null
+    TallyKind.WHACK -> stringResource(R.string.whack_title)
+    TallyKind.FAERIE -> stringResource(R.string.adventure_faerie_score)
+    TallyKind.CASTLE -> stringResource(R.string.adventure_castle_score)
+}
+
+@Composable
 private fun ScoreChart(
     standings: List<AdventureStanding>,
     songProgress: Float,
-    gold: Map<String, Float>,
     landed: Map<String, List<TallyItem>>,
     maxTotal: Float,
     showWinner: Boolean,
@@ -289,6 +310,8 @@ private fun ScoreChart(
     onBarAnchor: (String, Offset) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val density = LocalDensity.current
+    val barBottoms = remember { mutableStateMapOf<String, Offset>() }
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val nameSpace = 54.dp
         val chartHeight = (maxHeight - nameSpace).coerceAtLeast(120.dp)
@@ -313,17 +336,63 @@ private fun ScoreChart(
                 standings.forEach { standing ->
                     val player = standing.player
                     key(player.profileId) {
-                        val goldValue by animateFloatAsState(
-                            targetValue = gold[player.profileId] ?: 0f,
-                            animationSpec = tween(320),
-                            label = "gold_bar"
+                        val counted = landed[player.profileId].orEmpty().groupBy { it.kind }
+                        fun total(kind: TallyKind): Float =
+                            counted[kind].orEmpty().sumOf { it.points }.toFloat()
+                        val barSpan = chartHeight - 42.dp
+                        fun height(value: Float): Dp = barSpan * (value / maxTotal)
+                        val songValue = player.songScore * songProgress
+                        val songH = height(songValue)
+                        val stickerH = height(
+                            animateFloatAsState(
+                                total(TallyKind.STICKER),
+                                tween(320),
+                                label = "sticker_bar"
+                            ).value
                         )
-                        val goldH = (chartHeight - 42.dp) * (goldValue / maxTotal)
-                        val songH = (chartHeight - 42.dp) * (player.songScore * songProgress / maxTotal)
-                        val color = ADVENTURE_PLAYER_COLORS[player.colorIndex % ADVENTURE_PLAYER_COLORS.size]
+                        val whackH = height(
+                            animateFloatAsState(
+                                total(TallyKind.WHACK),
+                                tween(320),
+                                label = "whack_bar"
+                            ).value
+                        )
+                        val faerieH = height(
+                            animateFloatAsState(
+                                total(TallyKind.FAERIE),
+                                tween(320),
+                                label = "faerie_bar"
+                            ).value
+                        )
+                        val castleH = height(
+                            animateFloatAsState(
+                                total(TallyKind.CASTLE),
+                                tween(320),
+                                label = "castle_bar"
+                            ).value
+                        )
+                        val color =
+                            ADVENTURE_PLAYER_COLORS[player.colorIndex % ADVENTURE_PLAYER_COLORS.size]
                         val barWidth = if (solo) 96.dp else if (standings.size == 2) 64.dp else 48.dp
+                        val bottom = barBottoms[player.profileId]
+                        SideEffect {
+                            if (bottom == null) return@SideEffect
+                            val stack = with(density) {
+                                (stickerH + whackH + faerieH + castleH).toPx()
+                            }
+                            onBarAnchor(player.profileId, Offset(bottom.x, bottom.y - stack))
+                        }
                         Column(
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .onGloballyPositioned { coordinates ->
+                                    val bounds = coordinates.boundsInRoot()
+                                    if (bounds.width > 0f && bounds.height > 0f) {
+                                        barBottoms[player.profileId] =
+                                            Offset(bounds.center.x, bounds.bottom)
+                                    }
+                                },
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Bottom
                         ) {
@@ -340,63 +409,42 @@ private fun ScoreChart(
                                         .semantics { contentDescription = label }
                                 )
                             }
+                            val landedPoints = counted.values.sumOf { items ->
+                                items.sumOf { it.points }
+                            }
                             Text(
-                                text = formatScore(
-                                    goldValue + player.songScore * songProgress
-                                ),
+                                text = formatScore(landedPoints + songValue),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Black,
                                 color = color
                             )
-                            Box(
-                                modifier = Modifier
-                                    .padding(top = 4.dp)
-                                    .width(barWidth)
-                                    .height(songH)
-                                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                                    .background(
-                                        Brush.verticalGradient(listOf(color, color.copy(alpha = 0.5f)))
-                                    )
+                            BarSegment(songH, barWidth, color, null, 14.dp, 0.dp)
+                            BarSegment(
+                                stickerH,
+                                barWidth,
+                                TallyKind.STICKER.color,
+                                counted[TallyKind.STICKER]
                             )
-                            Box(
-                                modifier = Modifier
-                                    .width(barWidth)
-                                    .height(goldH)
-                                    .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
-                                    .background(StorybookGold.copy(alpha = 0.85f))
-                                    .onGloballyPositioned { coordinates ->
-                                        val bounds = coordinates.boundsInRoot()
-                                        onBarAnchor(
-                                            player.profileId,
-                                            Offset(bounds.center.x, bounds.top)
-                                        )
-                                    },
-                                contentAlignment = Alignment.BottomCenter
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(horizontal = 2.dp, vertical = 3.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Bottom
-                                ) {
-                                    landed[player.profileId]
-                                        .orEmpty()
-                                        .filter { !it.bonus }
-                                        .takeLast(3)
-                                        .forEach { group ->
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(group.emoji, fontSize = 17.sp)
-                                                if (group.count > 1) {
-                                                    Text(
-                                                        text = "×${group.count}",
-                                                        fontSize = 9.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = AdventureInk
-                                                    )
-                                                }
-                                            }
-                                        }
-                                }
-                            }
+                            BarSegment(
+                                whackH,
+                                barWidth,
+                                TallyKind.WHACK.color,
+                                counted[TallyKind.WHACK]
+                            )
+                            BarSegment(
+                                faerieH,
+                                barWidth,
+                                TallyKind.FAERIE.color,
+                                counted[TallyKind.FAERIE]
+                            )
+                            BarSegment(
+                                castleH,
+                                barWidth,
+                                TallyKind.CASTLE.color,
+                                counted[TallyKind.CASTLE],
+                                0.dp,
+                                8.dp
+                            )
                         }
                     }
                 }
@@ -416,6 +464,52 @@ private fun ScoreChart(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.weight(1f)
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BarSegment(
+    height: Dp,
+    width: Dp,
+    color: Color,
+    items: List<TallyItem>?,
+    topRadius: Dp = 0.dp,
+    bottomRadius: Dp = 0.dp
+) {
+    Box(
+        modifier = Modifier
+            .width(width)
+            .height(height)
+            .clip(
+                RoundedCornerShape(
+                    topStart = topRadius,
+                    topEnd = topRadius,
+                    bottomStart = bottomRadius,
+                    bottomEnd = bottomRadius
+                )
+            )
+            .background(Brush.verticalGradient(listOf(color, color.copy(alpha = 0.55f)))),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 2.dp, vertical = 3.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Bottom
+        ) {
+            items.orEmpty().takeLast(3).forEach { item ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(item.emoji, fontSize = 17.sp)
+                    if (item.count > 1) {
+                        Text(
+                            text = "×${item.count}",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AdventureInk
+                        )
+                    }
                 }
             }
         }

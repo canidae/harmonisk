@@ -252,7 +252,7 @@ class AdventureViewModel @Inject constructor(
         val index = snapshot.currentPlayerIndex
         val player = snapshot.players.getOrNull(index) ?: return
         if (landing.reachedGoal) {
-            val finished = player.withBonus(ADVENTURE_CASTLE_BONUS)
+            val finished = player.withCastleScore()
             _state.update {
                 it.copy(
                     players = snapshot.players.toMutableList().also { list -> list[index] = finished },
@@ -278,7 +278,7 @@ class AdventureViewModel @Inject constructor(
         val faerie = if (crossedHalfway) faerieGift(players) else null
         if (faerie != null) {
             val recipient = players.indexOfFirst { it.profileId == faerie.playerId }
-            if (recipient >= 0) players[recipient] = players[recipient].withBonus(faerie.points)
+            if (recipient >= 0) players[recipient] = players[recipient].withFaerieScore(faerie.points)
         }
         _state.update {
             it.copy(
@@ -487,7 +487,7 @@ class AdventureViewModel @Inject constructor(
         val index = snapshot.currentPlayerIndex
         val player = snapshot.players.getOrNull(index) ?: return
         val gained = points.coerceAtLeast(0)
-        val rewarded = player.withBonus(gained)
+        val rewarded = player.withWhackScore(gained)
         val players = snapshot.players.toMutableList().also { list -> list[index] = rewarded }
         _state.update {
             it.copy(

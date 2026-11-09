@@ -264,10 +264,13 @@
     <string name="adventure_castle_reached">Slottet er nådd</string>
     <string name="adventure_castle_win">%1$s nådde slottet</string>
     <string name="adventure_score">Poeng</string>
-    <string name="adventure_bonus">Bonus</string>
     <string name="adventure_reward_stickers">Klistremerker</string>
     <string name="adventure_faerie_blessing">En fe gir %2$d poeng til %1$s</string>
     <string name="adventure_faerie_appears">Den musikalske feen dukker opp</string>
+    <string name="adventure_faerie_score">Fe</string>
+    <string name="adventure_castle_score">Slott</string>
+    <string name="adventure_whack_ready">Gjør deg klar!</string>
+    <string name="adventure_song_time">På tide med en sang!</string>
 
     <string name="whack_title">Tonedengeren</string>
     <string name="whack_hint">Spill tonen som gjemmer seg under emojien. Fargen på beltet viser fingeren: blå løs streng, grønn første, gul andre, oransje tredje, rød fjerde. Svar raskere for å få flere poeng.</string>
