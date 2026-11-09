@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import net.exent.harmonisk.ui.theme.AdventureGold
-import net.exent.harmonisk.ui.whack.WhackPressIcon
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.roundToInt
@@ -796,7 +795,7 @@ private fun FieldBadge(
         is AdventureReward.Stickers -> reward.stickers.firstOrNull()?.emoji
         AdventureReward.Song -> "🎵"
         AdventureReward.GoAgain -> "🎲"
-        AdventureReward.Whack -> null
+        AdventureReward.Whack -> "🎯"
         null -> null
     }
     Box(
@@ -822,9 +821,7 @@ private fun FieldBadge(
                 fontWeight = FontWeight.Black,
                 color = Color.White
             )
-            if (reward == AdventureReward.Whack) {
-                WhackPressIcon(Modifier.size(width = 12.dp, height = 9.dp))
-            } else if (icon != null) {
+            if (icon != null) {
                 Text(icon, fontSize = 8.sp)
             }
         }
