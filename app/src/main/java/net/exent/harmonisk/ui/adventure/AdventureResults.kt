@@ -3,6 +3,7 @@ package net.exent.harmonisk.ui.adventure
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -96,6 +97,8 @@ private fun bonusItem(playerId: String, emoji: String, score: Float, kind: Tally
 @Composable
 fun AdventureResultsScreen(
     state: AdventureState,
+    onDrumRoll: () -> Unit,
+    onFanfare: () -> Unit,
     onNewAdventure: () -> Unit,
     onHome: () -> Unit
 ) {
@@ -104,18 +107,23 @@ fun AdventureResultsScreen(
     val maxSongs = max(1, state.players.maxOfOrNull { it.songsPlayed } ?: 1)
     val maxTotal = max(100f * maxSongs, standings.maxOfOrNull { it.player.total } ?: 0f) * 1.08f
     val items = remember(state.players) { tallyItems(state.players) }
-    val songProgress = remember { Animatable(0f) }
+    val startLevel = standings.minOf { it.player.bonusTotal }
+    val endLevel = standings
+        .filter { it.player.songScore > 0f }
+        .maxOfOrNull { it.player.bonusTotal + it.player.songScore }
+        ?: startLevel
+    val race = remember { Animatable(0f) }
     val pop = remember { Animatable(0f) }
     val fly = remember { Animatable(0f) }
     val landed = remember { mutableStateMapOf<String, List<TallyItem>>() }
     val anchors = remember { mutableStateMapOf<String, Offset>() }
     var current by remember { mutableStateOf<TallyItem?>(null) }
     var overlaySize by remember { mutableStateOf(IntSize.Zero) }
+    var raceStarted by remember { mutableStateOf(false) }
+    var raceDone by remember { mutableStateOf(false) }
     var showWinner by remember { mutableStateOf(false) }
     LaunchedEffect(items) {
         delay(450)
-        songProgress.animateTo(1f, tween(2200, easing = FastOutSlowInEasing))
-        delay(300)
         items.forEach { item ->
             current = item
             pop.snapTo(0f)
@@ -127,7 +135,19 @@ fun AdventureResultsScreen(
             current = null
             delay(60)
         }
-        delay(150)
+        delay(300)
+        race.snapTo(startLevel)
+        raceStarted = true
+        if (endLevel > startLevel) {
+            onDrumRoll()
+            race.animateTo(
+                endLevel,
+                tween(AdventureTiming.RACE_MS.toInt(), easing = LinearEasing)
+            )
+            delay(200)
+        }
+        onFanfare()
+        raceDone = true
         showWinner = true
     }
     AdventureBackdrop(Modifier.fillMaxSize()) {
@@ -160,10 +180,11 @@ fun AdventureResultsScreen(
             }
             ScoreChart(
                 standings = standings,
-                songProgress = songProgress.value,
+                level = race.value,
+                raceStarted = raceStarted,
+                raceDone = raceDone,
                 landed = landed,
                 maxTotal = maxTotal,
-                showWinner = showWinner,
                 solo = state.solo,
                 onBarAnchor = { id, anchor -> anchors[id] = anchor },
                 modifier = Modifier.weight(1f)
@@ -302,10 +323,11 @@ private fun TallyKind.label(): String? = when (this) {
 @Composable
 private fun ScoreChart(
     standings: List<AdventureStanding>,
-    songProgress: Float,
+    level: Float,
+    raceStarted: Boolean,
+    raceDone: Boolean,
     landed: Map<String, List<TallyItem>>,
     maxTotal: Float,
-    showWinner: Boolean,
     solo: Boolean,
     onBarAnchor: (String, Offset) -> Unit,
     modifier: Modifier = Modifier
@@ -341,8 +363,12 @@ private fun ScoreChart(
                             counted[kind].orEmpty().sumOf { it.points }.toFloat()
                         val barSpan = chartHeight - 42.dp
                         fun height(value: Float): Dp = barSpan * (value / maxTotal)
-                        val songValue = player.songScore * songProgress
-                        val songH = height(songValue)
+                        val landedPoints = counted.values.sumOf { items ->
+                            items.sumOf { it.points }
+                        }.toFloat()
+                        val cap = landedPoints + player.songScore
+                        val shown = level.coerceIn(landedPoints, cap)
+                        val songH = height(shown - landedPoints)
                         val stickerH = height(
                             animateFloatAsState(
                                 total(TallyKind.STICKER),
@@ -397,7 +423,7 @@ private fun ScoreChart(
                             verticalArrangement = Arrangement.Bottom
                         ) {
                             AnimatedVisibility(
-                                visible = showWinner && !solo,
+                                visible = !solo && (raceDone || raceStarted && level >= cap - 0.01f),
                                 enter = fadeIn() + scaleIn(initialScale = 0.2f)
                             ) {
                                 val label = medalLabel(standing.medal)
@@ -409,11 +435,8 @@ private fun ScoreChart(
                                         .semantics { contentDescription = label }
                                 )
                             }
-                            val landedPoints = counted.values.sumOf { items ->
-                                items.sumOf { it.points }
-                            }
                             Text(
-                                text = formatScore(landedPoints + songValue),
+                                text = formatScore(shown),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Black,
                                 color = color

@@ -39,6 +39,7 @@ object AdventureTiming {
     const val REWARD_FLY_MS = 700L
     const val REWARD_TOTAL_MS = REWARD_MS + REWARD_FLY_MS + 250L
     const val ANNOUNCE_MS = 2_300L
+    const val RACE_MS = 3_600L
     const val CASTLE_CELEBRATION_MS = 4_400L
     const val FAERIE_ENTER_MS = 2_000L
     const val FAERIE_APPEAR_HOLD_MS = 1_300L
@@ -100,8 +101,10 @@ data class AdventurePlayer(
     val songQueue: List<String> = emptyList(),
     val queueIndex: Int = 0
 ) {
-    val total: Float
-        get() = songScore + stickerScore + whackScore + faerieScore + castleScore
+    val bonusTotal: Float
+        get() = stickerScore + whackScore + faerieScore + castleScore
+
+    val total: Float get() = songScore + bonusTotal
 }
 
 data class AdventureStanding(

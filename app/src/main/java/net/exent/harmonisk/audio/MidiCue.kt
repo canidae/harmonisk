@@ -93,6 +93,20 @@ object MidiCues {
         note(DRUMS, 41, 920, 120, 108)
     }
 
+    val DrumRoll = midiCue {
+        drum()
+        val step = 60
+        val hits = 3_600 / step
+        repeat(hits) { index ->
+            val at = index * step
+            val ramp = 40 + index * 55 / hits
+            note(DRUMS, 38, at, 55, ramp)
+            if (index % 4 == 0) note(DRUMS, 40, at, 40, ramp + 12)
+        }
+        note(DRUMS, 36, 3_420, 140, 112)
+        note(DRUMS, 38, 3_420, 120, 120)
+    }
+
     val Applause = midiCue {
         program(EXTRA, 126)
         note(EXTRA, n(4, C), 0, 2_600, 80)

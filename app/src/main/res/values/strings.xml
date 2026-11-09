@@ -281,6 +281,7 @@
     <string name="sound_test_title">Sound test</string>
     <string name="sound_test_turn">Next player chime</string>
     <string name="sound_test_dice">Dice rattle</string>
+    <string name="sound_test_drumroll">Score drum roll</string>
     <string name="sound_test_applause">Applause</string>
     <string name="sound_test_whistle">Time’s up whistle</string>
     <string name="sound_test_faerie">Faerie</string>
