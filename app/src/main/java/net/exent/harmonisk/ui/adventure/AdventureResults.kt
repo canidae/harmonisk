@@ -477,16 +477,25 @@ private fun ScoreChart(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 standings.forEach { standing ->
-                    Text(
-                        text = standing.player.name,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        AdventureAvatar(
+                            emoji = standing.player.emoji,
+                            colorIndex = standing.player.colorIndex,
+                            size = 26.dp
+                        )
+                        Text(
+                            text = standing.player.name,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         }
