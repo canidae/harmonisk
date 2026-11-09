@@ -4,6 +4,7 @@ import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.music.PitchResult
 import kotlin.math.abs
+import kotlin.math.pow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
@@ -49,6 +50,18 @@ class PitchProcessor(
 
         private const val RELEASE_PEAK_RATIO = 0.3f
         private const val RELEASE_DEBOUNCE_CHUNKS = 4
+
+        /**
+         * How far below the instrument's lowest open string a reading may sit and still count.
+         * The lowest string is the one a player is most likely to leave a little flat, and its
+         * note sits exactly on the range floor, so a few cents of tuning error or detector jitter
+         * would otherwise throw every frame away.
+         */
+        private const val LOWEST_NOTE_MARGIN_CENTS = 100f
+
+        internal fun lowestDetectableFrequency(instrument: Instrument, referenceA4: Float): Float =
+            NoteUtils.midiToFrequency(instrument.tuning.first(), referenceA4) *
+                2.0.pow(-LOWEST_NOTE_MARGIN_CENTS / 1200.0).toFloat()
     }
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB
@@ -75,7 +88,7 @@ class PitchProcessor(
     }
 
     private fun updateLowestFrequency() {
-        lowestFrequency = NoteUtils.midiToFrequency(instrument.tuning.first(), referenceA4)
+        lowestFrequency = lowestDetectableFrequency(instrument, referenceA4)
     }
 
     /**
