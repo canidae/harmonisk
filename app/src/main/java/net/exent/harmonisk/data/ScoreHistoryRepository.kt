@@ -65,7 +65,6 @@ class ScoreHistoryRepository(
         }
     }
 
-    /** Timestamp of the most recent playthrough of each melody, across instruments. */
     @OptIn(ExperimentalCoroutinesApi::class)
     val lastPlayed: Flow<Map<String, Long>> = profileRepository.activeProfile.flatMapLatest { profile ->
         if (profile == null) {

@@ -1,6 +1,5 @@
 package net.exent.harmonisk.ui.record
 
-/** A scheduled note-on or note-off in the Record playback engine. */
 internal data class ReplayEvent(
     val timeMs: Long,
     val midiNote: Int,
@@ -10,13 +9,6 @@ internal data class ReplayEvent(
 
 internal object ReplayEvents {
 
-    /**
-     * Note events for the span from [startTimeMs] up to [loopEndMs].
-     *
-     * A note that already began before [startTimeMs] is left out: starting playback in the
-     * middle of the song must not retrigger it, or the tone sustains from the seek point.
-     * End times past the loop end are clamped, so a note never outlives the loop it plays in.
-     */
     fun notes(
         playedNotes: List<PlayedNote>,
         startTimeMs: Long,

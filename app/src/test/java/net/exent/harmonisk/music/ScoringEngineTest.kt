@@ -31,7 +31,7 @@ class ScoringEngineTest {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69,
             detectedMidiNote = 69,
-            centsOff = 15f,   // > PERFECT_CENTS (10) and <= GREAT_CENTS (20)
+            centsOff = 15f,
             expectedDurationMs = 500,
             actualDurationMs = 500
         ))
@@ -44,7 +44,7 @@ class ScoringEngineTest {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69,
             detectedMidiNote = 69,
-            centsOff = 25f,   // > GREAT_CENTS (20) and <= GOOD_CENTS (30)
+            centsOff = 25f,
             expectedDurationMs = 500,
             actualDurationMs = 500
         ))
@@ -162,7 +162,7 @@ class ScoringEngineTest {
         assertEquals(3, melodyScore.notesHit)
         assertEquals(2, melodyScore.perfectNotes)
         assertEquals(1, melodyScore.greatNotes)
-        assertEquals(2, melodyScore.longestStreak) // first two
+        assertEquals(2, melodyScore.longestStreak)
     }
 
     @Test
@@ -171,7 +171,6 @@ class ScoringEngineTest {
         assertEquals(MelodyScore.EMPTY, melodyScore)
     }
 
-    // Boundary-value tests for PitchAccuracy
 
     @Test
     fun `PitchAccuracy boundary at PERFECT_CENTS returns PERFECT`() {
@@ -253,7 +252,6 @@ class ScoringEngineTest {
         assertEquals(PitchAccuracy.MISS, result.pitchAccuracy)
     }
 
-    // Trailing-streak regression: a streak ending on the last note must be counted
 
     @Test
     fun `trailing streak at end of melody is counted`() {
@@ -275,7 +273,6 @@ class ScoringEngineTest {
         assertEquals(noteCount, melodyScore.longestStreak)
     }
 
-    // All-miss tests
 
     @Test
     fun `all miss melody has zero streak and zero notes hit`() {
@@ -285,7 +282,6 @@ class ScoringEngineTest {
         assertEquals(0, melodyScore.notesHit)
     }
 
-    // Time scoring tests
 
     @Test
     fun `time score is full marks when the song is played at its own duration`() {
@@ -371,11 +367,9 @@ class ScoringEngineTest {
             centsOff = 0f, expectedDurationMs = 500,
             actualDurationMs = 500
         ))
-        // Perfect pitch (100) * 0.6 + perfect duration (100) * 0.4 = 100
         assertEquals(100f, result.overallScore, 0.01f)
     }
 
-    // Total score tests
 
     @Test
     fun `total score is 100 when every category in play is perfect`() {
@@ -386,9 +380,7 @@ class ScoringEngineTest {
 
     @Test
     fun `two half marks no longer compound into a quarter`() {
-        // 50% notes and 50% correct notes used to multiply to 25, now they average to 50
         assertEquals(50f, ScoringEngine.combineScores(50f, 1f, 50f, 4), 0.01f)
-        // 50% notes and half the song duration score used to give 25 at level 1
         assertEquals(50f, ScoringEngine.combineScores(50f, 0.5f, 100f, 1), 0.01f)
     }
 
@@ -401,7 +393,6 @@ class ScoringEngineTest {
 
     @Test
     fun `total score ignores the categories that are not scored at that level`() {
-        // Wrong notes do not count up to level 2, song duration does not count from level 4
         assertEquals(100f, ScoringEngine.combineScores(100f, 1f, 0f, 2), 0.01f)
         assertEquals(100f, ScoringEngine.combineScores(100f, 0f, 100f, 4), 0.01f)
     }

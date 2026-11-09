@@ -23,10 +23,6 @@ class AudioCaptureService(
         const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_FLOAT
 
-        /**
-         * VOICE_PERFORMANCE (API 29+): Designed for live performance / karaoke.
-         * Minimizes latency and decouples from playback path — ideal for instrument pitch detection.
-         */
         private const val AUDIO_SOURCE = MediaRecorder.AudioSource.VOICE_PERFORMANCE
     }
 
@@ -34,7 +30,6 @@ class AudioCaptureService(
         AudioConstants.SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT
     )
 
-    /** Estimated mic-to-read latency in ms, measured via AudioRecord.getTimestamp(). */
     @Volatile
     var captureLatencyMs: Int = 0
         private set

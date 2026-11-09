@@ -116,7 +116,6 @@ fun MelodyPlayScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
 
-                // ── Top panel ────────────────────────────────────────────
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -125,7 +124,6 @@ fun MelodyPlayScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    // MIDI input toggle
                     if (deviceState.midiAvailable) {
                         val isMidi = deviceState.midiInputEnabled
                         IconButton(
@@ -141,7 +139,6 @@ fun MelodyPlayScreen(
                             )
                         }
                     }
-                    // MIDI output toggle
                     if (deviceState.midiAvailable) {
                         val isMidi = deviceState.midiOutputEnabled
                         IconButton(
@@ -158,7 +155,6 @@ fun MelodyPlayScreen(
                         }
                     }
 
-                    // Song title, level and latest score
                     gameState.melodyName?.let { name ->
                         Spacer(Modifier.width(6.dp))
                         val levelLabel = stringResource(R.string.melody_level, gameState.currentLevel)
@@ -183,9 +179,6 @@ fun MelodyPlayScreen(
 
                     Spacer(Modifier.weight(1f))
 
-                    // Preview melody button. Listening to the song is allowed before the take
-                    // starts, after it has been played through, and while it is paused; during a
-                    // scored take it is a developer feature.
                     if (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED ||
                         gameState.phase == PlayPhase.FINISHED ||
                         devModeEnabled && (gameState.phase == PlayPhase.PLAYING || gameState.phase == PlayPhase.WAITING_FOR_NOTE)) {
@@ -202,7 +195,6 @@ fun MelodyPlayScreen(
                         }
                     }
 
-                    // Metronome toggle
                     IconButton(
                         onClick = { viewModel.toggleMetronome() },
                         modifier = Modifier.size(PANEL_BTN_SIZE)
@@ -215,7 +207,6 @@ fun MelodyPlayScreen(
                         )
                     }
 
-                    // Voice selector (top-panel chip, like Record)
                     if (gameState.melodyTracks.size > 1) {
                         var showVoiceMenu by remember { mutableStateOf(false) }
                         val voiceColor = VOICE_COLORS[gameState.activeVoiceIndex % VOICE_COLORS.size]
@@ -264,7 +255,6 @@ fun MelodyPlayScreen(
                         }
                     }
 
-                    // Settings
                     MelodySettingsMenu(
                         expanded = showConfigMenu,
                         onDismiss = { showConfigMenu = false },
@@ -285,17 +275,14 @@ fun MelodyPlayScreen(
                     )
                 }
 
-                // ── Sheet music strip / play canvas ──
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
                 ) {
                     val track = gameState.melodyTrack
-                    // How far the bars run ahead of the game clock, on the same rule the view model uses.
                     val adjustedNow = gameState.currentTimeSeconds +
                             nowLineLeadSeconds(gameState.phase, inputDelay)
-                    // A preview drives the canvas with the song's own time, at the pace of the audio.
                     val canvasNow = gameState.previewTimeSeconds ?: adjustedNow
 
                     if (track != null) {
@@ -315,7 +302,6 @@ fun MelodyPlayScreen(
                         )
                     }
 
-                    // ── Play canvas ──────────────────────────────────────
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -403,7 +389,6 @@ fun MelodyPlayScreen(
                             }
                         }
 
-                        // Contextual action buttons (bottom-right overlay)
                         if (!adventureMode) {
                             val showScrollButton = gameState.phase == PlayPhase.FINISHED && !gameState.isAtScrollStart(viewState.songTimeOffsetSeconds)
                             Column(
@@ -444,7 +429,6 @@ fun MelodyPlayScreen(
                         }
 
                     } else {
-                        // Error fallback — melody failed to load
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(stringResource(R.string.melody_failed_load_melody), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
@@ -522,7 +506,6 @@ private fun MelodySettingsMenu(
             offset = DpOffset((-180).dp, 0.dp),
             modifier = Modifier.widthIn(min = minMenuWidth)
         ) {
-            // Levels are earned by scoring; picking one freely is a developer feature.
             if (showLevelControl) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.melody_play_level, currentLevel)) },
@@ -580,7 +563,6 @@ private fun MelodySettingsMenu(
             )
             if (showPlayVoices) {
                 HorizontalDivider()
-                // Accompaniment mode selector
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.melody_play_voices)) },
                     onClick = {}

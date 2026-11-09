@@ -75,9 +75,6 @@ private const val ReelFontSize = 20f
 private val CabinetWidth = ReelWidth + LeverWidth
 private val ReelPanel = Color(0xFF1B1733)
 
-/**
- * Constant tempo for the first 40% of the spin, then a smooth deceleration to a dead stop.
- */
 private object SlotEasing : Easing {
     private const val HoldFraction = 0.4f
     private const val Velocity = 2f / (1f + HoldFraction)
@@ -93,16 +90,6 @@ private object SlotEasing : Easing {
     }
 }
 
-/**
- * Slot machine that reveals the song of the current turn: the lever is pulled during
- * [AdventureTurnPhase.PULLING], the reel scrolls at a constant tempo and then slows down during
- * [AdventureTurnPhase.SPINNING], the winning song is highlighted during [AdventureTurnPhase.HIGHLIGHT]
- * and the title then flies down to the turn card.
- *
- * @param mapCenter center of the map area in root coordinates
- * @param songAnchor left edge and vertical center of the song label in the turn card, in root coordinates
- * @param origin position of this screen's root box in root coordinates
- */
 @Composable
 fun SongRevealOverlay(
     state: AdventureState,

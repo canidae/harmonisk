@@ -8,13 +8,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Which melody voices the app sounds while the player is being scored.
- *
- * Playing voices is a developer feature: a player who is being scored must not hear the melody they
- * are asked to play, however the accompaniment setting was left. The song is still there to listen
- * to before the take, as a preview.
- */
 class AudibleMelodyTracksTest {
 
     private fun track(channel: Int) = MelodyTrack(

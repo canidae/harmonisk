@@ -4,10 +4,6 @@ import java.io.InputStream
 
 class MidiParser {
 
-    /**
-     * Parse a MIDI file into a single consolidated [MelodyTrack].
-     * All note events from all tracks are merged and sorted.
-     */
     fun parse(inputStream: InputStream, name: String = "Unknown"): MelodyTrack {
         val source = readSource(inputStream)
         val tracks = readAllTracks(source.data, source.reader, source.header, name)
@@ -25,11 +21,6 @@ class MidiParser {
         )
     }
 
-    /**
-     * Parse a MIDI file into one [MelodyTrack] per original MIDI track.
-     * Useful for multi-track / multi-voice MIDI files where each track
-     * should retain its identity (e.g. different instruments).
-     */
     fun parseMultiTrack(inputStream: InputStream, name: String = "Unknown"): List<MelodyTrack> {
         val source = readSource(inputStream)
         return readAllTracks(source.data, source.reader, source.header, name)
@@ -58,7 +49,6 @@ class MidiParser {
     ): List<MelodyTrack> {
         var pos = reader.firstTrackPosition
 
-        // First pass: read all tracks to collect global tempo/time-sig/key events
         val allTrackData = mutableListOf<MutableList<NoteEvent>>()
         val allTempos = mutableListOf<TempoEvent>()
         val allTimeSigs = mutableListOf<TimeSignatureEvent>()
@@ -93,7 +83,6 @@ class MidiParser {
         val globalTempos = if (allTempos.isEmpty()) listOf(TempoEvent(0, 500_000)) else allTempos
         val notatedKey = allKeys.minByOrNull { it.first }?.second
 
-        // Second pass: build MelodyTrack with shared global tempo/time-sig map
         return allTrackData.mapIndexed { trackIdx, notes ->
             val trackName = if (header.numTracks > 1) "$name - Track ${trackIdx + 1}" else name
             MelodyTrack(

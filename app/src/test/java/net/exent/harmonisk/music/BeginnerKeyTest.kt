@@ -6,7 +6,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The beginner key should transpose melodies into instrument-friendly finger patterns. */
 class BeginnerKeyTest {
 
     private val beginnerKey = BeginnerKey(BowedAlgorithm())

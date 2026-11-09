@@ -29,9 +29,6 @@ private val Context.importedStore: DataStore<Preferences> by preferencesDataStor
 
 private const val TAG = "MelodyRepository"
 
-/**
- * Repository for managing MIDI melodies (bundled and user-imported).
- */
 class MelodyRepository(
     private val context: Context,
     private val difficultyRepository: DifficultyRepository
@@ -66,10 +63,8 @@ class MelodyRepository(
             "multipart/x-zip"
         )
 
-        /** Folder key for user-imported melodies. */
         const val IMPORTED_FOLDER = "imported"
 
-        /** Asset directory holding bundled melodies, one subdirectory per folder. */
         const val MELODY_ASSETS_DIR = "melodies"
 
     }
@@ -88,7 +83,6 @@ class MelodyRepository(
         data class Folder(val folder: String, val count: Int) : ImportResult
     }
 
-    /** Bundled melodies from the assets/melodies directory tree. */
     fun getBundledMelodies(): List<MelodyInfo> {
         val result = mutableListOf<MelodyInfo>()
         val folders = context.assets.list(MELODY_ASSETS_DIR).orEmpty()
@@ -106,7 +100,6 @@ class MelodyRepository(
         return result
     }
 
-    /** Flow of user-imported melodies. */
     val importedMelodies: Flow<List<MelodyInfo>> = importedMelodyStore.flow.map { map ->
         map.map { (id, mel) ->
             MelodyInfo(id, mel.name, false, folder = mel.folder ?: IMPORTED_FOLDER, uri = Uri.parse(mel.uri))
@@ -119,9 +112,6 @@ class MelodyRepository(
         }
     }
 
-    /**
-     * Load and parse a melody by its info.
-     */
     fun loadMelody(info: MelodyInfo): MelodyTrack? = synchronized(cacheLock) {
         cache[info.id]?.let { return it }
 
@@ -148,11 +138,6 @@ class MelodyRepository(
         track
     }
 
-    /**
-     * Load a melody preserving one [MelodyTrack] per original MIDI track (voice).
-     * Unlike [loadMelody], tracks are not merged, so multi-voice files keep their
-     * per-track identity.
-     */
     fun loadMultiTrack(info: MelodyInfo): List<MelodyTrack> = synchronized(cacheLock) {
         multiTrackCache[info.id]?.let { return it }
 
@@ -179,13 +164,8 @@ class MelodyRepository(
         tracks
     }
 
-    /** Stable melody ID derived from a user-supplied URI (uses full URI string, no hash collisions). */
     fun uriMelodyId(uri: Uri): String = "user_${uri}"
 
-    /**
-     * Resolve a content URI to a human-readable display name using ContentResolver metadata.
-     * Falls back to extracting from the URI path if the provider doesn't expose DISPLAY_NAME.
-     */
     fun resolveDisplayName(uri: Uri): String {
         return try {
             context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
@@ -197,14 +177,12 @@ class MelodyRepository(
         } catch (_: Exception) {
             null
         }?.let { raw -> MelodyNames.displayName(raw) } ?: run {
-            // Fallback: decode last path segment
             val rawPath = uri.lastPathSegment ?: return "Imported song"
             MelodyNames.displayName(Uri.decode(rawPath).substringAfterLast('/'))
                 ?: "Imported song"
         }
     }
 
-    /** Drop cached parses so a re-imported file is never served from the previous copy. */
     private suspend fun evictCached(id: String) {
         synchronized(cacheLock) {
             cache.remove(id)
@@ -353,7 +331,6 @@ class MelodyRepository(
         return difficulty
     }
 
-    /** Write [bytes] into the local melody directory, keyed by [seed] so a re-import replaces its file. */
     private fun writeMelodyFile(seed: Int, displayName: String, bytes: ByteArray): Uri {
         val melodiesDir = File(context.filesDir, "melodies")
         if (!melodiesDir.exists()) melodiesDir.mkdirs()
@@ -379,7 +356,6 @@ class MelodyRepository(
         importedMelodyStore.remove(id)
     }
 
-    /** Remove every melody imported into [folder] and delete its extracted files. Returns the removed ids. */
     suspend fun removeImportedFolder(folder: String): List<String> {
         val entries = importedMelodyStore.flow.first().filterValues { it.folder == folder }
         for ((id, melody) in entries) {

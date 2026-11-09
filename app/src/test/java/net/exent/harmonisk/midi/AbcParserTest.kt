@@ -216,8 +216,6 @@ class AbcParserTest {
         assertEquals("The Kesh Jig", track.name)
         assertEquals(TimeSignatureEvent(0, 6, 8), track.timeSignatures.single())
         assertEquals(KeySignature(1, false), track.keySignature)
-        // Both repeated sections play twice, the first with its two endings:
-        // (5+6+6+6+5+6+6+4) + (5+6+6+6+5+6+6+5) + 2 * (4+6+6+5+4+6+6+5)
         assertEquals(173, track.notes.size)
         assertTrue(track.notes.all { it.durationTicks > 0 })
         assertTrue(track.durationSeconds > 20.0)

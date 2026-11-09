@@ -12,12 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.CopyOnWriteArrayList
 
-/**
- * Monitors the active audio output device and emits changes.
- *
- * Device priority (highest first): Bluetooth A2DP → wired → built-in speaker.
- * Each device is identified by a key (e.g. "bluetooth_AirPods Pro", "speaker", "wired").
- */
 class AudioDeviceMonitor(private val context: Context) {
 
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager

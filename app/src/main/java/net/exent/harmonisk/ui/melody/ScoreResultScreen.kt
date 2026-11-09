@@ -168,12 +168,12 @@ fun ScoreResultModal(
 }
 
 private enum class EnthusiasmLevel(val emoji: String) {
-    LEGENDARY("\uD83C\uDF1F"),   // 🌟
-    EXCELLENT("\uD83C\uDF89"),   // 🎉
-    GREAT("\uD83D\uDC4F"),       // 👏
-    GOOD("\uD83D\uDCAA"),        // 💪
-    OK("\uD83C\uDFB6"),          // 🎶
-    NEEDS_WORK("\uD83C\uDFB5"); // 🎵
+    LEGENDARY("\uD83C\uDF1F"),
+    EXCELLENT("\uD83C\uDF89"),
+    GREAT("\uD83D\uDC4F"),
+    GOOD("\uD83D\uDCAA"),
+    OK("\uD83C\uDFB6"),
+    NEEDS_WORK("\uD83C\uDFB5");
 }
 
 @Composable

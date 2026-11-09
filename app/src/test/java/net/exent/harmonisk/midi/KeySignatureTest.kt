@@ -22,9 +22,7 @@ class KeySignatureTest {
         assertEquals(KeySignature(2, false), KeySignature(0, false).transpose(2))
         assertEquals(KeySignature(1, false), KeySignature(-1, false).transpose(2))
         assertEquals(KeySignature(7, false), KeySignature(5, false).transpose(2))
-        // A major up a minor third is C major
         assertEquals(KeySignature(0, false), KeySignature(3, false).transpose(3))
-        // A minor up a minor third is C minor
         assertEquals(KeySignature(-3, true), KeySignature(0, true).transpose(3))
     }
 

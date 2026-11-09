@@ -3,13 +3,6 @@ package net.exent.harmonisk.ui.melody
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/**
- * When the app's own notes are handed over, and where a preview canvas stands.
- *
- * A note is heard one output delay after it is played, and its bar crosses the now line one input
- * delay before the song reaches it, so the app plays ahead of both. A preview has no player to wait
- * for and only stands one output delay behind the notes it schedules.
- */
 class AudioLeadTest {
 
     @Test

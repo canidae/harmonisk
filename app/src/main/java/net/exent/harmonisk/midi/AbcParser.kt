@@ -3,16 +3,8 @@ package net.exent.harmonisk.midi
 import kotlin.math.pow
 import kotlin.math.roundToLong
 
-/**
- * Reads ABC notation into one [MelodyTrack] per voice. Headers (T/M/L/Q/K/V) are honoured,
- * as are notes, rests, octave markers, accidentals (including their persistence within a
- * bar), chords, ties, tuplets, broken rhythm, repeats and first/second endings. Grace notes,
- * decorations, slurs, chord symbols and annotations are ignored; the tempo, meter and key
- * are read from the headers only.
- */
 object AbcParser {
 
-    /** Tick resolution of the generated tracks. */
     private const val PPQ = 480
 
     private const val DEFAULT_VELOCITY = 80
@@ -41,7 +33,6 @@ object AbcParser {
         }
     }
 
-    // ── Lines and tunes ────────────────────────────────────────────────────
 
     private fun cleanLines(text: String): List<String> {
         val lines = mutableListOf<String>()
@@ -85,7 +76,6 @@ object AbcParser {
         return tunes
     }
 
-    // ── Tune parsing ───────────────────────────────────────────────────────
 
     private class Voice(val id: String) {
         val elements = mutableListOf<Element>()
@@ -183,7 +173,6 @@ object AbcParser {
         )
     }
 
-    // ── Headers ────────────────────────────────────────────────────────────
 
     private fun headerField(line: String): Char? {
         if (line.length < 2 || line[1] != ':') return null
@@ -216,7 +205,6 @@ object AbcParser {
         }
     }
 
-    /** `Q:1/4=120` is 120 of the given note value per minute; also accepts a bare `Q:120`. */
     private fun parseTempo(value: String, unitLength: Double): Long? {
         val cleaned = value.replace(Regex("\"[^\"]*\""), "").trim()
         val equals = cleaned.indexOf('=')
@@ -247,7 +235,6 @@ object AbcParser {
         return KeySignature.of(pitchClass + accidental, isMinor)
     }
 
-    // ── Body lexing ────────────────────────────────────────────────────────
 
     private sealed interface Element
 
@@ -409,7 +396,6 @@ object AbcParser {
         val value = run.toString()
         val repeatStart = value.contains("|:") || value.contains("::") || value.contains(":|:")
         val repeatEnd = value.contains(":|") || value.contains("::")
-        // A volta number may follow the bar line directly ("|1", "|2", ":|2").
         val ending = if (i < body.length && body[i].isDigit()) {
             val numbers = StringBuilder()
             while (i < body.length && (body[i].isDigit() || body[i] == ',')) {
@@ -480,7 +466,6 @@ object AbcParser {
         return (midi + alteration).coerceIn(0, 127) to i
     }
 
-    /** Duration of a note/rest, in whole-note fractions, after the note has been read. */
     private fun parseDuration(body: String, start: Int, unitLength: Double): Pair<Double, Int> {
         var i = start
         val numerator = StringBuilder()
@@ -506,7 +491,6 @@ object AbcParser {
         return if (end < 0) body.length else end + 1
     }
 
-    // ── Repeats and endings ────────────────────────────────────────────────
 
     private fun unroll(elements: List<Element>): List<BeatElement> {
         val out = mutableListOf<BeatElement>()
@@ -553,7 +537,6 @@ object AbcParser {
         return (from..to).mapNotNull { elements[it] as? BeatElement }
     }
 
-    /** The bar that closes the ending starting at [start]; endings inside a repeat end at the repeat. */
     private fun endingEnd(elements: List<Element>, start: Int, repeatEnd: Int): Int {
         if (start < repeatEnd) return repeatEnd
         var seenBeat = false

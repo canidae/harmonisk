@@ -25,7 +25,6 @@ import net.exent.harmonisk.ui.utils.centsColor
 import kotlin.math.abs
 import kotlin.math.min
 
-/** Semi-circular pitch gauge showing cents offset from -50 to +50. */
 @Composable
 fun PitchGauge(
     centsOff: Float,
@@ -38,8 +37,6 @@ fun PitchGauge(
     inTuneCents: Float = NoteUtils.IN_TUNE_CENTS
 ) {
     val clampedCents = centsOff.coerceIn(-maxCents, maxCents)
-    // Fine smoothing lives in PitchStabilizer; this tween only interpolates between frames, so
-    // shortening it costs needle steadiness without making the reading any more accurate.
     val normalizedPosition by animateFloatAsState(
         targetValue = (clampedCents + maxCents) / (2 * maxCents),
         animationSpec = tween(durationMillis = 100),
@@ -115,7 +112,6 @@ fun PitchGauge(
                 style = Stroke(width = 12f, cap = StrokeCap.Round)
             )
 
-            // The in-tune window: marking it on the arc shows how close the needle must be.
             val inTuneSweep = (inTuneCents / maxCents) * 90f
             drawArc(
                 color = TunerGreen,

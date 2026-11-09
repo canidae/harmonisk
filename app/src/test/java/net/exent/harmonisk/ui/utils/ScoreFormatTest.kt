@@ -3,7 +3,6 @@ package net.exent.harmonisk.ui.utils
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** A score reads the same in the result modal and in the song list. */
 class ScoreFormatTest {
 
     @Test

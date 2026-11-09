@@ -9,10 +9,6 @@ enum class MelodyFormat(val extension: String) {
     ABC("abc")
 }
 
-/**
- * Decides how to read a melody file from its content rather than its name, so a file keeps
- * working after it has been copied into local storage under a sanitized name.
- */
 object MelodyFileFormat {
 
     private const val SNIFF_BYTES = 1024
@@ -28,7 +24,6 @@ object MelodyFileFormat {
     }
 }
 
-/** Parses a melody in whichever of the supported formats it is written in. */
 object MelodyFileParser {
 
     fun parse(input: InputStream, name: String): MelodyTrack? {
@@ -57,7 +52,6 @@ object MelodyFileParser {
         }
     }
 
-    /** Flattens several voices into the single track that difficulty and previews use. */
     private fun merge(tracks: List<MelodyTrack>, name: String): MelodyTrack? {
         if (tracks.isEmpty()) return null
         if (tracks.size == 1) return tracks[0]

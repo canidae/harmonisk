@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** Plays a list of [MelodyTrack] through a [NotePlayer] in standalone or game-synced mode. */
 class MelodyPlayer(
     synthesizer: NotePlayer
 ) {
@@ -18,23 +17,11 @@ class MelodyPlayer(
 
     private val activeSynthNotes = mutableMapOf<Int, NoteEvent>()
 
-    /**
-     * Switch the backend at runtime. Silences the current player before switching.
-     * Used to toggle between internal synthesizer and MIDI device output.
-     */
     fun setNotePlayer(player: NotePlayer) {
         notePlayer.allNotesOff()
         notePlayer = player
     }
 
-    /**
-     * Plays melody tracks with absolute timing. Supports multi-track polyphonic playback.
-     *
-     * [leadInSeconds] shifts every event later by that much, so a track that counts the music in
-     * (the metronome, whose notes sit before the song's first beat) can start from a standstill.
-     * [startSeconds] drops the song in at that point: earlier notes are skipped, while a note
-     * still sounding there is attacked at once and released at its own end.
-     */
     fun playWithTiming(
         melodyTracks: List<MelodyTrack>,
         scope: CoroutineScope,
@@ -85,18 +72,9 @@ class MelodyPlayer(
         }
     }
 
-    /**
-     * Drives note-on/off from an external game clock.
-     * Notes play at their natural song position — visual offset handles sync.
-     * Handles multiple tracks polyphonically — each track is treated as a separate voice/channel.
-     * Tracks per-NoteEvent identity so that repeated same-pitch notes are properly
-     * released before re-attack even when both fall within a single frame.
-     */
     fun updateGameTime(gameTimeSeconds: Double, tracks: List<MelodyTrack>) {
         if (!notePlayer.isReady) return
 
-        // Collect all notes that should be active at the current time,
-        // keyed by compound key, tracking the originating NoteEvent.
         val nextActive = mutableMapOf<Int, NoteEvent>()
         for (track in tracks) {
             val channel = track.channel
@@ -112,8 +90,6 @@ class MelodyPlayer(
             }
         }
 
-        // Turn off any previously-active notes that are no longer active,
-        // or whose NoteEvent has changed (same key, different event — repeated note).
         for ((key, currentNote) in activeSynthNotes) {
             val nextNote = nextActive[key]
             if (nextNote == null || nextNote !== currentNote) {
@@ -121,7 +97,6 @@ class MelodyPlayer(
             }
         }
 
-        // Turn on new notes, or re-attack notes whose NoteEvent changed.
         for ((key, note) in nextActive) {
             val currentNote = activeSynthNotes[key]
             if (currentNote == null || currentNote !== note) {
@@ -149,10 +124,6 @@ class MelodyPlayer(
         activeSynthNotes.clear()
     }
 
-    /**
-     * Releases only the notes this player started. A synthesizer-wide silence would also cut notes
-     * queued by other players, such as adventure cues.
-     */
     private fun Set<Int>.releaseWith(player: NotePlayer) {
         for (key in this) player.noteOff(key shr 7, key and 0x7F)
     }

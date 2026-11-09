@@ -31,14 +31,6 @@ data class KeyLayout(
     val isBlack: Boolean
 )
 
-/**
- * Calculate piano-proportional layout for a range of MIDI notes.
- * Returns a map of MIDI number -> KeyLayout.
- *
- * Uses a stable calculation: white key width is derived from the MIDI range
- * divided by the average density of white keys (7/12), avoiding jumps when
- * the view boundary crosses a key.
- */
 fun calculatePianoLayout(
     viewMinMidi: Float,
     viewMaxMidi: Float,
@@ -110,14 +102,12 @@ fun DrawScope.drawPianoKeyboard(
     val cornerRadius = CornerRadius(4f * density, 4f * density)
     val pianoTop = if (pianoAtBottom) size.height - pianoHeight else 0f
 
-    // Background behind piano
     drawRect(
         color = DarkBg,
         topLeft = Offset(0f, pianoTop),
         size = Size(size.width, pianoHeight)
     )
 
-    // Draw white keys first
     for (midi in minMidi..maxMidi) {
         val key = layout[midi] ?: continue
         if (key.isBlack) continue
@@ -136,7 +126,6 @@ fun DrawScope.drawPianoKeyboard(
             strokeWidth = 1f
         )
 
-        // Label on white key
         val noteIndex = midi % 12
         val octave = midi / 12 - 1
         val noteName = NoteUtils.NOTE_NAMES[noteIndex]
@@ -161,7 +150,6 @@ fun DrawScope.drawPianoKeyboard(
             }
         }
 
-        // C4 indicator dot
         if (midi == C4_MIDI) {
             val dotRadius = C4_DOT_RADIUS_DP * density
             val dotCenterX = key.x + key.width / 2f
@@ -174,7 +162,6 @@ fun DrawScope.drawPianoKeyboard(
         }
     }
 
-    // Draw black keys on top
     for (midi in minMidi..maxMidi) {
         val key = layout[midi] ?: continue
         if (!key.isBlack) continue
@@ -221,7 +208,6 @@ fun DrawScope.drawPianoKeyboard(
         }
     }
 
-    // Edge line
     val edgeY = if (pianoAtBottom) pianoTop else pianoTop + pianoHeight - 1f
     drawLine(
         color = Color(0xFF333344),

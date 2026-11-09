@@ -17,8 +17,6 @@ class SongTimeRatioTest {
         ticksPerQuarterNote = 480
     )
 
-    // 120bpm in 4/4: 480 ticks per beat, so a 960-tick note lasts the beat and a half note lasts 1s.
-    // A note of 1s from the start, a one beat rest, then a note of 2s: the music sums to 4s.
     private val song = track(listOf(0L to 960L, 1920L to 3840L))
 
     @Test

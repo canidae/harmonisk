@@ -30,22 +30,10 @@ class TunerViewModel @Inject constructor(
     companion object {
         const val HOLD_DURATION_MS = 10_000L
 
-        /**
-         * Hysteresis band around a semitone boundary (in cents).
-         * Once a note name is committed, the smoothed pitch must move MORE than
-         * (50 + HYSTERESIS_CENTS) cents from the current note's centre before the
-         * display switches to an adjacent semitone.  This prevents the name from
-         * flickering when the pitch hovers near a boundary.
-         */
         const val HYSTERESIS_CENTS = 15f
 
-        /** Extra leeway before the in-tune indicator turns off again, in cents. */
         private const val IN_TUNE_HYSTERESIS_CENTS = 2f
 
-        /**
-         * Fallback frame interval used for the very first frame, before a real interval has
-         * been measured. Matches the 512-sample capture hop at 44100 Hz.
-         */
         private const val NOMINAL_FRAME_S = AudioConstants.BUFFER_SIZE_SAMPLES.toDouble() /
             AudioConstants.SAMPLE_RATE
     }
@@ -58,10 +46,8 @@ class TunerViewModel @Inject constructor(
 
     private val stabilizer = PitchStabilizer()
 
-    /** Timestamp of the previous valid frame, used to keep smoothing time-based rather than per-frame. */
     private var lastFrameNanos = 0L
 
-    // Hysteresis: the MIDI note number currently committed to for display (-1 = none)
     private var displayedMidi: Int = -1
 
     private var referenceA4 = NoteUtils.DEFAULT_CONCERT_PITCH
@@ -109,8 +95,6 @@ class TunerViewModel @Inject constructor(
             holdJob?.cancel()
             holdJob = null
 
-            // Smooth in semitone space — vibrato oscillates symmetrically, so the stabilised
-            // value converges to the player's intended pitch regardless of its amplitude.
             val now = System.nanoTime()
             val dt = if (lastFrameNanos == 0L) NOMINAL_FRAME_S
             else ((now - lastFrameNanos) / 1e9).coerceIn(0.0, 0.25)
@@ -121,11 +105,8 @@ class TunerViewModel @Inject constructor(
             val smoothedFreq = (referenceA4 * 2.0.pow(smoothedSemitones / 12.0)).toFloat()
             val rawNoteInfo = noteUtils.frequencyToNote(smoothedFreq, referenceA4)
 
-            // Hysteresis: only switch displayed note name when the smoothed pitch has moved
-            // clearly past the semitone boundary (> 50 + HYSTERESIS_CENTS from current centre).
             val noteInfo: NoteInfo = when {
                 displayedMidi == -1 -> {
-                    // First valid frame after silence — commit immediately.
                     displayedMidi = rawNoteInfo.midiNumber
                     rawNoteInfo
                 }
@@ -134,12 +115,9 @@ class TunerViewModel @Inject constructor(
                     val displayedCenter = NoteUtils.midiToFrequency(displayedMidi, referenceA4)
                     val centsFromDisplayed = noteUtils.frequencyToCents(smoothedFreq, displayedCenter)
                     if (abs(centsFromDisplayed) > NoteUtils.MAX_CENTS_OFF + HYSTERESIS_CENTS) {
-                        // Crossed decisively into the adjacent semitone — switch.
                         displayedMidi = rawNoteInfo.midiNumber
                         rawNoteInfo
                     } else {
-                        // Still within the hysteresis band — keep the current note name but
-                        // show the actual cents offset relative to the displayed note centre.
                         noteUtils.frequencyToNote(displayedCenter, referenceA4)
                             .copy(centsOff = centsFromDisplayed)
                     }
@@ -164,12 +142,9 @@ class TunerViewModel @Inject constructor(
                 )
             }
         } else {
-            // Brief silence: don't reset the stabiliser — hold the current smoothed value so that
-            // transient quiet moments (e.g., a breath) don't destabilise the display.
             if (_state.value.displayedResult.isValid && holdJob?.isActive != true) {
                 holdJob = viewModelScope.launch {
                     delay(HOLD_DURATION_MS)
-                    // Hold expired — player truly stopped. Reset so the next note starts fresh.
                     stabilizer.reset()
                     lastFrameNanos = 0L
                     displayedMidi = -1

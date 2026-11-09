@@ -4,13 +4,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
-/**
- * The bundled songs are exported from MuseScore, which cuts every note short by about 5%.
- * Before the gap handling in [MidiToAlphaTex], quantizing such a note ended it a grid step
- * early, so a plain note came out as a long note tied to a sliver, and the sheet music was
- * full of dots. Dotted notes are legitimate, but a dotted note tied to a sixteenth or
- * thirty-second in a row of even notes is the export artefact coming back.
- */
 class BundledSongsNotationTest {
 
     private val melodyRoot = File("src/main/assets/melodies")
@@ -39,10 +32,6 @@ class BundledSongsNotationTest {
     }
 
     private companion object {
-        /**
-         * A note of at least seven grid steps (a dotted quarter or longer) tied to a
-         * sixteenth or thirty-second is an exported note that was cut short.
-         */
         val SLIVER_TIE = Regex("""[A-G][#b]?\d\{t\}\.(?:16|32)""")
     }
 }

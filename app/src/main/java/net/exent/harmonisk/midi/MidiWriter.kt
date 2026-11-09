@@ -27,7 +27,6 @@ class MidiWriter {
 
         val tracks = mutableListOf<ByteArray>()
 
-        // Track 0: tempo + time signature meta
         val track0 = ByteArrayOutputStream()
         track0.write(byteArrayOf(0x00, 0xFF.toByte(), 0x51, 0x03))
         track0.write(byteArrayOf(
@@ -38,13 +37,12 @@ class MidiWriter {
         track0.write(byteArrayOf(
             0x00, 0xFF.toByte(), 0x58, 0x04,
             beatsPerBar.coerceIn(1, 127).toByte(),
-            0x02.toByte(), // denominator = 2^2 = 4
+            0x02.toByte(),
             0x18, 0x08
         ))
         track0.write(byteArrayOf(0x00, 0xFF.toByte(), 0x2F, 0x00))
         tracks.add(track0.toByteArray())
 
-        // One track per voice
         for ((_, voiceNotes) in voiceGroups) {
             val events = mutableListOf<MidiEvt>()
             for (note in voiceNotes) {
@@ -77,7 +75,7 @@ class MidiWriter {
         val output = ByteArrayOutputStream()
         output.write("MThd".toByteArray(Charsets.US_ASCII))
         output.write(writeInt32(6))
-        output.write(writeInt16(1)) // Format 1
+        output.write(writeInt16(1))
         output.write(writeInt16(tracks.size))
         output.write(writeInt16(TICKS_PER_QUARTER))
         for (track in tracks) {

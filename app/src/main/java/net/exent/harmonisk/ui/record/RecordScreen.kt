@@ -88,8 +88,6 @@ fun RecordScreen(
     val midiRange = state.viewMaxMidi - state.viewMinMidi
     val pxPerMs = state.fallSpeedPxPerSec * density.density / 1000f
 
-    // Stable references usable inside pointerInput blocks with Unit keys
-    // (those blocks are not restarted on state changes, so raw values would be stale)
     val currentMidiRange by rememberUpdatedState(midiRange)
     val currentPxPerMs by rememberUpdatedState(pxPerMs)
     val currentSelectedNoteId by rememberUpdatedState(state.selectedNoteId)
@@ -117,11 +115,9 @@ fun RecordScreen(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? -> uri?.let { viewModel.importFromMidi(it, context) } }
 
-    // Note interaction state
     val noteRectsState = remember { mutableStateOf<List<Pair<String, Rect>>>(emptyList()) }
     val handleRadiusPx = with(density) { 18.dp.toPx() }
 
-    // ── Dropdown / dialog state ──
     var showInputMenu by remember { mutableStateOf(false) }
     var showOutputMenu by remember { mutableStateOf(false) }
     var showConfigMenu by remember { mutableStateOf(false) }
@@ -130,9 +126,7 @@ fun RecordScreen(
     var showDivisionMenu by remember { mutableStateOf(false) }
     var showEditHelp by remember { mutableStateOf(false) }
 
-    // ── Panel 1 content: I/O · Settings · Play · Record · Edit · ScrollTop ──
     val panel1Content: @Composable RowScope.() -> Unit = {
-        // Input source dropdown
         Box {
             TextButton(
                 onClick = { showInputMenu = true },
@@ -169,7 +163,6 @@ fun RecordScreen(
             }
         }
 
-        // Output source dropdown
         Box {
             val outputLabel = when (state.outputDevice) {
                 OutputDevice.MIDI -> state.midiOutputDeviceName?.take(9) ?: stringResource(R.string.record_midi)
@@ -217,7 +210,6 @@ fun RecordScreen(
             ProfileIconButton(emoji = it.emoji, name = it.name, onClick = { profileDialogs.open(sessionActive) })
         }
 
-        // Help button (always visible)
         IconButton(
             onClick = { showEditHelp = true },
             modifier = Modifier.size(PANEL_BTN_SIZE)
@@ -225,7 +217,6 @@ fun RecordScreen(
             Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = stringResource(R.string.help), tint = OVERLAY_ICON_TINT, modifier = Modifier.size(17.dp))
         }
 
-        // Metronome toggle
         IconButton(
             onClick = { viewModel.toggleMetronome() },
             modifier = Modifier.size(PANEL_BTN_SIZE)
@@ -238,7 +229,6 @@ fun RecordScreen(
             )
         }
 
-        // Settings
         Box {
             IconButton(
                 onClick = { showConfigMenu = true },
@@ -294,13 +284,10 @@ fun RecordScreen(
         }
     }
 
-    // ── Panel 2 content: BPM · Meter · Voice · Loop ──────────────────────
     val panel2Content: @Composable RowScope.() -> Unit = {
-        // BPM drag state
         var bpmDragAccumPx by remember { mutableFloatStateOf(0f) }
         var bpmDragging by remember { mutableStateOf(false) }
 
-        // While dragging, continuously apply BPM changes proportional to accumulated offset
         LaunchedEffect(bpmDragging) {
             if (!bpmDragging) return@LaunchedEffect
             while (true) {
@@ -308,20 +295,18 @@ fun RecordScreen(
                 if (abs(off) > 1f) {
                     val maxDistPx = with(density) { 60.dp.toPx() }
                     val fraction = (off / maxDistPx).coerceIn(-1f, 1f)
-                    val deltaPerFrame = fraction * 20f * 16f / 1000f  // 20 BPM/sec at ~60fps
+                    val deltaPerFrame = fraction * 20f * 16f / 1000f
                     viewModel.setBpm(viewModel.state.value.bpm + deltaPerFrame)
                 }
                 delay(16L)
             }
         }
 
-        // Pause playback/recording while the user drags the BPM label
         LaunchedEffect(bpmDragging) {
             if (bpmDragging) viewModel.pausePlaybackRecording()
             else viewModel.resumePlaybackRecording()
         }
 
-        // BPM label + value — draggable vertically
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.pointerInput(Unit) {
@@ -361,12 +346,10 @@ fun RecordScreen(
 
         Spacer(Modifier.width(8.dp))
 
-        // Meter (time signature) — two separate dropdowns
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.record_meter), fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
             Spacer(Modifier.width(4.dp))
 
-            // Beats (numerator) dropdown
             Box {
                 Text(
                     text = state.beatsPerBar.toString(),
@@ -388,7 +371,6 @@ fun RecordScreen(
 
             Text("/", fontSize = 13.sp, color = Color.White.copy(alpha = 0.5f))
 
-            // Division (denominator) dropdown
             Box {
                 Text(
                     text = state.barDivision.toString(),
@@ -409,7 +391,6 @@ fun RecordScreen(
             }
         }
 
-        // Voice selector
         val voiceColor = VOICE_COLORS[state.activeVoiceIndex % VOICE_COLORS.size]
         Box {
             Box(
@@ -439,7 +420,6 @@ fun RecordScreen(
 
         Spacer(Modifier.width(8.dp))
 
-        // Loop controls — "Loop X – Y"
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.record_loop), fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
             Spacer(Modifier.width(4.dp))
@@ -463,7 +443,6 @@ fun RecordScreen(
         }
     }
 
-    // ── Main layout ───────────────────────────────────────────────────────
     DisposableEffect(Unit) {
         onDispose {
             viewModel.stopMetronome()
@@ -474,7 +453,6 @@ fun RecordScreen(
     Box(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
         if (isLandscape) {
-            // In landscape: both panels in a single horizontal bar to save vertical space
             Row(
                 modifier = Modifier.fillMaxWidth().background(PANEL_BG).padding(horizontal = 6.dp, vertical = 3.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -495,7 +473,6 @@ fun RecordScreen(
                 ) { panel2Content() }
             }
         } else {
-            // Portrait: two stacked rows
             Row(
                 modifier = Modifier.fillMaxWidth().background(PANEL_BG).padding(horizontal = 6.dp, vertical = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -508,7 +485,6 @@ fun RecordScreen(
             ) { panel2Content() }
         }
 
-        // ── Main canvas ────────────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -576,7 +552,6 @@ fun RecordScreen(
                         }
                     }
                 }
-                // Drag on selected note: move body or resize via handles (no long-press needed)
                 .pointerInput(state.selectedNoteId) {
                     val selId = state.selectedNoteId ?: return@pointerInput
                     awaitEachGesture {
@@ -584,7 +559,6 @@ fun RecordScreen(
                         val noteRect = noteRectsState.value.firstOrNull { (id, _) -> id == selId }?.second
                             ?: return@awaitEachGesture
 
-                        // Handle hit areas: end centered on top-right corner, start on bottom-left corner
                         val isEndHandle = run {
                             val dx = down.position.x - noteRect.right
                             val dy = down.position.y - noteRect.top
@@ -600,8 +574,6 @@ fun RecordScreen(
                         if (!isEndHandle && !isStartHandle && !isNoteBody) return@awaitEachGesture
                         down.consume()
 
-                        // Capture note times at drag start; all deltas are computed from origin so
-                        // snap jumps to the next grid as the total drag crosses a grid-interval boundary
                         val origInfo = viewModel.getNoteInfo(selId) ?: return@awaitEachGesture
                         val origStartMs = origInfo.startTimeMs
                         val origEndMs   = origInfo.endTimeMs
@@ -634,7 +606,6 @@ fun RecordScreen(
                                         localMidiAccum -= deltaMidi.toFloat()
                                         if (deltaMidi != 0) totalMidiDelta += deltaMidi
                                         viewModel.moveNote(selId, origMidi + totalMidiDelta, origStartMs + totalDeltaMs)
-                                        // Audible feedback when semitone changes
                                         if (totalMidiDelta != lastPlayedMidiDelta) {
                                             lastPlayedMidiDelta = totalMidiDelta
                                             viewModel.previewNoteTone((origMidi + totalMidiDelta).coerceIn(21, 108))
@@ -677,7 +648,6 @@ fun RecordScreen(
                 )
             }
 
-            // Action buttons — shown to the right of the selected note
             val selectedRect = state.selectedNoteId?.let { id ->
                 noteRectsState.value.firstOrNull { (nid, _) -> nid == id }?.second
             }
@@ -715,7 +685,6 @@ fun RecordScreen(
                 }
             }
 
-            // Idle overlay: play/record buttons shown when neither playing nor recording
             if (!state.isPlaying && !state.isRecording) {
                 val showBottomPiano = state.pianoVisibility == PianoVisibility.BOTH ||
                         state.pianoVisibility == PianoVisibility.LOWER_ONLY
@@ -753,7 +722,7 @@ fun RecordScreen(
         }
     }
     SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).systemBarsPadding())
-    } // end Box
+    }
 
     ProfileDialogs(
         state = profileDialogs,

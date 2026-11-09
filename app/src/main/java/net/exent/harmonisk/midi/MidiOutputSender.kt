@@ -9,10 +9,6 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-/**
- * Sends MIDI note-on/off messages to the connected device's input port.
- * Implements [NotePlayer] so it can substitute for the internal synthesizer.
- */
 class MidiOutputSender(
     private val midiDeviceManager: MidiDeviceManager
 ) : NotePlayer {

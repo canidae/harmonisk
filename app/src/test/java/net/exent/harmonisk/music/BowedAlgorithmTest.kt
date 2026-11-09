@@ -108,19 +108,19 @@ class BowedAlgorithmTest {
     @Test
     fun `flat spellings below the next open string use the low fourth finger`() {
         val ebMajor = KeySignature(-3, false)
-        assertEquals(BowedPosition(0, 4), violinPosition(61, ebMajor)) // Db
-        assertEquals(BowedPosition(1, 4), violinPosition(68, ebMajor)) // Ab
-        assertEquals(BowedPosition(2, 4), violinPosition(75, ebMajor)) // Eb
-        assertEquals(BowedPosition(3, 4), violinPosition(82, ebMajor)) // Bb
+        assertEquals(BowedPosition(0, 4), violinPosition(61, ebMajor))
+        assertEquals(BowedPosition(1, 4), violinPosition(68, ebMajor))
+        assertEquals(BowedPosition(2, 4), violinPosition(75, ebMajor))
+        assertEquals(BowedPosition(3, 4), violinPosition(82, ebMajor))
         assertEquals(-1, BowedAlgorithm.fingerOffsetDeviation(68, 62, 4, Instrument.VIOLIN))
     }
 
     @Test
     fun `sharp spellings below the next open string keep the high third finger`() {
-        assertEquals(BowedPosition(0, 3), violinPosition(61, KeySignature(2, false))) // C# in D major
-        assertEquals(BowedPosition(1, 3), violinPosition(68, KeySignature(2, false))) // G# in D major
-        assertEquals(BowedPosition(2, 3), violinPosition(75, KeySignature(4, false))) // D# in E major
-        assertEquals(BowedPosition(3, 3), violinPosition(82, KeySignature(5, false))) // A# in B major
+        assertEquals(BowedPosition(0, 3), violinPosition(61, KeySignature(2, false)))
+        assertEquals(BowedPosition(1, 3), violinPosition(68, KeySignature(2, false)))
+        assertEquals(BowedPosition(2, 3), violinPosition(75, KeySignature(4, false)))
+        assertEquals(BowedPosition(3, 3), violinPosition(82, KeySignature(5, false)))
     }
 
     @Test

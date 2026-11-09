@@ -62,7 +62,6 @@ class MelodyTrack(
 
     fun noteStartSeconds(note: NoteEvent): Double = tickToSeconds(note.startTick)
 
-    /** Indices (into [notes]) of all notes active at the given time, i.e. those whose window contains it. */
     fun activeNoteIndicesAt(seconds: Double): List<Int> {
         val result = mutableListOf<Int>()
         for ((i, note) in notes.withIndex()) {
