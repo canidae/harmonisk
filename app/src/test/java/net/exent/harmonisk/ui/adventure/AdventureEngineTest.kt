@@ -130,16 +130,24 @@ class AdventureEngineTest {
 
     @Test
     fun `the first player at the castle gets a hundred point bonus`() {
-        val player = player("A", songScore = 120f).withBonus(ADVENTURE_CASTLE_BONUS)
-        assertEquals(100f, player.bonusScore)
+        val player = player("A", songScore = 120f).withCastleScore()
+        assertEquals(100f, player.castleScore)
         assertEquals(220f, player.total)
     }
 
     @Test
     fun `whack points are added to the total score`() {
-        val player = player("A", songScore = 42f).withBonus(7)
-        assertEquals(7f, player.bonusScore)
+        val player = player("A", songScore = 42f).withWhackScore(7)
+        assertEquals(7f, player.whackScore)
         assertEquals(49f, player.total)
+    }
+
+    @Test
+    fun `the faerie blessing is kept apart from the other bonuses`() {
+        val player = player("A", songScore = 42f).withFaerieScore(31)
+        assertEquals(31f, player.faerieScore)
+        assertEquals(0f, player.castleScore)
+        assertEquals(73f, player.total)
     }
 
     @Test

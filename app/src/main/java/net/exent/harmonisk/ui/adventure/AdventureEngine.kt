@@ -38,6 +38,7 @@ object AdventureTiming {
     const val REWARD_MS = 2900L
     const val REWARD_FLY_MS = 700L
     const val REWARD_TOTAL_MS = REWARD_MS + REWARD_FLY_MS + 250L
+    const val ANNOUNCE_MS = 2_300L
     const val CASTLE_CELEBRATION_MS = 4_400L
     const val FAERIE_ENTER_MS = 2_000L
     const val FAERIE_APPEAR_HOLD_MS = 1_300L
@@ -91,13 +92,16 @@ data class AdventurePlayer(
     val position: Int = 0,
     val songScore: Float = 0f,
     val stickerScore: Float = 0f,
-    val bonusScore: Float = 0f,
+    val whackScore: Float = 0f,
+    val faerieScore: Float = 0f,
+    val castleScore: Float = 0f,
     val stickers: List<AdventureSticker> = emptyList(),
     val songsPlayed: Int = 0,
     val songQueue: List<String> = emptyList(),
     val queueIndex: Int = 0
 ) {
-    val total: Float get() = songScore + stickerScore + bonusScore
+    val total: Float
+        get() = songScore + stickerScore + whackScore + faerieScore + castleScore
 }
 
 data class AdventureStanding(
@@ -125,8 +129,14 @@ fun AdventurePlayer.withScore(score: Float): AdventurePlayer = copy(
     songsPlayed = songsPlayed + 1
 )
 
-fun AdventurePlayer.withBonus(points: Int): AdventurePlayer =
-    copy(bonusScore = bonusScore + points)
+fun AdventurePlayer.withWhackScore(points: Int): AdventurePlayer =
+    copy(whackScore = whackScore + points)
+
+fun AdventurePlayer.withFaerieScore(points: Int): AdventurePlayer =
+    copy(faerieScore = faerieScore + points)
+
+fun AdventurePlayer.withCastleScore(points: Int = ADVENTURE_CASTLE_BONUS): AdventurePlayer =
+    copy(castleScore = castleScore + points)
 
 fun AdventurePlayer.withReward(reward: AdventureReward): AdventurePlayer = when (reward) {
     is AdventureReward.Stickers -> copy(
