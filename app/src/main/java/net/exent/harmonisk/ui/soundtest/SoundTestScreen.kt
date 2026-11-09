@@ -62,6 +62,8 @@ fun SoundTestScreen(
                 CueCard(R.string.sound_test_faerie, MidiCues.Faerie, viewModel)
                 CueCard(R.string.sound_test_castle, MidiCues.CastleFanfare, viewModel)
                 CueCard(R.string.sound_test_fanfare, MidiCues.Fanfare, viewModel)
+                CueCard(R.string.sound_test_whack, MidiCues.WhackIntro, viewModel)
+                CueCard(R.string.sound_test_song, MidiCues.SongIntro, viewModel)
                 Spacer(Modifier.height(6.dp))
                 Button(
                     onClick = viewModel::playAll,

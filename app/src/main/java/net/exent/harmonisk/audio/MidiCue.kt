@@ -103,6 +103,29 @@ object MidiCues {
         note(HORN, n(6, C), 0, 950, 72)
     }
 
+    val WhackIntro = midiCue {
+        program(BELLS, 12)
+        program(HARP, 46)
+        drum()
+        note(DRUMS, 39, 0, 90, 86)
+        note(DRUMS, 39, 180, 90, 96)
+        note(DRUMS, 76, 360, 70, 92)
+        arp(BELLS, listOf(n(5, C), n(5, E), n(5, G), n(6, C)), 430, 70, 260, 96)
+        note(HARP, n(3, C), 730, 760, 52)
+        chord(BELLS, listOf(n(5, C), n(5, E), n(5, G)), 730, 760, 74)
+    }
+
+    val SongIntro = midiCue {
+        program(BELLS, 10)
+        program(HARP, 46)
+        note(BELLS, n(5, E), 0, 420, 74)
+        note(HARP, n(4, C), 0, 420, 44)
+        note(BELLS, n(5, C), 300, 420, 78)
+        note(HARP, n(4, G), 300, 420, 44)
+        chord(BELLS, listOf(n(6, C), n(6, E), n(6, G)), 600, 900, 66)
+        chord(HARP, listOf(n(3, C), n(3, G), n(4, E)), 600, 900, 52)
+    }
+
     val Faerie = midiCue {
         program(HARP, 46)
         program(BELLS, 9)
