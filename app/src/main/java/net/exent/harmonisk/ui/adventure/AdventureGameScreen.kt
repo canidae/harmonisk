@@ -44,6 +44,7 @@ import net.exent.harmonisk.R
 import net.exent.harmonisk.ui.celebration.CelebrationLevel
 import net.exent.harmonisk.ui.celebration.ScoreCelebrationOverlay
 import net.exent.harmonisk.ui.components.KeepScreenOn
+import net.exent.harmonisk.ui.whack.WhackPressIcon
 import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -248,6 +249,8 @@ private fun CurrentTurnCard(
         AdventureTurnPhase.MOVING -> ""
         AdventureTurnPhase.EVENT -> when {
             state.finisherId != null -> stringResource(R.string.adventure_castle_reached)
+            state.reward is AdventureReward.Whack -> stringResource(R.string.whack_title)
+            state.reward is AdventureReward.Song -> stringResource(R.string.adventure_song_time)
             state.turnScore != null -> stringResource(R.string.adventure_score)
             state.reward is AdventureReward.Stickers -> stringResource(R.string.adventure_reward_stickers)
             state.reward is AdventureReward.GoAgain -> stringResource(R.string.adventure_throw_again)
@@ -523,44 +526,59 @@ private fun RewardCard(reward: AdventureReward?, score: Int?, levelUp: Int?) {
                 modifier = Modifier.fillMaxWidth()
             )
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            when (reward) {
-                is AdventureReward.Stickers -> reward.stickers.forEach { sticker ->
-                    Text(sticker.emoji, fontSize = 30.sp)
+        when (reward) {
+            is AdventureReward.Stickers -> {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    reward.stickers.forEach { sticker -> Text(sticker.emoji, fontSize = 30.sp) }
                 }
-                AdventureReward.GoAgain -> Text("🎲", fontSize = 30.sp)
-                AdventureReward.Song, AdventureReward.Whack, null -> {}
+                Spacer(Modifier.height(4.dp))
+                RewardCardLabel(
+                    pluralStringResource(
+                        R.plurals.adventure_stickers_won,
+                        reward.stickers.size,
+                        reward.stickers.size
+                    )
+                )
             }
-        }
-        if (reward is AdventureReward.Stickers) {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = pluralStringResource(
-                    R.plurals.adventure_stickers_won,
-                    reward.stickers.size,
-                    reward.stickers.size
-                ),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = StorybookGold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        if (reward is AdventureReward.GoAgain) {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.adventure_throw_again),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = StorybookGold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
+            AdventureReward.GoAgain -> {
+                Text(
+                    text = "🎲",
+                    fontSize = 30.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(4.dp))
+                RewardCardLabel(stringResource(R.string.adventure_throw_again))
+            }
+            AdventureReward.Whack -> {
+                WhackPressIcon(
+                    Modifier.align(Alignment.CenterHorizontally).size(width = 56.dp, height = 41.dp)
+                )
+                Spacer(Modifier.height(6.dp))
+                RewardCardLabel(stringResource(R.string.whack_title))
+                Text(
+                    text = stringResource(R.string.adventure_whack_ready),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.75f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            AdventureReward.Song -> {
+                Text(
+                    text = "🎵",
+                    fontSize = 40.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(4.dp))
+                RewardCardLabel(stringResource(R.string.adventure_song_time))
+            }
+            null -> {}
         }
         if (levelUp != null) {
             Spacer(Modifier.height(2.dp))
@@ -573,6 +591,18 @@ private fun RewardCard(reward: AdventureReward?, score: Int?, levelUp: Int?) {
             )
         }
     }
+}
+
+@Composable
+private fun RewardCardLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.Bold,
+        color = StorybookGold,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable

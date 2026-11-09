@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.exent.harmonisk.R
+import net.exent.harmonisk.audio.MidiCue
 import net.exent.harmonisk.audio.MidiCuePlayer
 import net.exent.harmonisk.audio.MidiCues
 import net.exent.harmonisk.data.MelodyRepository
@@ -325,12 +326,12 @@ class AdventureViewModel @Inject constructor(
                 }
                 scheduleRewardAdvance(AdventureReward.GoAgain)
             }
-            AdventureReward.Whack -> {
-                _state.update {
-                    it.copy(step = AdventureStep.WHACK, phase = AdventureTurnPhase.EVENT, reward = null)
-                }
+            AdventureReward.Whack -> announce(AdventureReward.Whack, MidiCues.WhackIntro) {
+                _state.update { it.copy(step = AdventureStep.WHACK, reward = null) }
             }
-            AdventureReward.Song -> startSongTurn(player)
+            AdventureReward.Song -> announce(AdventureReward.Song, MidiCues.SongIntro) {
+                startSongTurn(player)
+            }
             null -> {
                 val next = nextPlayerIndex(index, snapshot.players.size)
                 _state.update { it.copy(currentPlayerIndex = next, currentSong = null) }
@@ -379,6 +380,17 @@ class AdventureViewModel @Inject constructor(
             } catch (e: Exception) {
                 _state.update { it.copy(loading = false) }
             }
+        }
+    }
+
+    private fun announce(reward: AdventureReward, cue: MidiCue, onDone: () -> Unit) {
+        _state.update { it.copy(phase = AdventureTurnPhase.EVENT, reward = reward) }
+        cues.play(cue)
+        resultJob?.cancel()
+        resultJob = viewModelScope.launch {
+            delay(AdventureTiming.ANNOUNCE_MS)
+            _state.update { it.copy(reward = null) }
+            onDone()
         }
     }
 

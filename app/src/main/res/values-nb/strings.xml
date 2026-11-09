@@ -286,6 +286,8 @@
     <string name="sound_test_faerie">Fe</string>
     <string name="sound_test_castle">Slottsfanfare</string>
     <string name="sound_test_fanfare">Resultatfanfare</string>
+    <string name="sound_test_whack">Tonedengeren starter</string>
+    <string name="sound_test_song">Sang starter</string>
     <string name="sound_test_play_all">Spill alle</string>
     <string name="sound_test_stop">Stopp</string>
 </resources>

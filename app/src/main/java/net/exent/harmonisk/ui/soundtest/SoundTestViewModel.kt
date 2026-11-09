@@ -55,7 +55,9 @@ class SoundTestViewModel @Inject constructor(
             MidiCues.Whistle,
             MidiCues.Faerie,
             MidiCues.CastleFanfare,
-            MidiCues.Fanfare
+            MidiCues.Fanfare,
+            MidiCues.WhackIntro,
+            MidiCues.SongIntro
         )
     }
 }
