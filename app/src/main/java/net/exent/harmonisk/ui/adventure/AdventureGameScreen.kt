@@ -64,7 +64,7 @@ fun AdventureGameScreen(
     var mapCenter by remember { mutableStateOf(Offset.Unspecified) }
     var songAnchor by remember { mutableStateOf(Offset.Unspecified) }
     var origin by remember { mutableStateOf(Offset.Zero) }
-    var turnStage by remember { mutableStateOf(TurnIntroStage.INTRO) }
+    var turnStage by remember(state.phase) { mutableStateOf(TurnIntroStage.INTRO) }
     val latestToken = remember { TokenPosition() }
     val tokenPositions = remember { mutableMapOf<String, Offset>() }
     LaunchedEffect(state.phase, state.currentPlayerIndex) {
