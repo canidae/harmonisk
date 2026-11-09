@@ -105,6 +105,16 @@ class PitchStabilizerTest {
     }
 
     @Test
+    fun `a tuning correction is followed within a quarter second`() {
+        val stabilizer = PitchStabilizer()
+        val framesPerQuarterSecond = (0.25 / DT).toInt()
+
+        val out = feed(stabilizer, 200) { i -> if (i < 100) 0.0 to 0.95f else 25.0 to 0.95f }
+
+        assertEquals("a moved finger or turned peg must not lag", 25.0, out[100 + framesPerQuarterSecond], 1.0)
+    }
+
+    @Test
     fun `vibrato is attenuated without shifting the centre pitch`() {
         val stabilizer = PitchStabilizer()
         val centre = -7.0
@@ -125,10 +135,10 @@ class PitchStabilizerTest {
         val confident = PitchStabilizer()
         val unsure = PitchStabilizer()
 
-        // A sustained 30 cent drift stays below the snap threshold, so only the smoothing
+        // A short 30 cent drift stays inside the snap window, so only the smoothing
         // weight decides how far the needle travels — and that weight follows confidence.
         val settled = 60
-        val driftFrames = 10
+        val driftFrames = 5
         val confidentOut = feed(confident, settled + driftFrames) { i ->
             if (i < settled) 0.0 to 0.95f else 30.0 to 0.95f
         }

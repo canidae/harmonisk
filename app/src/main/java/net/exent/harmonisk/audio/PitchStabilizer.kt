@@ -15,10 +15,12 @@ import kotlin.math.exp
  *     delays a genuine ramp by only half its window; a mean, by contrast, would let a single
  *     outlier pull the reading off-pitch.
  *
- *  2. **Step snap** — when the estimate commits to a different pitch (a large deviation holding
- *     the same sign for several frames) the filter jumps straight to it. This is what stops
- *     smoothing from making note changes feel sluggish: the needle only moves slowly while the
- *     pitch is genuinely steady, which is exactly when slow is what you want.
+ *  2. **Step snap** — when the estimate commits to a different pitch (a deviation holding the same
+ *     sign for long enough) the filter jumps straight to it. A large jump snaps within a few
+ *     frames, while a smaller tuning correction — a finger moved or a peg turned — snaps once it
+ *     has held for a moment. This is what stops smoothing from making corrections feel sluggish:
+ *     the needle only moves slowly while the pitch is genuinely steady, which is exactly when slow
+ *     is what you want.
  *
  *  3. **Time-constant EMA** — smooths the remaining frame-to-frame noise. The per-frame weight
  *     comes from elapsed time rather than a fixed alpha, so the needle behaves the same whether
@@ -36,9 +38,9 @@ class PitchStabilizer {
 
         /**
          * Smoothing time constant in seconds. The needle covers 95% of a step in ~3x this;
-         * 320 ms damps bow noise and vibrato without making a peg turn feel laggy.
+         * 220 ms damps bow noise and vibrato without making a peg turn feel laggy.
          */
-        const val TIME_CONSTANT_S = 0.32
+        const val TIME_CONSTANT_S = 0.22
 
         /** Changes smaller than this are not shown, so a steady note's needle stops jittering. */
         const val OUTPUT_DEADBAND_SEMITONES = 0.010
@@ -55,8 +57,14 @@ class PitchStabilizer {
         /** Deviation, in semitones, that counts as committing to a different pitch. */
         private const val SNAP_SEMITONES = 0.40
 
-        /** Consecutive frames that must deviate before the filter jumps to the new pitch. */
-        private const val SNAP_FRAMES = 3
+        /** How long a [SNAP_SEMITONES] deviation must hold before the filter jumps to it. */
+        private const val SNAP_TIME_S = 0.055
+
+        /** A tuning correction this size is followed once it has held for [FINE_SNAP_TIME_S]. */
+        private const val FINE_SNAP_SEMITONES = 0.09
+
+        /** How long a [FINE_SNAP_SEMITONES] correction must hold to count as deliberate. */
+        private const val FINE_SNAP_TIME_S = 0.12
 
         /** Frame intervals outside this range are clamped; guards against stalls and test input. */
         private const val MIN_DT_S = 0.004
@@ -72,7 +80,7 @@ class PitchStabilizer {
     private var shown = 0.0
     private var started = false
 
-    private var deviatingFrames = 0
+    private var deviationSeconds = 0.0
     private var deviationSign = 0
 
     /**
@@ -94,24 +102,25 @@ class PitchStabilizer {
             return shown
         }
 
+        val dt = dtSeconds.coerceIn(MIN_DT_S, MAX_DT_S)
         val delta = median - smoothed
+        val magnitude = abs(delta)
         val sign = if (delta >= 0) 1 else -1
-        if (abs(delta) > SNAP_SEMITONES && sign == deviationSign) {
-            deviatingFrames++
+        if (magnitude > FINE_SNAP_SEMITONES && sign == deviationSign) {
+            deviationSeconds += dt
         } else {
-            deviatingFrames = 0
+            deviationSeconds = 0.0
             deviationSign = sign
         }
 
-        if (deviatingFrames >= SNAP_FRAMES) {
-            // A new pitch, not noise: follow it immediately.
+        if (deviationSeconds >= if (magnitude > SNAP_SEMITONES) SNAP_TIME_S else FINE_SNAP_TIME_S) {
+            // A new pitch or a deliberate correction, not noise: follow it immediately.
             smoothed = median
             shown = median
-            deviatingFrames = 0
+            deviationSeconds = 0.0
             return shown
         }
 
-        val dt = dtSeconds.coerceIn(MIN_DT_S, MAX_DT_S)
         val alpha = (1.0 - exp(-dt / TIME_CONSTANT_S)) * confidenceWeight(confidence)
         smoothed += alpha * delta
         if (abs(smoothed - shown) >= OUTPUT_DEADBAND_SEMITONES) shown = smoothed
@@ -125,7 +134,7 @@ class PitchStabilizer {
         smoothed = 0.0
         shown = 0.0
         started = false
-        deviatingFrames = 0
+        deviationSeconds = 0.0
         deviationSign = 0
     }
 
