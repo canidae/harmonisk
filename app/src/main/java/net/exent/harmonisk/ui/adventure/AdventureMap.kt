@@ -818,11 +818,17 @@ private fun FieldBadge(
             Text(
                 text = index.toString(),
                 style = MaterialTheme.typography.labelSmall,
+                fontSize = (size.value * 0.25f).sp,
+                lineHeight = (size.value * 0.27f).sp,
                 fontWeight = FontWeight.Black,
                 color = Color.White
             )
             if (icon != null) {
-                Text(icon, fontSize = 8.sp)
+                Text(
+                    text = icon,
+                    fontSize = (size.value * 0.46f).sp,
+                    lineHeight = (size.value * 0.5f).sp
+                )
             }
         }
     }
