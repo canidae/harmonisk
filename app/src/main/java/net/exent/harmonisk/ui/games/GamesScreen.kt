@@ -20,7 +20,6 @@ import net.exent.harmonisk.R
 import net.exent.harmonisk.ui.adventure.AdventureBackdrop
 import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.theme.AdventureGold
-import net.exent.harmonisk.ui.whack.WhackPressIcon
 
 private val ADVENTURE_ACCENT = AdventureGold
 private val WHACK_ACCENT = Color(0xFF7FB3C8)
@@ -63,7 +62,7 @@ fun GamesScreen(
                     title = stringResource(R.string.whack_title),
                     accent = WHACK_ACCENT,
                     onClick = onWhack,
-                    icon = { WhackPressIcon(Modifier.size(width = 34.dp, height = 46.dp)) }
+                    icon = { Text("🎯", fontSize = 40.sp) }
                 )
                 if (devModeEnabled) {
                     Spacer(Modifier.height(14.dp))
