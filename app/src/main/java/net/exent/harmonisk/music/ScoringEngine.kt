@@ -23,8 +23,8 @@ class ScoringEngine {
             else unlocked
         }
 
-        const val TIME_GRACE_RATIO_LEVEL_1 = 1.20
-        const val TIME_GRACE_RATIO_LEVEL_2 = 1.10
+        const val TIME_GRACE_RATIO_LEVEL_1 = 2.00
+        const val TIME_GRACE_RATIO_LEVEL_2 = 1.20
         const val TIME_GRACE_RATIO_LEVEL_3 = 1.05
 
         fun timeGraceRatio(level: Int): Double = when (level) {

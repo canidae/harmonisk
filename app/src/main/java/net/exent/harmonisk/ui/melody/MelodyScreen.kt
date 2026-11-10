@@ -98,7 +98,7 @@ fun MelodyScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            viewModel.stopPreview()
+            if (previewingMelody != null) viewModel.stopPreview()
         }
     }
 

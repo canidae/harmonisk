@@ -161,6 +161,8 @@
     <string name="melody_failed_load_url">Failed to download song</string>
     <string name="melody_stop_preview">Stop preview</string>
     <string name="melody_preview">Preview melody</string>
+    <string name="melody_preview_cue">A preview will play first</string>
+    <string name="melody_your_turn">Your turn to play</string>
     <string name="melody_failed_load_midi">Failed to load song file</string>
     <string name="melody_failed_load_melody">Failed to load melody</string>
     <string name="melody_difficulty">Difficulty: </string>
@@ -203,8 +205,8 @@
     <string name="score_dismiss">Dismiss</string>
     <string name="level_reached">Level %1$d reached!</string>
     <string name="retry_level">Retry level</string>
-    <string name="level_2_change">On level 2 pitch accuracy will count toward your score</string>
-    <string name="level_3_change">On level 3 playing wrong notes will penalize your score</string>
+    <string name="level_2_change">On level 2 the song is no longer previewed and you have less time to play each note</string>
+    <string name="level_3_change">On level 3 pitch accuracy and wrong notes will count toward your score</string>
     <string name="level_4_change">On level 4 the game will not wait for you to play the note</string>
     <string name="level_5_change">On level 5 note bars will not be shown</string>
 

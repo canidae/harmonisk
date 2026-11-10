@@ -30,6 +30,7 @@ data class MelodyGameState(
     val noteFirstDetectionStart: Map<Int, Float> = emptyMap(),
     val countdownResumeTarget: Double = 0.0,
     val previewTimeSeconds: Double? = null,
+    val cue: PlayCue? = null,
     val metronomeEnabled: Boolean = true,
     val metronomeTrack: MelodyTrack? = null,
     val currentLevel: Int = 1,
@@ -37,7 +38,8 @@ data class MelodyGameState(
     val playedLevel: Int = 1,
     val newlyUnlockedLevel: Int? = null,
     val melodyName: String? = null,
-    val hideNoteBars: Boolean = false
+    val hideNoteBars: Boolean = false,
+    val settingsLoaded: Boolean = false
 ) {
     fun isAtScrollStart(songTimeOffsetSeconds: Double): Boolean {
         val track = melodyTrack ?: return true
@@ -67,6 +69,11 @@ enum class PlayPhase {
     PAUSED,
     WAITING_FOR_NOTE,
     FINISHED
+}
+
+enum class PlayCue {
+    PREVIEW,
+    YOUR_TURN
 }
 
 enum class NoteResultState {

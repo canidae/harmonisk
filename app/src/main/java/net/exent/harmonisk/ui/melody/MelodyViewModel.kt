@@ -68,6 +68,8 @@ class MelodyViewModel @Inject constructor(
 
     companion object {
         private val TAG = "MelodyViewModel"
+        private const val PREVIEW_CUE_MS = 1500L
+        private const val YOUR_TURN_CUE_MS = 1500L
     }
 
     private val _gameState = MutableStateFlow(MelodyGameState())
@@ -121,6 +123,8 @@ class MelodyViewModel @Inject constructor(
     private var scoreHistoryJob: Job? = null
     private var previewClockJob: Job? = null
     private var previewSavedOffset: Double? = null
+    private var runStartJob: Job? = null
+    private var adventureStartJob: Job? = null
     private var playbackStartWallMs = 0L
     private var pauseOffset = 0.0
 
@@ -342,6 +346,8 @@ class MelodyViewModel @Inject constructor(
 
     fun loadMelody(info: MelodyRepository.MelodyInfo): Boolean {
         stopPreview()
+        runStartJob?.cancel()
+        adventureStartJob?.cancel()
         val melodyTracks = assignChannels(melodyRepository.loadMultiTrack(info).filter { it.notes.isNotEmpty() })
         if (melodyTracks.isNotEmpty()) {
             originalMelodyTracks = melodyTracks
@@ -391,7 +397,9 @@ class MelodyViewModel @Inject constructor(
         noteCentsPositions = emptyMap(),
         notePlayProgress = emptyMap(),
         noteFirstDetectionStart = emptyMap(),
-        countdownResumeTarget = 0.0
+        countdownResumeTarget = 0.0,
+        cue = null,
+        settingsLoaded = false
     )
 
     private fun loadMelodySettingsAndHistory(melodyId: String, instrument: String = _currentInstrument.value) {
@@ -419,6 +427,7 @@ class MelodyViewModel @Inject constructor(
                         playedLevel = level,
                         newlyUnlockedLevel = null,
                         hideNoteBars = hnb,
+                        settingsLoaded = true,
                         activeVoiceIndex = saved.activeVoiceIndex,
                         accompanimentMode = accompanimentMode,
                         preferOpenStrings = saved.preferOpenStrings
@@ -759,6 +768,54 @@ class MelodyViewModel @Inject constructor(
         )
     }
 
+    fun startRun() {
+        if (runStartJob?.isActive == true) return
+        val state = _gameState.value
+        if (state.phase != PlayPhase.READY) return
+        if (state.currentLevel != 1) {
+            startPlaying()
+            return
+        }
+        runStartJob = viewModelScope.launch {
+            _gameState.update { it.copy(cue = PlayCue.PREVIEW) }
+            delay(PREVIEW_CUE_MS)
+            if (_gameState.value.phase != PlayPhase.READY) return@launch
+            if (!awaitSynthesizer()) {
+                _gameState.update { it.copy(cue = null) }
+                startPlaying()
+                return@launch
+            }
+            previewMelody()
+            _gameState.update { it.copy(cue = null) }
+            if (melodyPlayer.isPlaying.value) melodyPlayer.isPlaying.first { !it }
+            if (_gameState.value.phase != PlayPhase.READY) return@launch
+            _gameState.update { it.copy(cue = PlayCue.YOUR_TURN) }
+            delay(YOUR_TURN_CUE_MS)
+            _gameState.update { it.copy(cue = null) }
+            if (_gameState.value.phase == PlayPhase.READY) startPlaying()
+        }
+    }
+
+    fun startAdventurePlay() {
+        if (adventureStartJob?.isActive == true) return
+        adventureStartJob = viewModelScope.launch {
+            awaitSettingsLoaded()
+            if (_gameState.value.phase == PlayPhase.READY) startRun()
+        }
+    }
+
+    private suspend fun awaitSettingsLoaded(timeoutMs: Long = 1500): Boolean {
+        val deadline = SystemClock.elapsedRealtime() + timeoutMs
+        while (!_gameState.value.settingsLoaded && SystemClock.elapsedRealtime() < deadline) delay(20)
+        return _gameState.value.settingsLoaded
+    }
+
+    private suspend fun awaitSynthesizer(timeoutMs: Long = 2000): Boolean {
+        val deadline = SystemClock.elapsedRealtime() + timeoutMs
+        while (!soundFontSynthesizer.isReady && SystemClock.elapsedRealtime() < deadline) delay(50)
+        return soundFontSynthesizer.isReady
+    }
+
     fun enterReadyPhase() {
         if (_gameState.value.phase == PlayPhase.NOT_STARTED) {
             _gameState.update {
@@ -873,7 +930,10 @@ class MelodyViewModel @Inject constructor(
     fun stop() {
         playbackJob?.cancel()
         pitchJob?.cancel()
+        runStartJob?.cancel()
+        runStartJob = null
         stopPreview()
+        _gameState.update { it.copy(cue = null) }
         pauseOffset = 0.0
         noteTracking.isWaitingForNote = false
         noteTracking.wasWaitingForNote = false
@@ -1269,7 +1329,7 @@ class MelodyViewModel @Inject constructor(
         val detectedDurationMs = if (isMidi) noteTracking.detectedPitchFrameCount * frameDurationMs else noteTracking.detectedPitchMs
         val correctDurationMs = if (isMidi) noteTracking.correctPitchFrameCount * frameDurationMs else noteTracking.correctPitchMs
 
-        val score = if (level == 1) {
+        val score = if (level <= 2) {
             val actualDurationMs = detectedDurationMs
             val durationScore = scoringEngine.scoreDuration(actualDurationMs, expectedDurationMs)
             NoteScore(
@@ -1484,6 +1544,8 @@ class MelodyViewModel @Inject constructor(
     override fun onCleared() {
         playbackJob?.cancel()
         pitchJob?.cancel()
+        runStartJob?.cancel()
+        adventureStartJob?.cancel()
         melodyPlayer.stop()
         soundFontSynthesizer.close()
     }

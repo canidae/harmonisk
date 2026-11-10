@@ -161,6 +161,8 @@
     <string name="melody_failed_load_url">Kunne ikke laste ned sangen</string>
     <string name="melody_stop_preview">Stopp forhåndsvisningen</string>
     <string name="melody_preview">Forhåndsvis melodi</string>
+    <string name="melody_preview_cue">En forhåndsvisning spilles først</string>
+    <string name="melody_your_turn">Din tur til å spille</string>
     <string name="melody_failed_load_midi">Kunne ikke laste sangfilen</string>
     <string name="melody_failed_load_melody">Kunne ikke laste melodien</string>
     <string name="melody_difficulty">Vanskelighetsgrad: </string>
@@ -203,8 +205,8 @@
     <string name="score_dismiss">Lukk</string>
     <string name="level_reached">Nivå %1$d nådd!</string>
     <string name="retry_level">Prøv nivå på nytt</string>
-    <string name="level_2_change">På nivå 2 teller treffsikkerheten på tonen med i poengsummen</string>
-    <string name="level_3_change">På nivå 3 gir feil noter trekk i poengsummen</string>
+    <string name="level_2_change">På nivå 2 blir ikke sangen forhåndsavspilt lenger, og du har mindre tid på hver tone</string>
+    <string name="level_3_change">På nivå 3 teller treffsikkerhet og feil noter med i poengsummen</string>
     <string name="level_4_change">På nivå 4 venter ikke spillet på at du spiller noten</string>
     <string name="level_5_change">På nivå 5 vises ikke notestolpene</string>
 
