@@ -21,7 +21,7 @@ fun ScoreSummaryPanel(
     personalBest: Float? = null
 ) {
     Column(modifier = modifier.padding(top = 8.dp)) {
-        if (currentLevel > 1) {
+        if (currentLevel > 2) {
             BreakdownRow(stringResource(R.string.score_pitch_accuracy), score.avgPitchScore)
         }
         BreakdownRow(stringResource(R.string.score_note_duration), score.avgDurationScore)

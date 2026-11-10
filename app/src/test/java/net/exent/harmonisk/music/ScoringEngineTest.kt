@@ -290,14 +290,14 @@ class ScoringEngineTest {
 
     @Test
     fun `time score is full marks at the level 1 grace boundary`() {
-        assertEquals(1f, ScoringEngine.scoreTime(1.20, 1), 0.001f)
-        assertEquals(0.99f, ScoringEngine.scoreTime(1.21, 1), 0.01f)
+        assertEquals(1f, ScoringEngine.scoreTime(2.00, 1), 0.001f)
+        assertEquals(0.99f, ScoringEngine.scoreTime(2.01, 1), 0.01f)
     }
 
     @Test
     fun `time score is full marks at the level 2 grace boundary`() {
-        assertEquals(1f, ScoringEngine.scoreTime(1.10, 2), 0.001f)
-        assertEquals(0.99f, ScoringEngine.scoreTime(1.11, 2), 0.01f)
+        assertEquals(1f, ScoringEngine.scoreTime(1.20, 2), 0.001f)
+        assertEquals(0.99f, ScoringEngine.scoreTime(1.21, 2), 0.01f)
     }
 
     @Test
@@ -313,18 +313,18 @@ class ScoringEngineTest {
 
     @Test
     fun `time score falls off with the ratio beyond the grace boundary`() {
-        assertEquals(0.6f, ScoringEngine.scoreTime(2.0, 1), 0.001f)
-        assertEquals(0.55f, ScoringEngine.scoreTime(2.0, 2), 0.001f)
+        assertEquals(1f, ScoringEngine.scoreTime(2.0, 1), 0.001f)
+        assertEquals(0.6f, ScoringEngine.scoreTime(2.0, 2), 0.001f)
         assertEquals(0.525f, ScoringEngine.scoreTime(2.0, 3), 0.001f)
-        assertEquals(0.24f, ScoringEngine.scoreTime(5.0, 1), 0.001f)
-        assertEquals(0.22f, ScoringEngine.scoreTime(5.0, 2), 0.001f)
+        assertEquals(0.4f, ScoringEngine.scoreTime(5.0, 1), 0.001f)
+        assertEquals(0.24f, ScoringEngine.scoreTime(5.0, 2), 0.001f)
         assertEquals(0.21f, ScoringEngine.scoreTime(5.0, 3), 0.001f)
     }
 
     @Test
     fun `time score still awards points for a very long play time`() {
-        assertEquals(0.12f, ScoringEngine.scoreTime(10.0, 1), 0.001f)
-        assertEquals(0.11f, ScoringEngine.scoreTime(10.0, 2), 0.001f)
+        assertEquals(0.2f, ScoringEngine.scoreTime(10.0, 1), 0.001f)
+        assertEquals(0.12f, ScoringEngine.scoreTime(10.0, 2), 0.001f)
         assertEquals(0.105f, ScoringEngine.scoreTime(10.0, 3), 0.001f)
         assertEquals(0.0105f, ScoringEngine.scoreTime(100.0, 3), 0.0001f)
         assertTrue(ScoringEngine.scoreTime(1000.0, 3) > 0f)
@@ -339,8 +339,8 @@ class ScoringEngineTest {
             assertTrue("level 1 must not be stricter than level 2 at $ratio", level1 >= level2)
             assertTrue("level 2 must not be stricter than level 3 at $ratio", level2 >= level3)
         }
-        assertTrue(ScoringEngine.scoreTime(1.15, 1) > ScoringEngine.scoreTime(1.15, 2))
-        assertTrue(ScoringEngine.scoreTime(1.15, 2) > ScoringEngine.scoreTime(1.15, 3))
+        assertTrue(ScoringEngine.scoreTime(1.3, 1) > ScoringEngine.scoreTime(1.3, 2))
+        assertTrue(ScoringEngine.scoreTime(1.3, 2) > ScoringEngine.scoreTime(1.3, 3))
     }
 
     @Test

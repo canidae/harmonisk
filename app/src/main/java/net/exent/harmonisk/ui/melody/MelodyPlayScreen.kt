@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -106,9 +107,9 @@ fun MelodyPlayScreen(
         }
     }
 
-    LaunchedEffect(adventureMode, gameState.melodyTrack, gameState.phase) {
+    LaunchedEffect(adventureMode, gameState.melodyTrack, gameState.phase, gameState.settingsLoaded) {
         if (adventureMode && gameState.phase == PlayPhase.READY && gameState.melodyTrack != null) {
-            viewModel.startPlaying()
+            viewModel.startAdventurePlay()
         }
     }
 
@@ -179,9 +180,10 @@ fun MelodyPlayScreen(
 
                     Spacer(Modifier.weight(1f))
 
-                    if (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED ||
+                    if (gameState.cue == null &&
+                        (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED ||
                         gameState.phase == PlayPhase.FINISHED ||
-                        devModeEnabled && (gameState.phase == PlayPhase.PLAYING || gameState.phase == PlayPhase.WAITING_FOR_NOTE)) {
+                        devModeEnabled && (gameState.phase == PlayPhase.PLAYING || gameState.phase == PlayPhase.WAITING_FOR_NOTE))) {
                         IconButton(
                             onClick = { if (isPreviewPlaying) viewModel.stopPreviewAndReturn() else viewModel.previewMelody() },
                             modifier = Modifier.size(PANEL_BTN_SIZE)
@@ -364,13 +366,13 @@ fun MelodyPlayScreen(
                             )
                         }
 
-                        if (gameState.previewTimeSeconds == null &&
+                        if (gameState.previewTimeSeconds == null && gameState.cue == null &&
                             (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED)
                         ) {
                             IconButton(
                                 onClick = {
                                     if (isPreviewPlaying) viewModel.stopPreview()
-                                    if (gameState.phase == PlayPhase.READY) viewModel.startPlaying()
+                                    if (gameState.phase == PlayPhase.READY) viewModel.startRun()
                                     else viewModel.resume()
                                 },
                                 modifier = Modifier
@@ -385,6 +387,30 @@ fun MelodyPlayScreen(
                                     contentDescription = if (gameState.phase == PlayPhase.READY) stringResource(R.string.start) else stringResource(R.string.melody_play_resume),
                                     tint = PlayGreen.copy(alpha = 0.9f),
                                     modifier = Modifier.size(40.dp)
+                                )
+                            }
+                        }
+
+                        gameState.cue?.let { cue ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.45f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = stringResource(
+                                        when (cue) {
+                                            PlayCue.PREVIEW -> R.string.melody_preview_cue
+                                            PlayCue.YOUR_TURN -> R.string.melody_your_turn
+                                        }
+                                    ),
+                                    style = MaterialTheme.typography.displaySmall,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (cue == PlayCue.PREVIEW) Color.White else PlayGreen,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 2,
+                                    modifier = Modifier.padding(horizontal = 24.dp)
                                 )
                             }
                         }
