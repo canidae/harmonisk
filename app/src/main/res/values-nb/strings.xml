@@ -242,6 +242,9 @@
     <string name="adventure_results_solo_title">Ditt eventyr er over</string>
     <string name="adventure_results_home">Tilbake</string>
     <string name="adventure_results_new">Nytt eventyr</string>
+    <string name="adventure_give_up_title">Gi opp sangen?</string>
+    <string name="adventure_give_up_body">Fremgangen på denne sangen går tapt.</string>
+    <string name="adventure_give_up_confirm">Gi opp</string>
     <string name="adventure_exit_title">Forlate eventyret?</string>
     <string name="adventure_exit_body">Eventyret du spiller nå, går tapt.</string>
     <string name="adventure_exit_confirm">Forlat</string>

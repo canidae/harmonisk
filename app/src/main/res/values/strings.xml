@@ -242,6 +242,9 @@
     <string name="adventure_results_solo_title">Your adventure is complete</string>
     <string name="adventure_results_home">Back home</string>
     <string name="adventure_results_new">New adventure</string>
+    <string name="adventure_give_up_title">Give up the song?</string>
+    <string name="adventure_give_up_body">Progress on this song will be lost.</string>
+    <string name="adventure_give_up_confirm">Give up</string>
     <string name="adventure_exit_title">Leave the adventure?</string>
     <string name="adventure_exit_body">The current adventure will be lost.</string>
     <string name="adventure_exit_confirm">Leave</string>

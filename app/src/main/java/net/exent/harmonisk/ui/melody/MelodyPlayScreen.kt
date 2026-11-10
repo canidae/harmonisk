@@ -125,7 +125,7 @@ fun MelodyPlayScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    if (deviceState.midiAvailable) {
+                    if (!adventureMode && deviceState.midiAvailable) {
                         val isMidi = deviceState.midiInputEnabled
                         IconButton(
                             onClick = { viewModel.toggleMidiInput() },
@@ -140,7 +140,7 @@ fun MelodyPlayScreen(
                             )
                         }
                     }
-                    if (deviceState.midiAvailable) {
+                    if (!adventureMode && deviceState.midiAvailable) {
                         val isMidi = deviceState.midiOutputEnabled
                         IconButton(
                             onClick = { viewModel.toggleMidiOutput() },
@@ -197,19 +197,21 @@ fun MelodyPlayScreen(
                         }
                     }
 
-                    IconButton(
-                        onClick = { viewModel.toggleMetronome() },
-                        modifier = Modifier.size(PANEL_BTN_SIZE)
-                    ) {
-                        Icon(
-                            Icons.Filled.Timer,
-                            contentDescription = if (gameState.metronomeEnabled) stringResource(R.string.metronome_on) else stringResource(R.string.metronome_off),
-                            tint = if (gameState.metronomeEnabled) MetronomeBlue else OVERLAY_ICON_TINT,
-                            modifier = Modifier.size(17.dp)
-                        )
+                    if (!adventureMode) {
+                        IconButton(
+                            onClick = { viewModel.toggleMetronome() },
+                            modifier = Modifier.size(PANEL_BTN_SIZE)
+                        ) {
+                            Icon(
+                                Icons.Filled.Timer,
+                                contentDescription = if (gameState.metronomeEnabled) stringResource(R.string.metronome_on) else stringResource(R.string.metronome_off),
+                                tint = if (gameState.metronomeEnabled) MetronomeBlue else OVERLAY_ICON_TINT,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
                     }
 
-                    if (gameState.melodyTracks.size > 1) {
+                    if (!adventureMode && gameState.melodyTracks.size > 1) {
                         var showVoiceMenu by remember { mutableStateOf(false) }
                         val voiceColor = VOICE_COLORS[gameState.activeVoiceIndex % VOICE_COLORS.size]
                         Box {
@@ -257,24 +259,26 @@ fun MelodyPlayScreen(
                         }
                     }
 
-                    MelodySettingsMenu(
-                        expanded = showConfigMenu,
-                        onDismiss = { showConfigMenu = false },
-                        onOpen = { showConfigMenu = true },
-                        currentLevel = gameState.currentLevel,
-                        onLevelChange = { viewModel.setLevel(it) },
-                        autoTranspose = gameState.autoTranspose,
-                        onAutoTransposeChange = { viewModel.setAutoTranspose(it) },
-                        showAutoTranspose = true,
-                        preferOpenStrings = gameState.preferOpenStrings,
-                        onPreferOpenStringsChange = { viewModel.setPreferOpenStrings(it) },
-                        transposeSemitones = gameState.transposeSemitones,
-                        onTransposeChange = { viewModel.setTranspose(it) },
-                        accompanimentMode = gameState.accompanimentMode,
-                        onAccompanimentModeChange = { viewModel.setAccompanimentMode(it) },
-                        showLevelControl = devModeEnabled && !adventureMode,
-                        showPlayVoices = devModeEnabled
-                    )
+                    if (!adventureMode) {
+                        MelodySettingsMenu(
+                            expanded = showConfigMenu,
+                            onDismiss = { showConfigMenu = false },
+                            onOpen = { showConfigMenu = true },
+                            currentLevel = gameState.currentLevel,
+                            onLevelChange = { viewModel.setLevel(it) },
+                            autoTranspose = gameState.autoTranspose,
+                            onAutoTransposeChange = { viewModel.setAutoTranspose(it) },
+                            showAutoTranspose = true,
+                            preferOpenStrings = gameState.preferOpenStrings,
+                            onPreferOpenStringsChange = { viewModel.setPreferOpenStrings(it) },
+                            transposeSemitones = gameState.transposeSemitones,
+                            onTransposeChange = { viewModel.setTranspose(it) },
+                            accompanimentMode = gameState.accompanimentMode,
+                            onAccompanimentModeChange = { viewModel.setAccompanimentMode(it) },
+                            showLevelControl = devModeEnabled,
+                            showPlayVoices = devModeEnabled
+                        )
+                    }
                 }
 
                 Column(
@@ -321,7 +325,9 @@ fun MelodyPlayScreen(
                             .pointerInput(gameState.phase) {
                                 detectTapGestures {
                                     val phase = gameState.phase
-                                    if (phase == PlayPhase.PLAYING || phase == PlayPhase.WAITING_FOR_NOTE) {
+                                    if (!adventureMode &&
+                                        (phase == PlayPhase.PLAYING || phase == PlayPhase.WAITING_FOR_NOTE)
+                                    ) {
                                         viewModel.pause()
                                     }
                                 }
@@ -366,7 +372,7 @@ fun MelodyPlayScreen(
                             )
                         }
 
-                        if (gameState.previewTimeSeconds == null && gameState.cue == null &&
+                        if (!adventureMode && gameState.previewTimeSeconds == null && gameState.cue == null &&
                             (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED)
                         ) {
                             IconButton(

@@ -63,6 +63,7 @@ fun AdventureScreen(
     val context = LocalContext.current
     val resources = LocalResources.current
     var showExitDialog by remember { mutableStateOf(false) }
+    var showGiveUpDialog by remember { mutableStateOf(false) }
     var showCreatePlayer by remember { mutableStateOf(false) }
     var playingLoaded by rememberSaveable(state.turnId) { mutableStateOf(false) }
 
@@ -114,7 +115,7 @@ fun AdventureScreen(
             MelodyPlayScreen(
                 onBack = {
                     if (melodyViewModel.gameState.value.phase != PlayPhase.FINISHED) {
-                        showExitDialog = true
+                        showGiveUpDialog = true
                     }
                 },
                 viewModel = melodyViewModel,
@@ -128,20 +129,20 @@ fun AdventureScreen(
                 }
             }
         }
-        if (showExitDialog) {
+        if (showGiveUpDialog) {
             AlertDialog(
-                onDismissRequest = { showExitDialog = false },
-                title = { Text(stringResource(R.string.adventure_exit_title)) },
-                text = { Text(stringResource(R.string.adventure_exit_body)) },
+                onDismissRequest = { showGiveUpDialog = false },
+                title = { Text(stringResource(R.string.adventure_give_up_title)) },
+                text = { Text(stringResource(R.string.adventure_give_up_body)) },
                 confirmButton = {
                     TextButton(onClick = {
-                        showExitDialog = false
+                        showGiveUpDialog = false
                         melodyViewModel.stop()
                         viewModel.abandonSong()
-                    }) { Text(stringResource(R.string.adventure_exit_confirm)) }
+                    }) { Text(stringResource(R.string.adventure_give_up_confirm)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showExitDialog = false }) {
+                    TextButton(onClick = { showGiveUpDialog = false }) {
                         Text(stringResource(R.string.cancel))
                     }
                 }
