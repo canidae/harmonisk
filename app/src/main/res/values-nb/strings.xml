@@ -153,7 +153,7 @@
     <string name="melody_choose">Velg en melodi</string>
     <string name="melody_import_file">Importer sangfil</string>
     <string name="melody_import_url">Importer fra URL</string>
-    <string name="melody_import_url_hint">Lim inn en https://-lenke til en sang, ABC- eller zip-fil, f.eks. en delt Google Drive-lenke</string>
+    <string name="melody_import_url_hint">Lim inn en URL til en sang, ABC- eller zip-fil</string>
     <string name="melody_import_url_confirm">Importer</string>
     <string name="melody_import_qr">Importer fra QR-kode</string>
     <string name="melody_import_qr_prompt">Skann en URL til en sang, ABC- eller zip-fil</string>
@@ -183,7 +183,7 @@
     <string name="melody_play_midi_output_on">MIDI-utgang aktiv</string>
     <string name="melody_play_midi_output_off">MIDI-utgang av</string>
     <string name="melody_play_resume">Fortsett</string>
-    <string name="melody_play_scroll_start">Rull til starten</string>
+    <string name="melody_play_scroll_start">Gå til starten</string>
     <string name="melody_play_results">Resultater</string>
     <string name="melody_play_go_back">Gå tilbake</string>
     <string name="melody_play_level">Nivå: %1$d</string>
@@ -204,7 +204,7 @@
     <!-- Score results -->
     <string name="score_dismiss">Lukk</string>
     <string name="level_reached">Nivå %1$d nådd!</string>
-    <string name="retry_level">Prøv nivå på nytt</string>
+    <string name="retry_level">Spill nivå på nytt</string>
     <string name="level_2_change">På nivå 2 blir ikke sangen forhåndsavspilt lenger, og du har mindre tid på hver tone</string>
     <string name="level_3_change">På nivå 3 teller treffsikkerhet og feil noter med i poengsummen</string>
     <string name="level_4_change">På nivå 4 venter ikke spillet på at du spiller noten</string>
@@ -275,7 +275,7 @@
     <string name="adventure_faerie_score">Fe</string>
     <string name="adventure_castle_score">Slott</string>
     <string name="adventure_whack_ready">Gjør deg klar!</string>
-    <string name="adventure_song_time">På tide med en sang!</string>
+    <string name="adventure_song_time">Spill en sang!</string>
 
     <string name="whack_title">Tonedengeren</string>
     <string name="whack_hint">Spill tonen som gjemmer seg under emojien. Fargen på beltet viser fingeren: blå løs streng, grønn første, gul andre, oransje tredje, rød fjerde. Svar raskere for å få flere poeng.</string>
