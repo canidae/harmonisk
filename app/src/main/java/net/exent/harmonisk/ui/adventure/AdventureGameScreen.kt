@@ -247,7 +247,10 @@ private fun CurrentTurnCard(
             state.diceValue?.let { stringResource(R.string.adventure_move, it) }.orEmpty()
         AdventureTurnPhase.MOVING -> ""
         AdventureTurnPhase.EVENT -> when {
-            state.finisherId != null -> stringResource(R.string.adventure_castle_reached)
+            state.finisherId != null -> state.players
+                .firstOrNull { it.profileId == state.finisherId }
+                ?.let { stringResource(R.string.adventure_castle_win, it.name) }
+                .orEmpty()
             state.reward is AdventureReward.Whack -> stringResource(R.string.whack_title)
             state.reward is AdventureReward.Song -> stringResource(R.string.adventure_song_time)
             state.turnScore != null -> stringResource(R.string.adventure_score)

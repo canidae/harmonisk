@@ -239,7 +239,6 @@
     <string name="adventure_move">Flytt %1$d</string>
     <string name="adventure_load_failed">Kunne ikke starte sangen</string>
     <string name="adventure_results_title">Eventyret er over</string>
-    <string name="adventure_results_solo_title">Ditt eventyr er over</string>
     <string name="adventure_results_home">Tilbake</string>
     <string name="adventure_results_new">Nytt eventyr</string>
     <string name="adventure_give_up_title">Gi opp sangen?</string>
@@ -266,7 +265,6 @@
     <string name="adventure_throw_dice">Kast terningen</string>
     <string name="adventure_choose_song">Velg en sang</string>
     <string name="adventure_song_complete">Sang ferdig</string>
-    <string name="adventure_castle_reached">Slottet er nådd</string>
     <string name="adventure_castle_win">%1$s nådde slottet</string>
     <string name="adventure_score">Poeng</string>
     <string name="adventure_reward_stickers">Klistremerker</string>

@@ -68,8 +68,8 @@ class MelodyViewModel @Inject constructor(
 
     companion object {
         private val TAG = "MelodyViewModel"
-        private const val PREVIEW_CUE_MS = 4500L
-        private const val YOUR_TURN_CUE_MS = 4500L
+        private const val PREVIEW_CUE_MS = 3000L
+        private const val YOUR_TURN_CUE_MS = 3000L
     }
 
     private val _gameState = MutableStateFlow(MelodyGameState())
