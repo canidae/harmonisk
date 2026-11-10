@@ -161,10 +161,7 @@ fun AdventureResultsScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(
-                            if (state.solo) R.string.adventure_results_solo_title
-                            else R.string.adventure_results_title
-                        ),
+                        text = stringResource(R.string.adventure_results_title),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Black,
                         color = StorybookGold
