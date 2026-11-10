@@ -1,8 +1,9 @@
 ## Instructions
-- Ask clarifying questions first, then complete the task without interruption.
+- Resolve tasks in TODO.md unless task specifies not to. User may add clarifications or new tasks simultaneously as you work. Remove tasks when they're complete without affecting other tasks in the file.
+- Don't assume, ask clarifying questions when in doubt.
 - Be critical of the users request, if they suggest an architecturally bad or inefficient solution, let them know and offer alternatives.
 - If local uncommited changes, find out their purpose and commit them before starting a new task.
-- Never write comments in code under any circumstances, not even to explain a tricky line; delete any code comment you come across. Non-code files, such as resources, build scripts and configuration, may keep their comments.
+- Never write comments in code under any circumstances, delete any code comment you come across. Non-code files, such as resources, build scripts and configuration, may keep their comments.
 - Less and compact code is better than verbose code.
 - When implementing changes, clean up old redundant code.
 - If current changes are related to the last commit and that commit isn't pushed, amend the commit.
