@@ -211,15 +211,19 @@ fun faerieGift(players: List<AdventurePlayer>): AdventureFaerie? {
 }
 
 fun standings(players: List<AdventurePlayer>): List<AdventureStanding> {
-    val sorted = players.sortedWith(
-        compareByDescending<AdventurePlayer> { it.total }.thenBy { it.name.lowercase() }
-    )
+    val ranks = mutableMapOf<String, Int>()
     var rank = 0
     var previous = Float.NaN
-    return sorted.mapIndexed { index, player ->
+    players.sortedWith(
+        compareByDescending<AdventurePlayer> { it.total }.thenBy { it.name.lowercase() }
+    ).forEachIndexed { index, player ->
         if (index == 0 || abs(player.total - previous) > 0.001f) rank = index + 1
         previous = player.total
-        AdventureStanding(player, rank, medalFor(rank, players.size))
+        ranks[player.profileId] = rank
+    }
+    return players.map { player ->
+        val playerRank = ranks.getValue(player.profileId)
+        AdventureStanding(player, playerRank, medalFor(playerRank, players.size))
     }
 }
 

@@ -228,21 +228,21 @@ class AdventureEngineTest {
     }
 
     @Test
-    fun `standings rank by total and handle a tie`() {
+    fun `standings keep player order and rank by total`() {
         val standings = standings(
             listOf(
-                player("A", songScore = 100f),
-                player("B", songScore = 70f, stickerScore = 10f),
                 player("C", songScore = 65f, stickerScore = 15f),
-                player("D", songScore = 50f)
+                player("B", songScore = 70f, stickerScore = 10f),
+                player("D", songScore = 50f),
+                player("A", songScore = 100f)
             )
         )
-        assertEquals(listOf("A", "B", "C", "D"), standings.map { it.player.name })
-        assertEquals(listOf(1, 2, 2, 4), standings.map { it.rank })
-        assertEquals(AdventureMedal.GOLD, standings[0].medal)
+        assertEquals(listOf("C", "B", "D", "A"), standings.map { it.player.name })
+        assertEquals(listOf(2, 2, 4, 1), standings.map { it.rank })
+        assertEquals(AdventureMedal.SILVER, standings[0].medal)
         assertEquals(AdventureMedal.SILVER, standings[1].medal)
-        assertEquals(AdventureMedal.SILVER, standings[2].medal)
-        assertEquals(AdventureMedal.NONE, standings[3].medal)
+        assertEquals(AdventureMedal.NONE, standings[2].medal)
+        assertEquals(AdventureMedal.GOLD, standings[3].medal)
     }
 
     @Test
@@ -255,12 +255,12 @@ class AdventureEngineTest {
     fun `two players get gold and silver`() {
         val standings = standings(
             listOf(
-                player("A", songScore = 100f),
-                player("B", songScore = 90f, color = 1)
+                player("B", songScore = 90f, color = 1),
+                player("A", songScore = 100f)
             )
         )
-        assertEquals(AdventureMedal.GOLD, standings[0].medal)
-        assertEquals(AdventureMedal.SILVER, standings[1].medal)
+        assertEquals(AdventureMedal.SILVER, standings[0].medal)
+        assertEquals(AdventureMedal.GOLD, standings[1].medal)
     }
 
     @Test
