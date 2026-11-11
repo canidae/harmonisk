@@ -12,7 +12,19 @@ class ScoringEngine {
         private val GOOD_CENTS = NoteUtils.GOOD_CENTS
         private val OK_CENTS = NoteUtils.OK_CENTS
 
-        const val PERFECT_DURATION_RATIO = 0.85f
+        const val DURATION_GRACE_LEVEL_1 = 0.85f
+        const val DURATION_GRACE_LEVEL_2 = 0.875f
+        const val DURATION_GRACE_LEVEL_3 = 0.90f
+        const val DURATION_GRACE_LEVEL_4 = 0.925f
+        const val DURATION_GRACE_LEVEL_5 = 0.95f
+
+        fun durationGraceRatio(level: Int): Float = when (level) {
+            1 -> DURATION_GRACE_LEVEL_1
+            2 -> DURATION_GRACE_LEVEL_2
+            3 -> DURATION_GRACE_LEVEL_3
+            4 -> DURATION_GRACE_LEVEL_4
+            else -> DURATION_GRACE_LEVEL_5
+        }
 
         const val LEVEL_UP_SCORE = 90f
 
@@ -69,9 +81,9 @@ class ScoringEngine {
         }
     }
 
-    fun scoreNote(result: NotePerformance): NoteScore {
+    fun scoreNote(result: NotePerformance, level: Int = 5): NoteScore {
         val pitchAccuracy = getPitchAccuracy(result.centsOff)
-        val durationScore = scoreDuration(result.actualDurationMs, result.expectedDurationMs)
+        val durationScore = scoreDuration(result.actualDurationMs, result.expectedDurationMs, level)
         val overallScore = (
             pitchAccuracy.score * PITCH_WEIGHT +
             durationScore * DURATION_WEIGHT
@@ -105,10 +117,10 @@ class ScoringEngine {
         else -> PitchAccuracy.MISS
     }
 
-    fun scoreDuration(actualMs: Long, expectedMs: Long): Float {
+    fun scoreDuration(actualMs: Long, expectedMs: Long, level: Int = 5): Float {
         if (expectedMs <= 0) return 100f
         val ratio = min(actualMs, expectedMs).toFloat() / max(actualMs, expectedMs).toFloat()
-        return if (ratio >= PERFECT_DURATION_RATIO) 100f else ratio * 100f
+        return min(1f, ratio / durationGraceRatio(level)) * 100f
     }
 
     fun calculateMelodyScore(noteScores: List<NoteScore>): MelodyScore {

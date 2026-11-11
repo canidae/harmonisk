@@ -162,6 +162,8 @@
     <string name="melody_stop_preview">Stopp forhåndsvisningen</string>
     <string name="melody_preview">Forhåndsvis melodi</string>
     <string name="melody_preview_cue">En forhåndsvisning spilles først</string>
+    <string name="melody_replay">Din spilling</string>
+    <string name="melody_listen_recording">Hør på spillingen din</string>
     <string name="melody_your_turn">Din tur til å spille</string>
     <string name="melody_failed_load_midi">Kunne ikke laste sangfilen</string>
     <string name="melody_failed_load_melody">Kunne ikke laste melodien</string>

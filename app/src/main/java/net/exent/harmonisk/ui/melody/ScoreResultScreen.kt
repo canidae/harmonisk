@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,7 +34,9 @@ fun ScoreResultModal(
     newlyUnlockedLevel: Int? = null,
     onRetryLevel: (Int) -> Unit = {},
     celebrationLevel: CelebrationLevel = CelebrationLevel.NONE,
-    personalBest: Float? = null
+    personalBest: Float? = null,
+    recordingAvailable: Boolean = false,
+    onListenRecording: () -> Unit = {}
 ) {
     val animatedScore by animateFloatAsState(
         targetValue = melodyScore.overallScore,
@@ -101,6 +104,15 @@ fun ScoreResultModal(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         ScoreSummaryPanel(score = melodyScore, currentLevel = currentLevel, personalBest = personalBest)
+
+                        if (recordingAvailable) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedButton(onClick = onListenRecording) {
+                                Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.melody_listen_recording))
+                            }
+                        }
 
                         if (scoreHistory.size >= 1) {
                             Spacer(modifier = Modifier.height(12.dp))

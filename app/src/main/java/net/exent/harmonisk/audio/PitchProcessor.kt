@@ -9,8 +9,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 
-private data class PitchWindow(val samples: FloatArray, val sounding: Boolean)
-
 class PitchProcessor(
     private val audioCaptureService: AudioCaptureService,
     private val pitchDetector: PitchDetector,
@@ -27,9 +25,6 @@ class PitchProcessor(
         private const val ONSET_DEBOUNCE_CHUNKS = 2
 
         const val INPUT_ONSET_MS = (ONSET_DEBOUNCE_CHUNKS * AudioConstants.BUFFER_SIZE_SAMPLES * 1000 + AudioConstants.SAMPLE_RATE / 2) / AudioConstants.SAMPLE_RATE
-
-        private const val RELEASE_PEAK_RATIO = 0.3f
-        private const val RELEASE_DEBOUNCE_CHUNKS = 4
 
         private const val LOWEST_NOTE_MARGIN_CENTS = 100f
 
@@ -69,8 +64,6 @@ class PitchProcessor(
         var windowFilled = 0
         var prevChunkRms = 0f
         var onsetStreak = 0
-        var releaseStreak = 0
-        var peakRms = 0f
 
         return source
             .mapNotNull { chunk ->
@@ -86,15 +79,10 @@ class PitchProcessor(
 
                 if (isOnset) {
                     onsetStreak = 0
-                    releaseStreak = 0
-                    peakRms = chunkRms
                     slidingWindow.fill(0f)
                     System.arraycopy(chunk, 0, slidingWindow, 0, chunkSize)
                     windowFilled = chunkSize
                 } else {
-                    if (chunkRms > peakRms) peakRms = chunkRms
-                    val releasing = peakRms > 0f && chunkRms < peakRms * RELEASE_PEAK_RATIO
-                    releaseStreak = if (releasing) releaseStreak + 1 else 0
                     if (windowFilled >= ANALYSIS_WINDOW_SIZE) {
                         System.arraycopy(slidingWindow, chunkSize, slidingWindow, 0, ANALYSIS_WINDOW_SIZE - chunkSize)
                         System.arraycopy(chunk, 0, slidingWindow, ANALYSIS_WINDOW_SIZE - chunkSize, chunkSize)
@@ -105,10 +93,10 @@ class PitchProcessor(
                     }
                 }
                 if (windowFilled < ANALYSIS_WINDOW_SIZE) null
-                else PitchWindow(slidingWindow.copyOf(), releaseStreak < RELEASE_DEBOUNCE_CHUNKS)
+                else slidingWindow.copyOf()
             }
             .buffer(Channel.CONFLATED)
-            .map { window -> processBuffer(window.samples).copy(sounding = window.sounding) }
+            .map { processBuffer(it) }
             .flowOn(Dispatchers.Default)
     }
 

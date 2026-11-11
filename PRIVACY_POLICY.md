@@ -1,6 +1,6 @@
 # Privacy Policy for Harmonisk
 
-**Last updated:** 2026-11-03
+**Last updated:** 2026-11-11
 
 This Privacy Policy describes how **Harmonisk** (“the App,” “we,” “us,” or “our”) handles information. The App is provided by the developer.
 
@@ -14,8 +14,10 @@ We do not collect:
 - Device identifiers, advertising IDs, IP addresses, or similar identifiers
 - Location data
 - Usage data, analytics, crash reports, or behavioral data
-- Photos, contacts, files, microphone data, camera data, or other media
+- Photos, contacts, files, camera data, or other media
 - Any other personal or sensitive user information
+
+The App listens to your instrument through the microphone only to detect what you play in real time. It never transmits audio, and any audio it saves stays on your device (see Section 3).
 
 The App lets you create local profiles with a display name, settings, and scores. This information is stored only on your device and is never transmitted to us or to any third party (see Section 3).
 
@@ -28,6 +30,8 @@ Because Harmonisk does not collect any information, we do not use, process, or d
 Harmonisk does not store user data on external servers.
 
 If the App saves profile names, settings, preferences, scores, or similar information, that information is stored **only locally on your device** and is never transmitted to us or to any third party. You can delete a profile and all its settings and scores from the profile menu, or remove all locally stored information by clearing the App’s data or uninstalling the App.
+
+The App can save your most recent playthrough of a song as an audio recording on your device so that you can listen to it again inside the App. The recording is stored only on your device, is never transmitted to us or to any third party, and is removed when you clear the App's data or uninstall the App.
 
 You can import a song from a web address that you enter yourself. The App then downloads that file **directly from the address you provide** (a sharing link, such as a Google Drive link, is resolved to that service’s direct download address); the address and the downloaded file are not sent to us or to any third party, and the file is stored only on your device. We have no access to the address or its contents.
 

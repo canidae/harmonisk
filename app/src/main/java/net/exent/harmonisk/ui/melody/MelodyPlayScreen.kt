@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -69,6 +70,7 @@ fun MelodyPlayScreen(
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
     val deviceState by viewModel.deviceState.collectAsStateWithLifecycle()
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsStateWithLifecycle()
+    val recordingAvailable by viewModel.recordingAvailable.collectAsStateWithLifecycle()
     val inputDelay by viewModel.activeInputDelay.collectAsStateWithLifecycle()
     val scoreHistory by viewModel.currentScoreHistory.collectAsStateWithLifecycle()
     val celebrationLevel by viewModel.celebrationLevel.collectAsStateWithLifecycle()
@@ -289,7 +291,7 @@ fun MelodyPlayScreen(
                     val track = gameState.melodyTrack
                     val adjustedNow = gameState.currentTimeSeconds +
                             nowLineLeadSeconds(gameState.phase, inputDelay)
-                    val canvasNow = gameState.previewTimeSeconds ?: adjustedNow
+                    val canvasNow = gameState.replayTimeSeconds ?: gameState.previewTimeSeconds ?: adjustedNow
 
                     if (track != null) {
                         val alphaTex = remember(track) { MidiToAlphaTex.generate(track) }
@@ -298,7 +300,8 @@ fun MelodyPlayScreen(
                             melodyTrack = track,
                             alphaTex = alphaTex,
                             currentTimeSeconds = canvasNow,
-                            isPlaying = gameState.phase == PlayPhase.PLAYING || gameState.previewTimeSeconds != null,
+                            isPlaying = gameState.phase == PlayPhase.PLAYING ||
+                                    gameState.previewTimeSeconds != null || gameState.replayTimeSeconds != null,
                             seekTimeSeconds = canvasNow,
                             scrollTimeSeconds = viewTimeSeconds,
                             songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
@@ -351,13 +354,28 @@ fun MelodyPlayScreen(
                                 hideNoteBars = gameState.hideNoteBars,
                                 instrument = currentInstrument,
                                 bowedPositions = viewState.bowedPositions,
-                                preferOpenStrings = gameState.preferOpenStrings
+                                preferOpenStrings = gameState.preferOpenStrings,
+                                noteOnsetOffsetsMs = gameState.replayNoteOffsetsMs,
+                                showOnsetOffsets = gameState.replayLevel >= 4
                             ),
                             pianoAtBottom = true,
                             viewMinMidi = viewState.viewMinMidi,
                             viewMaxMidi = viewState.viewMaxMidi,
                             modifier = Modifier.fillMaxSize()
                         )
+
+                        if (gameState.replayTimeSeconds != null) {
+                            Text(
+                                text = stringResource(R.string.melody_replay),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(8.dp)
+                                    .background(OVERLAY_BG, RoundedCornerShape(50))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
 
                         if (gameState.previewTimeSeconds != null) {
                             Text(
@@ -444,6 +462,19 @@ fun MelodyPlayScreen(
                                     }
                                 }
                                 if (gameState.phase == PlayPhase.FINISHED) {
+                                    if (!adventureMode && recordingAvailable) {
+                                        IconButton(
+                                            onClick = { viewModel.toggleRecordingPlayback() },
+                                            modifier = Modifier.size(OVERLAY_BUTTON_SIZE).background(OVERLAY_BG, CircleShape)
+                                        ) {
+                                            Icon(
+                                                if (gameState.replayTimeSeconds != null) Icons.Filled.Stop else Icons.Filled.PlayArrow,
+                                                contentDescription = stringResource(R.string.melody_listen_recording),
+                                                tint = OVERLAY_ICON_TINT,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
                                     IconButton(
                                         onClick = { showResultsModal = true },
                                         modifier = Modifier.size(OVERLAY_BUTTON_SIZE).background(OVERLAY_BG, CircleShape)
@@ -491,7 +522,12 @@ fun MelodyPlayScreen(
                 viewModel.retryLevel(level)
             },
             celebrationLevel = celebrationLevel,
-            personalBest = personalBest
+            personalBest = personalBest,
+            recordingAvailable = recordingAvailable,
+            onListenRecording = {
+                showResultsModal = false
+                viewModel.toggleRecordingPlayback()
+            }
         )
     }
 

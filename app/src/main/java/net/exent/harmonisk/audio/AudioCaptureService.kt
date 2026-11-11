@@ -15,6 +15,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.isActive
+import java.util.concurrent.CopyOnWriteArrayList
 
 class AudioCaptureService(
     private val context: Context
@@ -35,6 +36,16 @@ class AudioCaptureService(
         private set
 
     private var totalFramesRead: Long = 0L
+
+    private val sampleListeners = CopyOnWriteArrayList<(FloatArray) -> Unit>()
+
+    fun addSampleListener(listener: (FloatArray) -> Unit) {
+        sampleListeners.addIfAbsent(listener)
+    }
+
+    fun removeSampleListener(listener: (FloatArray) -> Unit) {
+        sampleListeners.remove(listener)
+    }
 
     private fun updateCaptureLatency(record: AudioRecord) {
         val ts = AudioTimestamp()
@@ -86,7 +97,9 @@ class AudioCaptureService(
                     if (read > 0) {
                         totalFramesRead += read
                         updateCaptureLatency(audioRecord)
-                        trySend(buffer.copyOf(read))
+                        val samples = buffer.copyOf(read)
+                        for (listener in sampleListeners) listener(samples)
+                        trySend(samples)
                     }
                 }
             } finally {

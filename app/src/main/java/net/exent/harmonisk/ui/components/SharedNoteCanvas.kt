@@ -49,6 +49,10 @@ import kotlin.math.roundToLong
 private val CANVAS_BG = Color(0xFF0D0D1A)
 private val BLACK_COLUMN_BG = Color(0xFF151520)
 private val NOTE_COLOR_UPCOMING = Color(0xBB7C4DFF)
+private const val ONSET_TOLERANCE_MS = 120L
+private val ONSET_EARLY = Color(0xFF64B5F6)
+private val ONSET_LATE = Color(0xFFFFA726)
+private val ONSET_ON_TIME = Color(0xFF81C784)
 private val OVERLAY_PERFECT = Color(0xFF4CAF50)
 private val OVERLAY_GREAT = Color(0xFF81C784)
 private val OVERLAY_GOOD = Color(0xFFFFC107)
@@ -163,7 +167,9 @@ sealed interface CanvasMode {
         val hideNoteBars: Boolean = false,
         val instrument: Instrument = Instrument.VIOLIN,
         val bowedPositions: List<BowedPosition?> = emptyList(),
-        val preferOpenStrings: Boolean = true
+        val preferOpenStrings: Boolean = true,
+        val noteOnsetOffsetsMs: Map<Int, Long> = emptyMap(),
+        val showOnsetOffsets: Boolean = false
     ) : CanvasMode
 }
 
@@ -1108,6 +1114,41 @@ private fun DrawScope.drawBowedMelodyNotes(
                 detectionStart = detectionStart,
                 density = density
             )
+        }
+
+        if (mode.showOnsetOffsets) {
+            mode.noteOnsetOffsetsMs[index]?.let { offsetMs ->
+                val fraction = if (noteDuration > 0.0) (offsetMs / 1000.0 / noteDuration).toFloat() else 0f
+                val markerY = (barTop + barLen) - fraction.coerceIn(0f, 1f) * barLen
+                val markerSize = 4.5f * density
+                val markerColor = when {
+                    offsetMs < -ONSET_TOLERANCE_MS -> ONSET_EARLY
+                    offsetMs > ONSET_TOLERANCE_MS -> ONSET_LATE
+                    else -> ONSET_ON_TIME
+                }
+                val markerX = barLeft + barThickness / 2f
+                val markerTop = barTop + markerSize
+                val markerBottom = barTop + barLen - markerSize
+                val visibleMarkerY = if (markerBottom > markerTop) markerY.coerceIn(markerTop, markerBottom) else barTop + barLen / 2f
+                if (offsetMs > ONSET_TOLERANCE_MS || offsetMs < -ONSET_TOLERANCE_MS) {
+                    val up = offsetMs < 0
+                    val path = Path().apply {
+                        if (up) {
+                            moveTo(markerX, visibleMarkerY - markerSize)
+                            lineTo(markerX - markerSize, visibleMarkerY + markerSize)
+                            lineTo(markerX + markerSize, visibleMarkerY + markerSize)
+                        } else {
+                            moveTo(markerX, visibleMarkerY + markerSize)
+                            lineTo(markerX - markerSize, visibleMarkerY - markerSize)
+                            lineTo(markerX + markerSize, visibleMarkerY - markerSize)
+                        }
+                        close()
+                    }
+                    drawPath(path, markerColor)
+                } else {
+                    drawCircle(markerColor, markerSize * 0.8f, Offset(markerX, visibleMarkerY))
+                }
+            }
         }
 
         val (textLayout, outlineLayout) = labels[pos?.finger] ?: return@forEachIndexed

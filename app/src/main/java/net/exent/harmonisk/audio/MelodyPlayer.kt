@@ -26,7 +26,8 @@ class MelodyPlayer(
         melodyTracks: List<MelodyTrack>,
         scope: CoroutineScope,
         leadInSeconds: Double = 0.0,
-        startSeconds: Double = 0.0
+        startSeconds: Double = 0.0,
+        tailSeconds: Double = 0.0
     ) {
         stop()
         _isPlaying.value = true
@@ -65,6 +66,7 @@ class MelodyPlayer(
                         sounding.remove(noteKey(event.channel, event.noteNumber))
                     }
                 }
+                if (isActive && tailSeconds > 0.0) delay((tailSeconds * 1000).toLong())
             } finally {
                 sounding.releaseWith(notePlayer)
                 _isPlaying.value = false

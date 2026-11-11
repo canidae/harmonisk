@@ -162,6 +162,8 @@
     <string name="melody_stop_preview">Stop preview</string>
     <string name="melody_preview">Preview melody</string>
     <string name="melody_preview_cue">A preview will play first</string>
+    <string name="melody_replay">Your playing</string>
+    <string name="melody_listen_recording">Listen to your playing</string>
     <string name="melody_your_turn">Your turn to play</string>
     <string name="melody_failed_load_midi">Failed to load song file</string>
     <string name="melody_failed_load_melody">Failed to load melody</string>

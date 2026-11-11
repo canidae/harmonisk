@@ -91,39 +91,46 @@ class ScoringEngineTest {
     }
 
     @Test
-    fun `half duration gives 50`() {
+    fun `half duration gives half score on the strictest level`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69,
             detectedMidiNote = 69,
             centsOff = 0f,
             expectedDurationMs = 500,
             actualDurationMs = 250
-        ))
-        assertEquals(50f, result.durationScore, 0.01f)
+        ), 5)
+        assertEquals(52.63f, result.durationScore, 0.01f)
     }
 
     @Test
-    fun `duration at PERFECT_DURATION_RATIO boundary gives 100`() {
+    fun `level one gives full score from eighty five percent of the note`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69,
             detectedMidiNote = 69,
             centsOff = 0f,
-            expectedDurationMs = 1000,
-            actualDurationMs = 850
-        ))
+            expectedDurationMs = 500,
+            actualDurationMs = 425
+        ), 1)
         assertEquals(100f, result.durationScore, 0.01f)
     }
 
     @Test
-    fun `duration just below PERFECT_DURATION_RATIO gives ratio score`() {
+    fun `level one scores below its grace ratio proportionally`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69,
             detectedMidiNote = 69,
             centsOff = 0f,
             expectedDurationMs = 1000,
-            actualDurationMs = 849
-        ))
-        assertEquals(84.9f, result.durationScore, 0.01f)
+            actualDurationMs = 425
+        ), 1)
+        assertEquals(50f, result.durationScore, 0.01f)
+    }
+
+    @Test
+    fun `lower levels are more forgiving than higher levels`() {
+        assertTrue(engine.scoreDuration(500, 1000, 1) > engine.scoreDuration(500, 1000, 2))
+        assertTrue(engine.scoreDuration(500, 1000, 2) > engine.scoreDuration(500, 1000, 3))
+        assertTrue(engine.scoreDuration(500, 1000, 3) > engine.scoreDuration(500, 1000, 5))
     }
 
     @Test
@@ -133,7 +140,7 @@ class ScoringEngineTest {
             detectedMidiNote = 69,
             centsOff = 0f,
             expectedDurationMs = 500,
-            actualDurationMs = 588
+            actualDurationMs = 525
         ))
         assertEquals(100f, result.durationScore, 0.01f)
     }

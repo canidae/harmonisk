@@ -6,6 +6,7 @@ import net.exent.harmonisk.audio.AudioDeviceMonitor
 import net.exent.harmonisk.audio.PitchDetector
 import net.exent.harmonisk.audio.MelodyPlayer
 import net.exent.harmonisk.audio.PitchProcessor
+import net.exent.harmonisk.audio.PlaybackRecorder
 import net.exent.harmonisk.audio.SoundFontSynthesizer
 import net.exent.harmonisk.data.AudioDelayRepository
 import net.exent.harmonisk.data.DifficultyRepository
@@ -47,6 +48,13 @@ object AppModule {
     @Provides
     @Singleton
     fun provideNoteUtils(): NoteUtils = NoteUtils()
+
+    @Provides
+    @Singleton
+    fun providePlaybackRecorder(
+        @ApplicationContext context: Context,
+        audioCaptureService: AudioCaptureService
+    ): PlaybackRecorder = PlaybackRecorder(context, audioCaptureService)
 
     @Provides
     @Singleton
