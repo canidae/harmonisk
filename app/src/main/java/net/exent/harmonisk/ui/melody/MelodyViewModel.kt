@@ -77,6 +77,7 @@ class MelodyViewModel @Inject constructor(
         private const val PREVIEW_TAIL_SECONDS = 0.9
         private const val TIMELINE_SAMPLE_MS = 100L
         private const val EARLY_ONSET_LOOKAHEAD_SECONDS = 0.75
+        private const val FRESH_PITCH_MS = 150L
     }
 
     private val _gameState = MutableStateFlow(MelodyGameState())
@@ -140,6 +141,7 @@ class MelodyViewModel @Inject constructor(
 
     private val noteTracking = NoteTrackingState()
     private var latestPitchResult: PitchResult = PitchResult.SILENT
+    private var latestPitchAtMs = 0L
 
     private var currentNoteDetectedCorrectly = false
     private var currentChordIndices: List<Int> = emptyList()
@@ -915,6 +917,7 @@ class MelodyViewModel @Inject constructor(
 
         noteTracking.reset()
         latestPitchResult = PitchResult.SILENT
+        latestPitchAtMs = 0L
         currentChordIndices = emptyList()
         currentNoteDetectedCorrectly = false
         waitStartWallMs = 0L
@@ -1191,6 +1194,7 @@ class MelodyViewModel @Inject constructor(
                             heldNotes.add(event.noteNumber)
                             val result = pitchResultFromMidi(event.noteNumber)
                             latestPitchResult = result
+                            latestPitchAtMs = SystemClock.elapsedRealtime()
                             _gameState.update { it.copy(pitchResult = result) }
                             for (idx in currentChordIndices) {
                                 updateNoteProgress(idx, result.frequency)
@@ -1201,11 +1205,13 @@ class MelodyViewModel @Inject constructor(
                             heldNotes.remove(event.noteNumber)
                             if (heldNotes.isEmpty()) {
                                 latestPitchResult = PitchResult.SILENT
+                                latestPitchAtMs = SystemClock.elapsedRealtime()
                                 _gameState.update { it.copy(pitchResult = PitchResult.SILENT) }
                                 noteTracking.wasPauseSinceLastWrong = true
                             } else {
                                 val result = pitchResultFromMidi(heldNotes.last())
                                 latestPitchResult = result
+                                latestPitchAtMs = SystemClock.elapsedRealtime()
                                 _gameState.update { it.copy(pitchResult = result) }
                             }
                         }
@@ -1216,6 +1222,7 @@ class MelodyViewModel @Inject constructor(
                 pitchProcessor.pitchFlow().collect { result ->
                     latestPitchResult = result
                     val now = SystemClock.elapsedRealtime()
+                    latestPitchAtMs = now
                     val updateUi = now - lastPitchUiUpdate >= 33L
                     if (updateUi) {
                         lastPitchUiUpdate = now
@@ -1287,13 +1294,30 @@ class MelodyViewModel @Inject constructor(
             noteTracking.resetForNewNote()
 
             if (activeIndices.isNotEmpty() && _gameState.value.waitMode) {
-                val noteStart = activeIndices.minOf { track.noteStartSeconds(track.notes[it]) }
-                noteTracking.isWaitingForNote = true
-                beginWait()
-                pauseOffset = noteStart
-                playbackStartWallMs = SystemClock.elapsedRealtime()
-                _gameState.update {
-                    it.copy(currentTimeSeconds = noteStart, phase = PlayPhase.WAITING_FOR_NOTE)
+                val pitch = latestPitchResult
+                val fresh = pitch.isValid &&
+                    SystemClock.elapsedRealtime() - latestPitchAtMs <= FRESH_PITCH_MS
+                val alreadyPlaying = fresh && activeIndices.any { index ->
+                    val note = track.notes.getOrNull(index) ?: return@any false
+                    abs(
+                        noteUtils.frequencyToCents(
+                            pitch.frequency,
+                            NoteUtils.midiToFrequency(note.noteNumber, referenceA4)
+                        )
+                    ) <= NoteUtils.MAX_CENTS_OFF
+                }
+                if (alreadyPlaying) {
+                    currentNoteDetectedCorrectly = true
+                    noteTracking.isWaitingForNote = false
+                } else {
+                    val noteStart = activeIndices.minOf { track.noteStartSeconds(track.notes[it]) }
+                    noteTracking.isWaitingForNote = true
+                    beginWait()
+                    pauseOffset = noteStart
+                    playbackStartWallMs = SystemClock.elapsedRealtime()
+                    _gameState.update {
+                        it.copy(currentTimeSeconds = noteStart, phase = PlayPhase.WAITING_FOR_NOTE)
+                    }
                 }
             }
         }

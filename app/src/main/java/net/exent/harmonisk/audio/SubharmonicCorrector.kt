@@ -8,7 +8,7 @@ internal object SubharmonicCorrector {
 
     private const val MAX_STEPS = 1
 
-    const val MIN_PEAK_RATIO = 0.03f
+    const val MIN_PEAK_RATIO = 0.06f
 
     fun fundamentalBin(activation: FloatArray, peakBin: Int): Int {
         var bin = peakBin

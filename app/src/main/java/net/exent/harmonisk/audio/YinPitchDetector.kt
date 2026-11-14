@@ -7,7 +7,7 @@ import kotlin.math.min
 internal class YinPitchDetector(
     private val sampleRate: Int = PitchResampler.TARGET_RATE,
     private val minFrequency: Float = 35f,
-    private val maxFrequency: Float = 1500f,
+    private val maxFrequency: Float = 2000f,
     private val threshold: Float = 0.1f
 ) {
     private val tauMin = max(2, (sampleRate / maxFrequency).toInt())

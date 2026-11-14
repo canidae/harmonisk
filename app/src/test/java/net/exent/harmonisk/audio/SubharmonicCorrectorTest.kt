@@ -36,6 +36,18 @@ class SubharmonicCorrectorTest {
     }
 
     @Test
+    fun correctsHighPitchesWhenTheSubharmonicIsStrong() {
+        val act = activation(300 to 0.8f, 240 to 0.25f)
+        assertEquals(240, SubharmonicCorrector.fundamentalBin(act, 300))
+    }
+
+    @Test
+    fun ignoresWeakSubharmonicsAtHighPitches() {
+        val act = activation(300 to 0.8f, 240 to 0.04f)
+        assertEquals(300, SubharmonicCorrector.fundamentalBin(act, 300))
+    }
+
+    @Test
     fun requiresALocalMaximumAtTheSubharmonic() {
         val act = FloatArray(360) { if (it <= 200) it / 200f else 1f }
         assertEquals(200, SubharmonicCorrector.fundamentalBin(act, 200))

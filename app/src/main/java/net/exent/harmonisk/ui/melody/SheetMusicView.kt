@@ -221,37 +221,41 @@ fun SheetMusicView(
             }
     }
 
-    LaunchedEffect(midiReady, scrollTime, beatPositions, isSheetDragging, beatCursorView) {
+    LaunchedEffect(midiReady, beatPositions, beatCursorView) {
         if (!midiReady) return@LaunchedEffect
-        if (isSheetDragging) return@LaunchedEffect
-        val scroll = scrollView ?: return@LaunchedEffect
-        val params = beatCursorView?.layoutParams as? android.widget.RelativeLayout.LayoutParams
-        if (abs(songOffset) < 0.001 && params != null) {
-            val viewportWidth = scroll.width
-            if (viewportWidth <= 0) return@LaunchedEffect
-            val onScreenX = params.leftMargin - scroll.scrollX
-            val leadX = cursorInsetPx.toInt()
-            val pageRightX = viewportWidth - (CURSOR_INSET_DP * 4f * density).toInt()
-            if (onScreenX < 0) {
-                scroll.scrollTo(0, scroll.scrollY)
-            } else if (onScreenX > pageRightX) {
-                val maxScroll = ((scroll.getChildAt(0)?.width ?: 0) - viewportWidth).coerceAtLeast(0)
-                scroll.scrollTo((params.leftMargin - leadX).coerceIn(0, maxScroll), scroll.scrollY)
+        snapshotFlow { Triple(isSheetDragging, scrollTime, songOffset) }
+            .sample(50)
+            .collectLatest { (dragging, time, offset) ->
+                if (dragging) return@collectLatest
+                val scroll = scrollView ?: return@collectLatest
+                val params = beatCursorView?.layoutParams as? android.widget.RelativeLayout.LayoutParams
+                if (abs(offset) < 0.001 && params != null) {
+                    val viewportWidth = scroll.width
+                    if (viewportWidth <= 0) return@collectLatest
+                    val onScreenX = params.leftMargin - scroll.scrollX
+                    val leadX = cursorInsetPx.toInt()
+                    val pageRightX = viewportWidth - (CURSOR_INSET_DP * 4f * density).toInt()
+                    if (onScreenX < 0) {
+                        scroll.scrollTo(0, scroll.scrollY)
+                    } else if (onScreenX > pageRightX) {
+                        val maxScroll = ((scroll.getChildAt(0)?.width ?: 0) - viewportWidth).coerceAtLeast(0)
+                        scroll.scrollTo((params.leftMargin - leadX).coerceIn(0, maxScroll), scroll.scrollY)
+                    }
+                } else if (beatPositions.isNotEmpty()) {
+                    val timeMs = time.coerceIn(0.0, durationSec) * 1000.0
+                    val targetX = (xForTime(timeMs, beatPositions) * density).toInt() - cursorInsetPx.toInt()
+                    val firstBeatX = (beatPositions.first().xCss * density).toInt()
+                    val startX = if (targetX < firstBeatX + cursorInsetPx.toInt()) 0 else targetX.coerceAtLeast(0)
+                    scroll.scrollTo(startX, scroll.scrollY)
+                    val cursor = beatCursorView ?: return@collectLatest
+                    val cursorParams = cursor.layoutParams as? android.widget.RelativeLayout.LayoutParams
+                        ?: return@collectLatest
+                    cursor.clearAnimation()
+                    cursorParams.leftMargin = maxOf(startX + cursorInsetPx.toInt(), firstBeatX)
+                    cursor.visibility = View.VISIBLE
+                    cursor.requestLayout()
+                }
             }
-        } else if (beatPositions.isNotEmpty()) {
-            val timeMs = scrollTime.coerceIn(0.0, durationSec) * 1000.0
-            val targetX = (xForTime(timeMs, beatPositions) * density).toInt() - cursorInsetPx.toInt()
-            val firstBeatX = (beatPositions.first().xCss * density).toInt()
-            val startX = if (targetX < firstBeatX + cursorInsetPx.toInt()) 0 else targetX.coerceAtLeast(0)
-            scroll.scrollTo(startX, scroll.scrollY)
-            val cursor = beatCursorView ?: return@LaunchedEffect
-            val cursorParams = cursor.layoutParams as? android.widget.RelativeLayout.LayoutParams
-                ?: return@LaunchedEffect
-            cursor.clearAnimation()
-            cursorParams.leftMargin = maxOf(startX + cursorInsetPx.toInt(), firstBeatX)
-            cursor.visibility = View.VISIBLE
-            cursor.requestLayout()
-        }
     }
 }
 
