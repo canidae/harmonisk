@@ -38,6 +38,7 @@ class SettingsRepository(
         private const val LANGUAGE_CODE = "language_code"
         private const val INSTRUMENT_NAME = "instrument_name"
         private const val CONCERT_PITCH = "concert_pitch_a4"
+        private const val ADVENTURE_GOAL = "adventure_goal"
 
         private const val PREFS_NAME = "locale_prefs"
 
@@ -151,6 +152,15 @@ class SettingsRepository(
                     ?: Instrument.VIOLIN.name
             )
         }
+
+    fun adventureGoal(defaultGoal: Int): Flow<Int> =
+        context.dataStore.data.map { prefs ->
+            prefs[intPreferencesKey(ADVENTURE_GOAL)] ?: defaultGoal
+        }
+
+    suspend fun updateAdventureGoal(goal: Int) {
+        context.dataStore.edit { it[intPreferencesKey(ADVENTURE_GOAL)] = goal }
+    }
 
     suspend fun updateConcertPitch(frequency: Float) = setFloat(CONCERT_PITCH, frequency)
 

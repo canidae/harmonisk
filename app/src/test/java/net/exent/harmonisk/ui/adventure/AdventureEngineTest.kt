@@ -27,10 +27,21 @@ class AdventureEngineTest {
     )
 
     @Test
-    fun `the last field is forty-nine and the castle is fifty`() {
-        assertEquals(49, ADVENTURE_FIELD_COUNT)
-        assertEquals(50, ADVENTURE_GOAL)
-        assertEquals(25, ADVENTURE_HALFWAY)
+    fun `the default board has forty fields and the shortest has twenty`() {
+        assertEquals(40, ADVENTURE_DEFAULT_GOAL)
+        assertEquals(20, ADVENTURE_MIN_GOAL)
+        assertEquals(0, ADVENTURE_DEFAULT_GOAL % ADVENTURE_GOAL_STEP)
+        assertTrue(ADVENTURE_DEFAULT_GOAL in ADVENTURE_MIN_GOAL..ADVENTURE_MAX_GOAL)
+    }
+
+    @Test
+    fun `adventure length estimates the play time from players, fields and songs`() {
+        assertEquals(14, adventureMinutes(40, 1, 30.0))
+        assertEquals(27, adventureMinutes(40, 2, 30.0))
+        assertEquals(41, adventureMinutes(40, 3, 30.0))
+        assertEquals(34, adventureMinutes(20, 4, 45.0))
+        assertEquals(15, adventureMinutes(40, 1, 36.0))
+        assertTrue(adventureMinutes(40, 2, 45.0) > adventureMinutes(40, 2, 30.0))
     }
 
     @Test
@@ -39,14 +50,25 @@ class AdventureEngineTest {
     }
 
     @Test
-    fun `rewards are preassigned to fields one through forty-nine`() {
+    fun `rewards are preassigned to every field except the start and the castle`() {
         val rewards = generateFieldRewards(Random(5))
-        assertEquals(ADVENTURE_GOAL + 1, rewards.size)
+        assertEquals(ADVENTURE_DEFAULT_GOAL + 1, rewards.size)
         assertNull(rewards[0])
-        (1..ADVENTURE_FIELD_COUNT).forEach { field ->
+        (1 until ADVENTURE_DEFAULT_GOAL).forEach { field ->
             assertNotNull(rewards[field])
         }
-        assertNull(rewards[ADVENTURE_GOAL])
+        assertNull(rewards[ADVENTURE_DEFAULT_GOAL])
+    }
+
+    @Test
+    fun `a shorter board preassigns rewards to its own fields`() {
+        val rewards = generateFieldRewards(Random(5), goal = 20)
+        assertEquals(21, rewards.size)
+        assertNull(rewards[0])
+        (1 until 20).forEach { field ->
+            assertNotNull(rewards[field])
+        }
+        assertNull(rewards[20])
     }
 
     @Test
@@ -152,7 +174,7 @@ class AdventureEngineTest {
 
     @Test
     fun `the dice moves the player and returns the landing reward`() {
-        val rewards = MutableList<AdventureReward?>(ADVENTURE_GOAL + 1) { null }
+        val rewards = MutableList<AdventureReward?>(ADVENTURE_DEFAULT_GOAL + 1) { null }
         rewards[4] = AdventureReward.Stickers(
             listOf(AdventureSticker.MUSHROOM, AdventureSticker.CRYSTAL)
         )
@@ -167,7 +189,7 @@ class AdventureEngineTest {
 
     @Test
     fun `only the landing field reward is returned`() {
-        val rewards = MutableList<AdventureReward?>(ADVENTURE_GOAL + 1) { null }
+        val rewards = MutableList<AdventureReward?>(ADVENTURE_DEFAULT_GOAL + 1) { null }
         rewards[2] = AdventureReward.Song
         rewards[4] = AdventureReward.GoAgain
         val landing = resolveLanding(player("A", position = 0), dice = 4, fieldRewards = rewards)
@@ -176,18 +198,19 @@ class AdventureEngineTest {
 
     @Test
     fun `reaching the castle has no field reward and clamps the position`() {
-        val rewards = MutableList<AdventureReward?>(ADVENTURE_GOAL + 1) { AdventureReward.Song }
-        val landing = resolveLanding(player("A", position = 48), dice = 6, fieldRewards = rewards)
-        assertEquals(ADVENTURE_GOAL, landing.player.position)
+        val rewards = MutableList<AdventureReward?>(ADVENTURE_DEFAULT_GOAL + 1) { AdventureReward.Song }
+        val landing = resolveLanding(player("A", position = 38), dice = 6, fieldRewards = rewards)
+        assertEquals(ADVENTURE_DEFAULT_GOAL, landing.player.position)
         assertNull(landing.reward)
         assertTrue(landing.reachedGoal)
     }
 
     @Test
     fun `players cannot pass the castle`() {
-        assertEquals(46, player("A", position = 41).movedBy(5).position)
-        assertEquals(ADVENTURE_GOAL, player("A", position = 48).movedBy(10).position)
-        assertEquals(ADVENTURE_GOAL, player("A", position = ADVENTURE_GOAL).movedBy(6).position)
+        val goal = ADVENTURE_DEFAULT_GOAL
+        assertEquals(35, player("A", position = 31).movedBy(4, goal).position)
+        assertEquals(goal, player("A", position = 38).movedBy(10, goal).position)
+        assertEquals(goal, player("A", position = goal).movedBy(6, goal).position)
     }
 
     @Test
@@ -295,9 +318,9 @@ class AdventureEngineTest {
     }
 
     @Test
-    fun `map specs contain a start, forty-nine fields and a castle at the top`() {
+    fun `map specs contain a start, every field and a castle at the top`() {
         val spec = generateMapSpec(Random(3), columns = 4)
-        assertEquals(ADVENTURE_GOAL + 1, spec.points.size)
+        assertEquals(ADVENTURE_DEFAULT_GOAL + 1, spec.points.size)
         val start = spec.points.first()
         val castle = spec.points.last()
         assertTrue(start.x < 0.5f)
@@ -305,6 +328,13 @@ class AdventureEngineTest {
         assertTrue(castle.x in 0.45f..0.55f)
         assertTrue(castle.y < 0.1f)
         assertTrue(spec.contentAspect > 2f)
+    }
+
+    @Test
+    fun `a short map ends at the castle after its own fields`() {
+        val spec = generateMapSpec(Random(3), columns = 4, goal = 20)
+        assertEquals(21, spec.points.size)
+        assertTrue(spec.points.last().y < spec.points[19].y)
     }
 
     @Test

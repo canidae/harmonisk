@@ -4,10 +4,24 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
-const val ADVENTURE_FIELD_COUNT = 49
-const val ADVENTURE_GOAL = ADVENTURE_FIELD_COUNT + 1
-const val ADVENTURE_HALFWAY = ADVENTURE_GOAL / 2
+const val ADVENTURE_DEFAULT_GOAL = 40
+const val ADVENTURE_MIN_GOAL = 20
+const val ADVENTURE_MAX_GOAL = 60
+const val ADVENTURE_GOAL_STEP = 5
 const val ADVENTURE_CASTLE_BONUS = 100
+
+private const val ADVENTURE_SONG_PERCENT = 55
+private const val ADVENTURE_STICKER_PERCENT = 20
+private const val ADVENTURE_WHACK_PERCENT = 15
+private const val ADVENTURE_GO_AGAIN_PERCENT =
+    100 - ADVENTURE_SONG_PERCENT - ADVENTURE_STICKER_PERCENT - ADVENTURE_WHACK_PERCENT
+
+private const val ADVENTURE_STEPS_PER_TURN = 3.5
+private const val ADVENTURE_SONG_PERFORMANCE_FACTOR = 1.5
+private const val ADVENTURE_PREVIEWED_SONG_FRACTION = 1.0 / 3.0
+private const val ADVENTURE_SONG_TURN_OVERHEAD_SECONDS = 35.0
+private const val ADVENTURE_WHACK_TURN_SECONDS = 75.0
+private const val ADVENTURE_OTHER_TURN_SECONDS = 11.0
 
 enum class AdventureTurnPhase {
     ROLLING,
@@ -124,8 +138,8 @@ data class AdventureFaerie(
     val points: Int
 )
 
-fun AdventurePlayer.movedBy(fields: Int): AdventurePlayer =
-    copy(position = (position + fields.coerceAtLeast(0)).coerceAtMost(ADVENTURE_GOAL))
+fun AdventurePlayer.movedBy(fields: Int, goal: Int): AdventurePlayer =
+    copy(position = (position + fields.coerceAtLeast(0)).coerceAtMost(goal))
 
 fun AdventurePlayer.withScore(score: Float): AdventurePlayer = copy(
     songScore = songScore + score,
@@ -149,13 +163,29 @@ fun AdventurePlayer.withReward(reward: AdventureReward): AdventurePlayer = when 
     AdventureReward.Song, AdventureReward.GoAgain, AdventureReward.Whack -> this
 }
 
+fun adventureMinutes(goal: Int, playerCount: Int, averageSongSeconds: Double): Int {
+    if (playerCount <= 0) return 0
+    val songTurnSeconds = ADVENTURE_SONG_TURN_OVERHEAD_SECONDS +
+        averageSongSeconds * (ADVENTURE_SONG_PERFORMANCE_FACTOR + ADVENTURE_PREVIEWED_SONG_FRACTION)
+    val turnSeconds =
+        ADVENTURE_SONG_PERCENT / 100.0 * songTurnSeconds +
+            ADVENTURE_WHACK_PERCENT / 100.0 * ADVENTURE_WHACK_TURN_SECONDS +
+            (ADVENTURE_STICKER_PERCENT + ADVENTURE_GO_AGAIN_PERCENT) / 100.0 *
+            ADVENTURE_OTHER_TURN_SECONDS
+    val stepsPerRoll = ADVENTURE_STEPS_PER_TURN *
+        (1.0 - ADVENTURE_GO_AGAIN_PERCENT / 100.0)
+    val rolls = goal / stepsPerRoll * playerCount
+    return (rolls * turnSeconds / 60.0).roundToInt().coerceAtLeast(1)
+}
+
 fun resolveLanding(
     player: AdventurePlayer,
     dice: Int,
     fieldRewards: List<AdventureReward?>
 ): AdventureLanding {
-    val moved = player.movedBy(dice)
-    val reachedGoal = moved.position >= ADVENTURE_GOAL
+    val goal = fieldRewards.lastIndex
+    val moved = player.movedBy(dice, goal)
+    val reachedGoal = moved.position >= goal
     return AdventureLanding(
         player = moved,
         reward = if (reachedGoal) null else fieldRewards.getOrNull(moved.position),
@@ -163,19 +193,24 @@ fun resolveLanding(
     )
 }
 
-fun generateFieldRewards(random: Random): List<AdventureReward?> =
-    (0..ADVENTURE_GOAL).map { field ->
+fun generateFieldRewards(random: Random, goal: Int = ADVENTURE_DEFAULT_GOAL): List<AdventureReward?> =
+    (0..goal).map { field ->
         when (field) {
-            0, ADVENTURE_GOAL -> null
+            0, goal -> null
             else -> randomFieldReward(random)
         }
     }
 
-fun randomFieldReward(random: Random): AdventureReward = when (random.nextInt(100)) {
-    in 0 until 55 -> AdventureReward.Song
-    in 55 until 75 -> AdventureReward.Stickers(randomStickers(random))
-    in 75 until 90 -> AdventureReward.Whack
-    else -> AdventureReward.GoAgain
+fun randomFieldReward(random: Random): AdventureReward {
+    val roll = random.nextInt(100)
+    val stickerEnd = ADVENTURE_SONG_PERCENT + ADVENTURE_STICKER_PERCENT
+    val whackEnd = stickerEnd + ADVENTURE_WHACK_PERCENT
+    return when {
+        roll < ADVENTURE_SONG_PERCENT -> AdventureReward.Song
+        roll < stickerEnd -> AdventureReward.Stickers(randomStickers(random))
+        roll < whackEnd -> AdventureReward.Whack
+        else -> AdventureReward.GoAgain
+    }
 }
 
 fun randomStickers(random: Random): List<AdventureSticker> {

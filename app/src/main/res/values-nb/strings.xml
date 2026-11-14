@@ -232,10 +232,16 @@
     <string name="adventure_choose_songs">Velg sanger</string>
     <string name="adventure_selected_songs">%1$d valgt</string>
     <string name="adventure_start">Start eventyret</string>
+    <string name="adventure_length">Lengde på eventyret</string>
+    <string name="adventure_length_estimate">Omtrent %1$d min</string>
     <string name="adventure_folder_other">Andre sanger</string>
     <plurals name="adventure_song_count">
         <item quantity="one">%1$d sang</item>
         <item quantity="other">%1$d sanger</item>
+    </plurals>
+    <plurals name="adventure_field_count">
+        <item quantity="one">%1$d felt</item>
+        <item quantity="other">%1$d felt</item>
     </plurals>
     <string name="adventure_turn">%1$s sin tur</string>
     <string name="adventure_move">Flytt %1$d</string>

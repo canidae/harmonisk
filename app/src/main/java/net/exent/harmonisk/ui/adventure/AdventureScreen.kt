@@ -48,6 +48,7 @@ import net.exent.harmonisk.ui.whack.WhackRules
 import net.exent.harmonisk.ui.whack.WhackScreen
 import net.exent.harmonisk.ui.whack.WhackViewModel
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 @Composable
 fun AdventureScreen(
@@ -185,6 +186,10 @@ fun AdventureScreen(
             AdventureStep.SONGS -> SongSetupScreen(
                 melodies = melodies,
                 selectedIds = state.selectedSongIds,
+                playerCount = state.selectedPlayerIds.size,
+                goal = state.goal,
+                averageSongSeconds = state.averageSongSeconds,
+                onGoalChange = viewModel::setGoal,
                 onToggle = viewModel::toggleSong,
                 onSetGroup = viewModel::setSongs,
                 onBack = viewModel::backToPlayers,
@@ -452,6 +457,10 @@ private data class SongGroup(
 private fun SongSetupScreen(
     melodies: List<MelodyRepository.MelodyInfo>,
     selectedIds: Set<String>,
+    playerCount: Int,
+    goal: Int,
+    averageSongSeconds: Double?,
+    onGoalChange: (Int) -> Unit,
     onToggle: (String) -> Unit,
     onSetGroup: (Collection<String>, Boolean) -> Unit,
     onBack: () -> Unit,
@@ -505,6 +514,13 @@ private fun SongSetupScreen(
                 }
             }
             Spacer(Modifier.height(8.dp))
+            LengthPicker(
+                goal = goal,
+                playerCount = playerCount,
+                averageSongSeconds = averageSongSeconds,
+                onGoalChange = onGoalChange
+            )
+            Spacer(Modifier.height(8.dp))
             Button(
                 onClick = onStart,
                 enabled = selectedIds.isNotEmpty(),
@@ -519,6 +535,62 @@ private fun SongSetupScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun LengthPicker(
+    goal: Int,
+    playerCount: Int,
+    averageSongSeconds: Double?,
+    onGoalChange: (Int) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1936).copy(alpha = 0.92f))
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.adventure_length),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = pluralStringResource(R.plurals.adventure_field_count, goal, goal),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = StorybookGold
+                )
+            }
+            Slider(
+                value = goal.toFloat(),
+                onValueChange = {
+                    onGoalChange((it / ADVENTURE_GOAL_STEP).roundToInt() * ADVENTURE_GOAL_STEP)
+                },
+                valueRange = ADVENTURE_MIN_GOAL.toFloat()..ADVENTURE_MAX_GOAL.toFloat(),
+                steps = (ADVENTURE_MAX_GOAL - ADVENTURE_MIN_GOAL) / ADVENTURE_GOAL_STEP - 1,
+                colors = SliderDefaults.colors(
+                    thumbColor = StorybookGold,
+                    activeTrackColor = StorybookGold,
+                    inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+            val estimate = averageSongSeconds?.let { average ->
+                stringResource(
+                    R.string.adventure_length_estimate,
+                    adventureMinutes(goal, playerCount, average)
+                )
+            } ?: " "
+            Text(
+                text = estimate,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.7f)
+            )
         }
     }
 }

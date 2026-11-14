@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -49,6 +51,8 @@ data class AdventureState(
     val moveFrom: Int = 0,
     val spinDurationMs: Long = AdventureTiming.SPIN_MS,
     val currentLevel: Int = 1,
+    val goal: Int = ADVENTURE_DEFAULT_GOAL,
+    val averageSongSeconds: Double? = null,
     val mapSeed: Long = 0L,
     val fieldRewards: List<AdventureReward?> = emptyList(),
     val reward: AdventureReward? = null,
@@ -104,8 +108,18 @@ class AdventureViewModel @Inject constructor(
     private var faerieJob: Job? = null
     private var pendingLanding: AdventureLanding? = null
     private var lastResultId = 0L
+    private var goalChosen = false
+    private var durationJob: Job? = null
 
     init {
+        viewModelScope.launch {
+            val stored = settingsRepository.adventureGoal(ADVENTURE_DEFAULT_GOAL).first()
+            if (!goalChosen && _state.value.step == AdventureStep.PLAYERS) {
+                _state.update {
+                    it.copy(goal = stored.coerceIn(ADVENTURE_MIN_GOAL, ADVENTURE_MAX_GOAL))
+                }
+            }
+        }
         viewModelScope.launch {
             session.result.collect { result ->
                 if (result != null && result.turn.id != lastResultId) {
@@ -149,6 +163,14 @@ class AdventureViewModel @Inject constructor(
         }
     }
 
+    fun setGoal(goal: Int) {
+        goalChosen = true
+        val chosen = goal.coerceIn(ADVENTURE_MIN_GOAL, ADVENTURE_MAX_GOAL)
+        if (chosen == _state.value.goal) return
+        _state.update { it.copy(goal = chosen) }
+        viewModelScope.launch { settingsRepository.updateAdventureGoal(chosen) }
+    }
+
     fun backToPlayers() {
         _state.update { it.copy(step = AdventureStep.PLAYERS) }
     }
@@ -158,6 +180,7 @@ class AdventureViewModel @Inject constructor(
             val selected = current.selectedSongIds
             current.copy(selectedSongIds = if (songId in selected) selected - songId else selected + songId)
         }
+        refreshSongDuration()
     }
 
     fun setSongs(songIds: Collection<String>, selected: Boolean) {
@@ -166,6 +189,30 @@ class AdventureViewModel @Inject constructor(
                 selectedSongIds = if (selected) current.selectedSongIds + songIds
                 else current.selectedSongIds - songIds.toSet()
             )
+        }
+        refreshSongDuration()
+    }
+
+    private fun refreshSongDuration() {
+        durationJob?.cancel()
+        val selected = melodies.value.filter { it.id in _state.value.selectedSongIds }
+        if (selected.isEmpty()) {
+            _state.update { it.copy(averageSongSeconds = null) }
+            return
+        }
+        durationJob = viewModelScope.launch {
+            delay(150)
+            val durations = withContext(Dispatchers.IO) {
+                selected.mapNotNull { melody ->
+                    melodyRepository.loadMultiTrack(melody)
+                        .firstOrNull { it.notes.isNotEmpty() }
+                        ?.durationSeconds
+                        ?.takeIf { it > 0.0 }
+                }
+            }
+            _state.update {
+                it.copy(averageSongSeconds = durations.takeIf { list -> list.isNotEmpty() }?.average())
+            }
         }
     }
 
@@ -193,6 +240,7 @@ class AdventureViewModel @Inject constructor(
         }
         val mapSeed = random.nextLong()
         val first = random.nextInt(players.size)
+        val goal = snapshot.goal.coerceIn(ADVENTURE_MIN_GOAL, ADVENTURE_MAX_GOAL)
         _state.update {
             it.copy(
                 step = AdventureStep.MAP,
@@ -205,8 +253,9 @@ class AdventureViewModel @Inject constructor(
                 goAgain = false,
                 moveFrom = players[first].position,
                 spinDurationMs = AdventureTiming.SPIN_MS,
-                fieldRewards = generateFieldRewards(Random(mapSeed)),
+                fieldRewards = generateFieldRewards(Random(mapSeed), goal),
                 currentLevel = 1,
+                goal = goal,
                 mapSeed = mapSeed,
                 reward = null,
                 faerie = null,
@@ -277,7 +326,8 @@ class AdventureViewModel @Inject constructor(
         val reward = landing.reward
         val landed = if (reward is AdventureReward.Stickers) player.withReward(reward) else player
         val players = snapshot.players.toMutableList().also { it[index] = landed }
-        val crossedHalfway = !snapshot.faerieGiven && players.all { it.position >= ADVENTURE_HALFWAY }
+        val crossedHalfway = !snapshot.faerieGiven &&
+            players.all { it.position >= snapshot.goal / 2 }
         val faerie = if (crossedHalfway) faerieGift(players) else null
         if (faerie != null) {
             val recipient = players.indexOfFirst { it.profileId == faerie.playerId }
@@ -541,7 +591,8 @@ class AdventureViewModel @Inject constructor(
         pendingLanding = null
         cues.stopAll()
         session.clear()
-        _state.value = AdventureState()
+        val previous = _state.value
+        _state.value = AdventureState(goal = previous.goal)
     }
 
     fun clear() {

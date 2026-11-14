@@ -232,10 +232,16 @@
     <string name="adventure_choose_songs">Choose songs</string>
     <string name="adventure_selected_songs">%1$d selected</string>
     <string name="adventure_start">Start adventure</string>
+    <string name="adventure_length">Adventure length</string>
+    <string name="adventure_length_estimate">About %1$d min</string>
     <string name="adventure_folder_other">Other songs</string>
     <plurals name="adventure_song_count">
         <item quantity="one">%1$d song</item>
         <item quantity="other">%1$d songs</item>
+    </plurals>
+    <plurals name="adventure_field_count">
+        <item quantity="one">%1$d field</item>
+        <item quantity="other">%1$d fields</item>
     </plurals>
     <string name="adventure_turn">%1$s’s turn</string>
     <string name="adventure_move">Move %1$d</string>

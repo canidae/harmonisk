@@ -168,16 +168,20 @@ private fun crossings(pathSamples: List<Offset>, river: List<Offset>): Int {
     return total
 }
 
-fun generateMapSpec(random: Random, columns: Int = 4): AdventureMapSpec {
+fun generateMapSpec(
+    random: Random,
+    columns: Int = 4,
+    goal: Int = ADVENTURE_DEFAULT_GOAL
+): AdventureMapSpec {
     val columnCount = columns.coerceAtLeast(3)
-    val rows = (ADVENTURE_GOAL + columnCount - 1) / columnCount
+    val rows = (goal + columnCount - 1) / columnCount
     val contentUnits = rows + MAP_TOP_UNITS + MAP_BOTTOM_UNITS
     val cellW = 1f / columnCount
     val cellH = 1f / contentUnits
     val contentAspect = contentUnits / columnCount
 
     fun rowY(row: Int) = (contentUnits - MAP_BOTTOM_UNITS - (row + 0.5f)) / contentUnits
-    val fields = (0 until ADVENTURE_GOAL).map { index ->
+    val fields = (0 until goal).map { index ->
         val row = index / columnCount
         val positionInRow = index % columnCount
         val column = if (row % 2 == 0) positionInRow else columnCount - 1 - positionInRow
@@ -313,8 +317,12 @@ fun AdventureMap(
     BoxWithConstraints(modifier) {
         val density = LocalDensity.current
         val viewportHeightPx = with(density) { maxHeight.toPx() }
+        val goal = if (fieldRewards.size > 1) fieldRewards.lastIndex else ADVENTURE_DEFAULT_GOAL
         val columns = (maxWidth.value / 92f).roundToInt().coerceIn(4, 8)
-        val spec = remember(mapSeed, columns) { generateMapSpec(Random(mapSeed), columns) }
+            .coerceAtMost((goal / 5).coerceAtLeast(4))
+        val spec = remember(mapSeed, columns, goal) {
+            generateMapSpec(Random(mapSeed), columns, goal)
+        }
         val contentWidth = maxWidth
         val contentHeight = maxOf(contentWidth * spec.contentAspect, maxHeight)
         val contentWidthPx = with(density) { contentWidth.toPx() }
@@ -418,7 +426,7 @@ fun AdventureMap(
                             topLeft = Offset(center.x - layout.size.width / 2f, center.y - layout.size.height / 2f)
                         )
                     }
-                    if (players.any { it.position >= ADVENTURE_GOAL && it.profileId == currentPlayerId }) {
+                    if (players.any { it.position >= goal && it.profileId == currentPlayerId }) {
                         drawCircle(
                             color = StorybookGold,
                             radius = 30.dp.toPx(),
@@ -446,7 +454,7 @@ fun AdventureMap(
                 }
 
                 pointsDp.forEachIndexed { index, point ->
-                    if (index <= ADVENTURE_FIELD_COUNT) {
+                    if (index < goal) {
                         val field = index
                         val reached = players.any { it.position >= field }
                         val active = !moving && players.any { it.position == field && it.profileId == currentPlayerId }
