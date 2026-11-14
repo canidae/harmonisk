@@ -120,13 +120,9 @@ object MidiCues {
     val WhackIntro = midiCue {
         program(BELLS, 12)
         program(HARP, 46)
-        drum()
-        note(DRUMS, 39, 0, 90, 86)
-        note(DRUMS, 39, 180, 90, 96)
-        note(DRUMS, 76, 360, 70, 92)
-        arp(BELLS, listOf(n(5, C), n(5, E), n(5, G), n(6, C)), 430, 70, 260, 96)
-        note(HARP, n(3, C), 730, 760, 52)
-        chord(BELLS, listOf(n(5, C), n(5, E), n(5, G)), 730, 760, 74)
+        arp(BELLS, listOf(n(5, C), n(5, E), n(5, G), n(6, C)), 0, 75, 260, 94)
+        note(HARP, n(3, C), 0, 820, 48)
+        chord(BELLS, listOf(n(5, C), n(5, E), n(5, G)), 560, 700, 70)
     }
 
     val SongIntro = midiCue {
