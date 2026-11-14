@@ -1,12 +1,15 @@
 package net.exent.harmonisk.audio
 
 import android.content.Context
+import android.media.MediaCodec
+import android.media.MediaCodecInfo
+import android.media.MediaFormat
+import android.media.MediaMuxer
 import android.media.MediaPlayer
-import android.os.SystemClock
+import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -44,24 +47,37 @@ class PlaybackRecorder(
     context: Context,
     private val capture: AudioCaptureService
 ) {
-    companion object {
-        private const val HEADER_SIZE = 44
-        private const val BYTES_PER_SAMPLE = 2
+    private companion object {
+        private const val TAG = "PlaybackRecorder"
+        private const val SAMPLE_RATE = AudioConstants.SAMPLE_RATE
+        private const val AAC_BIT_RATE = 96_000
+        private const val CODEC_TIMEOUT_US = 10_000L
+        private const val MAX_DRAIN_ATTEMPTS = 500
+        private const val MIN_RECORDING_MS = 1_000L
     }
 
     private val directory = File(context.filesDir, "recordings")
-    private val audioFile = File(directory, "last.wav")
+    private val audioFile = File(directory, "last.m4a")
+    private val legacyAudioFile = File(directory, "last.wav")
     private val metaFile = File(directory, "last.json")
-    private val takeAudioFile = File(directory, "take.wav")
+    private val takeAudioFile = File(directory, "take.m4a")
+    private val legacyTakeAudioFile = File(directory, "take.wav")
     private val takeMetaFile = File(directory, "take.json")
     private val lock = Any()
 
-    private var raf: RandomAccessFile? = null
+    private var encoder: MediaCodec? = null
+    private var muxer: MediaMuxer? = null
+    private var muxerStarted = false
+    private var trackIndex = -1
+    private var pcmBuffer = ByteBuffer
+        .allocate(AudioConstants.BUFFER_SIZE_SAMPLES * 2)
+        .order(ByteOrder.LITTLE_ENDIAN)
 
     @Volatile
-    private var dataBytes = 0L
+    private var totalSamples = 0L
     private var recordingMelodyId: String? = null
     private var recordingLevel = 1
+    private var recordingFailed = false
 
     @Volatile
     var lastTake: RecordedTake? = readTake()
@@ -75,19 +91,54 @@ class PlaybackRecorder(
         discardPending()
         stopPlayback()
         directory.mkdirs()
-        dataBytes = 0L
         recordingMelodyId = melodyId
         recordingLevel = level
-        val file = RandomAccessFile(takeAudioFile, "rw")
-        file.setLength(0)
-        file.write(ByteArray(HEADER_SIZE))
-        raf = file
+        recordingFailed = false
+        totalSamples = 0L
+        synchronized(lock) {
+            takeAudioFile.delete()
+            legacyTakeAudioFile.delete()
+            var codec: MediaCodec? = null
+            try {
+                val format = MediaFormat.createAudioFormat(
+                    MediaFormat.MIMETYPE_AUDIO_AAC,
+                    SAMPLE_RATE,
+                    1
+                ).apply {
+                    setInteger(
+                        MediaFormat.KEY_AAC_PROFILE,
+                        MediaCodecInfo.CodecProfileLevel.AACObjectLC
+                    )
+                    setInteger(MediaFormat.KEY_BIT_RATE, AAC_BIT_RATE)
+                    setInteger(
+                        MediaFormat.KEY_MAX_INPUT_SIZE,
+                        AudioConstants.BUFFER_SIZE_SAMPLES * 2
+                    )
+                }
+                codec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC)
+                codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+                codec.start()
+                encoder = codec
+                muxer = MediaMuxer(
+                    takeAudioFile.absolutePath,
+                    MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4
+                )
+                muxerStarted = false
+                trackIndex = -1
+            } catch (e: Exception) {
+                Log.e(TAG, "Could not start AAC encoder", e)
+                runCatching { codec?.release() }
+                releaseEncoder()
+                recordingMelodyId = null
+                return
+            }
+        }
         capture.addSampleListener(sink)
     }
 
-    fun isRecording(): Boolean = raf != null
+    fun isRecording(): Boolean = synchronized(lock) { encoder != null }
 
-    fun elapsedMs(): Long = (dataBytes / BYTES_PER_SAMPLE) * 1000L / AudioConstants.SAMPLE_RATE
+    fun elapsedMs(): Long = totalSamples * 1000L / SAMPLE_RATE
 
     fun stopRecording(
         save: Boolean,
@@ -97,22 +148,30 @@ class PlaybackRecorder(
         capture.removeSampleListener(sink)
         val melodyId = recordingMelodyId
         val level = recordingLevel
-        val file = raf
-        raf = null
         recordingMelodyId = null
-        if (file == null) return null
-        synchronized(lock) {
-            runCatching {
-                writeHeader(file, dataBytes)
-                file.close()
+        val encoded = synchronized(lock) {
+            if (encoder != null) {
+                runCatching { drainEncoder(true) }
+                    .onFailure {
+                        recordingFailed = true
+                        Log.e(TAG, "Could not finish AAC encoder", it)
+                    }
+                val started = muxerStarted
+                releaseEncoder()
+                started
+            } else {
+                false
             }
         }
-        if (!save || melodyId == null || dataBytes < AudioConstants.SAMPLE_RATE * BYTES_PER_SAMPLE) {
+        val samples = totalSamples
+        val durationMs = samples * 1000L / SAMPLE_RATE
+        if (!save || melodyId == null || recordingFailed || !encoded ||
+            durationMs < MIN_RECORDING_MS
+        ) {
             takeAudioFile.delete()
             takeMetaFile.delete()
             return null
         }
-        val durationMs = elapsedMs()
         val take = RecordedTake(
             melodyId = melodyId,
             level = level,
@@ -121,13 +180,13 @@ class PlaybackRecorder(
             timeline = timeline,
             noteOffsetsMs = noteOffsetsMs
         )
-        val json = takeToJson(take)
         runCatching {
-            takeMetaFile.writeText(json.toString())
+            takeMetaFile.writeText(takeToJson(take).toString())
             audioFile.delete()
             metaFile.delete()
-            if (!takeAudioFile.renameTo(audioFile)) return null
-            takeMetaFile.renameTo(metaFile)
+            legacyAudioFile.delete()
+            check(takeAudioFile.renameTo(audioFile))
+            check(takeMetaFile.renameTo(metaFile))
         }.onFailure {
             takeAudioFile.delete()
             takeMetaFile.delete()
@@ -166,46 +225,132 @@ class PlaybackRecorder(
 
     private fun discardPending() {
         capture.removeSampleListener(sink)
-        runCatching { raf?.close() }
-        raf = null
+        synchronized(lock) {
+            releaseEncoder()
+            takeAudioFile.delete()
+            legacyTakeAudioFile.delete()
+            takeMetaFile.delete()
+        }
         recordingMelodyId = null
-        takeAudioFile.delete()
-        takeMetaFile.delete()
+        recordingFailed = false
+        totalSamples = 0L
     }
 
     private fun writeSamples(samples: FloatArray) {
         if (samples.isEmpty()) return
-        val bytes = ByteBuffer.allocate(samples.size * BYTES_PER_SAMPLE).order(ByteOrder.LITTLE_ENDIAN)
-        for (sample in samples) {
-            bytes.putShort((sample.coerceIn(-1f, 1f) * Short.MAX_VALUE).toInt().toShort())
-        }
         synchronized(lock) {
-            val file = raf ?: return
-            runCatching { file.write(bytes.array()) }
-            dataBytes += bytes.capacity()
+            val codec = encoder ?: return
+            try {
+                val bytes = samples.size * 2
+                if (pcmBuffer.capacity() < bytes) {
+                    pcmBuffer = ByteBuffer.allocate(bytes).order(ByteOrder.LITTLE_ENDIAN)
+                }
+                pcmBuffer.clear()
+                for (sample in samples) {
+                    pcmBuffer.putShort((sample.coerceIn(-1f, 1f) * Short.MAX_VALUE).toInt().toShort())
+                }
+                pcmBuffer.flip()
+                val inputIndex = codec.dequeueInputBuffer(CODEC_TIMEOUT_US)
+                if (inputIndex >= 0) {
+                    val input = codec.getInputBuffer(inputIndex)
+                    if (input != null) {
+                        input.clear()
+                        input.put(pcmBuffer)
+                        codec.queueInputBuffer(
+                            inputIndex,
+                            0,
+                            pcmBuffer.limit(),
+                            totalSamples * 1_000_000L / SAMPLE_RATE,
+                            0
+                        )
+                        totalSamples += samples.size
+                    } else {
+                        codec.queueInputBuffer(inputIndex, 0, 0, 0, 0)
+                    }
+                }
+                drainEncoder(false)
+            } catch (e: Exception) {
+                Log.e(TAG, "AAC encoding failed", e)
+                recordingFailed = true
+                releaseEncoder()
+                recordingMelodyId = null
+            }
         }
     }
 
-    private fun writeHeader(file: RandomAccessFile, pcmBytes: Long) {
-        val channels = 1
-        val bitsPerSample = 16
-        val byteRate = AudioConstants.SAMPLE_RATE * channels * bitsPerSample / 8
-        val buffer = ByteBuffer.allocate(HEADER_SIZE).order(ByteOrder.LITTLE_ENDIAN)
-        buffer.put("RIFF".toByteArray())
-        buffer.putInt((36 + pcmBytes).toInt())
-        buffer.put("WAVE".toByteArray())
-        buffer.put("fmt ".toByteArray())
-        buffer.putInt(16)
-        buffer.putShort(1)
-        buffer.putShort(channels.toShort())
-        buffer.putInt(AudioConstants.SAMPLE_RATE)
-        buffer.putInt(byteRate)
-        buffer.putShort((channels * bitsPerSample / 8).toShort())
-        buffer.putShort(bitsPerSample.toShort())
-        buffer.put("data".toByteArray())
-        buffer.putInt(pcmBytes.toInt())
-        file.seek(0)
-        file.write(buffer.array())
+    private fun drainEncoder(endOfStream: Boolean) {
+        val codec = encoder ?: return
+        if (endOfStream && !queueEndOfStream(codec)) {
+            recordingFailed = true
+            return
+        }
+        val info = MediaCodec.BufferInfo()
+        var attempts = 0
+        while (true) {
+            val outputIndex = codec.dequeueOutputBuffer(
+                info,
+                if (endOfStream) CODEC_TIMEOUT_US else 0L
+            )
+            when {
+                outputIndex == MediaCodec.INFO_TRY_AGAIN_LATER -> {
+                    if (!endOfStream || ++attempts > MAX_DRAIN_ATTEMPTS) return
+                }
+                outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
+                    if (!muxerStarted) {
+                        val target = muxer ?: return
+                        trackIndex = target.addTrack(codec.outputFormat)
+                        target.start()
+                        muxerStarted = true
+                    }
+                }
+                outputIndex >= 0 -> {
+                    val buffer = codec.getOutputBuffer(outputIndex)
+                    if (buffer != null) {
+                        if (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) info.size = 0
+                        if (info.size > 0 && muxerStarted) {
+                            buffer.position(info.offset)
+                            buffer.limit(info.offset + info.size)
+                            muxer?.writeSampleData(trackIndex, buffer, info)
+                        }
+                    }
+                    codec.releaseOutputBuffer(outputIndex, false)
+                    if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return
+                }
+                else -> return
+            }
+        }
+    }
+
+    private fun queueEndOfStream(codec: MediaCodec): Boolean {
+        repeat(MAX_DRAIN_ATTEMPTS) {
+            val inputIndex = codec.dequeueInputBuffer(CODEC_TIMEOUT_US)
+            if (inputIndex >= 0) {
+                codec.queueInputBuffer(
+                    inputIndex,
+                    0,
+                    0,
+                    totalSamples * 1_000_000L / SAMPLE_RATE,
+                    MediaCodec.BUFFER_FLAG_END_OF_STREAM
+                )
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun releaseEncoder() {
+        encoder?.let { codec ->
+            runCatching { codec.stop() }
+            runCatching { codec.release() }
+        }
+        encoder = null
+        muxer?.let { target ->
+            if (muxerStarted) runCatching { target.stop() }
+            runCatching { target.release() }
+        }
+        muxer = null
+        muxerStarted = false
+        trackIndex = -1
     }
 
     private fun takeToJson(take: RecordedTake): JSONObject = JSONObject()
@@ -229,7 +374,12 @@ class PlaybackRecorder(
         )
 
     private fun readTake(): RecordedTake? {
-        if (!audioFile.exists() || !metaFile.exists()) return null
+        if (!metaFile.exists()) return null
+        val file = when {
+            audioFile.exists() -> audioFile
+            legacyAudioFile.exists() -> legacyAudioFile
+            else -> return null
+        }
         return runCatching {
             val json = JSONObject(metaFile.readText())
             val timelineValues = json.getJSONArray("timeline")
@@ -247,7 +397,7 @@ class PlaybackRecorder(
             RecordedTake(
                 melodyId = json.getString("melodyId"),
                 level = json.getInt("level"),
-                audioFile = audioFile,
+                audioFile = file,
                 durationMs = json.getLong("durationMs"),
                 timeline = timeline,
                 noteOffsetsMs = offsets

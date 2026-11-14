@@ -541,7 +541,7 @@ fun MelodyPlayScreen(
                         val shared = RecordingExporter.share(
                             context,
                             file,
-                            RecordingExporter.fileName(gameState.melodyName)
+                            RecordingExporter.fileName(gameState.melodyName, file.extension)
                         )
                         if (!shared) {
                             Toast.makeText(context, R.string.recording_share_failed, Toast.LENGTH_SHORT).show()
@@ -558,7 +558,7 @@ fun MelodyPlayScreen(
                         val saved = RecordingExporter.download(
                             context,
                             file,
-                            RecordingExporter.fileName(gameState.melodyName)
+                            RecordingExporter.fileName(gameState.melodyName, file.extension)
                         )
                         Toast.makeText(
                             context,

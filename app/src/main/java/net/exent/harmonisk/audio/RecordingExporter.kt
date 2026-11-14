@@ -15,15 +15,18 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 object RecordingExporter {
-    private const val MIME_TYPE = "audio/wav"
     private const val DOWNLOAD_FOLDER = "Harmonisk"
 
-    fun fileName(melodyName: String?): String {
+    fun fileName(melodyName: String?, extension: String): String {
         val base = melodyName?.trim()?.takeIf { it.isNotEmpty() } ?: "Harmonisk"
         val safe = base.replace(Regex("""[\\/:*?"<>|]"""), "-").take(60)
         val stamp = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").format(LocalDateTime.now())
-        return "$safe-$stamp.wav"
+        val suffix = if (extension.equals("wav", ignoreCase = true)) "wav" else "m4a"
+        return "$safe-$stamp.$suffix"
     }
+
+    private fun mimeType(file: File): String =
+        if (file.extension.equals("wav", ignoreCase = true)) "audio/wav" else "audio/mp4"
 
     suspend fun share(context: Context, file: File, displayName: String): Boolean {
         val shared = withContext(Dispatchers.IO) {
@@ -36,7 +39,7 @@ object RecordingExporter {
         return runCatching {
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", shared)
             val send = Intent(Intent.ACTION_SEND).apply {
-                type = MIME_TYPE
+                type = mimeType(file)
                 putExtra(Intent.EXTRA_STREAM, uri)
                 clipData = ClipData.newUri(context.contentResolver, displayName, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -50,7 +53,7 @@ object RecordingExporter {
             val resolver = context.contentResolver
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
-                put(MediaStore.MediaColumns.MIME_TYPE, MIME_TYPE)
+                put(MediaStore.MediaColumns.MIME_TYPE, mimeType(file))
                 put(
                     MediaStore.MediaColumns.RELATIVE_PATH,
                     "${Environment.DIRECTORY_DOWNLOADS}/$DOWNLOAD_FOLDER"
