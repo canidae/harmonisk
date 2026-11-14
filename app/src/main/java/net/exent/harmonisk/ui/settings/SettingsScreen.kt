@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Timer
@@ -28,6 +29,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import android.content.pm.PackageManager
 import net.exent.harmonisk.R
 import net.exent.harmonisk.data.LocaleManager
+import net.exent.harmonisk.data.ThemeMode
 import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.components.brandBackground
 import kotlin.math.roundToInt
@@ -39,6 +41,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val isCalibrating by viewModel.isCalibrating.collectAsStateWithLifecycle()
     val calibrationTonesDetected by viewModel.calibrationTonesDetected.collectAsStateWithLifecycle()
     val calibrationNoDetection by viewModel.calibrationNoDetection.collectAsStateWithLifecycle()
@@ -90,6 +93,16 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            SettingSection(
+                title = stringResource(R.string.settings_appearance),
+                icon = Icons.Filled.Brightness6
+            ) {
+                ThemeModeSelector(
+                    selected = themeMode,
+                    onSelect = viewModel::updateThemeMode
+                )
+            }
+
             SettingSection(
                 title = stringResource(R.string.settings_language),
                 icon = Icons.Filled.Language
@@ -237,6 +250,29 @@ fun SettingsScreen(
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
                 Text(stringResource(R.string.settings_reset_to_defaults))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemeModeSelector(
+    selected: ThemeMode,
+    onSelect: (ThemeMode) -> Unit
+) {
+    val options = listOf(
+        ThemeMode.SYSTEM to R.string.settings_theme_system,
+        ThemeMode.LIGHT to R.string.settings_theme_light,
+        ThemeMode.DARK to R.string.settings_theme_dark
+    )
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        options.forEachIndexed { index, (mode, label) ->
+            SegmentedButton(
+                selected = mode == selected,
+                onClick = { onSelect(mode) },
+                shape = SegmentedButtonDefaults.itemShape(index, options.size)
+            ) {
+                Text(stringResource(label))
             }
         }
     }

@@ -13,14 +13,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import net.exent.harmonisk.music.NoteUtils
+import net.exent.harmonisk.ui.theme.LocalHarmoniskDarkTheme
 import net.exent.harmonisk.ui.theme.TunerAmber
+import net.exent.harmonisk.ui.theme.TunerAmberLight
 import net.exent.harmonisk.ui.theme.TunerGreen
+import net.exent.harmonisk.ui.theme.TunerGreenLight
 import net.exent.harmonisk.ui.theme.Yellow80
+import net.exent.harmonisk.ui.theme.YellowLight
 import net.exent.harmonisk.ui.utils.centsColor
 import kotlin.math.abs
 import kotlin.math.min
@@ -43,18 +46,23 @@ fun PitchGauge(
         label = "gauge_position"
     )
 
+    val darkTheme = LocalHarmoniskDarkTheme.current
+    val tunerGreen = if (darkTheme) TunerGreen else TunerGreenLight
+    val tunerAmber = if (darkTheme) TunerAmber else TunerAmberLight
+    val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = if (darkTheme) 0.25f else 0.18f)
+
     val gaugeColor by animateColorAsState(
         targetValue = when {
-            isSilent -> Color.Gray.copy(alpha = 0.5f)
-            isInTune -> TunerGreen
-            abs(centsOff) <= NoteUtils.PERFECT_CENTS -> Yellow80
-            else -> centsColor(centsOff)
+            isSilent -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+            isInTune -> tunerGreen
+            abs(centsOff) <= NoteUtils.PERFECT_CENTS -> if (darkTheme) Yellow80 else YellowLight
+            else -> centsColor(centsOff, darkTheme)
         },
         animationSpec = tween(durationMillis = 200),
         label = "gauge_color"
     )
     val noteColor by animateColorAsState(
-        targetValue = if (isInTune) TunerGreen else MaterialTheme.colorScheme.onSurface,
+        targetValue = if (isInTune) tunerGreen else MaterialTheme.colorScheme.onSurface,
         animationSpec = tween(durationMillis = 200),
         label = "note_color"
     )
@@ -86,7 +94,7 @@ fun PitchGauge(
 
             if (glowAlpha > 0f) {
                 drawArc(
-                    color = TunerGreen.copy(alpha = glowAlpha),
+                    color = tunerGreen.copy(alpha = glowAlpha),
                     startAngle = 180f, sweepAngle = 180f, useCenter = false,
                     topLeft = Offset(arcLeft, arcTop),
                     size = Size(arcWidth, arcHeight),
@@ -95,7 +103,7 @@ fun PitchGauge(
             }
 
             drawArc(
-                color = Color.Gray.copy(alpha = 0.3f),
+                color = trackColor,
                 startAngle = 180f, sweepAngle = 180f, useCenter = false,
                 topLeft = Offset(arcLeft, arcTop),
                 size = Size(arcWidth, arcHeight),
@@ -104,7 +112,7 @@ fun PitchGauge(
 
             val indicatorSweep = 60f
             drawArc(
-                color = TunerAmber.copy(alpha = bandAlpha),
+                color = tunerAmber.copy(alpha = bandAlpha),
                 startAngle = 180f + 90f - indicatorSweep / 2,
                 sweepAngle = indicatorSweep, useCenter = false,
                 topLeft = Offset(arcLeft, arcTop),
@@ -114,7 +122,7 @@ fun PitchGauge(
 
             val inTuneSweep = (inTuneCents / maxCents) * 90f
             drawArc(
-                color = TunerGreen,
+                color = tunerGreen,
                 startAngle = 180f + 90f - inTuneSweep,
                 sweepAngle = inTuneSweep * 2f, useCenter = false,
                 topLeft = Offset(arcLeft, arcTop),

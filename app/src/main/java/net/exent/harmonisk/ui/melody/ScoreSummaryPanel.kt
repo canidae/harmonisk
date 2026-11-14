@@ -10,6 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import net.exent.harmonisk.R
 import net.exent.harmonisk.music.MelodyScore
+import net.exent.harmonisk.ui.theme.LocalHarmoniskDarkTheme
 import net.exent.harmonisk.ui.utils.formatScore
 import net.exent.harmonisk.ui.utils.scoreColor
 
@@ -20,6 +21,7 @@ fun ScoreSummaryPanel(
     modifier: Modifier = Modifier,
     personalBest: Float? = null
 ) {
+    val darkTheme = LocalHarmoniskDarkTheme.current
     Column(modifier = modifier.padding(top = 8.dp)) {
         if (currentLevel > 2) {
             BreakdownRow(stringResource(R.string.score_pitch_accuracy), score.avgPitchScore)
@@ -47,7 +49,7 @@ fun ScoreSummaryPanel(
                     text = formatScore(personalBest),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
-                    color = scoreColor(personalBest)
+                    color = scoreColor(personalBest, darkTheme)
                 )
             }
         }
@@ -56,7 +58,8 @@ fun ScoreSummaryPanel(
 
 @Composable
 private fun BreakdownRow(label: String, value: Float) {
-    val color = scoreColor(value)
+    val darkTheme = LocalHarmoniskDarkTheme.current
+    val color = scoreColor(value, darkTheme)
 
     Row(
         modifier = Modifier

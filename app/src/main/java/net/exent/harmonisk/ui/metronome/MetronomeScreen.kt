@@ -44,8 +44,11 @@ import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.components.KeepScreenOn
 import net.exent.harmonisk.ui.components.brandBackground
 import net.exent.harmonisk.ui.theme.AmberAccent
+import net.exent.harmonisk.ui.theme.LocalHarmoniskDarkTheme
 import net.exent.harmonisk.ui.theme.MetronomeBlue
+import net.exent.harmonisk.ui.theme.MetronomeBlueLight
 import net.exent.harmonisk.ui.theme.PlayGreen
+import net.exent.harmonisk.ui.theme.TunerAmberLight
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,7 +88,7 @@ fun MetronomeScreen(
                             contentDescription = stringResource(
                                 if (state.soundEnabled) R.string.metronome_sound_on else R.string.metronome_sound_off
                             ),
-                            tint = if (state.soundEnabled) MetronomeBlue else Color.White.copy(alpha = 0.55f)
+                            tint = if (state.soundEnabled) Color.White else Color.White.copy(alpha = 0.55f)
                         )
                     }
                 }
@@ -158,9 +161,12 @@ private fun BeatDisplay(
     onMuteToggle: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val darkTheme = LocalHarmoniskDarkTheme.current
+    val accent = if (darkTheme) MetronomeBlue else MetronomeBlueLight
+    val accentAmber = if (darkTheme) AmberAccent else TunerAmberLight
     val accented = state.isRunning && state.currentBeat == state.accentBeat
     val muted = state.isRunning && state.currentBeat in state.mutedBeats
-    val color = if (accented) AmberAccent else MetronomeBlue
+    val color = if (accented) accentAmber else accent
     val alpha = if (muted) 0.45f else 1f
 
     Column(
@@ -247,18 +253,21 @@ private fun BeatDot(
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
+    val darkTheme = LocalHarmoniskDarkTheme.current
+    val accent = if (darkTheme) MetronomeBlue else MetronomeBlueLight
+    val accentAmber = if (darkTheme) AmberAccent else TunerAmberLight
     val isMuted = beat in state.mutedBeats
     val isAccent = beat == state.accentBeat && !isMuted
     val isCurrent = state.isRunning && beat == state.currentBeat && !isMuted
     val container = when {
-        isCurrent && isAccent -> AmberAccent
-        isCurrent -> MetronomeBlue
+        isCurrent && isAccent -> accentAmber
+        isCurrent -> accent
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
     val content = when {
         isMuted -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
-        isCurrent -> Color.Black
-        isAccent -> AmberAccent
+        isCurrent -> if (darkTheme) Color.Black else Color.White
+        isAccent -> accentAmber
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     val slash = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
@@ -268,7 +277,7 @@ private fun BeatDot(
         modifier = Modifier.size(dotSize),
         shape = CircleShape,
         color = container,
-        border = if (isAccent) BorderStroke(2.dp, AmberAccent) else null
+        border = if (isAccent) BorderStroke(2.dp, accentAmber) else null
     ) {
         Box(
             modifier = Modifier
@@ -389,8 +398,8 @@ private fun RunButton(state: MetronomeState, viewModel: MetronomeViewModel) {
             .fillMaxWidth()
             .height(56.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (state.isRunning) MaterialTheme.colorScheme.surfaceVariant else PlayGreen,
-            contentColor = if (state.isRunning) MaterialTheme.colorScheme.onSurfaceVariant else Color.Black
+            containerColor = if (state.isRunning) MaterialTheme.colorScheme.secondaryContainer else PlayGreen,
+            contentColor = if (state.isRunning) MaterialTheme.colorScheme.onSecondaryContainer else Color.Black
         )
     ) {
         Icon(if (state.isRunning) Icons.Filled.Pause else Icons.Filled.PlayArrow, contentDescription = null)

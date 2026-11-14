@@ -18,6 +18,7 @@ import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.data.AppSettings
 import net.exent.harmonisk.data.AudioDelayRepository
 import net.exent.harmonisk.data.SettingsRepository
+import net.exent.harmonisk.data.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.math.abs
@@ -45,6 +46,9 @@ class SettingsViewModel @Inject constructor(
 
     val settings: StateFlow<AppSettings> = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
+
+    val themeMode: StateFlow<ThemeMode> = settingsRepository.themeMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM)
 
     val currentDevice: StateFlow<AudioOutputDevice?> = audioDeviceMonitor.currentDevice
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -74,6 +78,10 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.updateLanguageCode(code)
             activity.recreate()
         }
+    }
+
+    fun updateThemeMode(mode: ThemeMode) {
+        viewModelScope.launch { settingsRepository.updateThemeMode(mode) }
     }
 
     fun updateSilenceThreshold(db: Float) {

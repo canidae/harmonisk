@@ -30,7 +30,9 @@ import net.exent.harmonisk.ui.components.PitchGauge
 import net.exent.harmonisk.ui.components.RequireMicPermission
 import net.exent.harmonisk.ui.components.KeepScreenOn
 import net.exent.harmonisk.ui.components.brandBackground
+import net.exent.harmonisk.ui.theme.LocalHarmoniskDarkTheme
 import net.exent.harmonisk.ui.theme.TunerGreen
+import net.exent.harmonisk.ui.theme.TunerGreenLight
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,6 +42,7 @@ fun TunerScreen(
     viewModel: TunerViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val tunerGreen = if (LocalHarmoniskDarkTheme.current) TunerGreen else TunerGreenLight
 
     KeepScreenOn()
 
@@ -78,7 +81,7 @@ fun TunerScreen(
                         .fillMaxWidth()
                         .background(
                             Brush.radialGradient(
-                                listOf(TunerGreen.copy(alpha = 0.12f), Color.Transparent)
+                                listOf(tunerGreen.copy(alpha = 0.12f), Color.Transparent)
                             )
                         ),
                     contentAlignment = Alignment.Center
@@ -100,7 +103,7 @@ fun TunerScreen(
                         modifier = Modifier.height(44.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        InTuneBadge(visible = state.isInTune)
+                        InTuneBadge(visible = state.isInTune, accent = tunerGreen)
                     }
 
                     Text(
@@ -174,15 +177,15 @@ fun TunerScreen(
 }
 
 @Composable
-private fun InTuneBadge(visible: Boolean) {
+private fun InTuneBadge(visible: Boolean, accent: Color) {
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn() + scaleIn(initialScale = 0.85f),
         exit = fadeOut() + scaleOut(targetScale = 0.9f)
     ) {
         Surface(
-            color = TunerGreen.copy(alpha = 0.16f),
-            contentColor = TunerGreen,
+            color = accent.copy(alpha = 0.16f),
+            contentColor = accent,
             shape = RoundedCornerShape(50)
         ) {
             Row(

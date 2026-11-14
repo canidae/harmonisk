@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.exent.harmonisk.R
 import net.exent.harmonisk.data.ScoreHistoryRepository.ScoreEntry
+import net.exent.harmonisk.ui.theme.LocalHarmoniskDarkTheme
 import net.exent.harmonisk.ui.theme.Purple40
 import net.exent.harmonisk.ui.utils.scoreColor
 
@@ -31,6 +32,7 @@ fun ScoreProgressGraph(
 ) {
     if (scores.isEmpty()) return
 
+    val darkTheme = LocalHarmoniskDarkTheme.current
     val lineColor = Purple40
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -152,7 +154,7 @@ fun ScoreProgressGraph(
 
             val dotRadius = if (compact) 5f else 6f
             for (i in points.indices) {
-                val dotColor = scoreColor(scores[i].overallScore)
+                val dotColor = scoreColor(scores[i].overallScore, darkTheme)
                 drawCircle(dotColor, dotRadius, points[i])
                 drawCircle(Color.White, dotRadius * 0.5f, points[i])
             }

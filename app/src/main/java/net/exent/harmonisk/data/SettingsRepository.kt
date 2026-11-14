@@ -36,6 +36,7 @@ class SettingsRepository(
         private const val METRONOME_SOUND_ENABLED = "metronome_sound_enabled"
         private const val METRONOME_MUTED_BEATS = "metronome_muted_beats"
         private const val LANGUAGE_CODE = "language_code"
+        private const val THEME_MODE = "theme_mode"
         private const val INSTRUMENT_NAME = "instrument_name"
         private const val CONCERT_PITCH = "concert_pitch_a4"
         private const val ADVENTURE_GOAL = "adventure_goal"
@@ -63,6 +64,12 @@ class SettingsRepository(
         fun getLanguageCodeSync(context: Context): String =
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(LANGUAGE_CODE, "system") ?: "system"
+
+        fun getThemeModeSync(context: Context): ThemeMode =
+            ThemeMode.fromName(
+                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .getString(THEME_MODE, ThemeMode.SYSTEM.name)
+            )
     }
 
     private val sharedPrefs: SharedPreferences =
@@ -157,6 +164,15 @@ class SettingsRepository(
         context.dataStore.data.map { prefs ->
             prefs[intPreferencesKey(ADVENTURE_GOAL)] ?: defaultGoal
         }
+
+    val themeMode: Flow<ThemeMode> = context.dataStore.data.map { prefs ->
+        ThemeMode.fromName(prefs[stringPreferencesKey(THEME_MODE)])
+    }
+
+    suspend fun updateThemeMode(mode: ThemeMode) {
+        context.dataStore.edit { it[stringPreferencesKey(THEME_MODE)] = mode.name }
+        sharedPrefs.edit { putString(THEME_MODE, mode.name) }
+    }
 
     suspend fun updateAdventureGoal(goal: Int) {
         context.dataStore.edit { it[intPreferencesKey(ADVENTURE_GOAL)] = goal }

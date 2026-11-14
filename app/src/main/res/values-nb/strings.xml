@@ -60,6 +60,10 @@
     <string name="permission_grant">Gi tillatelse</string>
 
     <!-- Settings -->
+    <string name="settings_appearance">Utseende</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Lyst</string>
+    <string name="settings_theme_dark">Mørkt</string>
     <string name="settings_mic_sensitivity">Mikrofonfølsomhet</string>
     <string name="settings_silence_threshold">%1$.0f dB</string>
     <string name="settings_silence_threshold_min">Mindre følsom</string>

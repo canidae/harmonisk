@@ -3,7 +3,6 @@ package net.exent.harmonisk.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val Green80 = Color(0xFFA5D6A7)
-val Green40 = Color(0xFF388E3C)
 
 val Yellow80 = Color(0xFFFFF59D)
 
@@ -11,13 +10,11 @@ val Orange80 = Color(0xFFFFCC80)
 val Orange40 = Color(0xFFFF9800)
 
 val Red80 = Color(0xFFEF9A9A)
-val Red40 = Color(0xFFD32F2F)
 
 val Purple80 = Color(0xFFCFBCFF)
 val Purple40 = Color(0xFF7C4DFF)
 
 val Teal80 = Color(0xFF80CBC4)
-val Teal40 = Color(0xFF00897B)
 
 val BrandPurple = Color(0xFF8B5CF6)
 val BrandBlue = Color(0xFF5B5BE0)
@@ -38,8 +35,17 @@ val AdventureInk = Color(0xFF23163E)
 
 val DarkBackground = Color(0xFF121218)
 val DarkSurface = Color(0xFF1E1E2A)
-val LightBackground = Color(0xFFFFFBFE)
-val LightSurface = Color(0xFFF5F5F5)
+val LightBackground = Color(0xFFF7F5FB)
+val LightSurface = Color(0xFFFFFFFF)
+
+val GreenLight = Color(0xFF2E7D32)
+val TealLight = Color(0xFF00695C)
+val YellowLight = Color(0xFF8A5A00)
+val OrangeLight = Color(0xFFBF5B00)
+val RedLight = Color(0xFFC62828)
+val MetronomeBlueLight = Color(0xFF1565C0)
+val TunerGreenLight = Color(0xFF00695C)
+val TunerAmberLight = Color(0xFFB26A00)
 
 val FingerColors = listOf(
     Color(0xFF2196F3),

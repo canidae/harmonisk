@@ -55,6 +55,7 @@ import net.exent.harmonisk.ui.profile.ProfileButton
 import net.exent.harmonisk.ui.profile.ProfileDialogs
 import net.exent.harmonisk.ui.profile.rememberProfileDialogState
 import net.exent.harmonisk.ui.theme.BrandPurple
+import net.exent.harmonisk.ui.theme.LocalHarmoniskDarkTheme
 import net.exent.harmonisk.ui.utils.folderDisplayName
 import net.exent.harmonisk.ui.utils.formatScore
 import net.exent.harmonisk.ui.utils.scoreColor
@@ -608,7 +609,8 @@ private fun MelodyCard(
 
 @Composable
 private fun LevelScoreBadge(level: Int, score: Float?, onClick: () -> Unit) {
-    val tint = score?.let { scoreColor(it) } ?: MaterialTheme.colorScheme.primary
+    val darkTheme = LocalHarmoniskDarkTheme.current
+    val tint = score?.let { scoreColor(it, darkTheme) } ?: MaterialTheme.colorScheme.primary
     Box(
         modifier = Modifier
             .size(48.dp)

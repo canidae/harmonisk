@@ -5,20 +5,30 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import net.exent.harmonisk.data.LocaleManager
 import net.exent.harmonisk.data.SettingsRepository
 import net.exent.harmonisk.ui.theme.HarmoniskTheme
 import net.exent.harmonisk.ui.navigation.NavGraph
-import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val initialThemeMode = SettingsRepository.getThemeModeSync(this)
         setContent {
-            HarmoniskTheme {
+            val themeMode by settingsRepository.themeMode.collectAsStateWithLifecycle(
+                initialValue = initialThemeMode
+            )
+            HarmoniskTheme(themeMode = themeMode) {
                 NavGraph()
             }
         }

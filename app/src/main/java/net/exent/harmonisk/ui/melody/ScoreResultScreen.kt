@@ -23,6 +23,7 @@ import net.exent.harmonisk.music.ScoringEngine
 import net.exent.harmonisk.music.ScoreTier
 import net.exent.harmonisk.ui.celebration.CelebrationLevel
 import net.exent.harmonisk.ui.celebration.ScoreCelebrationOverlay
+import net.exent.harmonisk.ui.theme.LocalHarmoniskDarkTheme
 import net.exent.harmonisk.ui.utils.formatScore
 import net.exent.harmonisk.ui.utils.scoreColor
 
@@ -49,6 +50,7 @@ fun ScoreResultModal(
     )
 
     val score = melodyScore.overallScore
+    val darkTheme = LocalHarmoniskDarkTheme.current
     val enthusiasm = enthusiasmLevel(score)
 
     Dialog(onDismissRequest = onDismiss) {
@@ -98,7 +100,7 @@ fun ScoreResultModal(
                             modifier = pulseModifier,
                             level = enthusiasm,
                             scoreText = formatScore(animatedScore),
-                            scoreColor = scoreColor(score)
+                            scoreColor = scoreColor(score, darkTheme)
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
