@@ -6,7 +6,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,7 +38,9 @@ fun ScoreResultModal(
     celebrationLevel: CelebrationLevel = CelebrationLevel.NONE,
     personalBest: Float? = null,
     recordingAvailable: Boolean = false,
-    onListenRecording: () -> Unit = {}
+    onListenRecording: () -> Unit = {},
+    onShareRecording: () -> Unit = {},
+    onDownloadRecording: () -> Unit = {}
 ) {
     val animatedScore by animateFloatAsState(
         targetValue = melodyScore.overallScore,
@@ -107,10 +111,35 @@ fun ScoreResultModal(
 
                         if (recordingAvailable) {
                             Spacer(modifier = Modifier.height(12.dp))
-                            OutlinedButton(onClick = onListenRecording) {
+                            OutlinedButton(
+                                onClick = onListenRecording,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
                                 Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(stringResource(R.string.melody_listen_recording))
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = onShareRecording,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(stringResource(R.string.melody_share_recording))
+                                }
+                                OutlinedButton(
+                                    onClick = onDownloadRecording,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(stringResource(R.string.melody_download_recording))
+                                }
                             }
                         }
 

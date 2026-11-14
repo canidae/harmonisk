@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import net.exent.harmonisk.BuildConfig
 import javax.inject.Inject
+import java.io.File
 import kotlin.math.abs
 
 data class MelodyScoreSummary(val level: Int, val score: Float?)
@@ -679,6 +680,11 @@ class MelodyViewModel @Inject constructor(
         val offset = replaySavedOffset ?: return
         replaySavedOffset = null
         _viewState.update { it.copy(songTimeOffsetSeconds = offset) }
+    }
+
+    fun recordingFile(): File? {
+        val melodyId = currentMelodyId ?: return null
+        return playbackRecorder.takeFor(melodyId)?.audioFile?.takeIf { it.isFile }
     }
 
     val isPreviewPlaying: StateFlow<Boolean> = melodyPlayer.isPlaying

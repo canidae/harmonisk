@@ -1,5 +1,6 @@
 package net.exent.harmonisk.ui.melody
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,6 +41,7 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.harmonisk.R
+import net.exent.harmonisk.audio.RecordingExporter
 import net.exent.harmonisk.midi.MidiToAlphaTex
 import net.exent.harmonisk.ui.components.CanvasMode
 import net.exent.harmonisk.ui.components.VOICE_COLORS
@@ -57,6 +59,7 @@ import net.exent.harmonisk.ui.profile.rememberProfileDialogState
 import net.exent.harmonisk.ui.utils.formatScore
 import net.exent.harmonisk.ui.PANEL_BTN_SIZE
 import net.exent.harmonisk.ui.theme.*
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
@@ -79,6 +82,7 @@ fun MelodyPlayScreen(
     val devModeEnabled by viewModel.devModeEnabled.collectAsStateWithLifecycle()
     val density = LocalDensity.current
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var showResultsModal by remember { mutableStateOf(false) }
     var showConfigMenu by remember { mutableStateOf(false) }
     val profileDialogs = rememberProfileDialogState()
@@ -527,6 +531,42 @@ fun MelodyPlayScreen(
             onListenRecording = {
                 showResultsModal = false
                 viewModel.toggleRecordingPlayback()
+            },
+            onShareRecording = {
+                val file = viewModel.recordingFile()
+                if (file == null) {
+                    Toast.makeText(context, R.string.recording_share_failed, Toast.LENGTH_SHORT).show()
+                } else {
+                    scope.launch {
+                        val shared = RecordingExporter.share(
+                            context,
+                            file,
+                            RecordingExporter.fileName(gameState.melodyName)
+                        )
+                        if (!shared) {
+                            Toast.makeText(context, R.string.recording_share_failed, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            },
+            onDownloadRecording = {
+                val file = viewModel.recordingFile()
+                if (file == null) {
+                    Toast.makeText(context, R.string.recording_save_failed, Toast.LENGTH_SHORT).show()
+                } else {
+                    scope.launch {
+                        val saved = RecordingExporter.download(
+                            context,
+                            file,
+                            RecordingExporter.fileName(gameState.melodyName)
+                        )
+                        Toast.makeText(
+                            context,
+                            if (saved) R.string.recording_saved else R.string.recording_save_failed,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
             }
         )
     }

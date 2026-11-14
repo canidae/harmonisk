@@ -164,6 +164,12 @@
     <string name="melody_preview_cue">A preview will play first</string>
     <string name="melody_replay">Your playing</string>
     <string name="melody_listen_recording">Listen to your playing</string>
+    <string name="melody_share_recording">Share</string>
+    <string name="melody_download_recording">Download</string>
+    <string name="recording_share_title">Share recording</string>
+    <string name="recording_saved">Recording saved to Downloads</string>
+    <string name="recording_save_failed">Could not save the recording</string>
+    <string name="recording_share_failed">Could not share the recording</string>
     <string name="melody_your_turn">Your turn to play</string>
     <string name="melody_failed_load_midi">Failed to load song file</string>
     <string name="melody_failed_load_melody">Failed to load melody</string>

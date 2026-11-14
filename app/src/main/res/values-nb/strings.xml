@@ -164,6 +164,12 @@
     <string name="melody_preview_cue">En forhåndsvisning spilles først</string>
     <string name="melody_replay">Din spilling</string>
     <string name="melody_listen_recording">Hør på spillingen din</string>
+    <string name="melody_share_recording">Del</string>
+    <string name="melody_download_recording">Last ned</string>
+    <string name="recording_share_title">Del opptak</string>
+    <string name="recording_saved">Opptaket er lagret i Nedlastinger</string>
+    <string name="recording_save_failed">Kunne ikke lagre opptaket</string>
+    <string name="recording_share_failed">Kunne ikke dele opptaket</string>
     <string name="melody_your_turn">Din tur til å spille</string>
     <string name="melody_failed_load_midi">Kunne ikke laste sangfilen</string>
     <string name="melody_failed_load_melody">Kunne ikke laste melodien</string>
