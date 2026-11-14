@@ -126,31 +126,13 @@ class ScoringEngine {
     fun calculateMelodyScore(noteScores: List<NoteScore>): MelodyScore {
         if (noteScores.isEmpty()) return MelodyScore.EMPTY
 
-        var currentStreak = 0
-        var longestStreak = 0
-
-        for (score in noteScores) {
-            if (score.pitchAccuracy == PitchAccuracy.PERFECT || score.pitchAccuracy == PitchAccuracy.GREAT) {
-                currentStreak++
-            } else {
-                longestStreak = max(longestStreak, currentStreak)
-                currentStreak = 0
-            }
-        }
-        longestStreak = max(longestStreak, currentStreak)
-
         val avgScore = noteScores.map { it.overallScore }.average().toFloat()
         val notesHit = noteScores.count { it.pitchAccuracy != PitchAccuracy.MISS }
-        val perfectCount = noteScores.count { it.pitchAccuracy == PitchAccuracy.PERFECT }
-        val greatCount = noteScores.count { it.pitchAccuracy == PitchAccuracy.GREAT }
 
         return MelodyScore(
             overallScore = avgScore,
             totalNotes = noteScores.size,
             notesHit = notesHit,
-            perfectNotes = perfectCount,
-            greatNotes = greatCount,
-            longestStreak = longestStreak,
             avgPitchScore = noteScores.map { it.pitchScore }.average().toFloat(),
             avgDurationScore = noteScores.map { it.durationScore }.average().toFloat()
         )
@@ -182,16 +164,12 @@ data class MelodyScore(
     val overallScore: Float,
     val totalNotes: Int,
     val notesHit: Int,
-    val perfectNotes: Int,
-    val greatNotes: Int,
-    val longestStreak: Int,
     val avgPitchScore: Float,
     val avgDurationScore: Float,
     val timeScore: Float = 1.0f,
-    val wrongNoteScore: Float = 100f,
-    val wrongNoteCount: Int = 0
+    val wrongNoteScore: Float = 100f
 ) {
     companion object {
-        val EMPTY = MelodyScore(0f, 0, 0, 0, 0, 0, 0f, 0f)
+        val EMPTY = MelodyScore(0f, 0, 0, 0f, 0f)
     }
 }

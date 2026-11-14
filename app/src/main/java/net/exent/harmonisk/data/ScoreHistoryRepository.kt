@@ -31,14 +31,10 @@ class ScoreHistoryRepository(
         val overallScore: Float,
         val totalNotes: Int,
         val notesHit: Int,
-        val perfectNotes: Int,
-        val greatNotes: Int,
-        val longestStreak: Int,
         val avgPitchScore: Float,
         val avgDurationScore: Float,
         val level: Int = 1,
         val instrument: String = "PIANO",
-        val wrongNoteCount: Int = 0,
         val wrongNoteScore: Float = 100f
     ) {
         companion object {
@@ -52,14 +48,10 @@ class ScoreHistoryRepository(
                 overallScore = overallScore,
                 totalNotes = score.totalNotes,
                 notesHit = score.notesHit,
-                perfectNotes = score.perfectNotes,
-                greatNotes = score.greatNotes,
-                longestStreak = score.longestStreak,
                 avgPitchScore = score.avgPitchScore,
                 avgDurationScore = score.avgDurationScore,
                 level = level,
                 instrument = instrument,
-                wrongNoteCount = score.wrongNoteCount,
                 wrongNoteScore = score.wrongNoteScore
             )
         }

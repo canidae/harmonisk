@@ -13,9 +13,6 @@ class LevelChangesTest {
         overallScore = 50f,
         totalNotes = 10,
         notesHit = 5,
-        perfectNotes = 5,
-        greatNotes = 0,
-        longestStreak = 1,
         avgPitchScore = 50f,
         avgDurationScore = 50f,
         level = level

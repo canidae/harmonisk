@@ -153,8 +153,6 @@ class ScoringEngineTest {
         val melodyScore = engine.calculateMelodyScore(scores)
         assertEquals(100f, melodyScore.overallScore, 0.01f)
         assertEquals(10, melodyScore.notesHit)
-        assertEquals(10, melodyScore.perfectNotes)
-        assertEquals(10, melodyScore.longestStreak)
     }
 
     @Test
@@ -167,9 +165,6 @@ class ScoringEngineTest {
         )
         val melodyScore = engine.calculateMelodyScore(scores)
         assertEquals(3, melodyScore.notesHit)
-        assertEquals(2, melodyScore.perfectNotes)
-        assertEquals(1, melodyScore.greatNotes)
-        assertEquals(2, melodyScore.longestStreak)
     }
 
     @Test
@@ -261,31 +256,9 @@ class ScoringEngineTest {
 
 
     @Test
-    fun `trailing streak at end of melody is counted`() {
-        val scores = listOf(
-            NoteScore(0f, 50f, 30f, PitchAccuracy.MISS),
-            NoteScore(100f, 100f, 100f, PitchAccuracy.PERFECT),
-            NoteScore(100f, 100f, 100f, PitchAccuracy.PERFECT),
-            NoteScore(100f, 100f, 100f, PitchAccuracy.PERFECT)
-        )
-        val melodyScore = engine.calculateMelodyScore(scores)
-        assertEquals(3, melodyScore.longestStreak)
-    }
-
-    @Test
-    fun `all perfect notes streak equals note count`() {
-        val noteCount = 7
-        val scores = List(noteCount) { NoteScore(100f, 100f, 100f, PitchAccuracy.PERFECT) }
-        val melodyScore = engine.calculateMelodyScore(scores)
-        assertEquals(noteCount, melodyScore.longestStreak)
-    }
-
-
-    @Test
-    fun `all miss melody has zero streak and zero notes hit`() {
+    fun `all miss melody has zero notes hit`() {
         val scores = List(5) { NoteScore(0f, 100f, 40f, PitchAccuracy.MISS) }
         val melodyScore = engine.calculateMelodyScore(scores)
-        assertEquals(0, melodyScore.longestStreak)
         assertEquals(0, melodyScore.notesHit)
     }
 

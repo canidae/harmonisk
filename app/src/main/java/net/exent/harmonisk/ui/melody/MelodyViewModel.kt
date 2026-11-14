@@ -1539,7 +1539,6 @@ class MelodyViewModel @Inject constructor(
         val timeScore = ScoringEngine.scoreTime(timeRatio, currentLevel)
 
         val totalNotes = noteScores.size
-        val wrongNoteCount = totalNotes - melodyScore.notesHit
         val wrongNoteScore = if (totalNotes > 0) (melodyScore.notesHit.toFloat() / totalNotes) * 100f else 100f
 
         val adjustedScore = ScoringEngine.combineScores(
@@ -1551,8 +1550,7 @@ class MelodyViewModel @Inject constructor(
         val adjustedMelodyScore = melodyScore.copy(
             overallScore = adjustedScore,
             timeScore = timeScore,
-            wrongNoteScore = wrongNoteScore,
-            wrongNoteCount = wrongNoteCount
+            wrongNoteScore = wrongNoteScore
         )
 
         val unlockedLevel = _gameState.value.unlockedLevel
