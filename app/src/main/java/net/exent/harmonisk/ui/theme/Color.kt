@@ -6,9 +6,6 @@ val Green80 = Color(0xFFA5D6A7)
 
 val Yellow80 = Color(0xFFFFF59D)
 
-val Orange80 = Color(0xFFFFCC80)
-val Orange40 = Color(0xFFFF9800)
-
 val Red80 = Color(0xFFEF9A9A)
 
 val Purple80 = Color(0xFFCFBCFF)
@@ -41,7 +38,6 @@ val LightSurface = Color(0xFFFFFFFF)
 val GreenLight = Color(0xFF2E7D32)
 val TealLight = Color(0xFF00695C)
 val YellowLight = Color(0xFF8A5A00)
-val OrangeLight = Color(0xFFBF5B00)
 val RedLight = Color(0xFFC62828)
 val MetronomeBlueLight = Color(0xFF1565C0)
 val TunerGreenLight = Color(0xFF00695C)

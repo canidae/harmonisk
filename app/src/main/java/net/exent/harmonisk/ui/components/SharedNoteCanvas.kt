@@ -40,7 +40,6 @@ import net.exent.harmonisk.ui.record.PlayedNote
 import net.exent.harmonisk.ui.melody.NoteResultState
 import net.exent.harmonisk.ui.theme.AmberAccent
 import net.exent.harmonisk.ui.theme.FingerColors
-import net.exent.harmonisk.ui.theme.Orange40
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -53,10 +52,8 @@ private const val ONSET_TOLERANCE_MS = 120L
 private val ONSET_EARLY = Color(0xFF64B5F6)
 private val ONSET_LATE = Color(0xFFFFA726)
 private val ONSET_ON_TIME = Color(0xFF81C784)
-private val OVERLAY_PERFECT = Color(0xFF4CAF50)
-private val OVERLAY_GREAT = Color(0xFF81C784)
-private val OVERLAY_GOOD = Color(0xFFFFC107)
-private val OVERLAY_OK = Orange40
+private val OVERLAY_IN_TUNE = Color(0xFF4CAF50)
+private val OVERLAY_OFF = Color(0xFFFFC107)
 private val OVERLAY_MISS = Color(0xFFF44336)
 
 private const val BAR_GAP_PX = 2f
@@ -169,7 +166,8 @@ sealed interface CanvasMode {
         val bowedPositions: List<BowedPosition?> = emptyList(),
         val preferOpenStrings: Boolean = true,
         val noteOnsetOffsetsMs: Map<Int, Long> = emptyMap(),
-        val showOnsetOffsets: Boolean = false
+        val showOnsetOffsets: Boolean = false,
+        val level: Int = 5
     ) : CanvasMode
 }
 
@@ -746,7 +744,13 @@ private fun DrawScope.drawPitchIndicator(
     val detectedMidi = mode.detectedMidiNote ?: return
     val key = layout[detectedMidi] ?: return
 
-    val indicatorColor = getIndicatorColor(detectedMidi, mode.detectedCentsOff, mode.melodyTrack, mode.currentNoteIndex)
+    val indicatorColor = getIndicatorColor(
+        detectedMidi,
+        mode.detectedCentsOff,
+        mode.melodyTrack,
+        mode.currentNoteIndex,
+        mode.level
+    )
 
     val indicatorX = key.x + BAR_GAP_PX
     val indicatorW = key.width - BAR_GAP_PX * 2f
@@ -1192,7 +1196,7 @@ private fun DrawScope.drawBowedPitchIndicator(
         mode.preferOpenStrings
     )
 
-    val indicatorColor = getIndicatorColor(detectedMidi, mode.detectedCentsOff, track, expectedIndex)
+    val indicatorColor = getIndicatorColor(detectedMidi, mode.detectedCentsOff, track, expectedIndex, mode.level)
 
     val indicatorW = (slotWidth * 0.8f).coerceAtLeast(6f * density)
     val indicatorH = 6f * density
@@ -1416,22 +1420,17 @@ private fun getIndicatorColor(
     detectedMidi: Int,
     centsOff: Float?,
     melodyTrack: MelodyTrack,
-    currentNoteIndex: Int
+    currentNoteIndex: Int,
+    level: Int
 ): Color {
     if (currentNoteIndex !in melodyTrack.notes.indices) return Color.White.copy(alpha = 0.5f)
     val expectedNote = melodyTrack.notes[currentNoteIndex]
-
-    return if (detectedMidi == expectedNote.noteNumber) {
-        val absCents = abs(centsOff ?: NoteUtils.MAX_CENTS_OFF)
-        when {
-            absCents <= 5f -> OVERLAY_PERFECT
-            absCents <= 10f -> OVERLAY_GREAT
-            absCents <= 30f -> OVERLAY_GOOD
-            absCents <= NoteUtils.MAX_CENTS_OFF -> OVERLAY_OK
-            else -> OVERLAY_MISS
-        }
-    } else {
-        OVERLAY_MISS.copy(alpha = 0.6f)
-    }
+    val deviation = (detectedMidi - expectedNote.noteNumber) * 100f +
+        (centsOff ?: return OVERLAY_MISS.copy(alpha = 0.6f))
+    val absCents = abs(deviation)
+    if (!NoteUtils.isPitchAccepted(absCents, level)) return OVERLAY_MISS.copy(alpha = 0.6f)
+    val ratio = (absCents / NoteUtils.maxCentsOff(level)).coerceIn(0f, 1f)
+    return if (ratio <= 0.5f) lerp(OVERLAY_IN_TUNE, OVERLAY_OFF, ratio * 2f)
+    else lerp(OVERLAY_OFF, OVERLAY_MISS, (ratio - 0.5f) * 2f)
 }
 

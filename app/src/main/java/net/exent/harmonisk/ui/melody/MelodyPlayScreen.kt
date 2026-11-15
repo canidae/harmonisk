@@ -360,7 +360,8 @@ fun MelodyPlayScreen(
                                 bowedPositions = viewState.bowedPositions,
                                 preferOpenStrings = gameState.preferOpenStrings,
                                 noteOnsetOffsetsMs = gameState.replayNoteOffsetsMs,
-                                showOnsetOffsets = gameState.replayLevel >= 4
+                                showOnsetOffsets = gameState.replayLevel >= 4,
+                                level = gameState.currentLevel
                             ),
                             pianoAtBottom = true,
                             viewMinMidi = viewState.viewMinMidi,

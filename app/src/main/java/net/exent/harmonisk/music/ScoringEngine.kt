@@ -7,11 +7,6 @@ import kotlin.math.max
 class ScoringEngine {
 
     companion object {
-        private val PERFECT_CENTS = NoteUtils.PERFECT_CENTS
-        private val GREAT_CENTS = NoteUtils.GREAT_CENTS
-        private val GOOD_CENTS = NoteUtils.GOOD_CENTS
-        private val OK_CENTS = NoteUtils.OK_CENTS
-
         const val DURATION_GRACE_LEVEL_1 = 0.85f
         const val DURATION_GRACE_LEVEL_2 = 0.875f
         const val DURATION_GRACE_LEVEL_3 = 0.90f
@@ -71,6 +66,17 @@ class ScoringEngine {
             return min(1.0, timeGraceRatio(level) / ratio).toFloat()
         }
 
+        fun scorePitch(centsOff: Float, level: Int): Float {
+            val absCents = abs(centsOff)
+            val maxCents = NoteUtils.maxCentsOff(level)
+            return when {
+                absCents <= NoteUtils.FULL_PITCH_SCORE_CENTS -> 100f
+                absCents >= maxCents -> 0f
+                else -> (maxCents - absCents) /
+                    (maxCents - NoteUtils.FULL_PITCH_SCORE_CENTS) * 100f
+            }
+        }
+
         fun scoreTier(score: Float): ScoreTier = when {
             score >= 95f -> ScoreTier.LEGENDARY
             score >= 80f -> ScoreTier.EXCELLENT
@@ -82,39 +88,16 @@ class ScoringEngine {
     }
 
     fun scoreNote(result: NotePerformance, level: Int = 5): NoteScore {
-        val pitchAccuracy = getPitchAccuracy(result.centsOff)
+        val pitchScore = scorePitch(result.centsOff, level)
         val durationScore = scoreDuration(result.actualDurationMs, result.expectedDurationMs, level)
-        val overallScore = (
-            pitchAccuracy.score * PITCH_WEIGHT +
-            durationScore * DURATION_WEIGHT
-        )
-        val combinedAccuracy = getCombinedAccuracy(overallScore)
+        val overallScore = pitchScore * PITCH_WEIGHT + durationScore * DURATION_WEIGHT
 
         return NoteScore(
-            pitchScore = pitchAccuracy.score,
+            pitchScore = pitchScore,
             durationScore = durationScore,
             overallScore = overallScore,
-            pitchAccuracy = combinedAccuracy
+            isHit = NoteUtils.isPitchAccepted(result.centsOff, level)
         )
-    }
-
-    private fun getPitchAccuracy(centsOff: Float): PitchAccuracy {
-        val absCents = abs(centsOff)
-        return when {
-            absCents <= PERFECT_CENTS -> PitchAccuracy.PERFECT
-            absCents <= GREAT_CENTS -> PitchAccuracy.GREAT
-            absCents <= GOOD_CENTS -> PitchAccuracy.GOOD
-            absCents <= OK_CENTS -> PitchAccuracy.OK
-            else -> PitchAccuracy.MISS
-        }
-    }
-
-    private fun getCombinedAccuracy(overallScore: Float): PitchAccuracy = when {
-        overallScore >= 95f -> PitchAccuracy.PERFECT
-        overallScore >= 80f -> PitchAccuracy.GREAT
-        overallScore >= 65f -> PitchAccuracy.GOOD
-        overallScore >= 50f -> PitchAccuracy.OK
-        else -> PitchAccuracy.MISS
     }
 
     fun scoreDuration(actualMs: Long, expectedMs: Long, level: Int = 5): Float {
@@ -127,7 +110,7 @@ class ScoringEngine {
         if (noteScores.isEmpty()) return MelodyScore.EMPTY
 
         val avgScore = noteScores.map { it.overallScore }.average().toFloat()
-        val notesHit = noteScores.count { it.pitchAccuracy != PitchAccuracy.MISS }
+        val notesHit = noteScores.count { it.isHit }
 
         return MelodyScore(
             overallScore = avgScore,
@@ -151,12 +134,8 @@ data class NoteScore(
     val pitchScore: Float,
     val durationScore: Float,
     val overallScore: Float,
-    val pitchAccuracy: PitchAccuracy
+    val isHit: Boolean
 )
-
-enum class PitchAccuracy(val score: Float) {
-    PERFECT(100f), GREAT(80f), GOOD(50f), OK(25f), MISS(0f)
-}
 
 enum class ScoreTier { LEGENDARY, EXCELLENT, GREAT, GOOD, OK, NEEDS_WORK }
 

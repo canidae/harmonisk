@@ -18,10 +18,7 @@ class NoteUtils {
         const val MAX_CONCERT_PITCH = 445f
         const val IN_TUNE_CENTS = 5f
 
-        const val PERFECT_CENTS = 10f
-        const val GREAT_CENTS = 20f
-        const val GOOD_CENTS = 30f
-        const val OK_CENTS = 40f
+        const val FULL_PITCH_SCORE_CENTS = 10f
         const val MAX_CENTS_OFF = 50f
         const val LOW_LEVEL_MAX_CENTS_OFF = 75f
 

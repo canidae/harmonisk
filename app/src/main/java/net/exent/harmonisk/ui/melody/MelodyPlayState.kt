@@ -80,7 +80,7 @@ enum class PlayCue {
 }
 
 enum class NoteResultState {
-    ACTIVE, PERFECT, GREAT, GOOD, OK, MISS
+    ACTIVE, HIT, MISS
 }
 
 fun nowLineLeadSeconds(phase: PlayPhase, inputDelayMs: Int): Double =

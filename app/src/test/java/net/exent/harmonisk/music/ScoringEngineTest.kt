@@ -14,81 +14,46 @@ class ScoringEngineTest {
     }
 
     @Test
-    fun `perfect pitch gives 100 points`() {
-        val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69,
-            detectedMidiNote = 69,
-            centsOff = 3f,
-            expectedDurationMs = 500,
-            actualDurationMs = 500
-        ))
+    fun `pitch within the full-score range gives 100 points`() {
+        val result = score(3f)
         assertEquals(100f, result.pitchScore, 0.01f)
-        assertEquals(PitchAccuracy.PERFECT, result.pitchAccuracy)
+        assertTrue(result.isHit)
     }
 
     @Test
-    fun `great pitch gives 80 points`() {
-        val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69,
-            detectedMidiNote = 69,
-            centsOff = 15f,
-            expectedDurationMs = 500,
-            actualDurationMs = 500
-        ))
-        assertEquals(80f, result.pitchScore, 0.01f)
-        assertEquals(PitchAccuracy.GREAT, result.pitchAccuracy)
+    fun `pitch score starts falling just beyond the full-score range`() {
+        assertEquals(100f, score(NoteUtils.FULL_PITCH_SCORE_CENTS).pitchScore, 0.01f)
+        assertTrue(score(NoteUtils.FULL_PITCH_SCORE_CENTS + 0.01f).pitchScore < 100f)
     }
 
     @Test
-    fun `good pitch gives 50 points`() {
-        val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69,
-            detectedMidiNote = 69,
-            centsOff = 25f,
-            expectedDurationMs = 500,
-            actualDurationMs = 500
-        ))
-        assertEquals(50f, result.pitchScore, 0.01f)
-        assertEquals(PitchAccuracy.GOOD, result.pitchAccuracy)
+    fun `pitch score falls linearly toward zero`() {
+        assertEquals(87.5f, score(15f, 5).pitchScore, 0.01f)
+        assertEquals(62.5f, score(25f, 5).pitchScore, 0.01f)
+        assertEquals(50f, score(30f, 5).pitchScore, 0.01f)
+        assertEquals(50f, score(42.5f, 3).pitchScore, 0.01f)
     }
 
     @Test
-    fun `ok pitch gives 25 points`() {
-        val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69,
-            detectedMidiNote = 69,
-            centsOff = 40f,
-            expectedDurationMs = 500,
-            actualDurationMs = 500
-        ))
-        assertEquals(25f, result.pitchScore, 0.01f)
-        assertEquals(PitchAccuracy.OK, result.pitchAccuracy)
+    fun `pitch at the acceptance limit scores zero but still counts as a hit`() {
+        val level3 = score(75f, 3)
+        assertEquals(0f, level3.pitchScore, 0.01f)
+        assertTrue(level3.isHit)
+
+        val level5 = score(50f, 5)
+        assertEquals(0f, level5.pitchScore, 0.01f)
+        assertTrue(level5.isHit)
     }
 
     @Test
-    fun `missed pitch gives 0 points`() {
-        val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69,
-            detectedMidiNote = 70,
-            centsOff = 80f,
-            expectedDurationMs = 500,
-            actualDurationMs = 500
-        ))
-        assertEquals(0f, result.pitchScore, 0.01f)
-        assertEquals(PitchAccuracy.MISS, result.pitchAccuracy)
-    }
+    fun `pitch beyond the acceptance limit is a miss`() {
+        val level3 = score(75.01f, 3)
+        assertEquals(0f, level3.pitchScore, 0.01f)
+        assertFalse(level3.isHit)
 
-    @Test
-    fun `a note three quarters of a semitone off gets no pitch points`() {
-        val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69,
-            detectedMidiNote = 68,
-            centsOff = 75f,
-            expectedDurationMs = 500,
-            actualDurationMs = 500
-        ), 3)
-        assertEquals(0f, result.pitchScore, 0.01f)
-        assertEquals(PitchAccuracy.MISS, result.pitchAccuracy)
+        val level5 = score(50.01f, 5)
+        assertEquals(0f, level5.pitchScore, 0.01f)
+        assertFalse(level5.isHit)
     }
 
     @Test
@@ -159,10 +124,8 @@ class ScoringEngineTest {
     }
 
     @Test
-    fun `melody score calculation with all perfect`() {
-        val scores = List(10) {
-            NoteScore(100f, 100f, 100f, PitchAccuracy.PERFECT)
-        }
+    fun `melody score counts every hit`() {
+        val scores = List(10) { NoteScore(100f, 100f, 100f, true) }
         val melodyScore = engine.calculateMelodyScore(scores)
         assertEquals(100f, melodyScore.overallScore, 0.01f)
         assertEquals(10, melodyScore.notesHit)
@@ -171,10 +134,10 @@ class ScoringEngineTest {
     @Test
     fun `melody score with mixed results`() {
         val scores = listOf(
-            NoteScore(100f, 100f, 100f, PitchAccuracy.PERFECT),
-            NoteScore(75f, 80f, 83f, PitchAccuracy.GREAT),
-            NoteScore(0f, 50f, 30f, PitchAccuracy.MISS),
-            NoteScore(100f, 90f, 89f, PitchAccuracy.PERFECT)
+            NoteScore(100f, 100f, 100f, true),
+            NoteScore(75f, 80f, 83f, true),
+            NoteScore(0f, 50f, 30f, false),
+            NoteScore(100f, 90f, 89f, true)
         )
         val melodyScore = engine.calculateMelodyScore(scores)
         assertEquals(3, melodyScore.notesHit)
@@ -187,90 +150,10 @@ class ScoringEngineTest {
     }
 
 
-    @Test
-    fun `PitchAccuracy boundary at PERFECT_CENTS returns PERFECT`() {
-        val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = NoteUtils.PERFECT_CENTS,
-            expectedDurationMs = 500, actualDurationMs = 500
-        ))
-        assertEquals(PitchAccuracy.PERFECT, result.pitchAccuracy)
-    }
-
-    @Test
-    fun `PitchAccuracy just above PERFECT_CENTS returns GREAT`() {
-        val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = NoteUtils.PERFECT_CENTS + 0.01f,
-            expectedDurationMs = 500, actualDurationMs = 500
-        ))
-        assertEquals(PitchAccuracy.GREAT, result.pitchAccuracy)
-    }
-
-    @Test
-    fun `PitchAccuracy boundary at GREAT_CENTS returns GREAT`() {
-        val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = NoteUtils.GREAT_CENTS,
-            expectedDurationMs = 500, actualDurationMs = 500
-        ))
-        assertEquals(PitchAccuracy.GREAT, result.pitchAccuracy)
-    }
-
-    @Test
-    fun `PitchAccuracy just above GREAT_CENTS returns GOOD`() {
-        val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = NoteUtils.GREAT_CENTS + 0.01f,
-            expectedDurationMs = 500, actualDurationMs = 500
-        ))
-        assertEquals(PitchAccuracy.GOOD, result.pitchAccuracy)
-    }
-
-    @Test
-    fun `PitchAccuracy boundary at GOOD_CENTS returns GOOD`() {
-        val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = NoteUtils.GOOD_CENTS,
-            expectedDurationMs = 500, actualDurationMs = 500
-        ))
-        assertEquals(PitchAccuracy.GOOD, result.pitchAccuracy)
-    }
-
-    @Test
-    fun `PitchAccuracy just above GOOD_CENTS returns OK`() {
-        val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = NoteUtils.GOOD_CENTS + 0.01f,
-            expectedDurationMs = 500, actualDurationMs = 500
-        ))
-        assertEquals(PitchAccuracy.OK, result.pitchAccuracy)
-    }
-
-    @Test
-    fun `PitchAccuracy boundary at OK_CENTS returns OK`() {
-        val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = NoteUtils.OK_CENTS,
-            expectedDurationMs = 500, actualDurationMs = 500
-        ))
-        assertEquals(PitchAccuracy.OK, result.pitchAccuracy)
-    }
-
-    @Test
-    fun `PitchAccuracy just above OK_CENTS returns MISS`() {
-        val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69, detectedMidiNote = 69,
-            centsOff = NoteUtils.OK_CENTS + 0.01f,
-            expectedDurationMs = 500, actualDurationMs = 500
-        ))
-        assertEquals(PitchAccuracy.MISS, result.pitchAccuracy)
-    }
-
 
     @Test
     fun `all miss melody has zero notes hit`() {
-        val scores = List(5) { NoteScore(0f, 100f, 40f, PitchAccuracy.MISS) }
+        val scores = List(5) { NoteScore(0f, 100f, 40f, false) }
         val melodyScore = engine.calculateMelodyScore(scores)
         assertEquals(0, melodyScore.notesHit)
     }
@@ -423,4 +306,16 @@ class ScoringEngineTest {
     fun `the last level cannot unlock another`() {
         assertEquals(5, ScoringEngine.unlockedLevelAfterRun(5, 5, 100f))
     }
+
+    private fun score(centsOff: Float, level: Int = 5) = engine.scoreNote(
+        NotePerformance(
+            expectedMidiNote = 69,
+            detectedMidiNote = 69,
+            centsOff = centsOff,
+            expectedDurationMs = 500,
+            actualDurationMs = 500
+        ),
+        level
+    )
+
 }

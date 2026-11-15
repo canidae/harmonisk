@@ -55,7 +55,7 @@ fun PitchGauge(
         targetValue = when {
             isSilent -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
             isInTune -> tunerGreen
-            abs(centsOff) <= NoteUtils.PERFECT_CENTS -> if (darkTheme) Yellow80 else YellowLight
+            abs(centsOff) <= NoteUtils.FULL_PITCH_SCORE_CENTS -> if (darkTheme) Yellow80 else YellowLight
             else -> centsColor(centsOff, darkTheme)
         },
         animationSpec = tween(durationMillis = 200),
