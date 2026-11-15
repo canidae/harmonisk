@@ -12,6 +12,7 @@ import net.exent.harmonisk.data.AudioDelayRepository
 import net.exent.harmonisk.data.DifficultyRepository
 import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.data.MelodySettingsRepository
+import net.exent.harmonisk.data.PlaylistRepository
 import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.ScoreHistoryRepository
 import net.exent.harmonisk.data.SettingsRepository
@@ -159,4 +160,10 @@ object AppModule {
     fun provideDifficultyRepository(
         @ApplicationContext context: Context
     ): DifficultyRepository = DifficultyRepository(context)
+
+    @Provides
+    @Singleton
+    fun providePlaylistRepository(
+        @ApplicationContext context: Context
+    ): PlaylistRepository = PlaylistRepository(context)
 }

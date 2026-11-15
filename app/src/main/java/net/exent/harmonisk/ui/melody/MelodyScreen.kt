@@ -16,13 +16,22 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,9 +47,11 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -49,19 +60,28 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import net.exent.harmonisk.R
 import net.exent.harmonisk.data.MelodyRepository
+import net.exent.harmonisk.data.PlaylistRepository
 import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.components.brandBackground
 import net.exent.harmonisk.ui.profile.ProfileButton
 import net.exent.harmonisk.ui.profile.ProfileDialogs
 import net.exent.harmonisk.ui.profile.rememberProfileDialogState
+import net.exent.harmonisk.ui.theme.AdventureGold
 import net.exent.harmonisk.ui.theme.BrandPurple
 import net.exent.harmonisk.ui.theme.LocalHarmoniskDarkTheme
+import net.exent.harmonisk.ui.theme.MetronomeBlue
+import net.exent.harmonisk.ui.theme.MetronomeBlueLight
+import net.exent.harmonisk.ui.theme.Purple80
+import net.exent.harmonisk.ui.theme.PurpleLight
+import net.exent.harmonisk.ui.theme.YellowLight
 import net.exent.harmonisk.ui.utils.folderDisplayName
 import net.exent.harmonisk.ui.utils.formatScore
 import net.exent.harmonisk.ui.utils.scoreColor
 import kotlinx.coroutines.launch
 
 private val IMPORT_MIME_TYPES = arrayOf("*/*")
+
+private const val PLAYLISTS_FOLDER = "playlists"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,12 +99,21 @@ fun MelodyScreen(
     var expandedMelodyId by remember { mutableStateOf<String?>(null) }
     var currentFolder by rememberSaveable { mutableStateOf<String?>(null) }
     var currentSubfolder by rememberSaveable { mutableStateOf<String?>(null) }
+    var currentPlaylistId by rememberSaveable { mutableStateOf<String?>(null) }
+    var playlistEditMode by rememberSaveable { mutableStateOf(false) }
+    var creatingPlaylist by remember { mutableStateOf(false) }
+    var renamingPlaylist by remember { mutableStateOf(false) }
+    var addingSongs by remember { mutableStateOf(false) }
+    var addingToPlaylistSong by remember { mutableStateOf<MelodyRepository.MelodyInfo?>(null) }
+    var playlistToDelete by remember { mutableStateOf<PlaylistRepository.Playlist?>(null) }
     var showUrlDialog by remember { mutableStateOf(false) }
     var urlText by rememberSaveable { mutableStateOf("") }
     var importingUrl by remember { mutableStateOf<String?>(null) }
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
     val instrument by viewModel.currentInstrument.collectAsStateWithLifecycle()
+    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+    val melodyLevels by viewModel.allMelodyLevels.collectAsStateWithLifecycle()
     val profileDialogs = rememberProfileDialogState()
 
     LaunchedEffect(Unit) {
@@ -104,7 +133,16 @@ fun MelodyScreen(
     }
 
     BackHandler(enabled = currentFolder != null) {
-        if (currentSubfolder != null) currentSubfolder = null else currentFolder = null
+        when {
+            currentPlaylistId != null -> {
+                currentPlaylistId = null
+                playlistEditMode = false
+                addingSongs = false
+                renamingPlaylist = false
+            }
+            currentSubfolder != null -> currentSubfolder = null
+            else -> currentFolder = null
+        }
     }
 
     val scope = rememberCoroutineScope()
@@ -170,6 +208,8 @@ fun MelodyScreen(
         .groupBy { it.folder.orEmpty() }
     val bundledFolders = melodies.filter { it.isBundled && it.folder != null }.groupBy { it.folder.orEmpty() }
     val looseBundled = melodies.filter { it.isBundled && it.folder == null }
+    val melodyById = melodies.associateBy { it.id }
+    val currentPlaylist = currentPlaylistId?.let { id -> playlists.firstOrNull { it.id == id } }
 
     val inImportedFolder = currentFolder == MelodyRepository.IMPORTED_FOLDER
     val browsingImported = inImportedFolder && currentSubfolder == null
@@ -191,6 +231,7 @@ fun MelodyScreen(
             onPlay = {
                 viewModel.stopPreview()
                 previewingMelody = null
+                viewModel.endPlaylistSession()
                 if (viewModel.loadMelody(info)) {
                     onStartPlay()
                 } else {
@@ -211,8 +252,31 @@ fun MelodyScreen(
                 if (expandedMelodyId == info.id) {
                     viewModel.loadMelody(info)
                 }
-            }
+            },
+            onAddToPlaylist = { addingToPlaylistSong = info }
         )
+    }
+
+    fun movePlaylistSong(playlistId: String, from: Int, to: Int) {
+        val ids = playlists.firstOrNull { it.id == playlistId }?.melodyIds?.toMutableList() ?: return
+        if (from !in ids.indices || to !in ids.indices) return
+        ids.add(to, ids.removeAt(from))
+        viewModel.setPlaylistMelodies(playlistId, ids)
+    }
+
+    val addSongsPlaylist = currentPlaylist
+    if (addingSongs && addSongsPlaylist != null) {
+        BackHandler { addingSongs = false }
+        AddSongsScreen(
+            melodies = melodies,
+            existingIds = addSongsPlaylist.melodyIds.toSet(),
+            onAdd = { ids ->
+                viewModel.setPlaylistMelodies(addSongsPlaylist.id, addSongsPlaylist.melodyIds + ids)
+                addingSongs = false
+            },
+            onBack = { addingSongs = false }
+        )
+        return
     }
 
     Scaffold(
@@ -221,30 +285,87 @@ fun MelodyScreen(
             .brandBackground(),
         containerColor = Color.Transparent,
         bottomBar = {
-            if (browsingImported) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                        .height(IntrinsicSize.Min),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ImportButton(Modifier.weight(1f).fillMaxHeight(), Icons.Default.Add, R.string.melody_import_file) {
-                        filePickerLauncher.launch(IMPORT_MIME_TYPES)
+            when {
+                browsingImported -> {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ImportButton(Modifier.weight(1f).fillMaxHeight(), Icons.Default.Add, R.string.melody_import_file) {
+                            filePickerLauncher.launch(IMPORT_MIME_TYPES)
+                        }
+                        ImportButton(Modifier.weight(1f).fillMaxHeight(), Icons.Default.Link, R.string.melody_import_url) {
+                            urlText = ""
+                            showUrlDialog = true
+                        }
+                        ImportButton(Modifier.weight(1f).fillMaxHeight(), Icons.Default.QrCodeScanner, R.string.melody_import_qr) {
+                            qrScanLauncher.launch(
+                                ScanOptions().apply {
+                                    setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                                    setPrompt(resources.getString(R.string.melody_import_qr_prompt))
+                                    setBeepEnabled(false)
+                                }
+                            )
+                        }
                     }
-                    ImportButton(Modifier.weight(1f).fillMaxHeight(), Icons.Default.Link, R.string.melody_import_url) {
-                        urlText = ""
-                        showUrlDialog = true
+                }
+                currentFolder == PLAYLISTS_FOLDER && currentPlaylist == null -> {
+                    Button(
+                        onClick = { creatingPlaylist = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .height(52.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.melody_playlist_new))
                     }
-                    ImportButton(Modifier.weight(1f).fillMaxHeight(), Icons.Default.QrCodeScanner, R.string.melody_import_qr) {
-                        qrScanLauncher.launch(
-                            ScanOptions().apply {
-                                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                                setPrompt(resources.getString(R.string.melody_import_qr_prompt))
-                                setBeepEnabled(false)
+                }
+                currentPlaylist != null -> {
+                    val playlist = currentPlaylist
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (playlistEditMode) {
+                            ImportButton(Modifier.weight(1f).fillMaxHeight(), Icons.Default.Add, R.string.melody_playlist_add_songs) {
+                                addingSongs = true
                             }
-                        )
+                            ImportButton(Modifier.weight(1f).fillMaxHeight(), Icons.Default.Edit, R.string.melody_playlist_rename) {
+                                renamingPlaylist = true
+                            }
+                            ImportButton(Modifier.weight(1f).fillMaxHeight(), Icons.Default.Close, R.string.melody_playlist_done) {
+                                playlistEditMode = false
+                            }
+                        } else {
+                            ImportButton(
+                                Modifier.weight(1f).fillMaxHeight(),
+                                Icons.Default.PlayArrow,
+                                R.string.melody_playlist_play,
+                                enabled = playlist.melodyIds.isNotEmpty()
+                            ) {
+                                scope.launch {
+                                    if (viewModel.startPlaylist(playlist)) {
+                                        onStartPlay()
+                                    } else {
+                                        Toast.makeText(context, resources.getString(R.string.melody_failed_load_melody), Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                            ImportButton(Modifier.weight(1f).fillMaxHeight(), Icons.Default.Edit, R.string.melody_playlist_edit) {
+                                playlistEditMode = true
+                            }
+                        }
                     }
                 }
             }
@@ -252,11 +373,21 @@ fun MelodyScreen(
         topBar = {
             BrandTopBar(
                 title = stringResource(R.string.melody_title),
-                subtitle = currentSubfolder?.let { folderDisplayName(context, it) }
-                    ?: currentFolder?.let { folderDisplayName(context, it) }
+                subtitle = currentPlaylist?.name
+                    ?: currentSubfolder?.let { folderDisplayName(context, it) }
+                    ?: currentFolder?.let { folder ->
+                        if (folder == PLAYLISTS_FOLDER) stringResource(R.string.melody_playlists)
+                        else folderDisplayName(context, folder)
+                    }
                     ?: stringResource(R.string.melody_choose),
                 onBack = {
                     when {
+                        currentPlaylistId != null -> {
+                            currentPlaylistId = null
+                            playlistEditMode = false
+                            addingSongs = false
+                            renamingPlaylist = false
+                        }
                         currentSubfolder != null -> currentSubfolder = null
                         currentFolder != null -> currentFolder = null
                         else -> onBack()
@@ -277,16 +408,89 @@ fun MelodyScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             when {
+                currentPlaylist != null -> {
+                    val playlist = currentPlaylist
+                    val entries = playlist.melodyIds.mapNotNull { id -> melodyById[id] }
+                    LazyColumn(
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (entries.isEmpty()) {
+                            item {
+                                Text(
+                                    text = stringResource(R.string.melody_playlist_empty),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    textAlign = TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.fillMaxWidth().padding(32.dp)
+                                )
+                            }
+                        }
+                        itemsIndexed(entries, key = { _, info -> info.id }) { index, info ->
+                            PlaylistSongRow(
+                                index = index,
+                                name = info.name,
+                                level = melodyLevels[info.id] ?: 1,
+                                score = scores[info.id]?.score,
+                                editMode = playlistEditMode,
+                                canMoveUp = index > 0,
+                                canMoveDown = index < entries.lastIndex,
+                                onMoveUp = { movePlaylistSong(playlist.id, index, index - 1) },
+                                onMoveDown = { movePlaylistSong(playlist.id, index, index + 1) },
+                                onRemove = { viewModel.setPlaylistMelodies(playlist.id, playlist.melodyIds - info.id) }
+                            )
+                        }
+                    }
+                }
+                currentFolder == PLAYLISTS_FOLDER -> {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (playlists.isEmpty()) {
+                            item {
+                                Text(
+                                    text = stringResource(R.string.melody_playlist_no_playlists),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    textAlign = TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.fillMaxWidth().padding(32.dp)
+                                )
+                            }
+                        }
+                        items(playlists, key = { it.id }) { playlist ->
+                            PlaylistCard(
+                                name = playlist.name,
+                                count = playlist.melodyIds.size,
+                                onClick = {
+                                    currentPlaylistId = playlist.id
+                                    playlistEditMode = false
+                                },
+                                onDelete = { playlistToDelete = playlist }
+                            )
+                        }
+                    }
+                }
                 currentFolder == null -> {
                     LazyColumn(
                         modifier = Modifier.weight(1f, fill = false),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(looseBundled) { info -> songCard(info) }
+                        item {
+                            FolderCard(
+                                name = stringResource(R.string.melody_playlists),
+                                count = playlists.size,
+                                icon = "\uD83C\uDFBC",
+                                accent = folderAccent(PLAYLISTS_FOLDER),
+                                onClick = { currentFolder = PLAYLISTS_FOLDER }
+                            )
+                        }
                         item {
                             FolderCard(
                                 name = folderDisplayName(context, MelodyRepository.IMPORTED_FOLDER),
                                 count = importedMelodies.size,
+                                icon = "\uD83D\uDCE5",
+                                accent = folderAccent(MelodyRepository.IMPORTED_FOLDER),
                                 onClick = { currentFolder = MelodyRepository.IMPORTED_FOLDER }
                             )
                         }
@@ -294,9 +498,12 @@ fun MelodyScreen(
                             FolderCard(
                                 name = folderDisplayName(context, folder),
                                 count = bundledFolders[folder]?.size ?: 0,
+                                icon = "\uD83D\uDCC2",
+                                accent = folderAccent(folder),
                                 onClick = { currentFolder = folder }
                             )
                         }
+                        items(looseBundled) { info -> songCard(info) }
                     }
                 }
                 currentFolderSongs.isNotEmpty() || inImportedFolder -> {
@@ -309,6 +516,8 @@ fun MelodyScreen(
                                 FolderCard(
                                     name = folderDisplayName(context, folder),
                                     count = importedSubfolders[folder]?.size ?: 0,
+                                    icon = "\uD83D\uDCC2",
+                                    accent = folderAccent(folder),
                                     onClick = { currentSubfolder = folder },
                                     onRemove = { viewModel.removeImportedFolder(folder) }
                                 )
@@ -330,6 +539,72 @@ fun MelodyScreen(
                 }
             }
         }
+    }
+
+    if (creatingPlaylist) {
+        PlaylistNameDialog(
+            title = stringResource(R.string.melody_playlist_new),
+            initial = "",
+            confirmLabel = stringResource(R.string.melody_playlist_create),
+            onDismiss = { creatingPlaylist = false },
+            onConfirm = { name ->
+                viewModel.createPlaylist(name)
+                creatingPlaylist = false
+            }
+        )
+    }
+
+    if (renamingPlaylist) {
+        currentPlaylist?.let { playlist ->
+            PlaylistNameDialog(
+                title = stringResource(R.string.melody_playlist_rename),
+                initial = playlist.name,
+                confirmLabel = stringResource(R.string.melody_playlist_rename),
+                onDismiss = { renamingPlaylist = false },
+                onConfirm = { name ->
+                    viewModel.renamePlaylist(playlist.id, name)
+                    renamingPlaylist = false
+                }
+            )
+        }
+    }
+
+    addingToPlaylistSong?.let { song ->
+        AddToPlaylistDialog(
+            song = song,
+            playlists = playlists,
+            onToggle = { playlist, add ->
+                viewModel.setPlaylistMelodies(
+                    playlist.id,
+                    if (add) playlist.melodyIds + song.id else playlist.melodyIds - song.id
+                )
+            },
+            onDismiss = { addingToPlaylistSong = null }
+        )
+    }
+
+    playlistToDelete?.let { playlist ->
+        AlertDialog(
+            onDismissRequest = { playlistToDelete = null },
+            title = { Text(stringResource(R.string.melody_playlist_delete)) },
+            text = { Text(stringResource(R.string.melody_playlist_delete_confirm, playlist.name)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deletePlaylist(playlist.id)
+                        playlistToDelete = null
+                    }
+                ) {
+                    Text(
+                        stringResource(R.string.melody_playlist_delete),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { playlistToDelete = null }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
     }
 
     if (showUrlDialog) {
@@ -412,6 +687,8 @@ fun MelodyScreen(
 private fun FolderCard(
     name: String,
     count: Int,
+    icon: String,
+    accent: Color,
     onClick: () -> Unit,
     onRemove: (() -> Unit)? = null
 ) {
@@ -433,10 +710,10 @@ private fun FolderCard(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
+                    .background(accent.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text("📂", style = MaterialTheme.typography.headlineSmall)
+                Text(icon, style = MaterialTheme.typography.headlineSmall)
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
@@ -481,14 +758,423 @@ private fun FolderCard(
 }
 
 @Composable
+private fun folderAccent(folder: String): Color {
+    val darkTheme = LocalHarmoniskDarkTheme.current
+    return when (folder) {
+        PLAYLISTS_FOLDER -> if (darkTheme) AdventureGold else YellowLight
+        MelodyRepository.IMPORTED_FOLDER -> if (darkTheme) MetronomeBlue else MetronomeBlueLight
+        else -> if (darkTheme) Purple80 else PurpleLight
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PlaylistCard(
+    name: String,
+    count: Int,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    val accent = folderAccent(PLAYLISTS_FOLDER)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { showMenu = true }
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(accent.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("\uD83C\uDFBC", style = MaterialTheme.typography.headlineSmall)
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f)
+            )
+            Surface(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                contentColor = MaterialTheme.colorScheme.primary,
+                shape = CircleShape
+            ) {
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+        }
+
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        stringResource(R.string.melody_playlist_delete),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                },
+                onClick = {
+                    showMenu = false
+                    onDelete()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlaylistSongRow(
+    index: Int,
+    name: String,
+    level: Int,
+    score: Float?,
+    editMode: Boolean,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+    onRemove: () -> Unit
+) {
+    val darkTheme = LocalHarmoniskDarkTheme.current
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "${index + 1}",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.width(24.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    text = stringResource(R.string.level, level),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            score?.let {
+                Text(
+                    text = formatScore(it),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = scoreColor(it, darkTheme)
+                )
+            }
+            if (editMode) {
+                IconButton(onClick = onMoveUp, enabled = canMoveUp, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.KeyboardArrowUp,
+                        contentDescription = stringResource(R.string.melody_playlist_move_up),
+                        tint = if (canMoveUp) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    )
+                }
+                IconButton(onClick = onMoveDown, enabled = canMoveDown, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.KeyboardArrowDown,
+                        contentDescription = stringResource(R.string.melody_playlist_move_down),
+                        tint = if (canMoveDown) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    )
+                }
+                IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.melody_remove_song),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddToPlaylistDialog(
+    song: MelodyRepository.MelodyInfo,
+    playlists: List<PlaylistRepository.Playlist>,
+    onToggle: (PlaylistRepository.Playlist, Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.melody_playlist_add_to)) },
+        text = {
+            if (playlists.isEmpty()) {
+                Text(stringResource(R.string.melody_playlist_no_playlists))
+            } else {
+                Column {
+                    Text(song.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(8.dp))
+                    LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
+                        items(playlists, key = { it.id }) { playlist ->
+                            val inPlaylist = song.id in playlist.melodyIds
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onToggle(playlist, !inPlaylist) }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(checked = inPlaylist, onCheckedChange = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(playlist.name, style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.melody_playlist_done)) }
+        }
+    )
+}
+
+@Composable
+private fun PlaylistNameDialog(
+    title: String,
+    initial: String,
+    confirmLabel: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var name by remember(initial) { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                singleLine = true,
+                label = { Text(stringResource(R.string.melody_playlist_name)) },
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(enabled = name.isNotBlank(), onClick = { onConfirm(name.trim()) }) {
+                Text(confirmLabel)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        }
+    )
+}
+
+private data class SongGroup(
+    val key: String,
+    val title: String,
+    val songs: List<MelodyRepository.MelodyInfo>
+)
+
+@Composable
+private fun AddSongsScreen(
+    melodies: List<MelodyRepository.MelodyInfo>,
+    existingIds: Set<String>,
+    onAdd: (List<String>) -> Unit,
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    val resources = LocalResources.current
+    var selected by remember { mutableStateOf(setOf<String>()) }
+    val groups = remember(melodies, resources) {
+        melodies.groupBy { it.isBundled to it.folder }
+            .map { (key, songs) ->
+                val (bundled, folder) = key
+                SongGroup(
+                    key = "$bundled:${folder ?: ""}",
+                    title = folder?.let { folderDisplayName(context, it) }
+                        ?: resources.getString(R.string.adventure_folder_other),
+                    songs = songs.sortedBy { it.name.lowercase() }
+                )
+            }
+            .sortedBy { it.title.lowercase() }
+    }
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .brandBackground(),
+        containerColor = Color.Transparent,
+        topBar = {
+            BrandTopBar(
+                title = stringResource(R.string.melody_playlist_add_songs),
+                subtitle = stringResource(R.string.melody_playlist_selected, selected.size),
+                onBack = onBack
+            )
+        },
+        bottomBar = {
+            Button(
+                onClick = { onAdd(melodies.map { it.id }.filter { it in selected }) },
+                enabled = selected.isNotEmpty(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .height(52.dp)
+            ) {
+                Text(stringResource(R.string.melody_playlist_add))
+            }
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(groups, key = { it.key }) { group ->
+                AddSongsGroup(
+                    group = group,
+                    existingIds = existingIds,
+                    selectedIds = selected,
+                    onToggle = { id -> selected = if (id in selected) selected - id else selected + id },
+                    onSetGroup = { checked ->
+                        val ids = group.songs.map { it.id }.filter { it !in existingIds }.toSet()
+                        selected = if (checked) selected + ids else selected - ids
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddSongsGroup(
+    group: SongGroup,
+    existingIds: Set<String>,
+    selectedIds: Set<String>,
+    onToggle: (String) -> Unit,
+    onSetGroup: (Boolean) -> Unit
+) {
+    var expanded by remember { mutableStateOf(true) }
+    val checkedCount = group.songs.count { it.id in existingIds || it.id in selectedIds }
+    val allChecked = checkedCount == group.songs.size
+    val state = when {
+        allChecked -> ToggleableState.On
+        checkedCount > 0 -> ToggleableState.Indeterminate
+        else -> ToggleableState.Off
+    }
+    val hasSelectable = group.songs.any { it.id !in existingIds }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TriStateCheckbox(
+                    state = state,
+                    onClick = { onSetGroup(!allChecked) },
+                    enabled = hasSelectable
+                )
+                Icon(
+                    Icons.Filled.Folder,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = group.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = pluralStringResource(R.plurals.adventure_song_count, group.songs.size, group.songs.size),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Filled.ExpandMore else Icons.Filled.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (expanded) {
+                group.songs.forEach { song ->
+                    val existing = song.id in existingIds
+                    val isSelected = existing || song.id in selectedIds
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !existing) { onToggle(song.id) }
+                            .padding(start = 34.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = isSelected,
+                            onCheckedChange = null,
+                            enabled = !existing
+                        )
+                        Icon(
+                            Icons.Filled.MusicNote,
+                            contentDescription = null,
+                            tint = if (isSelected) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = song.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isSelected) 1f else 0.8f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ImportButton(
     modifier: Modifier = Modifier,
     icon: ImageVector,
     labelRes: Int,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     OutlinedButton(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,
         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 10.dp)
@@ -516,7 +1202,8 @@ private fun MelodyCard(
     isExpanded: Boolean,
     onPlay: () -> Unit,
     onTogglePreview: () -> Unit,
-    onToggleExpand: () -> Unit
+    onToggleExpand: () -> Unit,
+    onAddToPlaylist: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
     Card(
@@ -578,6 +1265,13 @@ private fun MelodyCard(
                     onClick = {
                         showMenu = false
                         viewModel.resetScore(info.id)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.melody_playlist_add_to)) },
+                    onClick = {
+                        showMenu = false
+                        onAddToPlaylist()
                     }
                 )
                 if (!info.isBundled) {

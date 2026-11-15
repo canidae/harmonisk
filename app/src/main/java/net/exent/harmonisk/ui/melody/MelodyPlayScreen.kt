@@ -80,6 +80,7 @@ fun MelodyPlayScreen(
     val personalBest by viewModel.personalBestScore.collectAsStateWithLifecycle()
     val currentInstrument by viewModel.currentInstrument.collectAsStateWithLifecycle()
     val devModeEnabled by viewModel.devModeEnabled.collectAsStateWithLifecycle()
+    val playlistRun by viewModel.playlistRun.collectAsStateWithLifecycle()
     val density = LocalDensity.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -95,6 +96,7 @@ fun MelodyPlayScreen(
 
     BackHandler {
         if (stopOnBack) viewModel.stop()
+        viewModel.endPlaylistSession()
         onBack()
     }
 
@@ -107,8 +109,8 @@ fun MelodyPlayScreen(
         }
     }
 
-    LaunchedEffect(gameState.phase) {
-        if (gameState.phase == PlayPhase.FINISHED && !adventureMode) {
+    LaunchedEffect(gameState.phase, playlistRun) {
+        if (gameState.phase == PlayPhase.FINISHED && !adventureMode && playlistRun == null) {
             showResultsModal = true
         }
     }
@@ -466,7 +468,7 @@ fun MelodyPlayScreen(
                                         )
                                     }
                                 }
-                                if (gameState.phase == PlayPhase.FINISHED) {
+                                if (gameState.phase == PlayPhase.FINISHED && playlistRun == null) {
                                     if (!adventureMode && recordingAvailable) {
                                         IconButton(
                                             onClick = { viewModel.toggleRecordingPlayback() },
@@ -514,7 +516,7 @@ fun MelodyPlayScreen(
     }
 
     val score = gameState.melodyScore
-    if (!adventureMode && showResultsModal && score != null) {
+    if (!adventureMode && playlistRun == null && showResultsModal && score != null) {
         ScoreResultModal(
             melodyScore = score,
             onDismiss = { showResultsModal = false },
@@ -570,6 +572,31 @@ fun MelodyPlayScreen(
                 }
             }
         )
+    }
+
+    if (!adventureMode) {
+        playlistRun?.let { run ->
+            if (run.finished) {
+                PlaylistSummaryDialog(
+                    run = run,
+                    onRetry = { index -> viewModel.retryPlaylistSong(index) },
+                    onPlayAgain = { viewModel.restartPlaylist() },
+                    onDone = {
+                        viewModel.endPlaylistSession()
+                        onBack()
+                    }
+                )
+            } else if (run.pending && run.next != null) {
+                PlaylistNextDialog(
+                    run = run,
+                    onStart = { viewModel.continuePlaylist() },
+                    onEnd = {
+                        viewModel.endPlaylistSession()
+                        onBack()
+                    }
+                )
+            }
+        }
     }
 
     ProfileDialogs(

@@ -188,6 +188,34 @@
     <string name="melody_folder_imported">Imported</string>
     <string name="melody_folder_traditional">Traditional</string>
     <string name="melody_folder_exercises">Exercises</string>
+    <string name="melody_playlists">Playlists</string>
+    <string name="melody_playlist_new">New playlist</string>
+    <string name="melody_playlist_name">Playlist name</string>
+    <string name="melody_playlist_create">Create</string>
+    <string name="melody_playlist_rename">Rename</string>
+    <string name="melody_playlist_delete">Delete playlist</string>
+    <string name="melody_playlist_delete_confirm">Delete “%1$s”? The songs will not be deleted.</string>
+    <string name="melody_playlist_empty">This playlist has no songs yet.</string>
+    <string name="melody_playlist_no_playlists">No playlists yet.</string>
+    <string name="melody_playlist_play">Play through</string>
+    <string name="melody_playlist_edit">Edit</string>
+    <string name="melody_playlist_done">Done</string>
+    <string name="melody_playlist_add_songs">Add songs</string>
+    <string name="melody_playlist_selected">%1$d selected</string>
+    <string name="melody_playlist_add_to">Add to playlist</string>
+    <string name="melody_playlist_add">Add</string>
+    <string name="melody_playlist_move_up">Move up</string>
+    <string name="melody_playlist_move_down">Move down</string>
+    <string name="melody_playlist_next">Next melody</string>
+    <string name="melody_playlist_previous">Previous melody</string>
+    <string name="melody_playlist_level_up">Level up! Now level %1$d</string>
+    <string name="melody_playlist_start">Start</string>
+    <string name="melody_playlist_continue">Continue</string>
+    <string name="melody_playlist_end">End practice</string>
+    <string name="melody_playlist_complete">Playlist complete</string>
+    <string name="melody_playlist_play_again">Play again</string>
+    <string name="melody_playlist_retry_song">Retry melody</string>
+    <string name="melody_playlist_retry_hint">Tap ↻ to retry a melody</string>
 
     <!-- Melody Play -->
     <string name="melody_play_midi_input">MIDI input</string>

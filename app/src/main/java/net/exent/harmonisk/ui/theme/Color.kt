@@ -9,6 +9,7 @@ val Yellow80 = Color(0xFFFFF59D)
 val Red80 = Color(0xFFEF9A9A)
 
 val Purple80 = Color(0xFFCFBCFF)
+val PurpleLight = Color(0xFF5B3FD1)
 val Purple40 = Color(0xFF7C4DFF)
 
 val Teal80 = Color(0xFF80CBC4)

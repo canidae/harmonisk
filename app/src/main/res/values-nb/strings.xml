@@ -188,6 +188,34 @@
     <string name="melody_folder_imported">Importert</string>
     <string name="melody_folder_traditional">Tradisjonelle</string>
     <string name="melody_folder_exercises">Øvelser</string>
+    <string name="melody_playlists">Spillelister</string>
+    <string name="melody_playlist_new">Ny spilleliste</string>
+    <string name="melody_playlist_name">Navn på spillelisten</string>
+    <string name="melody_playlist_create">Opprett</string>
+    <string name="melody_playlist_rename">Gi nytt navn</string>
+    <string name="melody_playlist_delete">Slett spillelisten</string>
+    <string name="melody_playlist_delete_confirm">Slette «%1$s»? Sangene blir ikke slettet.</string>
+    <string name="melody_playlist_empty">Denne spillelisten har ingen sanger ennå.</string>
+    <string name="melody_playlist_no_playlists">Ingen spillelister ennå.</string>
+    <string name="melody_playlist_play">Spill gjennom</string>
+    <string name="melody_playlist_edit">Rediger</string>
+    <string name="melody_playlist_done">Ferdig</string>
+    <string name="melody_playlist_add_songs">Legg til sanger</string>
+    <string name="melody_playlist_selected">%1$d valgt</string>
+    <string name="melody_playlist_add_to">Legg til i spilleliste</string>
+    <string name="melody_playlist_add">Legg til</string>
+    <string name="melody_playlist_move_up">Flytt opp</string>
+    <string name="melody_playlist_move_down">Flytt ned</string>
+    <string name="melody_playlist_next">Neste melodi</string>
+    <string name="melody_playlist_previous">Forrige melodi</string>
+    <string name="melody_playlist_level_up">Nytt nivå! Nå nivå %1$d</string>
+    <string name="melody_playlist_start">Start</string>
+    <string name="melody_playlist_continue">Fortsett</string>
+    <string name="melody_playlist_end">Avslutt øvingen</string>
+    <string name="melody_playlist_complete">Spillelisten er fullført</string>
+    <string name="melody_playlist_play_again">Spill igjen</string>
+    <string name="melody_playlist_retry_song">Prøv melodien igjen</string>
+    <string name="melody_playlist_retry_hint">Trykk ↻ for å prøve en melodi igjen</string>
 
     <!-- Melody Play -->
     <string name="melody_play_midi_input">MIDI-inngang</string>

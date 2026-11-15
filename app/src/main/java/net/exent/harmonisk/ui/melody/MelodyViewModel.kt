@@ -15,6 +15,7 @@ import net.exent.harmonisk.data.AudioDelayRepository
 import net.exent.harmonisk.data.DevModeState
 import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.data.MelodySettingsRepository
+import net.exent.harmonisk.data.PlaylistRepository
 import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.createProfileWithInstrument
 import net.exent.harmonisk.data.ScoreHistoryRepository
@@ -63,6 +64,7 @@ class MelodyViewModel @Inject constructor(
     private val midiInputReceiver: MidiInputReceiver,
     private val midiOutputSender: MidiOutputSender,
     private val scoreHistoryRepository: ScoreHistoryRepository,
+    private val playlistRepository: PlaylistRepository,
     private val profileRepository: ProfileRepository,
     private val bowedAlgorithm: BowedAlgorithm,
     private val beginnerKey: BeginnerKey,
@@ -107,6 +109,15 @@ class MelodyViewModel @Inject constructor(
 
     private val _allMelodyScores = MutableStateFlow<Map<String, MelodyScoreSummary>>(emptyMap())
     val allMelodyScores: StateFlow<Map<String, MelodyScoreSummary>> = _allMelodyScores.asStateFlow()
+
+    private val _allMelodyLevels = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val allMelodyLevels: StateFlow<Map<String, Int>> = _allMelodyLevels.asStateFlow()
+
+    val playlists: StateFlow<List<PlaylistRepository.Playlist>> = playlistRepository.playlists
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val _playlistRun = MutableStateFlow<PlaylistRun?>(null)
+    val playlistRun: StateFlow<PlaylistRun?> = _playlistRun.asStateFlow()
 
     private val lastPlayedAt: StateFlow<Map<String, Long>> = scoreHistoryRepository.lastPlayed
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
@@ -240,6 +251,7 @@ class MelodyViewModel @Inject constructor(
                 .drop(1)
                 .collect {
                     if (adventureSession.turn.value != null) return@collect
+                    endPlaylistSession()
                     if (currentMelodyId != null) {
                         stop()
                         enterReadyPhase()
@@ -283,7 +295,7 @@ class MelodyViewModel @Inject constructor(
                 melodies to instrument
             }.flatMapLatest { (melodies, instrument) ->
                 if (melodies.isEmpty()) {
-                    flowOf(emptyMap())
+                    flowOf(emptyMap<String, Int>() to emptyMap<String, MelodyScoreSummary>())
                 } else {
                     val flows = melodies.map { info ->
                         combine(
@@ -295,15 +307,17 @@ class MelodyViewModel @Inject constructor(
                                 level = level,
                                 score = scores.filter { it.level == level }.maxOfOrNull { it.overallScore }
                             )
-                            info.id to summary
+                            info.id to (level to summary)
                         }
                     }
                     combine(flows) { pairs ->
-                        pairs.mapNotNull { (id, summary) -> summary?.let { id to it } }.toMap()
+                        pairs.associate { (id, data) -> id to data.first } to
+                            pairs.mapNotNull { (id, data) -> data.second?.let { id to it } }.toMap()
                     }
                 }
-            }.collect { result ->
-                _allMelodyScores.value = result
+            }.collect { (levels, summaries) ->
+                _allMelodyLevels.value = levels
+                _allMelodyScores.value = summaries
             }
         }
     }
@@ -381,6 +395,129 @@ class MelodyViewModel @Inject constructor(
     }
 
     suspend fun importFile(uri: android.net.Uri): MelodyRepository.ImportResult? = melodyRepository.importFile(uri)
+
+    fun createPlaylist(name: String) {
+        viewModelScope.launch { playlistRepository.create(name) }
+    }
+
+    fun renamePlaylist(id: String, name: String) {
+        viewModelScope.launch { playlistRepository.rename(id, name) }
+    }
+
+    fun deletePlaylist(id: String) {
+        if (_playlistRun.value?.playlistId == id) endPlaylistSession()
+        viewModelScope.launch { playlistRepository.delete(id) }
+    }
+
+    fun setPlaylistMelodies(id: String, melodyIds: List<String>) {
+        viewModelScope.launch { playlistRepository.setMelodyIds(id, melodyIds) }
+    }
+
+    suspend fun startPlaylist(playlist: PlaylistRepository.Playlist): Boolean {
+        val all = availableMelodies.value.associateBy { it.id }
+        val infos = playlist.melodyIds.mapNotNull { all[it] }
+        if (infos.isEmpty()) return false
+        val songs = infos.map { PlaylistSong(it.id, it.name, levelOf(it.id)) }
+        endPlaylistSession()
+        stop()
+        if (!loadMelody(infos.first())) return false
+        _playlistRun.value = PlaylistRun(
+            playlistId = playlist.id,
+            name = playlist.name,
+            songs = songs,
+            pending = true
+        )
+        return true
+    }
+
+    fun restartPlaylist() {
+        val run = _playlistRun.value ?: return
+        viewModelScope.launch {
+            startPlaylist(PlaylistRepository.Playlist(run.playlistId, run.name, run.songs.map { it.id }))
+        }
+    }
+
+    fun continuePlaylist() {
+        if (_playlistRun.value?.pending != true) return
+        _playlistRun.update { it?.copy(pending = false) }
+        viewModelScope.launch {
+            awaitSettingsLoaded()
+            enterReadyPhase()
+            startRun()
+        }
+    }
+
+    fun retryPlaylistSong(index: Int) {
+        val run = _playlistRun.value ?: return
+        if (!run.finished || index !in run.results.indices) return
+        val song = run.songs.getOrNull(index) ?: return
+        viewModelScope.launch {
+            val info = availableMelodies.value.firstOrNull { it.id == song.id } ?: return@launch
+            loadMelody(info)
+            val current = _playlistRun.value ?: return@launch
+            if (current !== run) return@launch
+            val retryRun = current.copy(
+                index = index,
+                previous = null,
+                pending = false,
+                finished = false,
+                retrySongIndex = index
+            )
+            _playlistRun.value = retryRun
+            awaitSettingsLoaded()
+            if (_playlistRun.value !== retryRun) return@launch
+            enterReadyPhase()
+            startRun()
+        }
+    }
+
+    fun endPlaylistSession() {
+        _playlistRun.value = null
+    }
+
+    private suspend fun levelOf(melodyId: String): Int {
+        val profileId = profileRepository.activeProfileId ?: return 1
+        return melodySettingsRepository.getSettings(profileId, melodyId, _currentInstrument.value)
+            .first().level.coerceIn(1, 5)
+    }
+
+    private fun finishPlaylistSong(result: PlaylistResult) {
+        val run = _playlistRun.value ?: return
+        val retryIndex = run.retrySongIndex
+        if (retryIndex != null) {
+            val retryResults = run.results.toMutableList()
+            if (retryIndex in retryResults.indices) retryResults[retryIndex] = result
+            _playlistRun.value = run.copy(
+                results = retryResults,
+                previous = result,
+                pending = false,
+                finished = true,
+                retrySongIndex = null
+            )
+            return
+        }
+        val results = run.results + result
+        val nextIndex = run.index + 1
+        if (nextIndex >= run.songs.size) {
+            _playlistRun.value = run.copy(results = results, previous = result, pending = false, finished = true)
+            return
+        }
+        viewModelScope.launch {
+            val next = run.songs[nextIndex]
+            val level = levelOf(next.id)
+            val songs = run.songs.toMutableList().also { it[nextIndex] = next.copy(level = level) }
+            availableMelodies.value.firstOrNull { it.id == next.id }?.let { loadMelody(it) }
+            val current = _playlistRun.value ?: return@launch
+            if (current !== run) return@launch
+            _playlistRun.value = current.copy(
+                index = nextIndex,
+                songs = songs,
+                results = results,
+                previous = result,
+                pending = true
+            )
+        }
+    }
 
     suspend fun importFromUrl(url: String): MelodyRepository.ImportResult? = melodyRepository.importFromUrl(url)
 
@@ -1023,12 +1160,16 @@ class MelodyViewModel @Inject constructor(
         viewModelScope.launch {
             melodyRepository.removeImportedMelody(melodyId)
             scoreHistoryRepository.resetAllScores(melodyId)
+            playlistRepository.removeMelodyFromAll(melodyId)
         }
     }
 
     fun removeImportedFolder(folder: String) {
         viewModelScope.launch {
-            melodyRepository.removeImportedFolder(folder).forEach { scoreHistoryRepository.resetAllScores(it) }
+            melodyRepository.removeImportedFolder(folder).forEach {
+                scoreHistoryRepository.resetAllScores(it)
+                playlistRepository.removeMelodyFromAll(it)
+            }
         }
     }
 
@@ -1580,6 +1721,18 @@ class MelodyViewModel @Inject constructor(
                     )
                 )
             }
+        }
+
+        if (_playlistRun.value != null) {
+            finishPlaylistSong(
+                PlaylistResult(
+                    id = melodyId.orEmpty(),
+                    name = _gameState.value.melodyName.orEmpty(),
+                    level = currentLevel,
+                    score = adjustedScore,
+                    newLevel = newUnlockedLevel.takeIf { it > unlockedLevel }
+                )
+            )
         }
     }
 
