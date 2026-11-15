@@ -77,14 +77,6 @@ class ScoringEngine {
             }
         }
 
-        fun scoreTier(score: Float): ScoreTier = when {
-            score >= 95f -> ScoreTier.LEGENDARY
-            score >= 80f -> ScoreTier.EXCELLENT
-            score >= 65f -> ScoreTier.GREAT
-            score >= 50f -> ScoreTier.GOOD
-            score >= 30f -> ScoreTier.OK
-            else -> ScoreTier.NEEDS_WORK
-        }
     }
 
     fun scoreNote(result: NotePerformance, level: Int = 5): NoteScore {
@@ -137,7 +129,6 @@ data class NoteScore(
     val isHit: Boolean
 )
 
-enum class ScoreTier { LEGENDARY, EXCELLENT, GREAT, GOOD, OK, NEEDS_WORK }
 
 data class MelodyScore(
     val overallScore: Float,

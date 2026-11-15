@@ -19,8 +19,6 @@ import androidx.compose.ui.window.Dialog
 import net.exent.harmonisk.R
 import net.exent.harmonisk.data.ScoreHistoryRepository.ScoreEntry
 import net.exent.harmonisk.music.MelodyScore
-import net.exent.harmonisk.music.ScoringEngine
-import net.exent.harmonisk.music.ScoreTier
 import net.exent.harmonisk.ui.celebration.CelebrationLevel
 import net.exent.harmonisk.ui.celebration.ScoreCelebrationOverlay
 import net.exent.harmonisk.ui.theme.LocalHarmoniskDarkTheme
@@ -239,11 +237,11 @@ private fun EnthusiasmDisplay(
     )
 }
 
-private fun enthusiasmLevel(score: Float): EnthusiasmLevel = when (ScoringEngine.scoreTier(score)) {
-    ScoreTier.LEGENDARY -> EnthusiasmLevel.LEGENDARY
-    ScoreTier.EXCELLENT -> EnthusiasmLevel.EXCELLENT
-    ScoreTier.GREAT -> EnthusiasmLevel.GREAT
-    ScoreTier.GOOD -> EnthusiasmLevel.GOOD
-    ScoreTier.OK -> EnthusiasmLevel.OK
-    ScoreTier.NEEDS_WORK -> EnthusiasmLevel.NEEDS_WORK
+private fun enthusiasmLevel(score: Float): EnthusiasmLevel = when {
+    score >= 95f -> EnthusiasmLevel.LEGENDARY
+    score >= 80f -> EnthusiasmLevel.EXCELLENT
+    score >= 65f -> EnthusiasmLevel.GREAT
+    score >= 50f -> EnthusiasmLevel.GOOD
+    score >= 30f -> EnthusiasmLevel.OK
+    else -> EnthusiasmLevel.NEEDS_WORK
 }
