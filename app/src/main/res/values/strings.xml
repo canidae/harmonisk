@@ -153,7 +153,7 @@
     <string name="tuner_preset_default">Default</string>
 
     <!-- Melody screen -->
-    <string name="melody_title">Learn a melody</string>
+    <string name="melody_title">Practice</string>
     <string name="melody_choose">Choose a melody</string>
     <string name="melody_import_file">Import song file</string>
     <string name="melody_import_url">Import from URL</string>

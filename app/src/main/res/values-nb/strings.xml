@@ -153,7 +153,7 @@
     <string name="tuner_preset_default">Standard</string>
 
     <!-- Melody screen -->
-    <string name="melody_title">Lær en melodi</string>
+    <string name="melody_title">Øving</string>
     <string name="melody_choose">Velg en melodi</string>
     <string name="melody_import_file">Importer sangfil</string>
     <string name="melody_import_url">Importer fra URL</string>
