@@ -78,4 +78,10 @@ class AudioDelayRepository(
         setInputDelay(outputKey, inputDelayMs)
         setInputDelay(inputKey, inputDelayMs)
     }
+
+    suspend fun resetToDefaults() {
+        val outputKey = audioDeviceMonitor.currentDevice.value.deviceKey
+        val inputKey = audioDeviceMonitor.currentInputDevice.value.deviceKey
+        store.removeWhere { it == outputKey || it == inputKey }
+    }
 }

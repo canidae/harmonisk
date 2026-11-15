@@ -186,7 +186,10 @@ class SettingsRepository(
     }
 
     suspend fun resetToDefaults() {
-        profileRepository.activeProfileId?.let { deleteProfileData(it) }
+        val profileId = profileRepository.activeProfileId ?: return
+        context.dataStore.edit { prefs ->
+            prefs.remove(floatPreferencesKey(ProfileRepository.scopedKey(profileId, SILENCE_THRESHOLD_DB)))
+        }
     }
 
     suspend fun deleteProfileData(profileId: String) {

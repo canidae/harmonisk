@@ -80,7 +80,7 @@
     <string name="settings_input_delay_min">0</string>
     <string name="settings_input_delay_max">500</string>
     <string name="settings_reset_dialog_title">Tilbakestille til standardinnstillingene?</string>
-    <string name="settings_reset_dialog_body">Alle innstillinger for gjeldende profil blir tilbakestilt til standardverdiene, inkludert:\n\n\u2022 Mikrofonfølsomhet\n\u2022 Hastighet, tempo, taktart og notefesting i Opptak\n\u2022 Tempo, slag per takt og betoning i Metronom</string>
+    <string name="settings_reset_dialog_body">Følgende innstillinger blir tilbakestilt til standardverdiene:\n\n\u2022 Mikrofonfølsomhet\n\u2022 Inn- og utgangsforsinkelse for gjeldende enheter</string>
     <string name="settings_reset">Tilbakestill</string>
     <string name="settings_reset_to_defaults">Tilbakestill til standardinnstillingene</string>
     <string name="settings_language">Språk</string>

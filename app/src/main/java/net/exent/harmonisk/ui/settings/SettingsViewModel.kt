@@ -97,7 +97,10 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun resetToDefaults() {
-        viewModelScope.launch { settingsRepository.resetToDefaults() }
+        viewModelScope.launch {
+            settingsRepository.resetToDefaults()
+            audioDelayRepository.resetToDefaults()
+        }
     }
 
     fun autoCalibrateAudioDelay() {

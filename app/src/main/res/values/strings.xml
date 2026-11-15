@@ -80,7 +80,7 @@
     <string name="settings_input_delay_min">0</string>
     <string name="settings_input_delay_max">500</string>
     <string name="settings_reset_dialog_title">Reset to defaults?</string>
-    <string name="settings_reset_dialog_body">All settings for the current profile will be returned to their default values, including:\n\n\u2022 Silence threshold\n\u2022 Record speed, tempo, time signature, note snapping\n\u2022 Metronome tempo, beats per bar and accent</string>
+    <string name="settings_reset_dialog_body">The following settings will be returned to their default values:\n\n\u2022 Microphone sensitivity\n\u2022 Input and output audio delay for the current devices</string>
     <string name="settings_reset">Reset</string>
     <string name="settings_reset_to_defaults">Reset to defaults</string>
     <string name="settings_language">Language</string>
