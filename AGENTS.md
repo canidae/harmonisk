@@ -1,5 +1,4 @@
 ## Instructions
-- Resolve tasks in TODO.md unless task specifies not to. User may add clarifications or new tasks simultaneously as you work. Remove tasks when they're complete without affecting other tasks in the file.
 - Don't assume, ask clarifying questions when in doubt.
 - Be critical of the users request, if they suggest an architecturally bad or inefficient solution, let them know and offer alternatives.
 - If local uncommited changes, find out their purpose and commit them before starting a new task.
@@ -12,4 +11,4 @@
 - For testing on device, use profiles named "Test <num>", create if necessary.
 - After implementing changes, build, start and test before committing.
 - Avoid losing user data on device.
-- When releasing, create a tag prefixed with "v" then todays date in format "yyyy.MM.dd". If the tag already exists, overwrite it. Include a concise changelog since the last release in your response to the user.
+- When releasing, create a tag prefixed with "v" then todays date in format "yyyy.MM.dd". If the tag already exists, overwrite it. Push commits and tags to origin. Include a concise changelog since the last release in your response to the user.
