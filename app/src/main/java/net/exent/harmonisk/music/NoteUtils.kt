@@ -1,5 +1,6 @@
 package net.exent.harmonisk.music
 
+import kotlin.math.abs
 import kotlin.math.log2
 import kotlin.math.pow
 import kotlin.math.round
@@ -22,6 +23,13 @@ class NoteUtils {
         const val GOOD_CENTS = 30f
         const val OK_CENTS = 40f
         const val MAX_CENTS_OFF = 50f
+        const val LOW_LEVEL_MAX_CENTS_OFF = 75f
+
+        fun maxCentsOff(level: Int): Float =
+            if (level <= 3) LOW_LEVEL_MAX_CENTS_OFF else MAX_CENTS_OFF
+
+        fun isPitchAccepted(centsOff: Float, level: Int): Boolean =
+            abs(centsOff) <= maxCentsOff(level)
 
         fun midiToFrequency(midiNumber: Int, refA4: Float = DEFAULT_A4_FREQ): Float =
             (refA4.toDouble() * 2.0.pow((midiNumber - A4_MIDI_NUMBER).toDouble() / 12.0)).toFloat()

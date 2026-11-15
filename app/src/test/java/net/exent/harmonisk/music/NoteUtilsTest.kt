@@ -112,6 +112,23 @@ class NoteUtilsTest {
     }
 
     @Test
+    fun `levels one to three accept pitches three quarters of a semitone off`() {
+        for (level in 1..3) {
+            assertTrue(NoteUtils.isPitchAccepted(75f, level))
+            assertTrue(NoteUtils.isPitchAccepted(-75f, level))
+            assertFalse(NoteUtils.isPitchAccepted(75.01f, level))
+        }
+    }
+
+    @Test
+    fun `higher levels only accept pitches within half a semitone`() {
+        for (level in 4..5) {
+            assertTrue(NoteUtils.isPitchAccepted(50f, level))
+            assertFalse(NoteUtils.isPitchAccepted(75f, level))
+        }
+    }
+
+    @Test
     fun `frequencyToCents unison returns zero cents`() {
         val cents = noteUtils.frequencyToCents(440f, 440f)
         assertEquals(0f, cents, 0.01f)

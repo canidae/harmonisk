@@ -1299,12 +1299,13 @@ class MelodyViewModel @Inject constructor(
                     SystemClock.elapsedRealtime() - latestPitchAtMs <= FRESH_PITCH_MS
                 val alreadyPlaying = fresh && activeIndices.any { index ->
                     val note = track.notes.getOrNull(index) ?: return@any false
-                    abs(
+                    NoteUtils.isPitchAccepted(
                         noteUtils.frequencyToCents(
                             pitch.frequency,
                             NoteUtils.midiToFrequency(note.noteNumber, referenceA4)
-                        )
-                    ) <= NoteUtils.MAX_CENTS_OFF
+                        ),
+                        _gameState.value.currentLevel
+                    )
                 }
                 if (alreadyPlaying) {
                     currentNoteDetectedCorrectly = true
@@ -1340,7 +1341,7 @@ class MelodyViewModel @Inject constructor(
         val centsOff = expectedNotes.minOf { note ->
             abs(noteUtils.frequencyToCents(result.frequency, NoteUtils.midiToFrequency(note.noteNumber, referenceA4)))
         }
-        val isCorrectNote = abs(centsOff) <= NoteUtils.MAX_CENTS_OFF
+        val isCorrectNote = NoteUtils.isPitchAccepted(centsOff, _gameState.value.currentLevel)
         val isMidi = _deviceState.value.midiInputEnabled
         val frameDurationMs = AudioConstants.FRAME_DURATION_MS
 

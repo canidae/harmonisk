@@ -79,6 +79,19 @@ class ScoringEngineTest {
     }
 
     @Test
+    fun `a note three quarters of a semitone off gets no pitch points`() {
+        val result = engine.scoreNote(NotePerformance(
+            expectedMidiNote = 69,
+            detectedMidiNote = 68,
+            centsOff = 75f,
+            expectedDurationMs = 500,
+            actualDurationMs = 500
+        ), 3)
+        assertEquals(0f, result.pitchScore, 0.01f)
+        assertEquals(PitchAccuracy.MISS, result.pitchAccuracy)
+    }
+
+    @Test
     fun `perfect duration gives 100`() {
         val result = engine.scoreNote(NotePerformance(
             expectedMidiNote = 69,
