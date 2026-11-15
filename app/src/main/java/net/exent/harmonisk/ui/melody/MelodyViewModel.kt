@@ -1424,8 +1424,6 @@ class MelodyViewModel @Inject constructor(
         } else {
             val effectiveCentsOff = if (noteTracking.centsOffCount > 0) noteTracking.centsOffSum / noteTracking.centsOffCount else 100f
             val performance = NotePerformance(
-                expectedMidiNote = expectedNote.noteNumber,
-                detectedMidiNote = latestPitchResult.midiNoteNumber,
                 centsOff = effectiveCentsOff,
                 expectedDurationMs = expectedDurationMs,
                 actualDurationMs = playedDurationMs
@@ -1459,8 +1457,6 @@ class MelodyViewModel @Inject constructor(
                 val note = track.notes[i]
                 val expectedDurationMs = (track.noteDurationSeconds(note) * 1000).toLong()
                 val performance = NotePerformance(
-                    expectedMidiNote = note.noteNumber,
-                    detectedMidiNote = 0,
                     centsOff = 100f,
                     expectedDurationMs = expectedDurationMs,
                     actualDurationMs = 0

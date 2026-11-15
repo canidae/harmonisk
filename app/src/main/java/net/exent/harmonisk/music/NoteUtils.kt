@@ -37,10 +37,10 @@ class NoteUtils {
             return noteIndex to octave
         }
 
-        data class MidiNoteResolution(val noteIndex: Int, val octave: Int, val noteName: String)
+        data class MidiNoteResolution(val octave: Int, val noteName: String)
         fun resolveMidiNote(midi: Int): MidiNoteResolution {
             val (noteIndex, octave) = midiToNoteIndexAndOctave(midi)
-            return MidiNoteResolution(noteIndex, octave, NOTE_NAMES[noteIndex])
+            return MidiNoteResolution(octave, NOTE_NAMES[noteIndex])
         }
     }
 

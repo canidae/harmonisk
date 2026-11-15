@@ -59,8 +59,6 @@ class ScoringEngineTest {
     @Test
     fun `perfect duration gives 100`() {
         val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69,
-            detectedMidiNote = 69,
             centsOff = 0f,
             expectedDurationMs = 500,
             actualDurationMs = 500
@@ -71,8 +69,6 @@ class ScoringEngineTest {
     @Test
     fun `half duration gives half score on the strictest level`() {
         val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69,
-            detectedMidiNote = 69,
             centsOff = 0f,
             expectedDurationMs = 500,
             actualDurationMs = 250
@@ -83,8 +79,6 @@ class ScoringEngineTest {
     @Test
     fun `level one gives full score from eighty five percent of the note`() {
         val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69,
-            detectedMidiNote = 69,
             centsOff = 0f,
             expectedDurationMs = 500,
             actualDurationMs = 425
@@ -95,8 +89,6 @@ class ScoringEngineTest {
     @Test
     fun `level one scores below its grace ratio proportionally`() {
         val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69,
-            detectedMidiNote = 69,
             centsOff = 0f,
             expectedDurationMs = 1000,
             actualDurationMs = 425
@@ -114,8 +106,6 @@ class ScoringEngineTest {
     @Test
     fun `duration overshoot within tolerance gives 100`() {
         val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69,
-            detectedMidiNote = 69,
             centsOff = 0f,
             expectedDurationMs = 500,
             actualDurationMs = 525
@@ -239,7 +229,6 @@ class ScoringEngineTest {
     @Test
     fun `overall score uses only pitch and duration weights`() {
         val result = engine.scoreNote(NotePerformance(
-            expectedMidiNote = 69, detectedMidiNote = 69,
             centsOff = 0f, expectedDurationMs = 500,
             actualDurationMs = 500
         ))
@@ -309,8 +298,6 @@ class ScoringEngineTest {
 
     private fun score(centsOff: Float, level: Int = 5) = engine.scoreNote(
         NotePerformance(
-            expectedMidiNote = 69,
-            detectedMidiNote = 69,
             centsOff = centsOff,
             expectedDurationMs = 500,
             actualDurationMs = 500

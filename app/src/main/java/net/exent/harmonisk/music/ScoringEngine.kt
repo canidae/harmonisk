@@ -115,8 +115,6 @@ class ScoringEngine {
 }
 
 data class NotePerformance(
-    val expectedMidiNote: Int,
-    val detectedMidiNote: Int,
     val centsOff: Float,
     val expectedDurationMs: Long,
     val actualDurationMs: Long

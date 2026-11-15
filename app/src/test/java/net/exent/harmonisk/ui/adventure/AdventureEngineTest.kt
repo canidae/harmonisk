@@ -251,7 +251,7 @@ class AdventureEngineTest {
     }
 
     @Test
-    fun `standings keep player order and rank by total`() {
+    fun `standings keep player order and award medals by total`() {
         val standings = standings(
             listOf(
                 player("C", songScore = 65f, stickerScore = 15f),
@@ -261,7 +261,6 @@ class AdventureEngineTest {
             )
         )
         assertEquals(listOf("C", "B", "D", "A"), standings.map { it.player.name })
-        assertEquals(listOf(2, 2, 4, 1), standings.map { it.rank })
         assertEquals(AdventureMedal.SILVER, standings[0].medal)
         assertEquals(AdventureMedal.SILVER, standings[1].medal)
         assertEquals(AdventureMedal.NONE, standings[2].medal)

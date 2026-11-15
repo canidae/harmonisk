@@ -122,7 +122,6 @@ data class AdventurePlayer(
 
 data class AdventureStanding(
     val player: AdventurePlayer,
-    val rank: Int,
     val medal: AdventureMedal
 )
 
@@ -257,7 +256,7 @@ fun standings(players: List<AdventurePlayer>): List<AdventureStanding> {
     }
     return players.map { player ->
         val playerRank = ranks.getValue(player.profileId)
-        AdventureStanding(player, playerRank, medalFor(playerRank, players.size))
+        AdventureStanding(player, medalFor(playerRank, players.size))
     }
 }
 
