@@ -306,7 +306,7 @@ class AdventureViewModel @Inject constructor(
         val index = snapshot.currentPlayerIndex
         val player = snapshot.players.getOrNull(index) ?: return
         if (landing.reachedGoal) {
-            val finished = player.withCastleScore()
+            val finished = player.withCastleScore(snapshot.goal)
             _state.update {
                 it.copy(
                     players = snapshot.players.toMutableList().also { list -> list[index] = finished },

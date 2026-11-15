@@ -151,10 +151,10 @@ class AdventureEngineTest {
     }
 
     @Test
-    fun `the first player at the castle gets a hundred point bonus`() {
-        val player = player("A", songScore = 120f).withCastleScore()
-        assertEquals(100f, player.castleScore)
-        assertEquals(220f, player.total)
+    fun `the first player at the castle gets twice the game length as bonus`() {
+        val player = player("A", songScore = 120f).withCastleScore(ADVENTURE_DEFAULT_GOAL)
+        assertEquals(80f, player.castleScore)
+        assertEquals(200f, player.total)
     }
 
     @Test

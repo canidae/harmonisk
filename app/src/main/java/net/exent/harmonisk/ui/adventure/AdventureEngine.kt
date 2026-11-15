@@ -8,7 +8,6 @@ const val ADVENTURE_DEFAULT_GOAL = 40
 const val ADVENTURE_MIN_GOAL = 20
 const val ADVENTURE_MAX_GOAL = 60
 const val ADVENTURE_GOAL_STEP = 5
-const val ADVENTURE_CASTLE_BONUS = 100
 
 private const val ADVENTURE_SONG_PERCENT = 55
 private const val ADVENTURE_STICKER_PERCENT = 20
@@ -152,8 +151,8 @@ fun AdventurePlayer.withWhackScore(points: Int): AdventurePlayer =
 fun AdventurePlayer.withFaerieScore(points: Int): AdventurePlayer =
     copy(faerieScore = faerieScore + points)
 
-fun AdventurePlayer.withCastleScore(points: Int = ADVENTURE_CASTLE_BONUS): AdventurePlayer =
-    copy(castleScore = castleScore + points)
+fun AdventurePlayer.withCastleScore(goal: Int): AdventurePlayer =
+    copy(castleScore = castleScore + goal * 2)
 
 fun AdventurePlayer.withReward(reward: AdventureReward): AdventurePlayer = when (reward) {
     is AdventureReward.Stickers -> copy(
