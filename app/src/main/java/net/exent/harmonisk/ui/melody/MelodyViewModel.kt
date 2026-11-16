@@ -447,6 +447,20 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
+    fun pausePlaylist() {
+        val run = _playlistRun.value ?: return
+        if (run.pending || run.finished) return
+        stop()
+        _playlistRun.value = run.copy(pending = true)
+    }
+
+    fun cancelPlaylistRetry() {
+        val run = _playlistRun.value ?: return
+        if (run.retrySongIndex == null) return
+        stop()
+        _playlistRun.value = run.copy(pending = false, finished = true, retrySongIndex = null)
+    }
+
     fun retryPlaylistSong(index: Int) {
         val run = _playlistRun.value ?: return
         if (!run.finished || index !in run.results.indices) return

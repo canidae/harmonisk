@@ -95,9 +95,16 @@ fun MelodyPlayScreen(
         gameState.phase == PlayPhase.PAUSED
 
     BackHandler {
-        if (stopOnBack) viewModel.stop()
-        viewModel.endPlaylistSession()
-        onBack()
+        val run = playlistRun
+        when {
+            run?.retrySongIndex != null -> viewModel.cancelPlaylistRetry()
+            run != null && !run.pending && !run.finished -> viewModel.pausePlaylist()
+            else -> {
+                if (stopOnBack) viewModel.stop()
+                viewModel.endPlaylistSession()
+                onBack()
+            }
+        }
     }
 
     KeepScreenOn()
