@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-11-14
 
-This Privacy Policy describes how **Harmonisk** (“the App,” “we,” “us,” or “our”) handles information. The App is provided by the developer.
+This Privacy Policy describes how **Harmonisk** (“the App,” “we,” “us,” or “our”) handles information.
 
 ## 1. Information We Collect
 
@@ -56,9 +56,3 @@ Since Harmonisk does not collect or store personal data on our servers, there is
 ## 8. Changes to This Privacy Policy
 
 We may update this Privacy Policy from time to time. Any changes will be posted at this URL with an updated effective date. Continued use of the App after changes are posted constitutes acceptance of the updated policy.
-
-## 9. Contact Us
-
-If you have any questions about this Privacy Policy, you can contact us at:
-
-[contact information removed]
