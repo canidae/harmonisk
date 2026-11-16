@@ -396,8 +396,8 @@ class MelodyViewModel @Inject constructor(
 
     suspend fun importFile(uri: android.net.Uri): MelodyRepository.ImportResult? = melodyRepository.importFile(uri)
 
-    fun createPlaylist(name: String) {
-        viewModelScope.launch { playlistRepository.create(name) }
+    fun createPlaylist(name: String, onCreated: (String) -> Unit) {
+        viewModelScope.launch { onCreated(playlistRepository.create(name)) }
     }
 
     fun renamePlaylist(id: String, name: String) {

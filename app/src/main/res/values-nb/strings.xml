@@ -154,7 +154,6 @@
 
     <!-- Melody screen -->
     <string name="melody_title">Øving</string>
-    <string name="melody_choose">Velg en melodi</string>
     <string name="melody_import_file">Importer sangfil</string>
     <string name="melody_import_url">Importer fra URL</string>
     <string name="melody_import_url_hint">Lim inn en URL til en sang, ABC- eller zip-fil</string>
@@ -198,14 +197,12 @@
     <string name="melody_playlist_empty">Denne spillelisten har ingen sanger ennå.</string>
     <string name="melody_playlist_no_playlists">Ingen spillelister ennå.</string>
     <string name="melody_playlist_play">Spill gjennom</string>
-    <string name="melody_playlist_edit">Rediger</string>
     <string name="melody_playlist_done">Ferdig</string>
     <string name="melody_playlist_add_songs">Legg til sanger</string>
     <string name="melody_playlist_selected">%1$d valgt</string>
     <string name="melody_playlist_add_to">Legg til i spilleliste</string>
     <string name="melody_playlist_add">Legg til</string>
-    <string name="melody_playlist_move_up">Flytt opp</string>
-    <string name="melody_playlist_move_down">Flytt ned</string>
+    <string name="melody_playlist_reorder">Dra for å endre rekkefølge</string>
     <string name="melody_playlist_next">Neste melodi</string>
     <string name="melody_playlist_previous">Forrige melodi</string>
     <string name="melody_playlist_level_up">Nytt nivå! Nå nivå %1$d</string>

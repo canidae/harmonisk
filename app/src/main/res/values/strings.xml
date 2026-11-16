@@ -154,7 +154,6 @@
 
     <!-- Melody screen -->
     <string name="melody_title">Practice</string>
-    <string name="melody_choose">Choose a melody</string>
     <string name="melody_import_file">Import song file</string>
     <string name="melody_import_url">Import from URL</string>
     <string name="melody_import_url_hint">Paste a URL to a song, ABC or zip file</string>
@@ -198,14 +197,12 @@
     <string name="melody_playlist_empty">This playlist has no songs yet.</string>
     <string name="melody_playlist_no_playlists">No playlists yet.</string>
     <string name="melody_playlist_play">Play through</string>
-    <string name="melody_playlist_edit">Edit</string>
     <string name="melody_playlist_done">Done</string>
     <string name="melody_playlist_add_songs">Add songs</string>
     <string name="melody_playlist_selected">%1$d selected</string>
     <string name="melody_playlist_add_to">Add to playlist</string>
     <string name="melody_playlist_add">Add</string>
-    <string name="melody_playlist_move_up">Move up</string>
-    <string name="melody_playlist_move_down">Move down</string>
+    <string name="melody_playlist_reorder">Drag to reorder</string>
     <string name="melody_playlist_next">Next melody</string>
     <string name="melody_playlist_previous">Previous melody</string>
     <string name="melody_playlist_level_up">Level up! Now level %1$d</string>
