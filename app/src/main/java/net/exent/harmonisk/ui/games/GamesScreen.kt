@@ -22,6 +22,7 @@ import net.exent.harmonisk.ui.components.BrandTopBar
 import net.exent.harmonisk.ui.theme.AdventureGold
 
 private val ADVENTURE_ACCENT = AdventureGold
+private val FREEBIRD_ACCENT = Color(0xFF7ED0E8)
 private val WHACK_ACCENT = Color(0xFF7FB3C8)
 private val SOUND_TEST_ACCENT = Color(0xFFB39DDB)
 
@@ -29,6 +30,7 @@ private val SOUND_TEST_ACCENT = Color(0xFFB39DDB)
 fun GamesScreen(
     onBack: () -> Unit,
     onAdventure: () -> Unit,
+    onFreeBird: () -> Unit,
     onWhack: () -> Unit,
     onSoundTest: () -> Unit,
     viewModel: GamesViewModel = hiltViewModel()
@@ -56,6 +58,13 @@ fun GamesScreen(
                     accent = ADVENTURE_ACCENT,
                     onClick = onAdventure,
                     icon = { Text("🗺️", fontSize = 40.sp) }
+                )
+                Spacer(Modifier.height(14.dp))
+                GameCard(
+                    title = stringResource(R.string.freebird_title),
+                    accent = FREEBIRD_ACCENT,
+                    onClick = onFreeBird,
+                    icon = { Text("🐦", fontSize = 40.sp) }
                 )
                 Spacer(Modifier.height(14.dp))
                 GameCard(

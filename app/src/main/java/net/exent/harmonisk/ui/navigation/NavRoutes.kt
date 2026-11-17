@@ -8,6 +8,7 @@ internal object NavRoutes {
     const val SETTINGS = "settings"
     const val GAMES = "games"
     const val ADVENTURE = "adventure"
+    const val FREE_BIRD = "free_bird"
     const val WHACK = "whack"
     const val SOUND_TEST = "sound_test"
     const val MELODY_GRAPH = "melody_graph"

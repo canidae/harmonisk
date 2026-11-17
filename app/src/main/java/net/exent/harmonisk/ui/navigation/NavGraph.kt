@@ -9,6 +9,7 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import net.exent.harmonisk.ui.record.RecordScreen
 import net.exent.harmonisk.ui.games.GamesScreen
+import net.exent.harmonisk.ui.freebird.FreeBirdScreen
 import net.exent.harmonisk.ui.home.HomeScreen
 import net.exent.harmonisk.ui.melody.MelodyPlayScreen
 import net.exent.harmonisk.ui.melody.MelodyScreen
@@ -45,12 +46,16 @@ fun NavGraph() {
             GamesScreen(
                 onBack = { navController.popBackStack() },
                 onAdventure = { navController.navigate(NavRoutes.ADVENTURE) },
+                onFreeBird = { navController.navigate(NavRoutes.FREE_BIRD) },
                 onWhack = { navController.navigate(NavRoutes.WHACK) },
                 onSoundTest = { navController.navigate(NavRoutes.SOUND_TEST) }
             )
         }
         composable(NavRoutes.SOUND_TEST) {
             SoundTestScreen(onBack = { navController.popBackStack() })
+        }
+        composable(NavRoutes.FREE_BIRD) {
+            FreeBirdScreen(onBack = { navController.popBackStack() })
         }
         composable(NavRoutes.WHACK) {
             WhackScreen(onBack = { navController.popBackStack() })
