@@ -1,22 +1,31 @@
 package net.exent.harmonisk.ui.freebird
 
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.exent.harmonisk.audio.PitchProcessor
+import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.SettingsRepository
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.PitchResult
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import javax.inject.Inject
 
 @HiltViewModel
 class FreeBirdViewModel @Inject constructor(
     settingsRepository: SettingsRepository,
+    private val profileRepository: ProfileRepository,
+    private val freeBirdRepository: FreeBirdRepository,
     private val pitchProcessor: PitchProcessor
 ) : ViewModel() {
     private val _instrument = MutableStateFlow(Instrument.VIOLIN)
@@ -25,9 +34,20 @@ class FreeBirdViewModel @Inject constructor(
     private val _pitch = MutableStateFlow(PitchResult.SILENT)
     val pitch: StateFlow<PitchResult> = _pitch.asStateFlow()
 
+    private val _game = MutableStateFlow(FreeBirdGameState())
+    val game: StateFlow<FreeBirdGameState> = _game.asStateFlow()
+
     private var listenJob: Job? = null
+    private var gameJob: Job? = null
+    private var best = 0
 
     init {
+        viewModelScope.launch {
+            profileRepository.activeProfile.collect { profile ->
+                best = profile?.let { freeBirdRepository.best(it.id) } ?: 0
+                _game.update { it.copy(best = best) }
+            }
+        }
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
                 val instrument = Instrument.fromName(settings.instrumentName)
@@ -39,7 +59,131 @@ class FreeBirdViewModel @Inject constructor(
         }
     }
 
-    fun startListening() {
+    fun startGame() {
+        gameJob?.cancel()
+        startListening()
+        best = profileRepository.activeProfileId?.let { freeBirdRepository.best(it) } ?: 0
+        _game.value = FreeBirdGameState(
+            best = best,
+            playing = true,
+            timeMs = FREEBIRD_GAME_TIME_MS,
+            level = 1
+        )
+        gameJob = viewModelScope.launch {
+            var last = SystemClock.elapsedRealtime()
+            var nextSpawn = last + 1_000L
+            var pauseUntil = 0L
+            var feedback: FreeBirdFeedback? = null
+            var feedbackUntil = 0L
+            var nextId = 1L
+            while (isActive) {
+                delay(16)
+                val now = SystemClock.elapsedRealtime()
+                val delta = (now - last).coerceAtLeast(0L)
+                last = now
+                val state = _game.value
+                if (!state.playing) break
+                if (now < pauseUntil) continue
+                if (feedback != null && now >= feedbackUntil) feedback = null
+                var timeLeft = state.timeMs - delta
+                if (timeLeft <= 0) {
+                    _game.update {
+                        it.copy(
+                            playing = false,
+                            finished = true,
+                            timeMs = 0,
+                            letters = emptyList(),
+                            levelUp = null,
+                            feedback = null
+                        )
+                    }
+                    break
+                }
+                var level = state.level
+                var elapsed = state.levelElapsedMs + delta
+                val levelEnded = elapsed >= FREEBIRD_LEVEL_TIME_MS
+                val progress = (elapsed.toFloat() / FREEBIRD_LEVEL_TIME_MS).coerceIn(0f, 1f)
+                val interval = (FREEBIRD_SPAWN_MAX_MS -
+                    (FREEBIRD_SPAWN_MAX_MS - FREEBIRD_SPAWN_MIN_MS) * progress).toLong()
+                val letters = state.letters.toMutableList()
+                if (level >= FREEBIRD_MAX_LEVEL || !levelEnded) {
+                    if (now >= nextSpawn) {
+                        val pool = notesForLevel(_instrument.value, level)
+                        if (pool.isNotEmpty()) {
+                            val note = pool.random()
+                            letters += FreeBirdLetter(nextId++, note.midi, note.finger, 1.08f)
+                            nextSpawn = now + interval
+                        }
+                    }
+                }
+                val speed = (1.08f - BRANCH_PERCH_X) / FREEBIRD_NOTE_TRAVEL_MS
+                val remaining = ArrayList<FreeBirdLetter>(letters.size)
+                var score = state.score
+                for (letter in letters) {
+                    val x = letter.x - speed * delta
+                    var judged = letter.judged
+                    if (!judged && x <= BRANCH_PERCH_X) {
+                        judged = true
+                        val pitch = _pitch.value
+                        val targetCents = if (pitch.isSilent) 0f else centsFromTarget(pitch, letter.midi)
+                        val hit = !pitch.isSilent && abs(targetCents) <= FREEBIRD_HIT_CENTS
+                        if (hit) {
+                            val points = pointsForCents(targetCents)
+                            score += points
+                            timeLeft += FREEBIRD_TIME_BONUS_MS
+                            feedback = FreeBirdFeedback.Hit(nextId++, points, letter.midi, letter.finger, SystemClock.elapsedRealtime())
+                            feedbackUntil = now + FREEBIRD_FEEDBACK_MS
+                            continue
+                        }
+                        val direction = abs(targetCents) <= 150f
+                        feedback = FreeBirdFeedback.Miss(
+                            id = nextId++,
+                            reason = when {
+                                pitch.isSilent -> FreeBirdMissReason.SILENT
+                                !direction -> FreeBirdMissReason.WRONG_NOTE
+                                targetCents > 0f -> FreeBirdMissReason.SHARP
+                                else -> FreeBirdMissReason.FLAT
+                            },
+                            cents = if (!pitch.isSilent && direction) targetCents.roundToInt() else null,
+                            detectedMidi = if (!pitch.isSilent) pitch.midiNoteNumber else null
+                        )
+                        feedbackUntil = now + FREEBIRD_FEEDBACK_MS
+                    }
+                    if (x > -0.12f) {
+                        remaining += letter.copy(x = x, judged = judged)
+                    }
+                }
+                var levelUp: Int? = null
+                if (levelEnded && level < FREEBIRD_MAX_LEVEL) {
+                    if (remaining.isEmpty()) {
+                        level++
+                        elapsed = 0
+                        levelUp = level
+                        pauseUntil = now + FREEBIRD_LEVEL_PAUSE_MS
+                        nextSpawn = pauseUntil + 200
+                    }
+                } else if (level >= FREEBIRD_MAX_LEVEL && levelEnded) {
+                    elapsed = FREEBIRD_LEVEL_TIME_MS
+                }
+                if (score > best) {
+                    best = score
+                    profileRepository.activeProfileId?.let { freeBirdRepository.saveBest(it, score) }
+                }
+                _game.value = state.copy(
+                    score = score,
+                    best = best,
+                    timeMs = timeLeft,
+                    level = level,
+                    levelElapsedMs = elapsed,
+                    letters = remaining,
+                    levelUp = levelUp,
+                    feedback = feedback
+                )
+            }
+        }
+    }
+
+    private fun startListening() {
         if (listenJob != null) return
         listenJob = viewModelScope.launch {
             pitchProcessor.pitchFlow().collect { _pitch.value = it }
@@ -49,5 +193,7 @@ class FreeBirdViewModel @Inject constructor(
     override fun onCleared() {
         listenJob?.cancel()
         listenJob = null
+        gameJob?.cancel()
+        gameJob = null
     }
 }

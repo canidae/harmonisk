@@ -32,6 +32,8 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
 
+const val BIRD_SIZE_FRACTION = 0.13f
+
 private val Body = Color(0xFFF0A25A)
 private val BodyLight = Color(0xFFFFCB92)
 private val Belly = Color(0xFFFFE3BC)
@@ -54,7 +56,7 @@ fun FreeBirdBird(
         val layout = remember(width, height, instrument, level) {
             freeBirdStaffLayout(width, height, instrument, level, density)
         }
-        val birdSize = width * 0.13f
+        val birdSize = width * BIRD_SIZE_FRACTION
         val perchY = height * BRANCH_PERCH_Y - width * 0.0105f - birdSize * 0.36f
         val flying = !pitch.isSilent
         val targetY = if (flying) freeBirdPitchY(layout, pitch, height) else perchY

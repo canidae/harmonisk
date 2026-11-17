@@ -37,15 +37,15 @@ class FreeBirdStaffTest {
     @Test
     fun `violin level ranges grow with the available fingers`() {
         assertEquals(55..76, levelRange(Instrument.VIOLIN, 1))
-        assertEquals(55..78, levelRange(Instrument.VIOLIN, 2))
-        assertEquals(55..83, levelRange(Instrument.VIOLIN, 5))
+        assertEquals(57..78, levelRange(Instrument.VIOLIN, 2))
+        assertEquals(62..83, levelRange(Instrument.VIOLIN, 5))
         assertEquals(55..83, levelRange(Instrument.VIOLIN, 99))
     }
 
     @Test
     fun `cello level ranges include the low open strings`() {
         assertEquals(36..57, levelRange(Instrument.CELLO, 1))
-        assertEquals(36..62, levelRange(Instrument.CELLO, 5))
+        assertEquals(41..62, levelRange(Instrument.CELLO, 5))
         assertEquals(36..62, levelRange(Instrument.CELLO, 99))
     }
 

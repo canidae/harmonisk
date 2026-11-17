@@ -72,12 +72,21 @@ fun freeBirdStaffLayout(
     )
 }
 
+fun freeBirdNoteY(layout: FreeBirdStaffLayout, midi: Int, height: Float): Float {
+    val notePosition = notePosition(midi, 0f)
+    return (layout.middleC - (notePosition - MIDDLE_C_DIATONIC) * layout.step)
+        .coerceIn(height * 0.10f, height * 0.78f)
+}
+
 fun freeBirdPitchY(layout: FreeBirdStaffLayout, pitch: PitchResult, height: Float): Float {
-    val pitchClass = ((pitch.midiNoteNumber % 12) + 12) % 12
-    val octave = pitch.midiNoteNumber / 12
-    val position = octave * 7 + PITCH_STEP[pitchClass] + pitch.centsOff / 100f * 0.5f
+    val position = notePosition(pitch.midiNoteNumber, pitch.centsOff)
     return (layout.middleC - (position - MIDDLE_C_DIATONIC) * layout.step)
         .coerceIn(height * 0.10f, height * 0.78f)
+}
+
+private fun notePosition(midi: Int, cents: Float): Float {
+    val pitchClass = ((midi % 12) + 12) % 12
+    return (midi / 12) * 7 + PITCH_STEP[pitchClass] + cents / 100f * 0.5f
 }
 
 @Composable
@@ -169,10 +178,12 @@ fun FreeBirdStaff(
 }
 
 fun levelRange(instrument: Instrument, level: Int): IntRange {
-    val highestFinger = (0 until level.coerceIn(1, 5)).mapNotNull {
-        BowedAlgorithm.defaultFingerOffset(instrument, it)
-    }.maxOrNull() ?: 0
-    return instrument.tuning.min()..(instrument.tuning.max() + highestFinger)
+    val fingers = if (level >= FREEBIRD_MAX_LEVEL) 0..4 else listOf((level - 1).coerceIn(0, 4))
+    val midis = fingers.flatMap { finger ->
+        val offset = BowedAlgorithm.defaultFingerOffset(instrument, finger) ?: return@flatMap emptyList()
+        instrument.tuning.map { it + offset }
+    }
+    return midis.min()..midis.max()
 }
 
 fun diatonic(midi: Int): Int = (midi / 12) * 7 + NOTE_DEGREE[midi % 12]
