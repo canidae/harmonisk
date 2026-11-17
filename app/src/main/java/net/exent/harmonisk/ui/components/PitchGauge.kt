@@ -15,7 +15,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import net.exent.harmonisk.R
 import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.ui.theme.LocalHarmoniskDarkTheme
 import net.exent.harmonisk.ui.theme.TunerAmber
@@ -34,6 +36,8 @@ fun PitchGauge(
     noteName: String,
     octave: Int,
     isSilent: Boolean,
+    targetFrequency: Float = 0f,
+    detectedFrequency: Float = 0f,
     isInTune: Boolean = false,
     modifier: Modifier = Modifier,
     maxCents: Float = NoteUtils.MAX_CENTS_OFF,
@@ -172,6 +176,32 @@ fun PitchGauge(
                         color = noteColor.copy(alpha = 0.7f)
                     )
                 }
+            }
+        }
+
+        Box(
+            modifier = Modifier.height(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!isSilent) {
+                Text(
+                    text = stringResource(R.string.tuner_frequency, targetFrequency),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier.height(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!isSilent) {
+                Text(
+                    text = stringResource(R.string.tuner_frequency, detectedFrequency),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = noteColor
+                )
             }
         }
     }

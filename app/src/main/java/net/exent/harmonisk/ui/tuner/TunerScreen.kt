@@ -14,13 +14,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import net.exent.harmonisk.R
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -91,6 +89,8 @@ fun TunerScreen(
                         noteName = state.displayedResult.noteName,
                         octave = state.displayedResult.octave,
                         isSilent = !state.displayedResult.isValid,
+                        targetFrequency = state.targetFrequency,
+                        detectedFrequency = state.displayedResult.frequency,
                         isInTune = state.isInTune,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -105,14 +105,6 @@ fun TunerScreen(
                     ) {
                         InTuneBadge(visible = state.isInTune, accent = tunerGreen)
                     }
-
-                    Text(
-                        text = stringResource(R.string.tuner_frequency, state.displayedResult.frequency),
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.alpha(if (state.displayedResult.isValid) 1f else 0f)
-                    )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
