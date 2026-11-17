@@ -321,7 +321,7 @@ private fun DrawScope.drawWater(time: Float) {
     val width = size.width
     val height = size.height
     val waterTop = height * 0.88f
-    val scroll = (time * 4f % 1f) * width
+    val scroll = (time * 2.4f % 1f) * width
     val edge = Path().apply {
         moveTo(0f, height)
         lineTo(0f, waterEdgeY(0f, waterTop, height, scroll))
@@ -374,20 +374,20 @@ private fun DrawScope.drawWater(time: Float) {
         val row = index % 4
         val col = index / 4
         val y = waterTop + height * (0.045f + row * 0.033f)
-        val x = (((col * 0.27f + row * 0.13f + time * 9f) % 1.12f) - 0.08f) * width
+        val x = ((((col * 0.27f + row * 0.13f - time * 2.4f) % 1.12f + 1.12f) % 1.12f) - 0.08f) * width
         val length = width * (0.055f + 0.018f * (row % 3))
         val amplitude = height * (0.003f + row * 0.0009f)
         val alpha = 0.16f + (row + 1) * 0.055f
-        drawWave(x, y, length, amplitude, time * 22f + index * 0.8f, WaterWave.copy(alpha = alpha), 1.8f)
+        drawWave(x, y, length, amplitude, time * 9f + index * 0.8f, WaterWave.copy(alpha = alpha), 1.8f)
     }
     repeat(14) { index ->
         val y = waterTop + height * (0.07f + (index % 5) * 0.026f)
-        val x = (((index * 0.19f + time * 7f) % 1.1f) - 0.05f) * width
+        val x = ((((index * 0.19f - time * 1.8f) % 1.1f + 1.1f) % 1.1f) - 0.05f) * width
         val length = width * 0.035f
-        drawWave(x, y, length, height * 0.0022f, time * 16f + index, WaterWave.copy(alpha = 0.13f), 1.4f)
+        drawWave(x, y, length, height * 0.0022f, time * 7f + index, WaterWave.copy(alpha = 0.13f), 1.4f)
     }
     repeat(8) { index ->
-        val x = width * (0.05f + index * 0.125f) + sin(time * 11f + index) * width * 0.012f
+        val x = width * (0.05f + index * 0.125f) + sin(time * 5f + index) * width * 0.012f
         val y = waterTop + height * (0.012f + (index % 2) * 0.008f)
         val length = width * (0.035f + (index % 3) * 0.012f)
         drawPath(
@@ -405,7 +405,7 @@ private fun DrawScope.drawWater(time: Float) {
     }
     repeat(7) { index ->
         val y = waterTop + height * (0.03f + index * 0.018f)
-        val x = width * 0.76f + sin(time * 12f + index * 1.7f) * width * 0.025f
+        val x = width * 0.76f + sin(time * 6f + index * 1.7f) * width * 0.025f
         val length = width * (0.026f + (index % 3) * 0.012f)
         drawLine(
             WaterShine.copy(alpha = 0.2f - index * 0.02f),
