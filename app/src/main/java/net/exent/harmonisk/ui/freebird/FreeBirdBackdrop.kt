@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.min
@@ -342,17 +343,22 @@ private fun DrawScope.drawWater(time: Float) {
             endY = height
         )
     )
-    drawRect(
-        brush = Brush.verticalGradient(
-            0f to SunGlow.copy(alpha = 0.22f),
-            0.45f to SunGlow.copy(alpha = 0.07f),
-            1f to Color.Transparent,
-            startY = waterTop,
-            endY = height
-        ),
-        topLeft = Offset(width * 0.68f, waterTop),
-        size = Size(width * 0.16f, height - waterTop)
-    )
+    clipPath(edge) {
+        val shimmerCenter = Offset(width * 0.76f, waterTop + height * 0.035f)
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    SunGlow.copy(alpha = 0.2f),
+                    SunGlow.copy(alpha = 0.06f),
+                    Color.Transparent
+                ),
+                center = shimmerCenter,
+                radius = width * 0.2f
+            ),
+            radius = width * 0.2f,
+            center = shimmerCenter
+        )
+    }
 
     val shimmer = Path().apply {
         moveTo(0f, waterEdgeY(0f, waterTop, height, scroll))
