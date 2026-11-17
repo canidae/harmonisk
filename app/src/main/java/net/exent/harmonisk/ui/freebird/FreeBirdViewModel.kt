@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import net.exent.harmonisk.audio.PitchProcessor
 import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.SettingsRepository
+import net.exent.harmonisk.data.createProfileWithInstrument
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.PitchResult
 import kotlin.math.abs
@@ -22,7 +23,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FreeBirdViewModel @Inject constructor(
-    settingsRepository: SettingsRepository,
+    private val settingsRepository: SettingsRepository,
     private val profileRepository: ProfileRepository,
     private val freeBirdRepository: FreeBirdRepository,
     private val pitchProcessor: PitchProcessor
@@ -36,15 +37,23 @@ class FreeBirdViewModel @Inject constructor(
     private val _game = MutableStateFlow(FreeBirdGameState())
     val game: StateFlow<FreeBirdGameState> = _game.asStateFlow()
 
+    val profiles: StateFlow<List<ProfileRepository.Profile>> = profileRepository.profiles
+    val activeProfile: StateFlow<ProfileRepository.Profile?> = profileRepository.activeProfile
+
     private var listenJob: Job? = null
     private var gameJob: Job? = null
     private var best = 0
+    private var paused = false
 
     init {
         viewModelScope.launch {
+            var lastProfileId: String? = null
             profileRepository.activeProfile.collect { profile ->
+                val profileId = profile?.id
                 best = profile?.let { freeBirdRepository.best(it.id) } ?: 0
                 _game.update { it.copy(best = best) }
+                if (lastProfileId != null && lastProfileId != profileId) stopGame()
+                lastProfileId = profileId
             }
         }
         viewModelScope.launch {
@@ -60,6 +69,7 @@ class FreeBirdViewModel @Inject constructor(
 
     fun startGame() {
         gameJob?.cancel()
+        paused = false
         startListening()
         best = profileRepository.activeProfileId?.let { freeBirdRepository.best(it) } ?: 0
         _game.value = FreeBirdGameState(
@@ -80,6 +90,7 @@ class FreeBirdViewModel @Inject constructor(
                 val now = SystemClock.elapsedRealtime()
                 val delta = (now - last).coerceAtLeast(0L)
                 last = now
+                if (paused) continue
                 val state = _game.value
                 if (!state.playing) break
                 if (now < pauseUntil) continue
@@ -167,6 +178,30 @@ class FreeBirdViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun pauseGame() {
+        if (_game.value.playing) paused = true
+    }
+
+    fun resumeGame() {
+        paused = false
+    }
+
+    fun selectProfile(id: String) {
+        profileRepository.selectProfile(id)
+    }
+
+    fun createProfile(name: String, emoji: String, instrument: Instrument): Boolean =
+        createProfileWithInstrument(viewModelScope, profileRepository, settingsRepository, name, emoji, instrument)
+
+    private fun stopGame() {
+        gameJob?.cancel()
+        gameJob = null
+        listenJob?.cancel()
+        listenJob = null
+        _pitch.value = PitchResult.SILENT
+        _game.value = FreeBirdGameState(best = best)
     }
 
     private fun startListening() {

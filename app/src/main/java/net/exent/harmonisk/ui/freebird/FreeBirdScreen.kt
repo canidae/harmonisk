@@ -17,6 +17,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,8 +31,13 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.harmonisk.R
+import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.ui.components.KeepScreenOn
 import net.exent.harmonisk.ui.components.RequireMicPermission
+import net.exent.harmonisk.ui.profile.ProfileButton
+import net.exent.harmonisk.ui.profile.ProfileDialogs
+import net.exent.harmonisk.ui.profile.ProfileIconButton
+import net.exent.harmonisk.ui.profile.rememberProfileDialogState
 
 @Composable
 fun FreeBirdScreen(
@@ -41,6 +47,13 @@ fun FreeBirdScreen(
     val instrument by viewModel.instrument.collectAsStateWithLifecycle()
     val pitch by viewModel.pitch.collectAsStateWithLifecycle()
     val game by viewModel.game.collectAsStateWithLifecycle()
+    val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    val profileDialogs = rememberProfileDialogState()
+    val profileDialogOpen = profileDialogs.showSwitchConfirm || profileDialogs.showProfile || profileDialogs.showCreate
+    LaunchedEffect(profileDialogOpen) {
+        if (profileDialogOpen) viewModel.pauseGame() else viewModel.resumeGame()
+    }
     BackHandler(onBack = onBack)
     KeepScreenOn()
     Box(Modifier.fillMaxSize()) {
@@ -51,14 +64,22 @@ fun FreeBirdScreen(
         RequireMicPermission {
             FreeBirdBird(instrument, pitch, game.level, Modifier.fillMaxSize())
             if (!game.playing && !game.finished) {
-                FreeBirdStartOverlay(onStart = viewModel::startGame)
+                FreeBirdStartOverlay(
+                    profile = profile,
+                    onProfile = { profileDialogs.open(false) },
+                    onStart = viewModel::startGame
+                )
             }
         }
         game.feedback?.let {
             FreeBirdSingingNotes(instrument, game.level, it, Modifier.fillMaxSize())
         }
         if (game.playing || game.finished) {
-            FreeBirdHud(game)
+            FreeBirdHud(
+                game = game,
+                profile = profile,
+                onProfileClick = { profileDialogs.open(game.playing) }
+            )
         }
         if (game.playing) {
             FreeBirdTimer(
@@ -97,11 +118,23 @@ fun FreeBirdScreen(
                 )
             }
         }
+        ProfileDialogs(
+            state = profileDialogs,
+            profiles = profiles,
+            activeProfileId = profile?.id,
+            initialInstrument = instrument,
+            onSelect = viewModel::selectProfile,
+            onCreate = viewModel::createProfile
+        )
     }
 }
 
 @Composable
-private fun FreeBirdStartOverlay(onStart: () -> Unit) {
+private fun FreeBirdStartOverlay(
+    profile: ProfileRepository.Profile?,
+    onProfile: () -> Unit,
+    onStart: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -126,7 +159,11 @@ private fun FreeBirdStartOverlay(onStart: () -> Unit) {
                     fontWeight = FontWeight.Black,
                     textAlign = TextAlign.Center
                 )
-                Spacer(Modifier.height(22.dp))
+                Spacer(Modifier.height(18.dp))
+                profile?.let {
+                    ProfileButton(name = it.name, emoji = it.emoji, onClick = onProfile)
+                    Spacer(Modifier.height(16.dp))
+                }
                 Button(
                     onClick = onStart,
                     modifier = Modifier.fillMaxWidth()
@@ -139,7 +176,11 @@ private fun FreeBirdStartOverlay(onStart: () -> Unit) {
 }
 
 @Composable
-private fun FreeBirdHud(game: FreeBirdGameState) {
+private fun FreeBirdHud(
+    game: FreeBirdGameState,
+    profile: ProfileRepository.Profile?,
+    onProfileClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -152,6 +193,11 @@ private fun FreeBirdHud(game: FreeBirdGameState) {
         HudChip(stringResource(R.string.freebird_best, game.best))
         Spacer(Modifier.weight(1f))
         HudChip(stringResource(R.string.freebird_level, game.level))
+        if (game.playing) {
+            profile?.let {
+                ProfileIconButton(emoji = it.emoji, name = it.name, onClick = onProfileClick)
+            }
+        }
     }
 }
 
