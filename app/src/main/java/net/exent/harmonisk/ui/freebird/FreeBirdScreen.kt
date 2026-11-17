@@ -17,7 +17,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,8 +49,10 @@ fun FreeBirdScreen(
         FreeBirdSeagull(Modifier.fillMaxSize())
         FreeBirdLetters(instrument, game.letters, game.level, pitch, Modifier.fillMaxSize())
         RequireMicPermission {
-            LaunchedEffect(Unit) { viewModel.startGame() }
             FreeBirdBird(instrument, pitch, game.level, Modifier.fillMaxSize())
+            if (!game.playing && !game.finished) {
+                FreeBirdStartOverlay(onStart = viewModel::startGame)
+            }
         }
         game.feedback?.let {
             FreeBirdSingingNotes(instrument, game.level, it, Modifier.fillMaxSize())
@@ -94,6 +95,44 @@ fun FreeBirdScreen(
                     onRestart = viewModel::startGame,
                     onBack = onBack
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FreeBirdStartOverlay(onStart: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.32f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .widthIn(max = 330.dp)
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 30.dp, vertical = 26.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = stringResource(R.string.freebird_title),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(22.dp))
+                Button(
+                    onClick = onStart,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.start), fontSize = 16.sp)
+                }
             }
         }
     }
@@ -180,6 +219,10 @@ private fun GameOverOverlay(score: Int, best: Int, onRestart: () -> Unit, onBack
         contentAlignment = Alignment.Center
     ) {
         Surface(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .widthIn(max = 330.dp)
+                .fillMaxWidth(),
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surface
         ) {
