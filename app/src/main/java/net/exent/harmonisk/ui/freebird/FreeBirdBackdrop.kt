@@ -34,8 +34,11 @@ private val MidHillTop = Color(0xFF79B08D)
 private val MidHillBottom = Color(0xFF5E9874)
 private val BackForest = Color(0xFF4C8A63)
 private val FrontForest = Color(0xFF356B4A)
-private val Ground = Color(0xFF245538)
-private val GroundDark = Color(0xFF0E291B)
+private val WaterTop = Color(0xFF4C96A4)
+private val WaterMid = Color(0xFF2B6C7E)
+private val WaterDeep = Color(0xFF103B4C)
+private val WaterWave = Color(0xFFE2F9F4)
+private val WaterShine = Color(0xFFFFE5A8)
 private val Cloud = Color(0xFFFFFDF5)
 
 private data class TreeSpec(val x: Float, val height: Float, val broadleaf: Boolean)
@@ -101,7 +104,7 @@ fun FreeBirdBackdrop(modifier: Modifier = Modifier, speed: Float = 1f) {
             bottom = MidHillBottom
         )
         drawForest(time)
-        drawGround(time)
+        drawWater(time)
         drawBirds(time)
         drawVignette()
     }
@@ -313,34 +316,129 @@ private fun DrawScope.drawBroadleaf(base: Offset, width: Float, height: Float, c
     drawCircle(color, width * 0.38f, Offset(base.x, base.y - height * 0.78f))
 }
 
-private fun DrawScope.drawGround(time: Float) {
+private fun DrawScope.drawWater(time: Float) {
     val width = size.width
     val height = size.height
-    val baseY = height * 0.895f
+    val waterTop = height * 0.88f
     val scroll = (time * 4f % 1f) * width
-    val path = Path().apply {
+    val edge = Path().apply {
         moveTo(0f, height)
-        lineTo(0f, baseY)
+        lineTo(0f, waterEdgeY(0f, waterTop, height, scroll))
         var x = 0f
         while (x <= width) {
-            val angle = 2.0 * PI * (x + scroll) / width
-            val y = baseY -
-                height * 0.016f * sin(angle).toFloat() -
-                height * 0.010f * sin(angle * 2.0 + 1.1).toFloat()
-            lineTo(x, y)
+            lineTo(x, waterEdgeY(x, waterTop, height, scroll))
             x += width / 96f
         }
         lineTo(width, height)
         close()
     }
     drawPath(
-        path = path,
-        brush = Brush.verticalGradient(
-            0f to Ground,
-            ((baseY + height * 0.05f) / height).coerceIn(0f, 1f) to GroundDark,
-            1f to Color(0xFF081C12)
+        edge,
+        Brush.verticalGradient(
+            0f to WaterTop,
+            0.30f to WaterMid,
+            1f to WaterDeep,
+            startY = waterTop,
+            endY = height
         )
     )
+    drawRect(
+        brush = Brush.verticalGradient(
+            0f to SunGlow.copy(alpha = 0.22f),
+            0.45f to SunGlow.copy(alpha = 0.07f),
+            1f to Color.Transparent,
+            startY = waterTop,
+            endY = height
+        ),
+        topLeft = Offset(width * 0.68f, waterTop),
+        size = Size(width * 0.16f, height - waterTop)
+    )
+
+    val shimmer = Path().apply {
+        moveTo(0f, waterEdgeY(0f, waterTop, height, scroll))
+        var x = 0f
+        while (x <= width) {
+            lineTo(x, waterEdgeY(x, waterTop, height, scroll))
+            x += width / 96f
+        }
+    }
+    drawPath(shimmer, WaterWave.copy(alpha = 0.5f), style = Stroke(width = 1.8f))
+
+    repeat(20) { index ->
+        val row = index % 4
+        val col = index / 4
+        val y = waterTop + height * (0.045f + row * 0.033f)
+        val x = (((col * 0.27f + row * 0.13f + time * 9f) % 1.12f) - 0.08f) * width
+        val length = width * (0.055f + 0.018f * (row % 3))
+        val amplitude = height * (0.003f + row * 0.0009f)
+        val alpha = 0.16f + (row + 1) * 0.055f
+        drawWave(x, y, length, amplitude, time * 22f + index * 0.8f, WaterWave.copy(alpha = alpha), 1.8f)
+    }
+    repeat(14) { index ->
+        val y = waterTop + height * (0.07f + (index % 5) * 0.026f)
+        val x = (((index * 0.19f + time * 7f) % 1.1f) - 0.05f) * width
+        val length = width * 0.035f
+        drawWave(x, y, length, height * 0.0022f, time * 16f + index, WaterWave.copy(alpha = 0.13f), 1.4f)
+    }
+    repeat(8) { index ->
+        val x = width * (0.05f + index * 0.125f) + sin(time * 11f + index) * width * 0.012f
+        val y = waterTop + height * (0.012f + (index % 2) * 0.008f)
+        val length = width * (0.035f + (index % 3) * 0.012f)
+        drawPath(
+            Path().apply {
+                moveTo(x - length / 2f, y)
+                cubicTo(
+                    x - length * 0.18f, y - height * 0.006f,
+                    x + length * 0.18f, y + height * 0.005f,
+                    x + length / 2f, y
+                )
+            },
+            WaterWave.copy(alpha = 0.28f),
+            style = Stroke(width = 1.8f, cap = StrokeCap.Round)
+        )
+    }
+    repeat(7) { index ->
+        val y = waterTop + height * (0.03f + index * 0.018f)
+        val x = width * 0.76f + sin(time * 12f + index * 1.7f) * width * 0.025f
+        val length = width * (0.026f + (index % 3) * 0.012f)
+        drawLine(
+            WaterShine.copy(alpha = 0.2f - index * 0.02f),
+            Offset(x - length / 2f, y),
+            Offset(x + length / 2f, y),
+            strokeWidth = 2.2f,
+            cap = StrokeCap.Round
+        )
+    }
+}
+
+private fun DrawScope.waterEdgeY(x: Float, top: Float, height: Float, scroll: Float): Float {
+    val angle = 2.0 * PI * (x + scroll) / size.width
+    return top -
+        height * 0.008f * sin(angle).toFloat() -
+        height * 0.004f * sin(angle * 2.0 + 1.3).toFloat()
+}
+
+private fun DrawScope.drawWave(
+    x: Float,
+    y: Float,
+    length: Float,
+    amplitude: Float,
+    phase: Float,
+    color: Color,
+    width: Float
+) {
+    val path = Path().apply {
+        moveTo(x, y)
+        var step = 0f
+        while (step <= 1f) {
+            lineTo(
+                x + length * step,
+                y + amplitude * sin((step * 2f * PI + phase).toFloat())
+            )
+            step += 0.125f
+        }
+    }
+    drawPath(path, color, style = Stroke(width = width, cap = StrokeCap.Round))
 }
 
 private fun DrawScope.drawBirds(time: Float) {
