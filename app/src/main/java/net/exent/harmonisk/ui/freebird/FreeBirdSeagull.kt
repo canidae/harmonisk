@@ -1,11 +1,5 @@
 package net.exent.harmonisk.ui.freebird
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,16 +30,7 @@ private val GullShadow = Color(0xFF46575A)
 
 @Composable
 fun FreeBirdSeagull(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "freebird_seagull")
-    val phase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(5_600, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "freebird_seagull_phase"
-    )
+    val phase by rememberFreeBirdPhase(5_600L, fps = 12)
     Canvas(modifier) {
         val unit = size.width
         val bx = unit * BIRD_PERCH_X

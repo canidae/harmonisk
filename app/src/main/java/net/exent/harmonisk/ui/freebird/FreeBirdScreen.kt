@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,13 +57,14 @@ fun FreeBirdScreen(
     }
     BackHandler(onBack = onBack)
     KeepScreenOn()
+    val layer = remember { Modifier.fillMaxSize() }
     Box(Modifier.fillMaxSize()) {
-        FreeBirdBackdrop(Modifier.fillMaxSize())
-        FreeBirdStaff(instrument, game.level, Modifier.fillMaxSize())
-        FreeBirdSeagull(Modifier.fillMaxSize())
-        FreeBirdLetters(instrument, game.letters, game.level, pitch, Modifier.fillMaxSize())
+        FreeBirdBackdrop(layer)
+        FreeBirdStaff(instrument, game.level, layer)
+        FreeBirdSeagull(layer)
+        FreeBirdLetters(instrument, game.letters, game.level, pitch, layer)
         RequireMicPermission {
-            FreeBirdBird(instrument, pitch, game.level, Modifier.fillMaxSize())
+            FreeBirdBird(instrument, pitch, game.level, layer)
             if (!game.playing && !game.finished) {
                 FreeBirdStartOverlay(
                     profile = profile,
@@ -72,18 +74,25 @@ fun FreeBirdScreen(
             }
         }
         game.feedback?.let {
-            FreeBirdSingingNotes(instrument, game.level, it, Modifier.fillMaxSize())
+            FreeBirdSingingNotes(instrument, game.level, it, layer)
+        }
+        val openProfile = remember(profileDialogs, game.playing) {
+            { profileDialogs.open(game.playing) }
         }
         if (game.playing || game.finished) {
             FreeBirdHud(
-                game = game,
+                score = game.score,
+                best = game.best,
+                level = game.level,
+                playing = game.playing,
                 profile = profile,
-                onProfileClick = { profileDialogs.open(game.playing) }
+                onProfileClick = openProfile
             )
         }
         if (game.playing) {
             FreeBirdTimer(
-                timeMs = game.timeMs,
+                seconds = game.timeMs / 1_000L,
+                warning = game.timeMs < 5_000L,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .navigationBarsPadding()
@@ -177,7 +186,10 @@ private fun FreeBirdStartOverlay(
 
 @Composable
 private fun FreeBirdHud(
-    game: FreeBirdGameState,
+    score: Int,
+    best: Int,
+    level: Int,
+    playing: Boolean,
     profile: ProfileRepository.Profile?,
     onProfileClick: () -> Unit
 ) {
@@ -189,11 +201,11 @@ private fun FreeBirdHud(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        HudChip(stringResource(R.string.freebird_score, game.score))
-        HudChip(stringResource(R.string.freebird_best, game.best))
+        HudChip(stringResource(R.string.freebird_score, score))
+        HudChip(stringResource(R.string.freebird_best, best))
         Spacer(Modifier.weight(1f))
-        HudChip(stringResource(R.string.freebird_level, game.level))
-        if (game.playing) {
+        HudChip(stringResource(R.string.freebird_level, level))
+        if (playing) {
             profile?.let {
                 ProfileIconButton(emoji = it.emoji, name = it.name, onClick = onProfileClick)
             }
@@ -219,8 +231,7 @@ private fun HudChip(text: String) {
 }
 
 @Composable
-private fun FreeBirdTimer(timeMs: Long, modifier: Modifier = Modifier) {
-    val warning = timeMs < 5_000L
+private fun FreeBirdTimer(seconds: Long, warning: Boolean, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         color = Color.Black.copy(alpha = 0.28f),
@@ -228,7 +239,7 @@ private fun FreeBirdTimer(timeMs: Long, modifier: Modifier = Modifier) {
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f))
     ) {
         Text(
-            text = formatTime(timeMs),
+            text = formatTime(seconds),
             fontSize = 42.sp,
             fontWeight = FontWeight.Black,
             color = if (warning) Color(0xFFFF5C5C) else Color.White,
@@ -312,7 +323,7 @@ private fun GameOverOverlay(score: Int, best: Int, onRestart: () -> Unit, onBack
     }
 }
 
-private fun formatTime(milliseconds: Long): String {
-    val seconds = (milliseconds / 1000).coerceAtLeast(0)
-    return "%d:%02d".format(seconds / 60, seconds % 60)
+private fun formatTime(seconds: Long): String {
+    val total = seconds.coerceAtLeast(0)
+    return "%d:%02d".format(total / 60, total % 60)
 }

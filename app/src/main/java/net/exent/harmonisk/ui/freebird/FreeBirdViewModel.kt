@@ -44,6 +44,7 @@ class FreeBirdViewModel @Inject constructor(
     private var gameJob: Job? = null
     private var best = 0
     private var paused = false
+    private var latestPitch = PitchResult.SILENT
 
     init {
         viewModelScope.launch {
@@ -86,13 +87,14 @@ class FreeBirdViewModel @Inject constructor(
             var feedbackUntil = 0L
             var nextId = 1L
             while (isActive) {
-                delay(16)
+                delay(33)
                 val now = SystemClock.elapsedRealtime()
                 val delta = (now - last).coerceAtLeast(0L)
                 last = now
                 if (paused) continue
                 val state = _game.value
                 if (!state.playing) break
+                _pitch.value = latestPitch
                 if (now < pauseUntil) continue
                 if (feedback != null && now >= feedbackUntil) feedback = null
                 var timeLeft = state.timeMs - delta
@@ -107,6 +109,7 @@ class FreeBirdViewModel @Inject constructor(
                             feedback = null
                         )
                     }
+                    stopListening()
                     break
                 }
                 var level = state.level
@@ -198,16 +201,21 @@ class FreeBirdViewModel @Inject constructor(
     private fun stopGame() {
         gameJob?.cancel()
         gameJob = null
+        stopListening()
+        _game.value = FreeBirdGameState(best = best)
+    }
+
+    private fun stopListening() {
         listenJob?.cancel()
         listenJob = null
+        latestPitch = PitchResult.SILENT
         _pitch.value = PitchResult.SILENT
-        _game.value = FreeBirdGameState(best = best)
     }
 
     private fun startListening() {
         if (listenJob != null) return
         listenJob = viewModelScope.launch {
-            pitchProcessor.pitchFlow().collect { _pitch.value = it }
+            pitchProcessor.pitchFlow().collect { latestPitch = it }
         }
     }
 

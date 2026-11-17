@@ -1,12 +1,8 @@
 package net.exent.harmonisk.ui.freebird
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -74,19 +70,25 @@ private val FrontTrees = listOf(
 
 @Composable
 fun FreeBirdBackdrop(modifier: Modifier = Modifier, speed: Float = 1f) {
-    val transition = rememberInfiniteTransition(label = "freebird_backdrop")
-    val time by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween((120_000 / speed.coerceAtLeast(0.01f)).toInt(), easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "freebird_scroll"
+    Box(modifier) {
+        Canvas(Modifier.fillMaxSize()) {
+            drawSky()
+            drawSun()
+        }
+        FreeBirdAnimatedBackdrop(speed, Modifier.fillMaxSize())
+        Canvas(Modifier.fillMaxSize()) {
+            drawVignette()
+        }
+    }
+}
+
+@Composable
+private fun FreeBirdAnimatedBackdrop(speed: Float, modifier: Modifier) {
+    val time by rememberFreeBirdPhase(
+        periodMs = (120_000 / speed.coerceAtLeast(0.01f)).toLong(),
+        fps = 10
     )
     Canvas(modifier) {
-        drawSky()
-        drawSun()
         drawClouds(time)
         drawHills(
             baseY = size.height * 0.60f,
@@ -107,7 +109,6 @@ fun FreeBirdBackdrop(modifier: Modifier = Modifier, speed: Float = 1f) {
         drawForest(time)
         drawWater(time)
         drawBirds(time)
-        drawVignette()
     }
 }
 
@@ -208,7 +209,7 @@ private fun DrawScope.drawHills(
         val y = mountainY(x, baseY, amplitude, ridge, phase)
         fill.lineTo(x, y)
         line.lineTo(x, y)
-        x += 4f
+        x += 8f
     }
     fill.lineTo(size.width, size.height)
     fill.close()
@@ -328,7 +329,7 @@ private fun DrawScope.drawWater(time: Float) {
         var x = 0f
         while (x <= width) {
             lineTo(x, waterEdgeY(x, waterTop, height, scroll))
-            x += width / 96f
+            x += width / 64f
         }
         lineTo(width, height)
         close()
@@ -365,29 +366,29 @@ private fun DrawScope.drawWater(time: Float) {
         var x = 0f
         while (x <= width) {
             lineTo(x, waterEdgeY(x, waterTop, height, scroll))
-            x += width / 96f
+            x += width / 64f
         }
     }
     drawPath(shimmer, WaterWave.copy(alpha = 0.5f), style = Stroke(width = 1.8f))
 
-    repeat(20) { index ->
-        val row = index % 4
-        val col = index / 4
-        val y = waterTop + height * (0.045f + row * 0.033f)
+    repeat(12) { index ->
+        val row = index % 3
+        val col = index / 3
+        val y = waterTop + height * (0.048f + row * 0.038f)
         val x = ((((col * 0.27f + row * 0.13f - time * 2.4f) % 1.12f + 1.12f) % 1.12f) - 0.08f) * width
         val length = width * (0.055f + 0.018f * (row % 3))
         val amplitude = height * (0.003f + row * 0.0009f)
-        val alpha = 0.16f + (row + 1) * 0.055f
+        val alpha = 0.16f + (row + 1) * 0.06f
         drawWave(x, y, length, amplitude, time * 9f + index * 0.8f, WaterWave.copy(alpha = alpha), 1.8f)
     }
-    repeat(14) { index ->
-        val y = waterTop + height * (0.07f + (index % 5) * 0.026f)
+    repeat(8) { index ->
+        val y = waterTop + height * (0.075f + (index % 4) * 0.03f)
         val x = ((((index * 0.19f - time * 1.8f) % 1.1f + 1.1f) % 1.1f) - 0.05f) * width
         val length = width * 0.035f
         drawWave(x, y, length, height * 0.0022f, time * 7f + index, WaterWave.copy(alpha = 0.13f), 1.4f)
     }
-    repeat(8) { index ->
-        val x = width * (0.05f + index * 0.125f) + sin(time * 5f + index) * width * 0.012f
+    repeat(6) { index ->
+        val x = width * (0.05f + index * 0.16f) + sin(time * 5f + index) * width * 0.012f
         val y = waterTop + height * (0.012f + (index % 2) * 0.008f)
         val length = width * (0.035f + (index % 3) * 0.012f)
         drawPath(
@@ -441,7 +442,7 @@ private fun DrawScope.drawWave(
                 x + length * step,
                 y + amplitude * sin((step * 2f * PI + phase).toFloat())
             )
-            step += 0.125f
+            step += 0.25f
         }
     }
     drawPath(path, color, style = Stroke(width = width, cap = StrokeCap.Round))

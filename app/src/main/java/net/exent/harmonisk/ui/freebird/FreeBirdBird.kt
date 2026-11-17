@@ -1,20 +1,16 @@
 package net.exent.harmonisk.ui.freebird
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -26,6 +22,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.delay
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.PitchResult
 import kotlin.math.PI
@@ -62,27 +59,19 @@ fun FreeBirdBird(
         val perchY = height * BIRD_PERCH_Y - width * 0.0105f - birdSize * 0.36f
         val flying = !pitch.isSilent
         val targetY = if (flying) freeBirdPitchY(layout, pitch, height) else perchY
-        val y = animateFloatAsState(
-            targetValue = targetY,
-            animationSpec = tween(if (flying) 120 else 420, easing = FastOutSlowInEasing),
-            label = "freebird_y"
-        )
+        var birdY by remember { mutableFloatStateOf(perchY) }
+        val latestTarget by rememberUpdatedState(targetY)
+        LaunchedEffect(flying) {
+            val factor = if (flying) 0.3f else 0.12f
+            while (true) {
+                val diff = latestTarget - birdY
+                birdY = if (abs(diff) <= 0.5f) latestTarget else birdY + diff * factor
+                delay(33)
+            }
+        }
 
-        val transition = rememberInfiniteTransition(label = "freebird_flap")
-        val flap = transition.animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(260, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart
-            ),
-            label = "freebird_flap_phase"
-        )
-        val wingAmount by animateFloatAsState(
-            targetValue = if (flying) 1f else 0.35f,
-            animationSpec = tween(180),
-            label = "freebird_wing_amount"
-        )
+        val flap by rememberFreeBirdPhase(260L, fps = 30)
+        val wingAmount = if (flying) 1f else 0.35f
         val birdX = width * BIRD_PERCH_X
         val birdSizeDp = with(density) { birdSize.toDp() }
         val perch = perchY
@@ -90,19 +79,18 @@ fun FreeBirdBird(
             Modifier
                 .size(birdSizeDp)
                 .graphicsLayer {
-                    val currentY = y.value
                     translationX = birdX - birdSize / 2f
-                    translationY = currentY - birdSize / 2f
-                    val perchedNow = !flying && abs(currentY - perch) < birdSize * 0.24f
-                    rotationZ = if (perchedNow) 0f else ((targetY - currentY) / birdSize).coerceIn(-1f, 1f) * 28f
+                    translationY = birdY - birdSize / 2f
+                    val perchedNow = !flying && abs(birdY - perch) < birdSize * 0.24f
+                    rotationZ = if (perchedNow) 0f else ((targetY - birdY) / birdSize).coerceIn(-1f, 1f) * 28f
                 }
         ) {
-            val perchedNow = !flying && abs(y.value - perch) < birdSize * 0.24f
+            val perchedNow = !flying && abs(birdY - perch) < birdSize * 0.24f
             val divingNow = !flying && !perchedNow
             val wingAngle = when {
                 perchedNow -> 0f
                 divingNow -> -26f
-                else -> sin(flap.value * 2f * PI.toFloat()) * 42f * wingAmount
+                else -> sin(flap * 2f * PI.toFloat()) * 42f * wingAmount
             }
             drawBird(birdSize, perchedNow, wingAngle)
         }
