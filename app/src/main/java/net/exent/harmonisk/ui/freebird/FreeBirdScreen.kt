@@ -49,7 +49,7 @@ fun FreeBirdScreen(
     Box(Modifier.fillMaxSize()) {
         FreeBirdBackdrop(Modifier.fillMaxSize())
         FreeBirdStaff(instrument, game.level, Modifier.fillMaxSize())
-        FreeBirdBranch(Modifier.fillMaxSize())
+        FreeBirdSeagull(Modifier.fillMaxSize())
         FreeBirdLetters(instrument, game.letters, game.level, pitch, Modifier.fillMaxSize())
         RequireMicPermission {
             LaunchedEffect(Unit) { viewModel.startGame() }

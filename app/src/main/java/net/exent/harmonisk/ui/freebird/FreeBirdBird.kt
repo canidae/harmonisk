@@ -33,6 +33,8 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 const val BIRD_SIZE_FRACTION = 0.13f
+const val BIRD_PERCH_X = 0.21f
+const val BIRD_PERCH_Y = 0.842f
 
 private val Body = Color(0xFFF0A25A)
 private val BodyLight = Color(0xFFFFCB92)
@@ -57,7 +59,7 @@ fun FreeBirdBird(
             freeBirdStaffLayout(width, height, instrument, level, density)
         }
         val birdSize = width * BIRD_SIZE_FRACTION
-        val perchY = height * BRANCH_PERCH_Y - width * 0.0105f - birdSize * 0.36f
+        val perchY = height * BIRD_PERCH_Y - width * 0.0105f - birdSize * 0.36f
         val flying = !pitch.isSilent
         val targetY = if (flying) freeBirdPitchY(layout, pitch, height) else perchY
         val y = animateFloatAsState(
@@ -81,7 +83,7 @@ fun FreeBirdBird(
             animationSpec = tween(180),
             label = "freebird_wing_amount"
         )
-        val birdX = width * BRANCH_PERCH_X
+        val birdX = width * BIRD_PERCH_X
         val birdSizeDp = with(density) { birdSize.toDp() }
         val perch = perchY
         Canvas(

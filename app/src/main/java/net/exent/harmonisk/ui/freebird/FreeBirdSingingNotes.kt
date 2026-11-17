@@ -51,7 +51,7 @@ fun FreeBirdSingingNotes(
             val birdSize = width * BIRD_SIZE_FRACTION
             val noteY = freeBirdNoteY(layout, hit.midi, height)
             val beak = Offset(
-                x = width * BRANCH_PERCH_X + birdSize * 0.48f,
+                x = width * BIRD_PERCH_X + birdSize * 0.48f,
                 y = noteY - birdSize * 0.12f
             )
             val color = FingerColors[hit.finger]

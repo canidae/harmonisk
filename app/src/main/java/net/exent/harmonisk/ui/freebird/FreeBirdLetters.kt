@@ -69,7 +69,7 @@ fun FreeBirdLetters(
                 val nextY = freeBirdNoteY(layout, next.midi, height)
                 drawLine(
                     color = FingerColors[next.finger].copy(alpha = 0.13f),
-                    start = Offset(width * BRANCH_PERCH_X, nextY),
+                    start = Offset(width * BIRD_PERCH_X, nextY),
                     end = Offset(width * next.x, nextY),
                     strokeWidth = with(density) { 2.dp.toPx() }
                 )

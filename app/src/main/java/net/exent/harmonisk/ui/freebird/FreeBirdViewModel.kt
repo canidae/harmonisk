@@ -116,13 +116,13 @@ class FreeBirdViewModel @Inject constructor(
                         }
                     }
                 }
-                val speed = (1.08f - BRANCH_PERCH_X) / FREEBIRD_NOTE_TRAVEL_MS
+                val speed = (1.08f - BIRD_PERCH_X) / FREEBIRD_NOTE_TRAVEL_MS
                 val remaining = ArrayList<FreeBirdLetter>(letters.size)
                 var score = state.score
                 for (letter in letters) {
                     val x = letter.x - speed * delta
                     var judged = letter.judged
-                    if (!judged && x <= BRANCH_PERCH_X) {
+                    if (!judged && x <= BIRD_PERCH_X) {
                         judged = true
                         val pitch = _pitch.value
                         val targetCents = if (pitch.isSilent) 0f else centsFromTarget(pitch, letter.midi)
