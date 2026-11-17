@@ -13,11 +13,13 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.exent.harmonisk.R
 import net.exent.harmonisk.music.BowedAlgorithm
 import net.exent.harmonisk.music.Instrument
+import net.exent.harmonisk.music.PitchResult
 import kotlin.math.max
 import kotlin.math.min
 
@@ -40,6 +42,43 @@ private val ClefFont = FontFamily(Font(R.font.freebird_clefs))
 private val StaffInk = Color(0xFFDCE0D9).copy(alpha = 0.52f)
 private val StaffShadow = Color(0xFF18291F).copy(alpha = 0.12f)
 private val NOTE_DEGREE = intArrayOf(0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6)
+private val PITCH_STEP = floatArrayOf(0f, 0.5f, 1f, 1.5f, 2f, 3f, 3.5f, 4f, 4.5f, 5f, 5.5f, 6f)
+
+data class FreeBirdStaffLayout(
+    val step: Float,
+    val middleC: Float,
+    val clefX: Float,
+    val staffEnd: Float
+)
+
+fun freeBirdStaffLayout(
+    width: Float,
+    height: Float,
+    instrument: Instrument,
+    level: Int,
+    density: Density
+): FreeBirdStaffLayout {
+    val range = levelRange(instrument, level)
+    val topSteps = max(STAFF_HALF_STEPS.toFloat(), (diatonic(range.last) - MIDDLE_C_DIATONIC + STAFF_MARGIN_STEPS).toFloat())
+    val bottomSteps = max(STAFF_HALF_STEPS.toFloat(), (MIDDLE_C_DIATONIC - diatonic(range.first) + STAFF_MARGIN_STEPS).toFloat())
+    val available = height * 0.52f
+    val step = min(with(density) { 26.dp.toPx() }, available / (topSteps + bottomSteps))
+    val origin = height * 0.16f + (available - (topSteps + bottomSteps) * step) / 2f
+    return FreeBirdStaffLayout(
+        step = step,
+        middleC = origin + topSteps * step,
+        clefX = with(density) { 12.dp.toPx() },
+        staffEnd = width - with(density) { 14.dp.toPx() }
+    )
+}
+
+fun freeBirdPitchY(layout: FreeBirdStaffLayout, pitch: PitchResult, height: Float): Float {
+    val pitchClass = ((pitch.midiNoteNumber % 12) + 12) % 12
+    val octave = pitch.midiNoteNumber / 12
+    val position = octave * 7 + PITCH_STEP[pitchClass] + pitch.centsOff / 100f * 0.5f
+    return (layout.middleC - (position - MIDDLE_C_DIATONIC) * layout.step)
+        .coerceIn(height * 0.10f, height * 0.78f)
+}
 
 @Composable
 fun FreeBirdStaff(
@@ -50,17 +89,11 @@ fun FreeBirdStaff(
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
     Canvas(modifier) {
-        val range = levelRange(instrument, level)
-        val minDiatonic = diatonic(range.first)
-        val maxDiatonic = diatonic(range.last)
-        val topSteps = max(STAFF_HALF_STEPS.toFloat(), (maxDiatonic - MIDDLE_C_DIATONIC + STAFF_MARGIN_STEPS).toFloat())
-        val bottomSteps = max(STAFF_HALF_STEPS.toFloat(), (MIDDLE_C_DIATONIC - minDiatonic + STAFF_MARGIN_STEPS).toFloat())
-        val available = size.height * 0.52f
-        val step = min(with(density) { 26.dp.toPx() }, available / (topSteps + bottomSteps))
-        val origin = size.height * 0.16f + (available - (topSteps + bottomSteps) * step) / 2f
-        val middleC = origin + topSteps * step
+        val layout = freeBirdStaffLayout(size.width, size.height, instrument, level, density)
+        val step = layout.step
+        val middleC = layout.middleC
         val staffStart = 0f
-        val staffEnd = size.width - with(density) { 14.dp.toPx() }
+        val staffEnd = layout.staffEnd
         val lineWidth = with(density) { 1.5.dp.toPx() }
         val shadowWidth = with(density) { 2.6.dp.toPx() }
         val lineGap = step * 2f
@@ -106,7 +139,7 @@ fun FreeBirdStaff(
         val trebleShadow = textMeasurer.measure(AnnotatedString(TREBLE_CLEF), trebleShadowStyle)
         val bass = textMeasurer.measure(AnnotatedString(BASS_CLEF), bassStyle)
         val bassShadow = textMeasurer.measure(AnnotatedString(BASS_CLEF), bassShadowStyle)
-        val clefX = with(density) { 12.dp.toPx() }
+        val clefX = layout.clefX
         val shadowOffset = with(density) { 1.2.dp.toPx() }
         val trebleTop = middleC - 4 * step + G_CLEF_SPIRAL_Y * treblePx / CLEF_UNITS_PER_EM - treble.firstBaseline
         val bassTop = middleC + 4 * step + F_CLEF_DOT_MID_Y * bassPx / CLEF_UNITS_PER_EM - bass.firstBaseline

@@ -29,8 +29,6 @@
     <string name="record_title">Record</string>
     <string name="games_title">Games</string>
     <string name="freebird_title">Free Bird</string>
-    <string name="freebird_tagline">Ride the melody. Keep the sky alive.</string>
-    <string name="freebird_preview_hint">Preview</string>
     <string name="dev_mode_enabled">Developer mode is on</string>
     <string name="home_version">Version %1$s</string>
     <string name="dev_mode_turn_off">Turn off</string>

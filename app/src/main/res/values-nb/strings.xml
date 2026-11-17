@@ -29,8 +29,6 @@
     <string name="record_title">Opptak</string>
     <string name="games_title">Spill</string>
     <string name="freebird_title">Frifuglen</string>
-    <string name="freebird_tagline">Rid på melodien. Hold himmelen levende.</string>
-    <string name="freebird_preview_hint">Forhåndsvisning</string>
     <string name="dev_mode_enabled">Utviklermodus er på</string>
     <string name="home_version">Versjon %1$s</string>
     <string name="dev_mode_turn_off">Slå av</string>

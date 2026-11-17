@@ -341,31 +341,6 @@ private fun DrawScope.drawGround(time: Float) {
             1f to Color(0xFF081C12)
         )
     )
-    val bladeSpacing = width / 38f
-    var bladeX = -bladeSpacing
-    while (bladeX < width + bladeSpacing) {
-        val x = bladeX + (scroll % bladeSpacing)
-        val angle = 2.0 * PI * (x + scroll) / width
-        val y = baseY -
-            height * 0.016f * sin(angle).toFloat() -
-            height * 0.010f * sin(angle * 2.0 + 1.1).toFloat()
-        val bladeHeight = height * (0.014f + 0.008f * ((x / bladeSpacing).toInt() % 3))
-        drawLine(
-            color = Color(0xFF4C8A5D).copy(alpha = 0.60f),
-            start = Offset(x, y + 2f),
-            end = Offset(x - bladeHeight * 0.55f, y - bladeHeight),
-            strokeWidth = 2.2f,
-            cap = StrokeCap.Round
-        )
-        drawLine(
-            color = Color(0xFF3A7049).copy(alpha = 0.50f),
-            start = Offset(x + bladeSpacing * 0.45f, y + 2f),
-            end = Offset(x + bladeSpacing * 0.45f + bladeHeight * 0.35f, y - bladeHeight * 0.8f),
-            strokeWidth = 1.8f,
-            cap = StrokeCap.Round
-        )
-        bladeX += bladeSpacing
-    }
 }
 
 private fun DrawScope.drawBirds(time: Float) {
