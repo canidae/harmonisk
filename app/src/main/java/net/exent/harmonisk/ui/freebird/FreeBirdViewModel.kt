@@ -18,7 +18,6 @@ import net.exent.harmonisk.data.SettingsRepository
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.PitchResult
 import kotlin.math.abs
-import kotlin.math.roundToInt
 import javax.inject.Inject
 
 @HiltViewModel
@@ -73,7 +72,7 @@ class FreeBirdViewModel @Inject constructor(
             var last = SystemClock.elapsedRealtime()
             var nextSpawn = last + 1_000L
             var pauseUntil = 0L
-            var feedback: FreeBirdFeedback? = null
+            var feedback: FreeBirdHit? = null
             var feedbackUntil = 0L
             var nextId = 1L
             while (isActive) {
@@ -131,23 +130,10 @@ class FreeBirdViewModel @Inject constructor(
                             val points = pointsForCents(targetCents)
                             score += points
                             timeLeft += FREEBIRD_TIME_BONUS_MS
-                            feedback = FreeBirdFeedback.Hit(nextId++, points, letter.midi, letter.finger, SystemClock.elapsedRealtime())
+                            feedback = FreeBirdHit(nextId++, letter.midi, letter.finger, SystemClock.elapsedRealtime())
                             feedbackUntil = now + FREEBIRD_FEEDBACK_MS
                             continue
                         }
-                        val direction = abs(targetCents) <= 150f
-                        feedback = FreeBirdFeedback.Miss(
-                            id = nextId++,
-                            reason = when {
-                                pitch.isSilent -> FreeBirdMissReason.SILENT
-                                !direction -> FreeBirdMissReason.WRONG_NOTE
-                                targetCents > 0f -> FreeBirdMissReason.SHARP
-                                else -> FreeBirdMissReason.FLAT
-                            },
-                            cents = if (!pitch.isSilent && direction) targetCents.roundToInt() else null,
-                            detectedMidi = if (!pitch.isSilent) pitch.midiNoteNumber else null
-                        )
-                        feedbackUntil = now + FREEBIRD_FEEDBACK_MS
                     }
                     if (x > -0.12f) {
                         remaining += letter.copy(x = x, judged = judged)

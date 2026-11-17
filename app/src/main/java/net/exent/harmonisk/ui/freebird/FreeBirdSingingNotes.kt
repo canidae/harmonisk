@@ -29,7 +29,7 @@ import kotlin.math.sin
 fun FreeBirdSingingNotes(
     instrument: Instrument,
     level: Int,
-    hit: FreeBirdFeedback.Hit,
+    hit: FreeBirdHit,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(modifier) {

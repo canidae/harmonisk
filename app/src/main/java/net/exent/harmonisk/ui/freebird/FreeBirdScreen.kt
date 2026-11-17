@@ -31,10 +31,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.harmonisk.R
-import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.ui.components.KeepScreenOn
 import net.exent.harmonisk.ui.components.RequireMicPermission
-import kotlin.math.abs
 
 @Composable
 fun FreeBirdScreen(
@@ -55,7 +53,7 @@ fun FreeBirdScreen(
             LaunchedEffect(Unit) { viewModel.startGame() }
             FreeBirdBird(instrument, pitch, game.level, Modifier.fillMaxSize())
         }
-        (game.feedback as? FreeBirdFeedback.Hit)?.let {
+        game.feedback?.let {
             FreeBirdSingingNotes(instrument, game.level, it, Modifier.fillMaxSize())
         }
         if (game.playing || game.finished) {
@@ -88,9 +86,6 @@ fun FreeBirdScreen(
             )
         }
         if (game.playing || game.finished) {
-            (game.feedback as? FreeBirdFeedback.Miss)
-                ?.takeIf { it.reason != FreeBirdMissReason.SILENT }
-                ?.let { FreeBirdFeedbackOverlay(it) }
             game.levelUp?.let { LevelUpOverlay(it) }
             if (game.finished) {
                 GameOverOverlay(
@@ -154,35 +149,6 @@ private fun FreeBirdTimer(timeMs: Long, modifier: Modifier = Modifier) {
             color = if (warning) Color(0xFFFF5C5C) else Color.White,
             modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp)
         )
-    }
-}
-
-@Composable
-private fun FreeBirdFeedbackOverlay(feedback: FreeBirdFeedback.Miss) {
-    val text = when (feedback.reason) {
-        FreeBirdMissReason.SILENT -> return
-        FreeBirdMissReason.WRONG_NOTE -> {
-            val note = feedback.detectedMidi?.let { NoteUtils.resolveMidiNote(it) }
-            val label = note?.let { "${it.noteName}${it.octave}" } ?: "-"
-            stringResource(R.string.freebird_miss_wrong, label)
-        }
-        FreeBirdMissReason.SHARP -> stringResource(R.string.freebird_miss_sharp, abs(feedback.cents ?: 0))
-        FreeBirdMissReason.FLAT -> stringResource(R.string.freebird_miss_flat, abs(feedback.cents ?: 0))
-    }
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Surface(
-            color = Color.Black.copy(alpha = 0.38f),
-            shape = RoundedCornerShape(50),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f))
-        ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Black,
-                color = Color(0xFFFF6B6B),
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
-            )
-        }
     }
 }
 

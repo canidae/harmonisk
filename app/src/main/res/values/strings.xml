@@ -29,9 +29,6 @@
     <string name="record_title">Record</string>
     <string name="games_title">Games</string>
     <string name="freebird_best">Best %1$d</string>
-    <string name="freebird_miss_wrong">Wrong note: %1$s</string>
-    <string name="freebird_miss_sharp">Too sharp: %1$d cents</string>
-    <string name="freebird_miss_flat">Too flat: %1$d cents</string>
     <string name="freebird_score">Score %1$d</string>
     <string name="freebird_level">Level %1$d</string>
     <string name="freebird_time_up">Time\'s up</string>

@@ -29,9 +29,6 @@
     <string name="record_title">Opptak</string>
     <string name="games_title">Spill</string>
     <string name="freebird_best">Beste %1$d</string>
-    <string name="freebird_miss_wrong">Feil tone: %1$s</string>
-    <string name="freebird_miss_sharp">For høy: %1$d cent</string>
-    <string name="freebird_miss_flat">For lav: %1$d cent</string>
     <string name="freebird_score">Poeng %1$d</string>
     <string name="freebird_level">Nivå %1$d</string>
     <string name="freebird_time_up">Tiden er ute</string>

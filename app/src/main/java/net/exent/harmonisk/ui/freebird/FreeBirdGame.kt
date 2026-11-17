@@ -18,26 +18,12 @@ const val FREEBIRD_FEEDBACK_MS = 1_500L
 
 data class FreeBirdNote(val midi: Int, val finger: Int)
 
-enum class FreeBirdMissReason { SILENT, WRONG_NOTE, SHARP, FLAT }
-
-sealed interface FreeBirdFeedback {
-    val id: Long
-
-    data class Hit(
-        override val id: Long,
-        val points: Int,
-        val midi: Int,
-        val finger: Int,
-        val createdAt: Long
-    ) : FreeBirdFeedback
-
-    data class Miss(
-        override val id: Long,
-        val reason: FreeBirdMissReason,
-        val cents: Int? = null,
-        val detectedMidi: Int? = null
-    ) : FreeBirdFeedback
-}
+data class FreeBirdHit(
+    val id: Long,
+    val midi: Int,
+    val finger: Int,
+    val createdAt: Long
+)
 
 data class FreeBirdLetter(
     val id: Long,
@@ -57,7 +43,7 @@ data class FreeBirdGameState(
     val playing: Boolean = false,
     val finished: Boolean = false,
     val levelUp: Int? = null,
-    val feedback: FreeBirdFeedback? = null
+    val feedback: FreeBirdHit? = null
 )
 
 fun notesForLevel(instrument: Instrument, level: Int): List<FreeBirdNote> {
