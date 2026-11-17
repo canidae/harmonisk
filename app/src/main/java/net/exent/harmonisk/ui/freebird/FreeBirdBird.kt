@@ -62,7 +62,7 @@ fun FreeBirdBird(
         var birdY by remember { mutableFloatStateOf(perchY) }
         val latestTarget by rememberUpdatedState(targetY)
         LaunchedEffect(flying) {
-            val factor = if (flying) 0.3f else 0.12f
+            val factor = if (flying) 0.22f else 0.12f
             while (true) {
                 val diff = latestTarget - birdY
                 birdY = if (abs(diff) <= 0.5f) latestTarget else birdY + diff * factor
