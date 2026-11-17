@@ -68,6 +68,7 @@ license, so this does not affect the AGPL-3.0 licensing of Harmonisk.
 | `app/src/main/assets/crepe_small_f16.tflite` | MIT | CREPE, Kim et al. (2018), <https://github.com/marl/crepe> |
 | `app/src/main/jni/tsf.h` | MIT | TinySoundFont by Bernhard Schelling (based on SFZero by Steve Folta), <https://github.com/schellingb/TinySoundFont> |
 | Bravura and BravuraText fonts, shipped inside alphaTab | SIL OFL-1.1 | Bravura by Steinberg Media Technologies GmbH, <https://github.com/steinbergmedia/bravura> |
+| `app/src/main/res/font/freebird_clefs.ttf` | SIL OFL-1.1 | Noto Sans Symbols by Google, subset to the G and F clefs, <https://github.com/notofonts/noto-fonts> |
 | Sonic Network Inc. samples, shipped inside alphaTab | Apache-2.0 | Copyright (c) 2004-2006 Sonic Network Inc. |
 | `app/src/main/assets/melodies/**` | public domain | traditional tunes, arrangements made for this project |
 | `app/src/main/res/raw/ambience_river.ogg`, `ambience_wind.ogg`, `ambience_birds.ogg` | CC0-1.0 | Park ambiences by Thimras, <https://opengameart.org/content/park-ambiences> |
@@ -92,7 +93,8 @@ was trimmed, mono-mixed and re-encoded to Ogg Vorbis from the original.
 GeneralUser GS is distributed free of charge and its license explicitly allows
 use in software projects, including commercial ones. Bravura is bundled
 unmodified, which is all the OFL-1.1 requires beyond keeping the copyright
-notice.
+notice. The Noto Sans Symbols subset keeps its copyright and license notices and
+contains only the two clef glyphs.
 
 ## Build and test only
 
