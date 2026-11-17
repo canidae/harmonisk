@@ -34,12 +34,13 @@ class MetronomeViewModel @Inject constructor(
         viewModelScope.launch {
             val settings = settingsRepository.settings.first()
             val beats = settings.metronomeBeatsPerBar.coerceIn(1, METRONOME_MAX_BEATS)
+            val mutedBeats = settings.metronomeMutedBeats.filter { it < beats }.toSet()
             _state.update {
                 it.copy(
                     bpm = settings.metronomeBpm.coerceIn(METRONOME_MIN_BPM, METRONOME_MAX_BPM),
                     beatsPerBar = beats,
-                    accentBeat = settings.metronomeAccentBeat.coerceIn(0, beats - 1),
-                    mutedBeats = settings.metronomeMutedBeats.filter { it < beats }.toSet(),
+                    accentedBeats = settings.metronomeAccentedBeats.filter { beat -> beat < beats }.toSet() - mutedBeats,
+                    mutedBeats = mutedBeats,
                     soundEnabled = settings.metronomeSoundEnabled
                 )
             }
@@ -63,31 +64,30 @@ class MetronomeViewModel @Inject constructor(
 
     fun setBeatsPerBar(beats: Int) {
         val clamped = beats.coerceIn(1, METRONOME_MAX_BEATS)
-        val previous = _state.value.mutedBeats
-        val muted = previous.filter { it < clamped }.toSet()
+        val previousMuted = _state.value.mutedBeats
+        val previousAccented = _state.value.accentedBeats
+        val muted = previousMuted.filter { it < clamped }.toSet()
+        val accented = previousAccented.filter { it < clamped }.toSet()
         _state.update {
             it.copy(
                 beatsPerBar = clamped,
-                accentBeat = it.accentBeat.coerceAtMost(clamped - 1),
                 currentBeat = it.currentBeat.coerceAtMost(clamped - 1),
+                accentedBeats = accented,
                 mutedBeats = muted
             )
         }
         persist { settingsRepository.updateMetronomeBeatsPerBar(clamped) }
-        if (muted != previous) persist { settingsRepository.updateMetronomeMutedBeats(muted) }
+        if (accented != previousAccented || muted != previousMuted) {
+            persist { settingsRepository.updateMetronomeBeatStates(accented, muted) }
+        }
     }
 
-    fun toggleMutedBeat(beat: Int) {
-        val muted = _state.value.mutedBeats
-        val updated = if (beat in muted) muted - beat else muted + beat
-        _state.update { it.copy(mutedBeats = updated) }
-        persist { settingsRepository.updateMetronomeMutedBeats(updated) }
-    }
-
-    fun setAccentBeat(beat: Int) {
-        val clamped = beat.coerceIn(0, _state.value.beatsPerBar - 1)
-        _state.update { it.copy(accentBeat = clamped) }
-        persist { settingsRepository.updateMetronomeAccentBeat(clamped) }
+    fun cycleBeat(beat: Int) {
+        val current = _state.value
+        if (beat !in 0 until current.beatsPerBar) return
+        val (accented, muted) = cycleBeatState(beat, current.accentedBeats, current.mutedBeats)
+        _state.update { it.copy(accentedBeats = accented, mutedBeats = muted) }
+        persist { settingsRepository.updateMetronomeBeatStates(accented, muted) }
     }
 
     fun toggleSound() {
@@ -110,7 +110,7 @@ class MetronomeViewModel @Inject constructor(
             while (isActive) {
                 val current = _state.value
                 val beat = (beatIndex % current.beatsPerBar).toInt()
-                val accented = beat == current.accentBeat.coerceIn(0, current.beatsPerBar - 1)
+                val accented = beat in current.accentedBeats
                 _state.update { it.copy(currentBeat = beat, pulse = it.pulse + 1) }
                 if (beat !in current.mutedBeats) click(accented)
                 beatIndex++

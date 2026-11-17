@@ -6,7 +6,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -111,8 +111,7 @@ fun MetronomeScreen(
                     state = state,
                     pulse = pulse,
                     compact = true,
-                    onAccentChange = viewModel::setAccentBeat,
-                    onMuteToggle = viewModel::toggleMutedBeat,
+                    onBeatClick = viewModel::cycleBeat,
                     modifier = Modifier.weight(1f)
                 )
                 ControlPanel(state, viewModel, Modifier.weight(1f))
@@ -123,8 +122,7 @@ fun MetronomeScreen(
                     state = state,
                     pulse = pulse,
                     compact = false,
-                    onAccentChange = viewModel::setAccentBeat,
-                    onMuteToggle = viewModel::toggleMutedBeat,
+                    onBeatClick = viewModel::cycleBeat,
                     modifier = Modifier.weight(1f)
                 )
                 ControlPanel(state, viewModel)
@@ -157,14 +155,13 @@ private fun BeatDisplay(
     state: MetronomeState,
     pulse: Animatable<Float, *>,
     compact: Boolean,
-    onAccentChange: (Int) -> Unit,
-    onMuteToggle: (Int) -> Unit,
+    onBeatClick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val darkTheme = LocalHarmoniskDarkTheme.current
     val accent = if (darkTheme) MetronomeBlue else MetronomeBlueLight
     val accentAmber = if (darkTheme) AmberAccent else TunerAmberLight
-    val accented = state.isRunning && state.currentBeat == state.accentBeat
+    val accented = state.isRunning && state.currentBeat in state.accentedBeats
     val muted = state.isRunning && state.currentBeat in state.mutedBeats
     val color = if (accented) accentAmber else accent
     val alpha = if (muted) 0.45f else 1f
@@ -199,12 +196,12 @@ private fun BeatDisplay(
 
         Spacer(Modifier.height(if (compact) 12.dp else 24.dp))
 
-        BeatDots(state, compact = compact, onAccentChange = onAccentChange, onMuteToggle = onMuteToggle)
+        BeatDots(state, compact = compact, onBeatClick = onBeatClick)
 
         Spacer(Modifier.height(6.dp))
 
         Text(
-            text = stringResource(R.string.metronome_accent_hint),
+            text = stringResource(R.string.metronome_beat_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -216,8 +213,7 @@ private fun BeatDisplay(
 private fun BeatDots(
     state: MetronomeState,
     compact: Boolean,
-    onAccentChange: (Int) -> Unit,
-    onMuteToggle: (Int) -> Unit
+    onBeatClick: (Int) -> Unit
 ) {
     BoxWithConstraints(
         modifier = Modifier.fillMaxWidth(),
@@ -237,8 +233,7 @@ private fun BeatDots(
                     beat = beat,
                     state = state,
                     dotSize = dotSize,
-                    onClick = { onAccentChange(beat) },
-                    onLongClick = { onMuteToggle(beat) }
+                    onClick = { onBeatClick(beat) }
                 )
             }
         }
@@ -250,14 +245,13 @@ private fun BeatDot(
     beat: Int,
     state: MetronomeState,
     dotSize: Dp,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onClick: () -> Unit
 ) {
     val darkTheme = LocalHarmoniskDarkTheme.current
     val accent = if (darkTheme) MetronomeBlue else MetronomeBlueLight
     val accentAmber = if (darkTheme) AmberAccent else TunerAmberLight
     val isMuted = beat in state.mutedBeats
-    val isAccent = beat == state.accentBeat && !isMuted
+    val isAccent = beat in state.accentedBeats && !isMuted
     val isCurrent = state.isRunning && beat == state.currentBeat && !isMuted
     val container = when {
         isCurrent && isAccent -> accentAmber
@@ -271,7 +265,11 @@ private fun BeatDot(
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     val slash = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-    val silenced = stringResource(R.string.metronome_beat_silenced)
+    val mode = when {
+        isMuted -> stringResource(R.string.metronome_beat_silenced)
+        isAccent -> stringResource(R.string.metronome_beat_accented)
+        else -> stringResource(R.string.metronome_beat_normal)
+    }
 
     Surface(
         modifier = Modifier.size(dotSize),
@@ -282,12 +280,10 @@ private fun BeatDot(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .semantics { if (isMuted) stateDescription = silenced }
-                .combinedClickable(
-                    onClickLabel = stringResource(R.string.metronome_accent_beat),
-                    onLongClickLabel = stringResource(R.string.metronome_silence_beat),
-                    onClick = onClick,
-                    onLongClick = onLongClick
+                .semantics { stateDescription = mode }
+                .clickable(
+                    onClickLabel = stringResource(R.string.metronome_cycle_beat),
+                    onClick = onClick
                 ),
             contentAlignment = Alignment.Center
         ) {

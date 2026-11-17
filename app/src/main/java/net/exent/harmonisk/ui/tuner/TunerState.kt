@@ -8,4 +8,11 @@ data class TunerState(
     val smoothedCentsOff: Float = 0f,
     val concertPitchA4: Float = NoteUtils.DEFAULT_CONCERT_PITCH,
     val isInTune: Boolean = false
-)
+) {
+    val targetFrequency: Float
+        get() = if (displayedResult.isValid) {
+            NoteUtils.midiToFrequency(displayedResult.midiNoteNumber, concertPitchA4)
+        } else {
+            0f
+        }
+}
