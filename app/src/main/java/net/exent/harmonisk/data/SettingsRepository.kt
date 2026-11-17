@@ -32,7 +32,8 @@ class SettingsRepository(
         private const val MELODY_METRONOME_ENABLED = "melody_metronome_enabled"
         private const val METRONOME_BPM = "metronome_bpm"
         private const val METRONOME_BEATS_PER_BAR = "metronome_beats_per_bar"
-        private const val METRONOME_ACCENT_BEAT = "metronome_accent_beat"
+        private const val METRONOME_LEGACY_ACCENT_BEAT = "metronome_accent_beat"
+        private const val METRONOME_ACCENTED_BEATS = "metronome_accented_beats"
         private const val METRONOME_SOUND_ENABLED = "metronome_sound_enabled"
         private const val METRONOME_MUTED_BEATS = "metronome_muted_beats"
         private const val LANGUAGE_CODE = "language_code"
@@ -54,7 +55,8 @@ class SettingsRepository(
             MELODY_METRONOME_ENABLED,
             METRONOME_BPM,
             METRONOME_BEATS_PER_BAR,
-            METRONOME_ACCENT_BEAT,
+            METRONOME_LEGACY_ACCENT_BEAT,
+            METRONOME_ACCENTED_BEATS,
             METRONOME_SOUND_ENABLED,
             METRONOME_MUTED_BEATS,
             INSTRUMENT_NAME,
@@ -84,24 +86,35 @@ class SettingsRepository(
         }
     }
 
-    private fun Preferences.toSettings(profileId: String) = AppSettings(
-        silenceThresholdDb = readFloat(profileId, SILENCE_THRESHOLD_DB, AudioConstants.DEFAULT_SILENCE_THRESHOLD_DB).coerceIn(-65f, -25f),
-        recordFallSpeed = readFloat(profileId, RECORD_FALL_SPEED, 75f),
-        recordBeatsPerBar = readInt(profileId, RECORD_BEATS_PER_BAR, 4),
-        recordBpm = readFloat(profileId, RECORD_BPM, 120f),
-        recordMinNoteDivision = readInt(profileId, RECORD_MIN_NOTE_DIVISION, 16),
-        recordSnapEnabled = readBoolean(profileId, RECORD_SNAP_ENABLED, true),
-        recordMetronomeEnabled = readBoolean(profileId, RECORD_METRONOME_ENABLED, true),
-        melodyMetronomeEnabled = readBoolean(profileId, MELODY_METRONOME_ENABLED, true),
-        metronomeBpm = readInt(profileId, METRONOME_BPM, 100),
-        metronomeBeatsPerBar = readInt(profileId, METRONOME_BEATS_PER_BAR, 4),
-        metronomeAccentBeat = readInt(profileId, METRONOME_ACCENT_BEAT, 0),
-        metronomeSoundEnabled = readBoolean(profileId, METRONOME_SOUND_ENABLED, true),
-        metronomeMutedBeats = readStringSet(profileId, METRONOME_MUTED_BEATS).mapNotNull(String::toIntOrNull).toSet(),
-        languageCode = this[stringPreferencesKey(LANGUAGE_CODE)] ?: "system",
-        instrumentName = readString(profileId, INSTRUMENT_NAME, Instrument.VIOLIN.name),
-        concertPitchA4 = readFloat(profileId, CONCERT_PITCH, NoteUtils.DEFAULT_CONCERT_PITCH)
-    )
+    private fun Preferences.toSettings(profileId: String): AppSettings {
+        val mutedBeats = readStringSet(profileId, METRONOME_MUTED_BEATS)
+            .mapNotNull(String::toIntOrNull)
+            .toSet()
+        val accentedBeats = (
+            readStringSetOrNull(profileId, METRONOME_ACCENTED_BEATS)
+                ?.mapNotNull(String::toIntOrNull)
+                ?.toSet()
+                ?: setOf(readInt(profileId, METRONOME_LEGACY_ACCENT_BEAT, 0))
+        ) - mutedBeats
+        return AppSettings(
+            silenceThresholdDb = readFloat(profileId, SILENCE_THRESHOLD_DB, AudioConstants.DEFAULT_SILENCE_THRESHOLD_DB).coerceIn(-65f, -25f),
+            recordFallSpeed = readFloat(profileId, RECORD_FALL_SPEED, 75f),
+            recordBeatsPerBar = readInt(profileId, RECORD_BEATS_PER_BAR, 4),
+            recordBpm = readFloat(profileId, RECORD_BPM, 120f),
+            recordMinNoteDivision = readInt(profileId, RECORD_MIN_NOTE_DIVISION, 16),
+            recordSnapEnabled = readBoolean(profileId, RECORD_SNAP_ENABLED, true),
+            recordMetronomeEnabled = readBoolean(profileId, RECORD_METRONOME_ENABLED, true),
+            melodyMetronomeEnabled = readBoolean(profileId, MELODY_METRONOME_ENABLED, true),
+            metronomeBpm = readInt(profileId, METRONOME_BPM, 100),
+            metronomeBeatsPerBar = readInt(profileId, METRONOME_BEATS_PER_BAR, 4),
+            metronomeAccentedBeats = accentedBeats,
+            metronomeSoundEnabled = readBoolean(profileId, METRONOME_SOUND_ENABLED, true),
+            metronomeMutedBeats = mutedBeats,
+            languageCode = this[stringPreferencesKey(LANGUAGE_CODE)] ?: "system",
+            instrumentName = readString(profileId, INSTRUMENT_NAME, Instrument.VIOLIN.name),
+            concertPitchA4 = readFloat(profileId, CONCERT_PITCH, NoteUtils.DEFAULT_CONCERT_PITCH)
+        )
+    }
 
     private fun Preferences.readFloat(profileId: String, name: String, default: Float): Float =
         this[floatPreferencesKey(ProfileRepository.scopedKey(profileId, name))] ?: default
@@ -117,6 +130,9 @@ class SettingsRepository(
 
     private fun Preferences.readStringSet(profileId: String, name: String): Set<String> =
         this[stringSetPreferencesKey(ProfileRepository.scopedKey(profileId, name))].orEmpty()
+
+    private fun Preferences.readStringSetOrNull(profileId: String, name: String): Set<String>? =
+        this[stringSetPreferencesKey(ProfileRepository.scopedKey(profileId, name))]
 
     suspend fun updateSilenceThreshold(db: Float) = setFloat(SILENCE_THRESHOLD_DB, db)
 
@@ -138,14 +154,17 @@ class SettingsRepository(
 
     suspend fun updateMetronomeBeatsPerBar(beats: Int) = setInt(METRONOME_BEATS_PER_BAR, beats)
 
-    suspend fun updateMetronomeAccentBeat(beat: Int) = setInt(METRONOME_ACCENT_BEAT, beat)
-
     suspend fun updateMetronomeSoundEnabled(enabled: Boolean) = setBoolean(METRONOME_SOUND_ENABLED, enabled)
 
-    suspend fun updateMetronomeMutedBeats(beats: Set<Int>) = setStringSet(
-        METRONOME_MUTED_BEATS,
-        beats.map(Int::toString).toSet()
-    )
+    suspend fun updateMetronomeBeatStates(accentedBeats: Set<Int>, mutedBeats: Set<Int>) {
+        val profileId = profileRepository.activeProfileId ?: return
+        context.dataStore.edit {
+            it[stringSetPreferencesKey(ProfileRepository.scopedKey(profileId, METRONOME_ACCENTED_BEATS))] =
+                accentedBeats.map(Int::toString).toSet()
+            it[stringSetPreferencesKey(ProfileRepository.scopedKey(profileId, METRONOME_MUTED_BEATS))] =
+                mutedBeats.map(Int::toString).toSet()
+        }
+    }
 
     suspend fun updateInstrument(name: String) = setString(INSTRUMENT_NAME, name)
 
@@ -224,11 +243,6 @@ class SettingsRepository(
     private suspend fun setStringFor(profileId: String, name: String, value: String) {
         context.dataStore.edit { it[stringPreferencesKey(ProfileRepository.scopedKey(profileId, name))] = value }
     }
-
-    private suspend fun setStringSet(name: String, value: Set<String>) {
-        val profileId = profileRepository.activeProfileId ?: return
-        context.dataStore.edit { it[stringSetPreferencesKey(ProfileRepository.scopedKey(profileId, name))] = value }
-    }
 }
 
 data class AppSettings(
@@ -242,7 +256,7 @@ data class AppSettings(
     val melodyMetronomeEnabled: Boolean = true,
     val metronomeBpm: Int = 100,
     val metronomeBeatsPerBar: Int = 4,
-    val metronomeAccentBeat: Int = 0,
+    val metronomeAccentedBeats: Set<Int> = setOf(0),
     val metronomeSoundEnabled: Boolean = true,
     val metronomeMutedBeats: Set<Int> = emptySet(),
     val languageCode: String = "system",
