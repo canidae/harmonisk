@@ -343,6 +343,8 @@
     <!-- Frequency visualizer -->
     <string name="frequency_visualizer_title">Frekvensvisualisering</string>
     <string name="frequency_visualizer_idle">Trykk Start for å ta opp et tonehøydespor.</string>
+    <string name="frequency_visualizer_listening">Lytter etter tonehøyde …</string>
+    <string name="frequency_visualizer_no_sound">Ingen tonehøyde oppdaget.</string>
     <string name="frequency_visualizer_recording">Tar opp: %1$d s</string>
     <string name="frequency_visualizer_preparing">Klargjør nedlasting …</string>
     <string name="frequency_visualizer_ready">Opptak og tonehøydespor er klare.</string>

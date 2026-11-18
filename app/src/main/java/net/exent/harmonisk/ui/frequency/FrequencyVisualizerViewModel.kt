@@ -31,10 +31,12 @@ data class FrequencyVisualizerState(
     val recording: Boolean = false,
     val finalizing: Boolean = false,
     val frames: List<FrequencyTraceFrame> = emptyList(),
+    val startTimeMs: Long? = null,
     val elapsedMs: Long = 0L,
     val lastFrequency: Float = 0f,
     val lastConfidence: Float = 0f,
     val exportReady: Boolean = false,
+    val noPitch: Boolean = false,
     val error: FrequencyVisualizerError? = null
 )
 
@@ -66,6 +68,8 @@ class FrequencyVisualizerViewModel @Inject constructor(
     private var windowFilled = 0
     private var lastPublishNanos = 0L
     private var lastFrameTimeMs = 0L
+    private var firstPitchMs: Long? = null
+    private var lastPitchMs: Long? = null
     private var lastValidFrequency = 0f
     private var lastValidConfidence = 0f
 
@@ -103,6 +107,8 @@ class FrequencyVisualizerViewModel @Inject constructor(
         windowFilled = 0
         lastPublishNanos = 0L
         lastFrameTimeMs = 0L
+        firstPitchMs = null
+        lastPitchMs = null
         lastValidFrequency = 0f
         lastValidConfidence = 0f
         exportFile = null
@@ -155,15 +161,40 @@ class FrequencyVisualizerViewModel @Inject constructor(
             analysisJob = null
             val wav = wavWriter?.finish()
             wavWriter = null
-            val exported = wav?.let { FrequencyTraceExporter.export(context, it, frames.toList()) }
+            val startMs = firstPitchMs
+            val endMs = lastPitchMs
+            val trimmedFrames = if (startMs != null && endMs != null) {
+                frames.filter { it.timeMs in startMs..endMs }
+            } else {
+                emptyList()
+            }
+            val exported = if (startMs != null && endMs != null && wav != null) {
+                FrequencyTraceExporter.export(
+                    context = context,
+                    wav = wav,
+                    frames = trimmedFrames.map { it.copy(timeMs = it.timeMs - startMs) },
+                    startSample = startMs * SAMPLE_RATE / 1000L,
+                    endSample = endMs * SAMPLE_RATE / 1000L
+                )
+            } else {
+                null
+            }
             exportFile = exported
+            val hasPitch = startMs != null && endMs != null
+            val durationMs = if (startMs != null && endMs != null) endMs - startMs else 0L
             _state.update {
                 it.copy(
                     finalizing = false,
-                    frames = frames.toList(),
-                    elapsedMs = lastFrameTimeMs,
+                    frames = trimmedFrames,
+                    startTimeMs = startMs,
+                    elapsedMs = durationMs,
                     exportReady = exported != null,
-                    error = if (exported == null) FrequencyVisualizerError.EXPORT_FAILED else it.error
+                    noPitch = !hasPitch,
+                    error = if (hasPitch && exported == null) {
+                        FrequencyVisualizerError.EXPORT_FAILED
+                    } else {
+                        it.error
+                    }
                 )
             }
         }
@@ -208,12 +239,18 @@ class FrequencyVisualizerViewModel @Inject constructor(
             frequencyHz = frequency,
             confidence = result.confidence
         )
-        frames.add(frame)
         lastFrameTimeMs = frame.timeMs
         if (frequency > 0f) {
+            if (firstPitchMs == null) {
+                firstPitchMs = (frame.timeMs - PitchProcessor.ANALYSIS_WINDOW_MS).coerceAtLeast(0L)
+            }
+            lastPitchMs = frame.timeMs
             lastValidFrequency = frequency
             lastValidConfidence = result.confidence
+        } else if (firstPitchMs == null) {
+            return
         }
+        frames.add(frame)
         publish()
     }
 
@@ -221,10 +258,16 @@ class FrequencyVisualizerViewModel @Inject constructor(
         val now = System.nanoTime()
         if (!force && now - lastPublishNanos < PUBLISH_INTERVAL_NANOS) return
         lastPublishNanos = now
+        val start = firstPitchMs
         _state.update {
             it.copy(
                 frames = frames.toList(),
-                elapsedMs = lastFrameTimeMs,
+                startTimeMs = start,
+                elapsedMs = if (start != null) {
+                    (lastFrameTimeMs - start).coerceAtLeast(0L)
+                } else {
+                    0L
+                },
                 lastFrequency = lastValidFrequency,
                 lastConfidence = lastValidConfidence
             )

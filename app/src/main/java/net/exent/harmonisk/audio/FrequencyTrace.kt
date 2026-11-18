@@ -91,31 +91,48 @@ class WavFileWriter(private val file: File) {
     }
 
     private fun writeHeader() {
-        val target = output ?: return
-        target.write("RIFF".toByteArray())
-        writeIntLe(target, HEADER_SIZE - 8)
-        target.write("WAVE".toByteArray())
-        target.write("fmt ".toByteArray())
-        writeIntLe(target, 16)
-        writeShortLe(target, 1)
-        writeShortLe(target, 1)
-        writeIntLe(target, AudioConstants.SAMPLE_RATE)
-        writeIntLe(target, AudioConstants.SAMPLE_RATE * 2)
-        writeShortLe(target, 2)
-        writeShortLe(target, 16)
-        target.write("data".toByteArray())
-        writeIntLe(target, 0)
+        writeWavHeader(output ?: return, 0)
     }
+}
+
+object WavFileTrimmer {
+    fun trim(source: File, target: File, startSample: Long, endSample: Long): File? =
+        runCatching {
+            val totalSamples = (source.length() - 44) / 2
+            val start = startSample.coerceIn(0L, totalSamples)
+            val end = endSample.coerceIn(start, totalSamples)
+            val dataBytes = ((end - start) * 2).toInt()
+            FileOutputStream(target).use { output ->
+                writeWavHeader(output, dataBytes)
+                RandomAccessFile(source, "r").use { input ->
+                    input.seek(44 + start * 2)
+                    val buffer = ByteArray(8192)
+                    var remaining = dataBytes
+                    while (remaining > 0) {
+                        val read = input.read(buffer, 0, minOf(buffer.size, remaining))
+                        check(read > 0)
+                        output.write(buffer, 0, read)
+                        remaining -= read
+                    }
+                }
+            }
+            target
+        }.getOrNull()
 }
 
 object FrequencyTraceExporter {
     suspend fun export(
         context: Context,
         wav: File,
-        frames: List<FrequencyTraceFrame>
+        frames: List<FrequencyTraceFrame>,
+        startSample: Long,
+        endSample: Long
     ): File? = withContext(Dispatchers.IO) {
         runCatching {
             val directory = File(context.cacheDir, "frequency_visualizer").apply { mkdirs() }
+            val trimmedWav = File(directory, "recording-trimmed.wav")
+            WavFileTrimmer.trim(wav, trimmedWav, startSample, endSample)
+                ?: error("Could not trim recording")
             val csv = File(directory, "pitch.csv")
             csv.bufferedWriter().use { writer ->
                 writer.appendLine("time_ms,frequency_hz,confidence")
@@ -128,7 +145,7 @@ object FrequencyTraceExporter {
             val zip = File(directory, "frequency-trace.zip")
             ZipOutputStream(BufferedOutputStream(FileOutputStream(zip))).use { output ->
                 output.putNextEntry(ZipEntry("recording.wav"))
-                wav.inputStream().use { it.copyTo(output) }
+                trimmedWav.inputStream().use { it.copyTo(output) }
                 output.closeEntry()
                 output.putNextEntry(ZipEntry("pitch.csv"))
                 csv.inputStream().use { it.copyTo(output) }
@@ -137,6 +154,22 @@ object FrequencyTraceExporter {
             zip
         }.getOrNull()
     }
+}
+
+private fun writeWavHeader(output: OutputStream, dataBytes: Int) {
+    output.write("RIFF".toByteArray())
+    writeIntLe(output, 36 + dataBytes)
+    output.write("WAVE".toByteArray())
+    output.write("fmt ".toByteArray())
+    writeIntLe(output, 16)
+    writeShortLe(output, 1)
+    writeShortLe(output, 1)
+    writeIntLe(output, AudioConstants.SAMPLE_RATE)
+    writeIntLe(output, AudioConstants.SAMPLE_RATE * 2)
+    writeShortLe(output, 2)
+    writeShortLe(output, 16)
+    output.write("data".toByteArray())
+    writeIntLe(output, dataBytes)
 }
 
 private fun writeIntLe(output: OutputStream, value: Int) {

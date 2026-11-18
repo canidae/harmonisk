@@ -101,7 +101,9 @@ fun FrequencyVisualizerScreen(
                     ) {
                         PitchGraph(
                             frames = state.frames,
+                            startTimeMs = state.startTimeMs,
                             elapsedMs = state.elapsedMs,
+                            noPitch = state.noPitch,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -175,18 +177,22 @@ fun FrequencyVisualizerScreen(
 @Composable
 private fun statusText(state: FrequencyVisualizerState): String = when {
     state.finalizing -> stringResource(R.string.frequency_visualizer_preparing)
+    state.recording && state.startTimeMs == null -> stringResource(R.string.frequency_visualizer_listening)
     state.recording -> stringResource(
         R.string.frequency_visualizer_recording,
         (state.elapsedMs / 1000L).toInt()
     )
     state.exportReady -> stringResource(R.string.frequency_visualizer_ready)
+    state.noPitch -> stringResource(R.string.frequency_visualizer_no_sound)
     else -> stringResource(R.string.frequency_visualizer_idle)
 }
 
 @Composable
 private fun PitchGraph(
     frames: List<FrequencyTraceFrame>,
+    startTimeMs: Long?,
     elapsedMs: Long,
+    noPitch: Boolean,
     modifier: Modifier
 ) {
     val lineColor = MaterialTheme.colorScheme.primary
@@ -195,7 +201,8 @@ private fun PitchGraph(
     val density = LocalDensity.current
     val labelSize = 10.sp
     val labelSizePx = with(density) { labelSize.toPx() }
-    val hasPitch = frames.any { it.frequencyHz > 0f }
+    val start = startTimeMs
+    val hasPitch = start != null && frames.any { it.frequencyHz > 0f && it.timeMs >= start }
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
@@ -207,7 +214,12 @@ private fun PitchGraph(
             val chartHeight = size.height - top - bottom
             if (chartWidth <= 0f || chartHeight <= 0f) return@Canvas
 
-            val spanMs = maxOf(elapsedMs, frames.lastOrNull()?.timeMs ?: 0L, 1000L)
+            val lastFrameMs = if (start != null) {
+                frames.lastOrNull { it.timeMs >= start }?.let { it.timeMs - start } ?: 0L
+            } else {
+                0L
+            }
+            val spanMs = maxOf(elapsedMs, lastFrameMs, 1000L)
             fun xFor(timeMs: Long): Float =
                 left + chartWidth * timeMs.toFloat() / spanMs.toFloat()
 
@@ -288,39 +300,49 @@ private fun PitchGraph(
                 )
             }
 
-            val linePath = Path()
-            var drawing = false
-            for (frame in frames) {
-                if (frame.frequencyHz <= 0f) {
-                    drawing = false
-                    continue
+            if (start != null) {
+                val linePath = Path()
+                var drawing = false
+                for (frame in frames) {
+                    val timeMs = frame.timeMs - start
+                    if (timeMs < 0L) continue
+                    if (frame.frequencyHz <= 0f) {
+                        drawing = false
+                        continue
+                    }
+                    val x = xFor(timeMs)
+                    val y = yFor(frame.frequencyHz)
+                    if (drawing) {
+                        linePath.lineTo(x, y)
+                    } else {
+                        linePath.moveTo(x, y)
+                        drawing = true
+                    }
                 }
-                val x = xFor(frame.timeMs)
-                val y = yFor(frame.frequencyHz)
-                if (drawing) {
-                    linePath.lineTo(x, y)
-                } else {
-                    linePath.moveTo(x, y)
-                    drawing = true
-                }
-            }
-            drawPath(
-                path = linePath,
-                color = lineColor,
-                style = Stroke(width = 2.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-            )
-            frames.lastOrNull { it.frequencyHz > 0f }?.let {
-                drawCircle(
+                drawPath(
+                    path = linePath,
                     color = lineColor,
-                    radius = 4.dp.toPx(),
-                    center = Offset(xFor(it.timeMs), yFor(it.frequencyHz))
+                    style = Stroke(width = 2.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
                 )
+                frames.lastOrNull { it.frequencyHz > 0f && it.timeMs >= start }?.let {
+                    drawCircle(
+                        color = lineColor,
+                        radius = 4.dp.toPx(),
+                        center = Offset(xFor(it.timeMs - start), yFor(it.frequencyHz))
+                    )
+                }
             }
         }
 
         if (!hasPitch) {
             Text(
-                text = stringResource(R.string.frequency_visualizer_empty),
+                text = stringResource(
+                    if (noPitch) {
+                        R.string.frequency_visualizer_no_sound
+                    } else {
+                        R.string.frequency_visualizer_empty
+                    }
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
