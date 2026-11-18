@@ -188,6 +188,7 @@
     <string name="melody_folder_imported">Imported</string>
     <string name="melody_folder_traditional">Traditional</string>
     <string name="melody_folder_exercises">Exercises</string>
+    <string name="melody_exercise_major_scale">Major Scale</string>
     <string name="melody_playlists">Playlists</string>
     <string name="melody_playlist_new">New playlist</string>
     <string name="melody_playlist_name">Playlist name</string>
@@ -231,9 +232,8 @@
     <string name="melody_score">Score: %1$s</string>
     <string name="melody_play_prefer_open_strings">Prefer open strings</string>
     <string name="melody_play_auto_key">Easy key</string>
-    <string name="melody_play_transpose_0">Transpose: 0</string>
-    <string name="melody_play_transpose_plus">Transpose: +%1$d</string>
-    <string name="melody_play_transpose">Transpose: %1$d</string>
+    <string name="melody_play_octave">Octave: %1$s</string>
+    <string name="melody_play_key">Key: %1$s</string>
     <string name="melody_play_voices">Play voices:</string>
     <string name="accompaniment_all">All</string>
     <string name="accompaniment_except">Except</string>

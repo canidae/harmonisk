@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import net.exent.harmonisk.R
 import net.exent.harmonisk.midi.AbcParser
 import net.exent.harmonisk.midi.MelodyFileFormat
 import net.exent.harmonisk.midi.MelodyFileParser
@@ -66,6 +67,7 @@ class MelodyRepository(
         const val IMPORTED_FOLDER = "imported"
 
         const val MELODY_ASSETS_DIR = "melodies"
+        private const val MAJOR_SCALE_ASSET = "scale_c_major.mid"
 
     }
 
@@ -85,6 +87,10 @@ class MelodyRepository(
 
     fun getBundledMelodies(): List<MelodyInfo> {
         val result = mutableListOf<MelodyInfo>()
+        val displayContext = LocaleManager.createLocaleContext(
+            context,
+            SettingsRepository.getLanguageCodeSync(context)
+        )
         val folders = context.assets.list(MELODY_ASSETS_DIR).orEmpty()
         for (folder in folders) {
             val folderPrefix = "$MELODY_ASSETS_DIR/$folder"
@@ -93,7 +99,11 @@ class MelodyRepository(
                 .sorted()
             for (file in files) {
                 val assetPath = "$folderPrefix/$file"
-                val displayName = resourceNameToDisplayName(file.substringBeforeLast('.'))
+                val displayName = if (file.equals(MAJOR_SCALE_ASSET, true)) {
+                    displayContext.getString(R.string.melody_exercise_major_scale)
+                } else {
+                    resourceNameToDisplayName(file.substringBeforeLast('.'))
+                }
                 result.add(MelodyInfo(assetPath, displayName, true, folder = folder, assetPath = assetPath))
             }
         }

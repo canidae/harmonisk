@@ -188,6 +188,7 @@
     <string name="melody_folder_imported">Importert</string>
     <string name="melody_folder_traditional">Tradisjonelle</string>
     <string name="melody_folder_exercises">Øvelser</string>
+    <string name="melody_exercise_major_scale">Durskala</string>
     <string name="melody_playlists">Spillelister</string>
     <string name="melody_playlist_new">Ny spilleliste</string>
     <string name="melody_playlist_name">Navn på spillelisten</string>
@@ -231,9 +232,8 @@
     <string name="melody_score">Poeng: %1$s</string>
     <string name="melody_play_prefer_open_strings">Foretrekk åpne strenger</string>
     <string name="melody_play_auto_key">Enkel toneart</string>
-    <string name="melody_play_transpose_0">Transponering: 0</string>
-    <string name="melody_play_transpose_plus">Transponering: +%1$d</string>
-    <string name="melody_play_transpose">Transponering: %1$d</string>
+    <string name="melody_play_octave">Oktav: %1$s</string>
+    <string name="melody_play_key">Toneart: %1$s</string>
     <string name="melody_play_voices">Spill av stemmer:</string>
     <string name="accompaniment_all">Alle</string>
     <string name="accompaniment_except">Unntatt</string>
