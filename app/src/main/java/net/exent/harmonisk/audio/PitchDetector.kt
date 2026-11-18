@@ -5,6 +5,7 @@ import org.tensorflow.lite.Interpreter
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
+import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -55,6 +56,14 @@ internal object PitchFusion {
             return if (yin.frequency > 0f) yin else PitchDetectionResult.NONE
         }
         if (yin.frequency <= 0f) return corrected
+        val yinAgreesWithCrepe = abs(
+            1200.0 * ln(yin.frequency / crepe.frequency) / ln(2.0)
+        ) <= YIN_MARGIN_CENTS
+        if (yinAgreesWithCrepe &&
+            corrected.frequency < crepe.frequency * 2.0.pow(-YIN_MARGIN_CENTS / 1200.0).toFloat()
+        ) {
+            return crepe
+        }
         val yinIsLower = yin.frequency <
             corrected.frequency * 2.0.pow(-YIN_MARGIN_CENTS / 1200.0).toFloat()
         return if (corrected.frequency <= 0f || (yinIsLower && trustLowerYin)) yin else corrected

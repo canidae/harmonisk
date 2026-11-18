@@ -59,6 +59,16 @@ class PitchFusionTest {
     }
 
     @Test
+    fun keepsCrepeWhenYinAgreesAndTheCorrectionDropsAnOctave() {
+        val result = PitchFusion.combine(
+            crepe = PitchDetectionResult(1300f, 0.8f),
+            corrected = PitchDetectionResult(650f, 0.8f),
+            yin = PitchDetectionResult(1300f, 0.99f)
+        )
+        assertEquals(1300f, result.frequency, 0.01f)
+    }
+
+    @Test
     fun keepsCrepePrecisionWhenDetectorsAgree() {
         val result = PitchFusion.combine(
             crepe = PitchDetectionResult(440f, 0.9f),
