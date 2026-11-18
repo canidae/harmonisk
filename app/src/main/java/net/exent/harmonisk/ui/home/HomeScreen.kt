@@ -47,7 +47,7 @@ import net.exent.harmonisk.ui.theme.BrandPurple
 import net.exent.harmonisk.ui.theme.BrandTeal
 import net.exent.harmonisk.ui.theme.PlayGreen
 
-private const val DEV_MODE_HOLD_MS = 7_000L
+private const val DEV_MODE_HOLD_MS = 3_000L
 
 private data class ModeItem(
     val emoji: String,
