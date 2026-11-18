@@ -19,6 +19,7 @@ import net.exent.harmonisk.audio.AudioCaptureService
 import net.exent.harmonisk.audio.AudioConstants
 import net.exent.harmonisk.audio.FrequencyTraceExporter
 import net.exent.harmonisk.audio.FrequencyTraceFrame
+import net.exent.harmonisk.audio.PitchDebouncer
 import net.exent.harmonisk.audio.PitchDetector
 import net.exent.harmonisk.audio.PitchProcessor
 import net.exent.harmonisk.audio.WavFileWriter
@@ -70,6 +71,7 @@ class FrequencyVisualizerViewModel @Inject constructor(
     private var lastFrameTimeMs = 0L
     private var firstPitchMs: Long? = null
     private var lastPitchMs: Long? = null
+    private val debouncer = PitchDebouncer()
     private var referenceFrequency = 0f
     private var silentFrames = 0
     private var lastValidFrequency = 0f
@@ -111,6 +113,7 @@ class FrequencyVisualizerViewModel @Inject constructor(
         lastFrameTimeMs = 0L
         firstPitchMs = null
         lastPitchMs = null
+        debouncer.reset()
         referenceFrequency = 0f
         silentFrames = 0
         lastValidFrequency = 0f
@@ -237,7 +240,12 @@ class FrequencyVisualizerViewModel @Inject constructor(
 
     private fun detect(endSamples: Long) {
         val result = detector.detectPitch(window, lowestFrequency, referenceFrequency)
-        val frequency = if (result.frequency > 0f) result.frequency else 0f
+        val frequency = if (result.frequency > 0f) {
+            debouncer.filter(result.frequency)
+        } else {
+            debouncer.filter(0f)
+            0f
+        }
         if (frequency > 0f) {
             silentFrames = 0
         } else {
