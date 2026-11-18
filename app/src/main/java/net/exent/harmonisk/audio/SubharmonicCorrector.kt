@@ -1,24 +1,34 @@
 package net.exent.harmonisk.audio
 
+import kotlin.math.log2
+import kotlin.math.roundToInt
+
 internal object SubharmonicCorrector {
 
-    const val BINS_PER_OCTAVE = 60
+    private const val BINS_PER_OCTAVE = 60
 
     private const val SEARCH_RADIUS_BINS = 3
 
-    private const val MAX_STEPS = 1
+    private const val OCTAVE_PEAK_RATIO = 0.3f
 
-    const val MIN_PEAK_RATIO = 0.06f
+    private const val THIRD_PEAK_RATIO = 0.05f
+
+    private val DIVISORS = intArrayOf(2, 3)
 
     fun fundamentalBin(activation: FloatArray, peakBin: Int): Int {
-        var bin = peakBin
-        repeat(MAX_STEPS) {
-            val parent = activation[bin]
-            val sub = localPeakNear(activation, bin - BINS_PER_OCTAVE) ?: return bin
-            if (activation[sub] < parent * MIN_PEAK_RATIO) return bin
-            bin = sub
+        var bestBin = peakBin
+        var bestValue = 0f
+        for (divisor in DIVISORS) {
+            val offset = (BINS_PER_OCTAVE * log2(divisor.toDouble())).roundToInt()
+            val candidate = localPeakNear(activation, peakBin - offset) ?: continue
+            val threshold = if (divisor == 2) OCTAVE_PEAK_RATIO else THIRD_PEAK_RATIO
+            val value = activation[candidate]
+            if (value >= activation[peakBin] * threshold && value > bestValue) {
+                bestBin = candidate
+                bestValue = value
+            }
         }
-        return bin
+        return bestBin
     }
 
     private fun localPeakNear(activation: FloatArray, center: Int): Int? {

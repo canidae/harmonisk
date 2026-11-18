@@ -50,7 +50,8 @@ internal object PitchFusion {
         crepe: PitchDetectionResult,
         corrected: PitchDetectionResult,
         yin: PitchDetectionResult,
-        trustLowerYin: Boolean = true
+        trustLowerYin: Boolean = true,
+        trustCorrection: Boolean = true
     ): PitchDetectionResult {
         if (crepe.frequency <= 0f || crepe.confidence < CREPE_MIN_CONFIDENCE) {
             return if (yin.frequency > 0f) yin else PitchDetectionResult.NONE
@@ -59,7 +60,7 @@ internal object PitchFusion {
         val yinAgreesWithCrepe = abs(
             1200.0 * ln(yin.frequency / crepe.frequency) / ln(2.0)
         ) <= YIN_MARGIN_CENTS
-        if (yinAgreesWithCrepe &&
+        if (!trustCorrection && yinAgreesWithCrepe &&
             corrected.frequency < crepe.frequency * 2.0.pow(-YIN_MARGIN_CENTS / 1200.0).toFloat()
         ) {
             return crepe
@@ -135,11 +136,14 @@ class PitchDetector(context: Context) {
             PitchDetectionResult.NONE
         }
         val yinSupported = activationPeakAt(activation, yin.frequency) >= confidence * YIN_SUPPORT_RATIO
+        val trustCorrection = correctedFrequency > 0f &&
+            rawFrequency / correctedFrequency >= 2.5f
         val fused = PitchFusion.combine(
             PitchDetectionResult(rawFrequency, confidence),
             corrected,
             yin,
-            trustLowerYin = rawFrequency <= PitchFusion.CORRECTION_MAX_FREQUENCY || yinSupported
+            trustLowerYin = rawFrequency <= PitchFusion.CORRECTION_MAX_FREQUENCY || yinSupported,
+            trustCorrection = trustCorrection
         )
         return if (fused.frequency >= lowestFrequency) fused else PitchDetectionResult.NONE
     }

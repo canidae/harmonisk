@@ -24,6 +24,24 @@ class SubharmonicCorrectorTest {
     }
 
     @Test
+    fun descendsToThirdFrequencyPeak() {
+        val act = activation(260 to 0.9f, 165 to 0.5f)
+        assertEquals(165, SubharmonicCorrector.fundamentalBin(act, 260))
+    }
+
+    @Test
+    fun ignoresWeakThirdFrequencyPeak() {
+        val act = activation(260 to 0.9f, 165 to 0.02f)
+        assertEquals(260, SubharmonicCorrector.fundamentalBin(act, 260))
+    }
+
+    @Test
+    fun prefersTheStrongestHarmonicCandidate() {
+        val act = activation(260 to 0.9f, 200 to 0.8f, 165 to 0.85f)
+        assertEquals(165, SubharmonicCorrector.fundamentalBin(act, 260))
+    }
+
+    @Test
     fun descendsOnlyOneOctave() {
         val act = activation(260 to 0.9f, 200 to 0.8f, 140 to 0.7f)
         assertEquals(200, SubharmonicCorrector.fundamentalBin(act, 260))

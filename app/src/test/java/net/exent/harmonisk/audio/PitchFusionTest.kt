@@ -63,9 +63,20 @@ class PitchFusionTest {
         val result = PitchFusion.combine(
             crepe = PitchDetectionResult(1300f, 0.8f),
             corrected = PitchDetectionResult(650f, 0.8f),
-            yin = PitchDetectionResult(1300f, 0.99f)
+            yin = PitchDetectionResult(1300f, 0.99f),
+            trustCorrection = false
         )
         assertEquals(1300f, result.frequency, 0.01f)
+    }
+
+    @Test
+    fun usesThirdHarmonicCorrectionDespiteYinAgreement() {
+        val result = PitchFusion.combine(
+            crepe = PitchDetectionResult(588f, 0.8f),
+            corrected = PitchDetectionResult(196f, 0.8f),
+            yin = PitchDetectionResult(590f, 0.99f)
+        )
+        assertEquals(196f, result.frequency, 0.01f)
     }
 
     @Test
