@@ -338,6 +338,19 @@
     <string name="sound_test_song">Song intro</string>
     <string name="sound_test_play_all">Play all</string>
     <string name="sound_test_stop">Stop</string>
+
+    <!-- Frequency visualizer -->
+    <string name="frequency_visualizer_title">Frequency visualizer</string>
+    <string name="frequency_visualizer_idle">Press Start to record a pitch trace.</string>
+    <string name="frequency_visualizer_recording">Recording: %1$d s</string>
+    <string name="frequency_visualizer_preparing">Preparing download…</string>
+    <string name="frequency_visualizer_ready">Recording and pitch trace ready.</string>
+    <string name="frequency_visualizer_empty">No pitch detected yet.</string>
+    <string name="frequency_visualizer_last">Last: %1$s Hz (confidence %2$s)</string>
+    <string name="frequency_visualizer_download">Download ZIP</string>
+    <string name="frequency_visualizer_saved">Saved to Downloads</string>
+    <string name="frequency_visualizer_save_failed">Could not save the recording</string>
+    <string name="frequency_visualizer_error">Could not record audio</string>
 </resources>
 
 

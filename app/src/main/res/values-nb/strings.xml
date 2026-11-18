@@ -338,4 +338,17 @@
     <string name="sound_test_song">Sang starter</string>
     <string name="sound_test_play_all">Spill alle</string>
     <string name="sound_test_stop">Stopp</string>
+
+    <!-- Frequency visualizer -->
+    <string name="frequency_visualizer_title">Frekvensvisualisering</string>
+    <string name="frequency_visualizer_idle">Trykk Start for å ta opp et tonehøydespor.</string>
+    <string name="frequency_visualizer_recording">Tar opp: %1$d s</string>
+    <string name="frequency_visualizer_preparing">Klargjør nedlasting …</string>
+    <string name="frequency_visualizer_ready">Opptak og tonehøydespor er klare.</string>
+    <string name="frequency_visualizer_empty">Ingen tonehøyde oppdaget ennå.</string>
+    <string name="frequency_visualizer_last">Sist: %1$s Hz (konfidens %2$s)</string>
+    <string name="frequency_visualizer_download">Last ned ZIP</string>
+    <string name="frequency_visualizer_saved">Lagret i Nedlastinger</string>
+    <string name="frequency_visualizer_save_failed">Kunne ikke lagre opptaket</string>
+    <string name="frequency_visualizer_error">Kunne ikke ta opp lyd</string>
 </resources>

@@ -21,12 +21,15 @@ object RecordingExporter {
         val base = melodyName?.trim()?.takeIf { it.isNotEmpty() } ?: "Harmonisk"
         val safe = base.replace(Regex("""[\\/:*?"<>|]"""), "-").take(60)
         val stamp = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").format(LocalDateTime.now())
-        val suffix = if (extension.equals("wav", ignoreCase = true)) "wav" else "m4a"
+        val suffix = extension.lowercase().takeIf { it in setOf("wav", "m4a", "zip") } ?: "m4a"
         return "$safe-$stamp.$suffix"
     }
 
-    private fun mimeType(file: File): String =
-        if (file.extension.equals("wav", ignoreCase = true)) "audio/wav" else "audio/mp4"
+    private fun mimeType(file: File): String = when (file.extension.lowercase()) {
+        "wav" -> "audio/wav"
+        "zip" -> "application/zip"
+        else -> "audio/mp4"
+    }
 
     suspend fun share(context: Context, file: File, displayName: String): Boolean {
         val shared = withContext(Dispatchers.IO) {

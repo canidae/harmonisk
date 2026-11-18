@@ -24,6 +24,7 @@ import net.exent.harmonisk.ui.theme.AdventureGold
 private val ADVENTURE_ACCENT = AdventureGold
 private val WHACK_ACCENT = Color(0xFF7FB3C8)
 private val SOUND_TEST_ACCENT = Color(0xFFB39DDB)
+private val FREQUENCY_ACCENT = Color(0xFF81C784)
 
 @Composable
 fun GamesScreen(
@@ -31,6 +32,7 @@ fun GamesScreen(
     onAdventure: () -> Unit,
     onWhack: () -> Unit,
     onSoundTest: () -> Unit,
+    onFrequencyVisualizer: () -> Unit,
     viewModel: GamesViewModel = hiltViewModel()
 ) {
     val devModeEnabled by viewModel.devModeEnabled.collectAsStateWithLifecycle()
@@ -71,6 +73,13 @@ fun GamesScreen(
                         accent = SOUND_TEST_ACCENT,
                         onClick = onSoundTest,
                         icon = { Text("🔔", fontSize = 36.sp) }
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    GameCard(
+                        title = stringResource(R.string.frequency_visualizer_title),
+                        accent = FREQUENCY_ACCENT,
+                        onClick = onFrequencyVisualizer,
+                        icon = { Text("📈", fontSize = 36.sp) }
                     )
                 }
             }

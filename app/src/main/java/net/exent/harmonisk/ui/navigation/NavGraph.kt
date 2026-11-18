@@ -10,6 +10,7 @@ import androidx.navigation.compose.rememberNavController
 import net.exent.harmonisk.ui.record.RecordScreen
 import net.exent.harmonisk.ui.games.GamesScreen
 import net.exent.harmonisk.ui.home.HomeScreen
+import net.exent.harmonisk.ui.frequency.FrequencyVisualizerScreen
 import net.exent.harmonisk.ui.melody.MelodyPlayScreen
 import net.exent.harmonisk.ui.melody.MelodyScreen
 import net.exent.harmonisk.ui.melody.MelodyViewModel
@@ -46,11 +47,15 @@ fun NavGraph() {
                 onBack = { navController.popBackStack() },
                 onAdventure = { navController.navigate(NavRoutes.ADVENTURE) },
                 onWhack = { navController.navigate(NavRoutes.WHACK) },
-                onSoundTest = { navController.navigate(NavRoutes.SOUND_TEST) }
+                onSoundTest = { navController.navigate(NavRoutes.SOUND_TEST) },
+                onFrequencyVisualizer = { navController.navigate(NavRoutes.FREQUENCY_VISUALIZER) }
             )
         }
         composable(NavRoutes.SOUND_TEST) {
             SoundTestScreen(onBack = { navController.popBackStack() })
+        }
+        composable(NavRoutes.FREQUENCY_VISUALIZER) {
+            FrequencyVisualizerScreen(onBack = { navController.popBackStack() })
         }
         composable(NavRoutes.WHACK) {
             WhackScreen(onBack = { navController.popBackStack() })
