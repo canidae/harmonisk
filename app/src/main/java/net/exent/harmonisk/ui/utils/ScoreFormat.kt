@@ -1,5 +1,5 @@
 package net.exent.harmonisk.ui.utils
 
-import kotlin.math.roundToInt
+import kotlin.math.floor
 
-fun formatScore(score: Float): String = score.roundToInt().toString()
+fun formatScore(score: Float): String = floor(score).toInt().toString()
