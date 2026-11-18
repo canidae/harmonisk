@@ -5,6 +5,7 @@ import net.exent.harmonisk.music.MelodyScore
 import net.exent.harmonisk.music.NoteScore
 import net.exent.harmonisk.music.PitchResult
 import net.exent.harmonisk.music.BowedPosition
+import net.exent.harmonisk.music.Transpose
 
 enum class AccompanimentMode { ALL, EXCEPT, SELECTED_ONLY, NONE }
 
@@ -21,7 +22,7 @@ data class MelodyGameState(
     val pitchResult: PitchResult = PitchResult.SILENT,
     val waitMode: Boolean = true,
     val autoTranspose: Boolean = true,
-    val transposeSemitones: Int = 0,
+    val transpose: Transpose = Transpose(0, 0),
     val preferOpenStrings: Boolean = true,
     val melodyScore: MelodyScore? = null,
     val noteCentsHistory: Map<Int, List<Float>> = emptyMap(),

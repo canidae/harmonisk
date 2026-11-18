@@ -7,10 +7,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import net.exent.harmonisk.ui.developer.DeveloperToolsScreen
 import net.exent.harmonisk.ui.record.RecordScreen
 import net.exent.harmonisk.ui.games.GamesScreen
 import net.exent.harmonisk.ui.freebird.FreeBirdScreen
 import net.exent.harmonisk.ui.home.HomeScreen
+import net.exent.harmonisk.ui.frequency.FrequencyVisualizerScreen
 import net.exent.harmonisk.ui.melody.MelodyPlayScreen
 import net.exent.harmonisk.ui.melody.MelodyScreen
 import net.exent.harmonisk.ui.melody.MelodyViewModel
@@ -31,12 +33,20 @@ fun NavGraph() {
     ) {
         composable(NavRoutes.HOME) {
             HomeScreen(
-                onNavigateToRecord = { navController.navigate(NavRoutes.RECORD) },
+                onNavigateToDeveloperTools = { navController.navigate(NavRoutes.DEVELOPER_TOOLS) },
                 onNavigateToMelody = { navController.navigate(NavRoutes.MELODY_GRAPH) },
                 onNavigateToGames = { navController.navigate(NavRoutes.GAMES) },
                 onNavigateToMetronome = { navController.navigate(NavRoutes.METRONOME) },
                 onNavigateToTuner = { navController.navigate(NavRoutes.TUNER) },
                 onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS) }
+            )
+        }
+        composable(NavRoutes.DEVELOPER_TOOLS) {
+            DeveloperToolsScreen(
+                onBack = { navController.popBackStack() },
+                onRecord = { navController.navigate(NavRoutes.RECORD) },
+                onSoundTest = { navController.navigate(NavRoutes.SOUND_TEST) },
+                onFrequencyVisualizer = { navController.navigate(NavRoutes.FREQUENCY_VISUALIZER) }
             )
         }
         composable(NavRoutes.RECORD) {
@@ -47,8 +57,7 @@ fun NavGraph() {
                 onBack = { navController.popBackStack() },
                 onAdventure = { navController.navigate(NavRoutes.ADVENTURE) },
                 onFreeBird = { navController.navigate(NavRoutes.FREE_BIRD) },
-                onWhack = { navController.navigate(NavRoutes.WHACK) },
-                onSoundTest = { navController.navigate(NavRoutes.SOUND_TEST) }
+                onWhack = { navController.navigate(NavRoutes.WHACK) }
             )
         }
         composable(NavRoutes.SOUND_TEST) {
@@ -56,6 +65,9 @@ fun NavGraph() {
         }
         composable(NavRoutes.FREE_BIRD) {
             FreeBirdScreen(onBack = { navController.popBackStack() })
+        }
+        composable(NavRoutes.FREQUENCY_VISUALIZER) {
+            FrequencyVisualizerScreen(onBack = { navController.popBackStack() })
         }
         composable(NavRoutes.WHACK) {
             WhackScreen(onBack = { navController.popBackStack() })

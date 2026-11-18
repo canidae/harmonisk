@@ -37,6 +37,12 @@ class BeginnerKeyTest {
     }
 
     @Test
+    fun celloMajorScaleUsesPlayableOctave() {
+        val scale = intArrayOf(60, 62, 64, 65, 67, 69, 71, 72, 72, 71, 69, 67, 65, 64, 62, 60)
+        assertEquals(-10, offset(*scale, key = KeySignature(0, false), instrument = Instrument.CELLO))
+    }
+
+    @Test
     fun dMajorScaleStaysPut() {
         val scale = intArrayOf(62, 64, 66, 67, 69, 71, 73, 74)
         assertEquals(0, offset(*scale, key = KeySignature(2, false)))
@@ -87,14 +93,15 @@ class BeginnerKeyTest {
     fun eachInstrumentGetsAnOffsetWithinRange() {
         val melody = intArrayOf(62, 64, 66, 67, 69, 71, 73, 74)
         for (instrument in Instrument.entries) {
-            assertTrue(offset(*melody, key = KeySignature(2, false), instrument = instrument) in -6..6)
+            val offset = offset(*melody, key = KeySignature(2, false), instrument = instrument)
+            assertTrue(offset in -Transpose.MAX_SEMITONES..Transpose.MAX_SEMITONES)
         }
     }
 
     @Test
-    fun shiftNeverExceedsASixth() {
+    fun shiftStaysWithinConfiguredRange() {
         val melody = intArrayOf(20, 22, 24, 26, 28, 30, 32, 34)
         val offset = offset(*melody, key = KeySignature(0, false))
-        assertTrue(offset in -6..6)
+        assertTrue(offset in -Transpose.MAX_SEMITONES..Transpose.MAX_SEMITONES)
     }
 }

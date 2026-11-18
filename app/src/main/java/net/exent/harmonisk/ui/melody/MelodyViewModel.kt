@@ -165,7 +165,7 @@ class MelodyViewModel @Inject constructor(
     private var replaySavedOffset: Double? = null
     private val _recordingAvailable = MutableStateFlow(false)
     val recordingAvailable: StateFlow<Boolean> = _recordingAvailable.asStateFlow()
-    private var manualTransposeSemitones = 0
+    private var manualTranspose = Transpose(0, 0)
 
     private val _currentInstrument = MutableStateFlow(Instrument.VIOLIN.name)
     private val currentInstrumentFlow: StateFlow<String> = _currentInstrument.asStateFlow()
@@ -382,7 +382,7 @@ class MelodyViewModel @Inject constructor(
             val primary = melodyTracks.first()
             val metronomeTrack = generateMetronomeTrack(primary)
             val (viewMin, viewMax) = viewRangeFor(primary)
-            manualTransposeSemitones = 0
+            manualTranspose = Transpose(0, 0)
             _gameState.update { it.withLoadedMelody(primary, melodyTracks, metronomeTrack, melodyName) }
             _viewState.update {
                 it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax, songTimeOffsetSeconds = 0.0)
@@ -548,7 +548,7 @@ class MelodyViewModel @Inject constructor(
         activeVoiceIndex = 0,
         accompanimentMode = accompanimentMode,
         phase = PlayPhase.NOT_STARTED,
-        transposeSemitones = 0,
+        transpose = Transpose(0, 0),
         currentTimeSeconds = -twoBarLeadInSeconds(primary),
         previewTimeSeconds = null,
         noteResults = emptyMap(),
@@ -604,9 +604,8 @@ class MelodyViewModel @Inject constructor(
                     val idx = saved.activeVoiceIndex.coerceIn(0, tracks.lastIndex)
                     setActiveVoice(idx)
                 }
-                manualTransposeSemitones = saved.transposeSemitones
-                val auto = saved.autoTranspose
-                applyTranspose(if (auto) autoOffset() else saved.transposeSemitones, auto)
+                manualTranspose = Transpose.fromSemitones(saved.transposeSemitones)
+                if (saved.autoTranspose) applyAuto() else applyTranspose(manualTranspose, auto = false)
             }
         }
         scoreHistoryJob = viewModelScope.launch {
@@ -636,22 +635,26 @@ class MelodyViewModel @Inject constructor(
         startPlaying()
     }
 
-    fun setTranspose(semitones: Int) {
-        manualTransposeSemitones = semitones.coerceIn(-12, 12)
-        applyTranspose(manualTransposeSemitones, auto = false)
+    fun setOctave(octave: Int) {
+        val next = Transpose.of(octave, _gameState.value.transpose.key)
+        manualTranspose = next
+        applyTranspose(next, auto = false)
+    }
+
+    fun setKey(key: Int) {
+        val next = Transpose.of(_gameState.value.transpose.octave, key)
+        manualTranspose = next
+        applyTranspose(next, auto = false)
     }
 
     fun setAutoTranspose(enabled: Boolean) {
-        applyTranspose(if (enabled) autoOffset() else manualTransposeSemitones, enabled)
+        if (enabled) applyAuto() else applyTranspose(manualTranspose, auto = false)
     }
 
     fun setPreferOpenStrings(preferOpenStrings: Boolean) {
         if (_gameState.value.preferOpenStrings == preferOpenStrings) return
         _gameState.update { it.copy(preferOpenStrings = preferOpenStrings) }
-        applyTranspose(
-            if (_gameState.value.autoTranspose) autoOffset() else manualTransposeSemitones,
-            _gameState.value.autoTranspose
-        )
+        if (_gameState.value.autoTranspose) applyAuto() else applyTranspose(manualTranspose, auto = false)
     }
 
     private fun autoOffset(): Int {
@@ -667,10 +670,16 @@ class MelodyViewModel @Inject constructor(
         )
     }
 
-    private fun applyTranspose(semitones: Int, auto: Boolean) {
-        val clamped = semitones.coerceIn(-12, 12)
+    private fun applyAuto() {
+        val next = Transpose.fromSemitones(autoOffset())
+        manualTranspose = next
+        applyTranspose(next, auto = true)
+    }
+
+    private fun applyTranspose(transposition: Transpose, auto: Boolean) {
         if (originalMelodyTracks.isEmpty()) return
-        val melodyTracks = originalMelodyTracks.map { it.transpose(clamped) }
+        val clamped = Transpose.of(transposition.octave, transposition.key)
+        val melodyTracks = originalMelodyTracks.map { it.transpose(clamped.semitones) }
         val activeIdx = _gameState.value.activeVoiceIndex.coerceAtMost(melodyTracks.lastIndex)
         val primary = melodyTracks[activeIdx]
         val (viewMin, viewMax) = viewRangeFor(primary)
@@ -678,7 +687,7 @@ class MelodyViewModel @Inject constructor(
             it.copy(
                 melodyTrack = primary,
                 melodyTracks = melodyTracks,
-                transposeSemitones = clamped,
+                transpose = clamped,
                 autoTranspose = auto
             )
         }
@@ -725,7 +734,7 @@ class MelodyViewModel @Inject constructor(
             melodySettingsRepository.saveSettings(id, instrument, MelodySettingsRepository.MelodySettings(
                 waitMode = g.waitMode,
                 autoTranspose = g.autoTranspose,
-                transposeSemitones = manualTransposeSemitones,
+                transposeSemitones = g.transpose.semitones,
                 preferOpenStrings = g.preferOpenStrings,
                 fallSpeedPxPerSec = v.fallSpeedPxPerSec,
                 level = g.currentLevel,

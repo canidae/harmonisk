@@ -27,6 +27,7 @@
 
     <!-- Home screen -->
     <string name="record_title">Opptak</string>
+    <string name="developer_tools_title">Utviklerverktøy</string>
     <string name="games_title">Spill</string>
     <string name="freebird_best">Beste %1$d</string>
     <string name="freebird_score">Poeng %1$d</string>
@@ -194,6 +195,7 @@
     <string name="melody_folder_imported">Importert</string>
     <string name="melody_folder_traditional">Tradisjonelle</string>
     <string name="melody_folder_exercises">Øvelser</string>
+    <string name="melody_exercise_major_scale">Durskala</string>
     <string name="melody_playlists">Spillelister</string>
     <string name="melody_playlist_new">Ny spilleliste</string>
     <string name="melody_playlist_name">Navn på spillelisten</string>
@@ -237,9 +239,8 @@
     <string name="melody_score">Poeng: %1$s</string>
     <string name="melody_play_prefer_open_strings">Foretrekk åpne strenger</string>
     <string name="melody_play_auto_key">Enkel toneart</string>
-    <string name="melody_play_transpose_0">Transponering: 0</string>
-    <string name="melody_play_transpose_plus">Transponering: +%1$d</string>
-    <string name="melody_play_transpose">Transponering: %1$d</string>
+    <string name="melody_play_octave">Oktav: %1$s</string>
+    <string name="melody_play_key">Toneart: %1$s</string>
     <string name="melody_play_voices">Spill av stemmer:</string>
     <string name="accompaniment_all">Alle</string>
     <string name="accompaniment_except">Unntatt</string>
@@ -344,4 +345,19 @@
     <string name="sound_test_song">Sang starter</string>
     <string name="sound_test_play_all">Spill alle</string>
     <string name="sound_test_stop">Stopp</string>
+
+    <!-- Frequency visualizer -->
+    <string name="frequency_visualizer_title">Frekvensvisualisering</string>
+    <string name="frequency_visualizer_idle">Trykk Start for å ta opp et tonehøydespor.</string>
+    <string name="frequency_visualizer_listening">Lytter etter tonehøyde …</string>
+    <string name="frequency_visualizer_no_sound">Ingen tonehøyde oppdaget.</string>
+    <string name="frequency_visualizer_recording">Tar opp: %1$d s</string>
+    <string name="frequency_visualizer_preparing">Klargjør nedlasting …</string>
+    <string name="frequency_visualizer_ready">Opptak og tonehøydespor er klare.</string>
+    <string name="frequency_visualizer_empty">Ingen tonehøyde oppdaget ennå.</string>
+    <string name="frequency_visualizer_last">Sist: %1$s Hz (konfidens %2$s)</string>
+    <string name="frequency_visualizer_download">Last ned ZIP</string>
+    <string name="frequency_visualizer_saved">Lagret i Nedlastinger</string>
+    <string name="frequency_visualizer_save_failed">Kunne ikke lagre opptaket</string>
+    <string name="frequency_visualizer_error">Kunne ikke ta opp lyd</string>
 </resources>

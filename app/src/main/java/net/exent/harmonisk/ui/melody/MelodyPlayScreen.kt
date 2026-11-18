@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.harmonisk.R
 import net.exent.harmonisk.audio.RecordingExporter
 import net.exent.harmonisk.midi.MidiToAlphaTex
+import net.exent.harmonisk.music.Transpose
 import net.exent.harmonisk.ui.components.CanvasMode
 import net.exent.harmonisk.ui.components.VOICE_COLORS
 import net.exent.harmonisk.ui.components.KeepScreenOn
@@ -286,8 +287,10 @@ fun MelodyPlayScreen(
                             showAutoTranspose = true,
                             preferOpenStrings = gameState.preferOpenStrings,
                             onPreferOpenStringsChange = { viewModel.setPreferOpenStrings(it) },
-                            transposeSemitones = gameState.transposeSemitones,
-                            onTransposeChange = { viewModel.setTranspose(it) },
+                            octaveShift = gameState.transpose.octave,
+                            onOctaveChange = { viewModel.setOctave(it) },
+                            keyShift = gameState.transpose.key,
+                            onKeyChange = { viewModel.setKey(it) },
                             accompanimentMode = gameState.accompanimentMode,
                             onAccompanimentModeChange = { viewModel.setAccompanimentMode(it) },
                             showLevelControl = devModeEnabled,
@@ -616,6 +619,8 @@ fun MelodyPlayScreen(
     )
 }
 
+private fun signedValue(value: Int): String = if (value > 0) "+$value" else value.toString()
+
 @Composable
 private fun MelodySettingsMenu(
     expanded: Boolean,
@@ -628,8 +633,10 @@ private fun MelodySettingsMenu(
     showAutoTranspose: Boolean,
     preferOpenStrings: Boolean,
     onPreferOpenStringsChange: (Boolean) -> Unit,
-    transposeSemitones: Int,
-    onTransposeChange: (Int) -> Unit,
+    octaveShift: Int,
+    onOctaveChange: (Int) -> Unit,
+    keyShift: Int,
+    onKeyChange: (Int) -> Unit,
     accompanimentMode: AccompanimentMode,
     onAccompanimentModeChange: (AccompanimentMode) -> Unit,
     showLevelControl: Boolean,
@@ -686,22 +693,25 @@ private fun MelodySettingsMenu(
                 )
             }
             DropdownMenuItem(
-                text = {
-                    Text(
-                        when {
-                            transposeSemitones == 0 -> stringResource(R.string.melody_play_transpose_0)
-                            transposeSemitones > 0  -> stringResource(R.string.melody_play_transpose_plus, transposeSemitones)
-                            else                    -> stringResource(R.string.melody_play_transpose, transposeSemitones)
-                        }
-                    )
-                },
+                text = { Text(stringResource(R.string.melody_play_octave, signedValue(octaveShift))) },
                 onClick = {}
             )
             Slider(
-                value = transposeSemitones.toFloat(),
-                onValueChange = { onTransposeChange(it.roundToInt()) },
-                valueRange = -12f..12f,
-                steps = 23,
+                value = octaveShift.toFloat(),
+                onValueChange = { onOctaveChange(it.roundToInt()) },
+                valueRange = Transpose.MIN_OCTAVE.toFloat()..Transpose.MAX_OCTAVE.toFloat(),
+                steps = 3,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.melody_play_key, signedValue(keyShift))) },
+                onClick = {}
+            )
+            Slider(
+                value = keyShift.toFloat(),
+                onValueChange = { onKeyChange(it.roundToInt()) },
+                valueRange = Transpose.MIN_KEY.toFloat()..Transpose.MAX_KEY.toFloat(),
+                steps = 11,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
             if (showPlayVoices) {

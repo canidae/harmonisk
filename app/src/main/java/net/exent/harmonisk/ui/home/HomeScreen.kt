@@ -47,7 +47,7 @@ import net.exent.harmonisk.ui.theme.BrandPurple
 import net.exent.harmonisk.ui.theme.BrandTeal
 import net.exent.harmonisk.ui.theme.PlayGreen
 
-private const val DEV_MODE_HOLD_MS = 7_000L
+private const val DEV_MODE_HOLD_MS = 3_000L
 
 private data class ModeItem(
     val emoji: String,
@@ -59,7 +59,7 @@ private data class ModeItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToRecord: () -> Unit,
+    onNavigateToDeveloperTools: () -> Unit,
     onNavigateToMelody: () -> Unit,
     onNavigateToGames: () -> Unit,
     onNavigateToMetronome: () -> Unit,
@@ -90,10 +90,10 @@ fun HomeScreen(
     }
     val modes = listOfNotNull(
         if (devModeEnabled) ModeItem(
-            emoji = "🎵",
-            title = stringResource(R.string.record_title),
+            emoji = "🛠️",
+            title = stringResource(R.string.developer_tools_title),
             accent = BrandPurple,
-            onClick = onNavigateToRecord
+            onClick = onNavigateToDeveloperTools
         ) else null,
         ModeItem(
             emoji = "🎼",

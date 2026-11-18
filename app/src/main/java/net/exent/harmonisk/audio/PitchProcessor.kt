@@ -64,6 +64,8 @@ class PitchProcessor(
         var windowFilled = 0
         var prevChunkRms = 0f
         var onsetStreak = 0
+        var referenceFrequency = 0f
+        val debouncer = PitchDebouncer()
 
         return source
             .mapNotNull { chunk ->
@@ -79,6 +81,7 @@ class PitchProcessor(
 
                 if (isOnset) {
                     onsetStreak = 0
+                    referenceFrequency = 0f
                     slidingWindow.fill(0f)
                     System.arraycopy(chunk, 0, slidingWindow, 0, chunkSize)
                     windowFilled = chunkSize
@@ -96,23 +99,42 @@ class PitchProcessor(
                 else slidingWindow.copyOf()
             }
             .buffer(Channel.CONFLATED)
-            .map { processBuffer(it) }
+            .map { buffer ->
+                processBuffer(buffer, referenceFrequency, debouncer).also { result ->
+                    if (result.isValid) referenceFrequency = result.frequency
+                }
+            }
             .flowOn(Dispatchers.Default)
     }
 
-    private fun processBuffer(buffer: FloatArray): PitchResult {
+    private fun processBuffer(
+        buffer: FloatArray,
+        referenceFrequency: Float,
+        debouncer: PitchDebouncer
+    ): PitchResult {
         val rmsDb = AudioUtils.linearToDb(AudioUtils.rms(buffer))
-        if (rmsDb < silenceThresholdDb) return PitchResult.SILENT
+        if (rmsDb < silenceThresholdDb) {
+            debouncer.filter(0f)
+            return PitchResult.SILENT
+        }
 
         val start = System.nanoTime()
-        val result = pitchDetector.detectPitch(buffer = buffer, lowestFrequency = lowestFrequency)
+        val result = pitchDetector.detectPitch(
+            buffer = buffer,
+            lowestFrequency = lowestFrequency,
+            referenceFrequency = referenceFrequency
+        )
         val elapsed = ((System.nanoTime() - start) / 1_000_000).toInt()
         if (elapsed in 0..500) inferenceLatencyMs = elapsed
-        if (result.frequency <= 0f) return PitchResult.SILENT
+        if (result.frequency <= 0f) {
+            debouncer.filter(0f)
+            return PitchResult.SILENT
+        }
 
-        val noteInfo = noteUtils.frequencyToNote(result.frequency, referenceA4)
+        val frequency = debouncer.filter(result.frequency)
+        val noteInfo = noteUtils.frequencyToNote(frequency, referenceA4)
         return PitchResult(
-            frequency = result.frequency,
+            frequency = frequency,
             noteName = noteInfo.name,
             octave = noteInfo.octave,
             centsOff = noteInfo.centsOff,
