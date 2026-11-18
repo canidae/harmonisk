@@ -27,6 +27,7 @@
 
     <!-- Home screen -->
     <string name="record_title">Opptak</string>
+    <string name="developer_tools_title">Utviklerverktøy</string>
     <string name="games_title">Spill</string>
     <string name="dev_mode_enabled">Utviklermodus er på</string>
     <string name="home_version">Versjon %1$s</string>

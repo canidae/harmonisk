@@ -27,6 +27,7 @@
 
     <!-- Home screen -->
     <string name="record_title">Record</string>
+    <string name="developer_tools_title">Developer tools</string>
     <string name="games_title">Games</string>
     <string name="dev_mode_enabled">Developer mode is on</string>
     <string name="home_version">Version %1$s</string>

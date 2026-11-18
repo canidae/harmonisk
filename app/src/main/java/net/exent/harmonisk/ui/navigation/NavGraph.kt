@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import net.exent.harmonisk.ui.developer.DeveloperToolsScreen
 import net.exent.harmonisk.ui.record.RecordScreen
 import net.exent.harmonisk.ui.games.GamesScreen
 import net.exent.harmonisk.ui.home.HomeScreen
@@ -31,12 +32,20 @@ fun NavGraph() {
     ) {
         composable(NavRoutes.HOME) {
             HomeScreen(
-                onNavigateToRecord = { navController.navigate(NavRoutes.RECORD) },
+                onNavigateToDeveloperTools = { navController.navigate(NavRoutes.DEVELOPER_TOOLS) },
                 onNavigateToMelody = { navController.navigate(NavRoutes.MELODY_GRAPH) },
                 onNavigateToGames = { navController.navigate(NavRoutes.GAMES) },
                 onNavigateToMetronome = { navController.navigate(NavRoutes.METRONOME) },
                 onNavigateToTuner = { navController.navigate(NavRoutes.TUNER) },
                 onNavigateToSettings = { navController.navigate(NavRoutes.SETTINGS) }
+            )
+        }
+        composable(NavRoutes.DEVELOPER_TOOLS) {
+            DeveloperToolsScreen(
+                onBack = { navController.popBackStack() },
+                onRecord = { navController.navigate(NavRoutes.RECORD) },
+                onSoundTest = { navController.navigate(NavRoutes.SOUND_TEST) },
+                onFrequencyVisualizer = { navController.navigate(NavRoutes.FREQUENCY_VISUALIZER) }
             )
         }
         composable(NavRoutes.RECORD) {
@@ -46,9 +55,7 @@ fun NavGraph() {
             GamesScreen(
                 onBack = { navController.popBackStack() },
                 onAdventure = { navController.navigate(NavRoutes.ADVENTURE) },
-                onWhack = { navController.navigate(NavRoutes.WHACK) },
-                onSoundTest = { navController.navigate(NavRoutes.SOUND_TEST) },
-                onFrequencyVisualizer = { navController.navigate(NavRoutes.FREQUENCY_VISUALIZER) }
+                onWhack = { navController.navigate(NavRoutes.WHACK) }
             )
         }
         composable(NavRoutes.SOUND_TEST) {

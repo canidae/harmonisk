@@ -59,7 +59,7 @@ private data class ModeItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToRecord: () -> Unit,
+    onNavigateToDeveloperTools: () -> Unit,
     onNavigateToMelody: () -> Unit,
     onNavigateToGames: () -> Unit,
     onNavigateToMetronome: () -> Unit,
@@ -90,10 +90,10 @@ fun HomeScreen(
     }
     val modes = listOfNotNull(
         if (devModeEnabled) ModeItem(
-            emoji = "🎵",
-            title = stringResource(R.string.record_title),
+            emoji = "🛠️",
+            title = stringResource(R.string.developer_tools_title),
             accent = BrandPurple,
-            onClick = onNavigateToRecord
+            onClick = onNavigateToDeveloperTools
         ) else null,
         ModeItem(
             emoji = "🎼",

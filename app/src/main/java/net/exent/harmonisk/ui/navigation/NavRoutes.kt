@@ -2,6 +2,7 @@ package net.exent.harmonisk.ui.navigation
 
 internal object NavRoutes {
     const val HOME = "home"
+    const val DEVELOPER_TOOLS = "developer_tools"
     const val RECORD = "record"
     const val METRONOME = "metronome"
     const val TUNER = "tuner"
