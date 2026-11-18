@@ -41,6 +41,15 @@ internal object PitchResampler {
     }
 }
 
+internal object PitchReference {
+    private const val TOLERANCE_CENTS = 50f
+
+    fun matches(frequency: Float, reference: Float): Boolean {
+        if (reference <= 0f || frequency <= 0f) return false
+        return abs(1200.0 * ln(frequency / reference) / ln(2.0)) <= TOLERANCE_CENTS
+    }
+}
+
 internal object PitchFusion {
     const val CREPE_MIN_CONFIDENCE = 0.45f
     const val CORRECTION_MAX_FREQUENCY = 350f
@@ -105,7 +114,11 @@ class PitchDetector(context: Context) {
         return Interpreter(mappedBuf, Interpreter.Options().apply { numThreads = 2 })
     }
 
-    fun detectPitch(buffer: FloatArray, lowestFrequency: Float): PitchDetectionResult {
+    fun detectPitch(
+        buffer: FloatArray,
+        lowestFrequency: Float,
+        referenceFrequency: Float = 0f
+    ): PitchDetectionResult {
         PitchResampler.resample(buffer, downsampledBuf)
         normalise(downsampledBuf)
 
@@ -129,6 +142,9 @@ class PitchDetector(context: Context) {
             if (subharmonicFrequency >= lowestFrequency) {
                 correctedFrequency = subharmonicFrequency
             }
+        }
+        if (!PitchReference.matches(correctedFrequency, referenceFrequency)) {
+            correctedFrequency = rawFrequency
         }
         val corrected = if (correctedFrequency >= lowestFrequency) {
             PitchDetectionResult(correctedFrequency, confidence)

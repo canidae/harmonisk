@@ -70,6 +70,8 @@ class FrequencyVisualizerViewModel @Inject constructor(
     private var lastFrameTimeMs = 0L
     private var firstPitchMs: Long? = null
     private var lastPitchMs: Long? = null
+    private var referenceFrequency = 0f
+    private var silentFrames = 0
     private var lastValidFrequency = 0f
     private var lastValidConfidence = 0f
 
@@ -109,6 +111,8 @@ class FrequencyVisualizerViewModel @Inject constructor(
         lastFrameTimeMs = 0L
         firstPitchMs = null
         lastPitchMs = null
+        referenceFrequency = 0f
+        silentFrames = 0
         lastValidFrequency = 0f
         lastValidConfidence = 0f
         exportFile = null
@@ -232,8 +236,14 @@ class FrequencyVisualizerViewModel @Inject constructor(
     }
 
     private fun detect(endSamples: Long) {
-        val result = detector.detectPitch(window, lowestFrequency)
+        val result = detector.detectPitch(window, lowestFrequency, referenceFrequency)
         val frequency = if (result.frequency > 0f) result.frequency else 0f
+        if (frequency > 0f) {
+            silentFrames = 0
+        } else {
+            silentFrames++
+            if (silentFrames >= 5) referenceFrequency = 0f
+        }
         val frame = FrequencyTraceFrame(
             timeMs = endSamples * 1000L / SAMPLE_RATE,
             frequencyHz = frequency,
@@ -245,6 +255,7 @@ class FrequencyVisualizerViewModel @Inject constructor(
                 firstPitchMs = (frame.timeMs - PitchProcessor.ANALYSIS_WINDOW_MS).coerceAtLeast(0L)
             }
             lastPitchMs = frame.timeMs
+            referenceFrequency = frequency
             lastValidFrequency = frequency
             lastValidConfidence = result.confidence
         } else if (firstPitchMs == null) {
