@@ -53,6 +53,20 @@ class SubharmonicCorrectorTest {
     }
 
     @Test
+    fun keepsAHarmonicSeriesWithoutOddHarmonics() {
+        val samples = tone(316.0, 0.0, 1.0, 0.0, 0.5)
+        assertEquals(316f, correct(samples, 316f), 0.01f)
+    }
+
+    @Test
+    fun keepsARealEvenHarmonicTone() {
+        val audio = WavTestAudio.load("/audio/even_harmonics.wav")
+        val samples = FloatArray(PitchResampler.TARGET_SAMPLES)
+        PitchResampler.resample(audio.copyOfRange(0, ANALYSIS_WINDOW), samples)
+        assertEquals(316f, correct(samples, 316f), 3f)
+    }
+
+    @Test
     fun keepsAPureSecondHarmonic() {
         assertEquals(392f, correct(tone(392.0, 1.0), 392f), 0.01f)
     }

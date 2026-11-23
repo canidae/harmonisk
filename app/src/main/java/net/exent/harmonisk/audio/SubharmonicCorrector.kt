@@ -14,6 +14,8 @@ internal object SubharmonicCorrector {
 
     private const val SCORE_MARGIN = 0.5
 
+    private const val ODD_HARMONIC_RATIO = 0.01
+
     private const val LOWEST_DIVISOR = 2
 
     private const val HIGHEST_DIVISOR = 3
@@ -31,11 +33,14 @@ internal object SubharmonicCorrector {
     ): Float {
         if (frequency <= 0f) return frequency
         val rawScore = score(samples, frequency)
+        val rawAmplitude = amplitude(samples, frequency)
         var bestFrequency = frequency
         var bestScore = rawScore
         for (divisor in LOWEST_DIVISOR..HIGHEST_DIVISOR) {
             val candidate = frequency / divisor
             if (candidate < lowestFrequency) continue
+            val oddHarmonic = if (divisor == 2) candidate * 3 else candidate * 5
+            if (amplitude(samples, oddHarmonic) < rawAmplitude * ODD_HARMONIC_RATIO) continue
             val candidateScore = score(samples, candidate)
             if (candidateScore > bestScore) {
                 bestFrequency = candidate
