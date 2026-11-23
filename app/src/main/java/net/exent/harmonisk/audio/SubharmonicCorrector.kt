@@ -1,49 +1,70 @@
 package net.exent.harmonisk.audio
 
-import kotlin.math.log2
-import kotlin.math.roundToInt
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.ln
+import kotlin.math.max
+import kotlin.math.sqrt
 
 internal object SubharmonicCorrector {
 
-    private const val BINS_PER_OCTAVE = 60
+    private const val HARMONICS = 6
 
-    private const val SEARCH_RADIUS_BINS = 3
+    private const val AMPLITUDE_FLOOR = 1e-3
 
-    private const val OCTAVE_PEAK_RATIO = 0.3f
+    private const val SCORE_MARGIN = 0.5
 
-    private const val THIRD_PEAK_RATIO = 0.05f
+    private const val LOWEST_DIVISOR = 2
 
-    private val DIVISORS = intArrayOf(2, 3)
+    private const val HIGHEST_DIVISOR = 3
 
-    fun fundamentalBin(activation: FloatArray, peakBin: Int): Int {
-        var bestBin = peakBin
-        var bestValue = 0f
-        for (divisor in DIVISORS) {
-            val offset = (BINS_PER_OCTAVE * log2(divisor.toDouble())).roundToInt()
-            val candidate = localPeakNear(activation, peakBin - offset) ?: continue
-            val threshold = if (divisor == 2) OCTAVE_PEAK_RATIO else THIRD_PEAK_RATIO
-            val value = activation[candidate]
-            if (value >= activation[peakBin] * threshold && value > bestValue) {
-                bestBin = candidate
-                bestValue = value
-            }
-        }
-        return bestBin
+    private val window = DoubleArray(PitchResampler.TARGET_SAMPLES) { i ->
+        0.5 - 0.5 * cos(2.0 * PI * i / (PitchResampler.TARGET_SAMPLES - 1))
     }
 
-    private fun localPeakNear(activation: FloatArray, center: Int): Int? {
-        if (center < 1 || center > activation.size - 2) return null
-        var best = -1
-        var bestValue = 0f
-        val start = maxOf(1, center - SEARCH_RADIUS_BINS)
-        val end = minOf(activation.size - 2, center + SEARCH_RADIUS_BINS)
-        for (i in start..end) {
-            val value = activation[i]
-            if (value > activation[i - 1] && value >= activation[i + 1] && value > bestValue) {
-                best = i
-                bestValue = value
+    private val windowSum = window.sum()
+
+    fun fundamentalFrequency(
+        samples: FloatArray,
+        frequency: Float,
+        lowestFrequency: Float
+    ): Float {
+        if (frequency <= 0f) return frequency
+        val rawScore = score(samples, frequency)
+        var bestFrequency = frequency
+        var bestScore = rawScore
+        for (divisor in LOWEST_DIVISOR..HIGHEST_DIVISOR) {
+            val candidate = frequency / divisor
+            if (candidate < lowestFrequency) continue
+            val candidateScore = score(samples, candidate)
+            if (candidateScore > bestScore) {
+                bestFrequency = candidate
+                bestScore = candidateScore
             }
         }
-        return if (best >= 0) best else null
+        return if (bestScore > rawScore + SCORE_MARGIN) bestFrequency else frequency
+    }
+
+    private fun score(samples: FloatArray, frequency: Float): Double {
+        var score = 0.0
+        for (harmonic in 1..HARMONICS) {
+            score += ln(amplitude(samples, frequency * harmonic) + AMPLITUDE_FLOOR)
+        }
+        return score
+    }
+
+    private fun amplitude(samples: FloatArray, frequency: Float): Double {
+        if (frequency <= 0f || frequency >= PitchResampler.TARGET_RATE / 2f) return 0.0
+        val coefficient = 2.0 * cos(2.0 * PI * frequency / PitchResampler.TARGET_RATE)
+        var previous = 0.0
+        var previousPrevious = 0.0
+        for (i in samples.indices) {
+            val current = samples[i] * window[i] + coefficient * previous - previousPrevious
+            previousPrevious = previous
+            previous = current
+        }
+        val power = previous * previous + previousPrevious * previousPrevious -
+            coefficient * previous * previousPrevious
+        return sqrt(max(power, 0.0)) / windowSum
     }
 }

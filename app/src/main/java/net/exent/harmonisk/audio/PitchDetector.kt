@@ -143,25 +143,18 @@ class PitchDetector(context: Context) {
         }
 
         val rawFrequency = localWeightedFrequency(activation, peakBin)
-        var correctedFrequency = rawFrequency
-        val subharmonicBin = SubharmonicCorrector.fundamentalBin(activation, peakBin)
-        if (subharmonicBin != peakBin) {
-            val subharmonicFrequency = localWeightedFrequency(activation, subharmonicBin)
-            if (subharmonicFrequency >= lowestFrequency) {
-                correctedFrequency = subharmonicFrequency
-            }
-        }
-        if (!PitchReference.matches(correctedFrequency, referenceFrequency)) {
-            correctedFrequency = rawFrequency
-        }
+        val correctedFrequency = SubharmonicCorrector.fundamentalFrequency(
+            downsampledBuf,
+            rawFrequency,
+            lowestFrequency
+        )
         val corrected = if (correctedFrequency >= lowestFrequency) {
             PitchDetectionResult(correctedFrequency, confidence)
         } else {
             PitchDetectionResult.NONE
         }
         val yinSupported = activationPeakAt(activation, yin.frequency) >= confidence * YIN_SUPPORT_RATIO
-        val trustCorrection = correctedFrequency > 0f &&
-            rawFrequency / correctedFrequency >= 2.5f
+        val trustCorrection = correctedFrequency < rawFrequency
         val fused = PitchFusion.combine(
             PitchDetectionResult(rawFrequency, confidence),
             corrected,
