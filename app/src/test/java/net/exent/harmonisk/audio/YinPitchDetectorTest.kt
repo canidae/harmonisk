@@ -50,6 +50,15 @@ class YinPitchDetectorTest {
     }
 
     @Test
+    fun detectsHighViolinE() {
+        assertFrequency(
+            2637.0,
+            tone(2637.0, doubleArrayOf(1.0, 0.5, 0.3)),
+            toleranceCents = 30.0
+        )
+    }
+
+    @Test
     fun ignoresSilence() {
         val result = detector.detect(FloatArray(SAMPLES))
         assertTrue(result.frequency <= 0f)

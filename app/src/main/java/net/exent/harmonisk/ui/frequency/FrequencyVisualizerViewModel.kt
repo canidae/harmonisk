@@ -23,8 +23,6 @@ import net.exent.harmonisk.audio.PitchDebouncer
 import net.exent.harmonisk.audio.PitchDetector
 import net.exent.harmonisk.audio.PitchProcessor
 import net.exent.harmonisk.audio.WavFileWriter
-import net.exent.harmonisk.data.SettingsRepository
-import net.exent.harmonisk.music.Instrument
 import java.io.File
 import javax.inject.Inject
 
@@ -50,8 +48,7 @@ enum class FrequencyVisualizerError {
 class FrequencyVisualizerViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val capture: AudioCaptureService,
-    private val detector: PitchDetector,
-    private val settingsRepository: SettingsRepository
+    private val detector: PitchDetector
 ) : ViewModel() {
 
     private data class AudioChunk(val samples: FloatArray, val startSamples: Long)
@@ -72,6 +69,8 @@ class FrequencyVisualizerViewModel @Inject constructor(
     private var firstPitchMs: Long? = null
     private var lastPitchMs: Long? = null
     private val debouncer = PitchDebouncer()
+    private val lowestFrequency = PitchDetector.MIN_FREQUENCY
+    private val highestFrequency = PitchDetector.MAX_FREQUENCY
     private var referenceFrequency = 0f
     private var silentFrames = 0
     private var lastValidFrequency = 0f
@@ -82,20 +81,6 @@ class FrequencyVisualizerViewModel @Inject constructor(
     private var queue: Channel<AudioChunk>? = null
     private var wavWriter: WavFileWriter? = null
     private var exportFile: File? = null
-
-    @Volatile
-    private var lowestFrequency = 35f
-
-    init {
-        viewModelScope.launch {
-            settingsRepository.settings.collect { settings ->
-                lowestFrequency = PitchProcessor.lowestDetectableFrequency(
-                    Instrument.fromName(settings.instrumentName),
-                    settings.concertPitchA4
-                )
-            }
-        }
-    }
 
     fun start() {
         if (_state.value.recording || _state.value.finalizing) return
@@ -239,7 +224,12 @@ class FrequencyVisualizerViewModel @Inject constructor(
     }
 
     private fun detect(endSamples: Long) {
-        val result = detector.detectPitch(window, lowestFrequency, referenceFrequency)
+        val result = detector.detectPitch(
+            window,
+            lowestFrequency,
+            referenceFrequency,
+            highestFrequency
+        )
         val frequency = if (result.frequency > 0f) {
             debouncer.filter(result.frequency)
         } else {

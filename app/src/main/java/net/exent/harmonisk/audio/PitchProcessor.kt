@@ -26,18 +26,27 @@ class PitchProcessor(
 
         const val INPUT_ONSET_MS = (ONSET_DEBOUNCE_CHUNKS * AudioConstants.BUFFER_SIZE_SAMPLES * 1000 + AudioConstants.SAMPLE_RATE / 2) / AudioConstants.SAMPLE_RATE
 
-        private const val LOWEST_NOTE_MARGIN_CENTS = 100f
+        private const val LOWEST_NOTE_MARGIN_CENTS = 200f
+
+        private const val HIGHEST_NOTE_MARGIN_CENTS = 200f
 
         internal fun lowestDetectableFrequency(instrument: Instrument, referenceA4: Float): Float =
             NoteUtils.midiToFrequency(instrument.tuning.first(), referenceA4) *
                 2.0.pow(-LOWEST_NOTE_MARGIN_CENTS / 1200.0).toFloat()
+
+        internal fun highestDetectableFrequency(instrument: Instrument, referenceA4: Float): Float =
+            NoteUtils.midiToFrequency(instrument.highestPlayableMidi, referenceA4) *
+                2.0.pow(HIGHEST_NOTE_MARGIN_CENTS / 1200.0).toFloat()
     }
 
     private var silenceThresholdDb = SILENCE_THRESHOLD_DB
     private var referenceA4 = NoteUtils.DEFAULT_CONCERT_PITCH
     private var instrument = Instrument.VIOLIN
     @Volatile
-    private var lowestFrequency = NoteUtils.midiToFrequency(instrument.tuning.first(), referenceA4)
+    private var lowestFrequency = lowestDetectableFrequency(instrument, referenceA4)
+
+    @Volatile
+    private var highestFrequency = highestDetectableFrequency(instrument, referenceA4)
 
     @Volatile
     var inferenceLatencyMs: Int = 0
@@ -47,16 +56,17 @@ class PitchProcessor(
 
     fun setReferenceA4(frequency: Float) {
         referenceA4 = frequency
-        updateLowestFrequency()
+        updateFrequencyRange()
     }
 
     fun setInstrument(instrument: Instrument) {
         this.instrument = instrument
-        updateLowestFrequency()
+        updateFrequencyRange()
     }
 
-    private fun updateLowestFrequency() {
+    private fun updateFrequencyRange() {
         lowestFrequency = lowestDetectableFrequency(instrument, referenceA4)
+        highestFrequency = highestDetectableFrequency(instrument, referenceA4)
     }
 
     fun pitchFlow(source: Flow<FloatArray> = audioCaptureService.audioFlow()): Flow<PitchResult> {
@@ -122,7 +132,8 @@ class PitchProcessor(
         val result = pitchDetector.detectPitch(
             buffer = buffer,
             lowestFrequency = lowestFrequency,
-            referenceFrequency = referenceFrequency
+            referenceFrequency = referenceFrequency,
+            highestFrequency = highestFrequency
         )
         val elapsed = ((System.nanoTime() - start) / 1_000_000).toInt()
         if (elapsed in 0..500) inferenceLatencyMs = elapsed
