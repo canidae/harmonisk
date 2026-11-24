@@ -56,6 +56,8 @@ class FrequencyVisualizerViewModel @Inject constructor(
     private companion object {
         const val PUBLISH_INTERVAL_NANOS = 100_000_000L
         const val SAMPLE_RATE = AudioConstants.SAMPLE_RATE
+        const val FRAME_INTERVAL_SAMPLES = SAMPLE_RATE / 30
+        const val MAX_GRAPH_FRAMES = 1024
     }
 
     private val _state = MutableStateFlow(FrequencyVisualizerState())
@@ -63,12 +65,14 @@ class FrequencyVisualizerViewModel @Inject constructor(
 
     private val window = FloatArray(PitchProcessor.ANALYSIS_WINDOW_SIZE)
     private val frames = mutableListOf<FrequencyTraceFrame>()
+    private val graphFrames = mutableListOf<FrequencyTraceFrame>()
+    private var lastDetectSamples = 0L
     private var windowFilled = 0
     private var lastPublishNanos = 0L
     private var lastFrameTimeMs = 0L
     private var firstPitchMs: Long? = null
     private var lastPitchMs: Long? = null
-    private val debouncer = PitchDebouncer()
+    private val debouncer = PitchDebouncer(requiredFrames = 2, silenceFrames = 4)
     private val lowestFrequency = PitchDetector.MIN_FREQUENCY
     private val highestFrequency = PitchDetector.MAX_FREQUENCY
     private var referenceFrequency = 0f
@@ -93,7 +97,9 @@ class FrequencyVisualizerViewModel @Inject constructor(
         }
         wavWriter = writer
         frames.clear()
+        graphFrames.clear()
         windowFilled = 0
+        lastDetectSamples = 0L
         lastPublishNanos = 0L
         lastFrameTimeMs = 0L
         firstPitchMs = null
@@ -171,13 +177,14 @@ class FrequencyVisualizerViewModel @Inject constructor(
             } else {
                 null
             }
+            val displayFrames = downsample(trimmedFrames)
             exportFile = exported
             val hasPitch = startMs != null && endMs != null
             val durationMs = if (startMs != null && endMs != null) endMs - startMs else 0L
             _state.update {
                 it.copy(
                     finalizing = false,
-                    frames = trimmedFrames,
+                    frames = displayFrames,
                     startTimeMs = startMs,
                     elapsedMs = durationMs,
                     exportReady = exported != null,
@@ -189,6 +196,7 @@ class FrequencyVisualizerViewModel @Inject constructor(
                     }
                 )
             }
+            frames.clear()
         }
     }
 
@@ -207,7 +215,7 @@ class FrequencyVisualizerViewModel @Inject constructor(
                 System.arraycopy(samples, offset, window, windowFilled, count)
                 windowFilled += count
                 offset += count
-                if (windowFilled == window.size) detect(chunk.startSamples + offset)
+                if (windowFilled == window.size) maybeDetect(chunk.startSamples + offset)
                 continue
             }
             val remaining = samples.size - offset
@@ -219,7 +227,7 @@ class FrequencyVisualizerViewModel @Inject constructor(
                 System.arraycopy(samples, offset, window, window.size - remaining, remaining)
                 offset = samples.size
             }
-            detect(chunk.startSamples + offset)
+            maybeDetect(chunk.startSamples + offset)
         }
     }
 
@@ -240,7 +248,7 @@ class FrequencyVisualizerViewModel @Inject constructor(
             silentFrames = 0
         } else {
             silentFrames++
-            if (silentFrames >= 5) referenceFrequency = 0f
+            if (silentFrames >= 2) referenceFrequency = 0f
         }
         val frame = FrequencyTraceFrame(
             timeMs = endSamples * 1000L / SAMPLE_RATE,
@@ -259,8 +267,41 @@ class FrequencyVisualizerViewModel @Inject constructor(
         } else if (firstPitchMs == null) {
             return
         }
-        frames.add(frame)
+        appendFrame(frame)
         publish()
+    }
+
+    private fun maybeDetect(endSamples: Long) {
+        if (lastDetectSamples != 0L && endSamples - lastDetectSamples < FRAME_INTERVAL_SAMPLES) return
+        lastDetectSamples = endSamples
+        detect(endSamples)
+    }
+
+    private fun appendFrame(frame: FrequencyTraceFrame) {
+        frames.add(frame)
+        graphFrames.add(frame)
+        if (graphFrames.size <= MAX_GRAPH_FRAMES) return
+        var write = 0
+        var read = 0
+        while (read < graphFrames.size - 1) {
+            graphFrames[write++] = graphFrames[read]
+            read += 2
+        }
+        graphFrames[write++] = graphFrames.last()
+        graphFrames.subList(write, graphFrames.size).clear()
+    }
+
+    private fun downsample(source: List<FrequencyTraceFrame>): List<FrequencyTraceFrame> {
+        if (source.size <= MAX_GRAPH_FRAMES) return source
+        val stride = (source.size + MAX_GRAPH_FRAMES - 1) / MAX_GRAPH_FRAMES
+        val result = ArrayList<FrequencyTraceFrame>(MAX_GRAPH_FRAMES + 1)
+        var index = 0
+        while (index < source.size) {
+            result.add(source[index])
+            index += stride
+        }
+        if (result.last() !== source.last()) result.add(source.last())
+        return result
     }
 
     private fun publish(force: Boolean = false) {
@@ -270,7 +311,7 @@ class FrequencyVisualizerViewModel @Inject constructor(
         val start = firstPitchMs
         _state.update {
             it.copy(
-                frames = frames.toList(),
+                frames = graphFrames.toList(),
                 startTimeMs = start,
                 elapsedMs = if (start != null) {
                     (lastFrameTimeMs - start).coerceAtLeast(0L)
