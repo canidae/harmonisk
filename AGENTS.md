@@ -1,5 +1,5 @@
 ## Instructions
-- Don't assume, ask clarifying questions when in doubt.
+- Don't assume, ask clarifying questions.
 - Be critical of the users request, if they suggest an architecturally bad or inefficient solution, let them know and offer alternatives.
 - If local uncommitted changes, find out their purpose and commit them before starting a new task.
 - Never write comments in code under any circumstances, delete any code comment you come across. Non-code files, such as resources, build scripts and configuration, may keep their comments.
@@ -9,6 +9,6 @@
 - Ensure localization is correct and complete for all supported languages.
 - Ensure README.md, THIRD_PARTY_LICENSES.md and PRIVACY_POLICY.md are correct.
 - For testing on device, use profiles named "Test <num>", create if necessary.
-- After implementing changes, build, start and test before committing.
+- After implementing changes, build, start and test before committing, but do not push unless explicitly asked to.
 - Avoid losing user data on device.
 - When releasing, create a tag prefixed with "v" then today's date in format "yyyy.MM.dd". If the tag already exists, overwrite it. Push commits and tags. Respond with a concise changelog since the last release.
