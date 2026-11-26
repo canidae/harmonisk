@@ -175,9 +175,10 @@ fun MelodyPlayScreen(
                     gameState.melodyName?.let { name ->
                         Spacer(Modifier.width(6.dp))
                         val levelLabel = stringResource(R.string.melody_level, gameState.currentLevel)
-                        val latestScore = if (adventureMode) null else scoreHistory.lastOrNull()?.let {
-                            stringResource(R.string.melody_score, formatScore(it.overallScore))
-                        }
+                        val bestScore = if (adventureMode) null else scoreHistory
+                            .filter { it.level == gameState.currentLevel }
+                            .maxOfOrNull { it.overallScore }
+                            ?.let { stringResource(R.string.melody_score, formatScore(it)) }
                         Column {
                             Text(
                                 text = name,
@@ -187,7 +188,7 @@ fun MelodyPlayScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = latestScore?.let { "$levelLabel  $it" } ?: levelLabel,
+                                text = bestScore?.let { "$levelLabel  $it" } ?: levelLabel,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(alpha = 0.7f)
                             )

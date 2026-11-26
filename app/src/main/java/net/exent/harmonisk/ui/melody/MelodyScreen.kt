@@ -229,6 +229,17 @@ fun MelodyScreen(
         else -> emptyList()
     }
 
+    fun playSong(info: MelodyRepository.MelodyInfo) {
+        viewModel.stopPreview()
+        previewingMelody = null
+        viewModel.endPlaylistSession()
+        if (viewModel.loadMelody(info)) {
+            onStartPlay()
+        } else {
+            Toast.makeText(context, resources.getString(R.string.melody_failed_load_melody), Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val songCard: @Composable (MelodyRepository.MelodyInfo) -> Unit = { info ->
         MelodyCard(
             viewModel = viewModel,
@@ -237,16 +248,7 @@ fun MelodyScreen(
             difficulty = difficulties[info.id],
             isPreviewing = previewingMelody == info.name && isPreviewPlaying,
             isExpanded = expandedMelodyId == info.id,
-            onPlay = {
-                viewModel.stopPreview()
-                previewingMelody = null
-                viewModel.endPlaylistSession()
-                if (viewModel.loadMelody(info)) {
-                    onStartPlay()
-                } else {
-                    Toast.makeText(context, resources.getString(R.string.melody_failed_load_melody), Toast.LENGTH_SHORT).show()
-                }
-            },
+            onPlay = { playSong(info) },
             onTogglePreview = {
                 if (previewingMelody == info.name && isPreviewPlaying) {
                     viewModel.stopPreview()
@@ -449,6 +451,7 @@ fun MelodyScreen(
                                 score = scores[info.id]?.score,
                                 dragging = draggingSongId == info.id,
                                 dragOffset = if (draggingSongId == info.id) dragOffset else 0f,
+                                onPlay = { playSong(info) },
                                 onDragStart = {
                                     draggingSongId = info.id
                                     dragOffset = 0f
@@ -885,6 +888,7 @@ private fun PlaylistSongRow(
     score: Float?,
     dragging: Boolean,
     dragOffset: Float,
+    onPlay: () -> Unit,
     onDragStart: () -> Unit,
     onDrag: (Float) -> Unit,
     onDragEnd: () -> Unit,
@@ -899,7 +903,7 @@ private fun PlaylistSongRow(
                 translationY = dragOffset
                 shadowElevation = if (dragging) 12f else 0f
             }
-            .combinedClickable(onClick = {}, onLongClick = { showMenu = true }),
+            .combinedClickable(onClick = onPlay, onLongClick = { showMenu = true }),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
