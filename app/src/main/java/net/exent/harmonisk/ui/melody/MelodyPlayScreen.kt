@@ -5,7 +5,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -92,20 +91,12 @@ fun MelodyPlayScreen(
     val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val sessionActive = gameState.phase == PlayPhase.PLAYING ||
-        gameState.phase == PlayPhase.WAITING_FOR_NOTE ||
-        gameState.phase == PlayPhase.PAUSED
+        gameState.phase == PlayPhase.WAITING_FOR_NOTE
 
     BackHandler {
-        val run = playlistRun
-        when {
-            run?.retrySongIndex != null -> viewModel.cancelPlaylistRetry()
-            run != null && !run.pending && !run.finished -> viewModel.pausePlaylist()
-            else -> {
-                if (stopOnBack) viewModel.stop()
-                viewModel.endPlaylistSession()
-                onBack()
-            }
-        }
+        if (stopOnBack) viewModel.stop()
+        viewModel.endPlaylistSession()
+        onBack()
     }
 
     KeepScreenOn()
@@ -198,7 +189,7 @@ fun MelodyPlayScreen(
                     Spacer(Modifier.weight(1f))
 
                     if (gameState.cue == null &&
-                        (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED ||
+                        (gameState.phase == PlayPhase.READY ||
                         gameState.phase == PlayPhase.FINISHED ||
                         devModeEnabled && (gameState.phase == PlayPhase.PLAYING || gameState.phase == PlayPhase.WAITING_FOR_NOTE))) {
                         IconButton(
@@ -309,51 +300,62 @@ fun MelodyPlayScreen(
                     val adjustedNow = gameState.currentTimeSeconds +
                             nowLineLeadSeconds(gameState.phase, inputDelay)
                     val canvasNow = gameState.replayTimeSeconds ?: gameState.previewTimeSeconds ?: adjustedNow
+                    val alphaTex = remember(track) { track?.let { MidiToAlphaTex.generate(it) } }
+                    val pageSheet = gameState.hideNoteBars
+                    val sheetPlaying = gameState.phase == PlayPhase.PLAYING ||
+                            gameState.previewTimeSeconds != null || gameState.replayTimeSeconds != null
+                    val viewTimeSeconds = canvasNow + viewState.songTimeOffsetSeconds
 
-                    if (track != null) {
-                        val alphaTex = remember(track) { MidiToAlphaTex.generate(track) }
-                        val viewTimeSeconds = canvasNow + viewState.songTimeOffsetSeconds
-                        SheetMusicView(
-                            melodyTrack = track,
-                            alphaTex = alphaTex,
-                            currentTimeSeconds = canvasNow,
-                            isPlaying = gameState.phase == PlayPhase.PLAYING ||
-                                    gameState.previewTimeSeconds != null || gameState.replayTimeSeconds != null,
-                            seekTimeSeconds = canvasNow,
-                            scrollTimeSeconds = viewTimeSeconds,
-                            songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
-                            durationSeconds = track.durationSeconds,
-                            onScrolledToTime = { viewModel.seekToViewTime(it) },
-                            modifier = Modifier.fillMaxWidth().height(205.dp).zIndex(1f)
-                        )
+                    if (track != null && alphaTex != null && !pageSheet) {
+                        key(gameState.runId) {
+                            SheetMusicView(
+                                melodyTrack = track,
+                                alphaTex = alphaTex,
+                                currentTimeSeconds = canvasNow,
+                                isPlaying = sheetPlaying,
+                                seekTimeSeconds = canvasNow,
+                                scrollTimeSeconds = viewTimeSeconds,
+                                songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
+                                durationSeconds = track.durationSeconds,
+                                modifier = Modifier.fillMaxWidth().height(205.dp).zIndex(1f)
+                            )
+                        }
                     }
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .pointerInput(Unit) {
-                                detectTransformGestures { _, pan, zoom, _ ->
-                                    if (zoom != 1f) viewModel.onVerticalZoom(zoom)
-                                    val panValue = pan.y
-                                    if (panValue != 0f) {
-                                        val secondsPerPx = 1.0 / (viewState.fallSpeedPxPerSec * density.density)
-                                        viewModel.onVerticalScroll(panValue * secondsPerPx)
+                            .then(
+                                if (pageSheet) Modifier else Modifier.pointerInput(Unit) {
+                                    detectTransformGestures { _, pan, zoom, _ ->
+                                        if (zoom != 1f) viewModel.onVerticalZoom(zoom)
+                                        val panValue = pan.y
+                                        if (panValue != 0f) {
+                                            val secondsPerPx = 1.0 / (viewState.fallSpeedPxPerSec * density.density)
+                                            viewModel.onVerticalScroll(panValue * secondsPerPx)
+                                        }
                                     }
                                 }
-                            }
-                            .pointerInput(gameState.phase) {
-                                detectTapGestures {
-                                    val phase = gameState.phase
-                                    if (!adventureMode &&
-                                        (phase == PlayPhase.PLAYING || phase == PlayPhase.WAITING_FOR_NOTE)
-                                    ) {
-                                        viewModel.pause()
-                                    }
-                                }
-                            }
+                            )
                     ) {
-                        if (track != null) {
+                        if (track != null && alphaTex != null) {
+                        if (pageSheet) {
+                            key(gameState.runId) {
+                                SheetMusicView(
+                                    melodyTrack = track,
+                                    alphaTex = alphaTex,
+                                    currentTimeSeconds = canvasNow,
+                                    isPlaying = sheetPlaying,
+                                    seekTimeSeconds = canvasNow,
+                                    scrollTimeSeconds = viewTimeSeconds,
+                                    songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
+                                    durationSeconds = track.durationSeconds,
+                                    pageMode = true,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        } else {
                         SharedNoteCanvas(
                             mode = CanvasMode.Melody(
                                 melodyTrack = track,
@@ -368,7 +370,6 @@ fun MelodyPlayScreen(
                                 fallSpeedPxPerSec = viewState.fallSpeedPxPerSec,
                                 detectedMidiNote = if (gameState.pitchResult.isValid) gameState.pitchResult.midiNoteNumber else null,
                                 detectedCentsOff = if (gameState.pitchResult.isValid) gameState.pitchResult.centsOff else null,
-                                hideNoteBars = gameState.hideNoteBars,
                                 instrument = currentInstrument,
                                 bowedPositions = viewState.bowedPositions,
                                 preferOpenStrings = gameState.preferOpenStrings,
@@ -381,6 +382,7 @@ fun MelodyPlayScreen(
                             viewMaxMidi = viewState.viewMaxMidi,
                             modifier = Modifier.fillMaxSize()
                         )
+                        }
 
                         if (gameState.replayTimeSeconds != null) {
                             Text(
@@ -409,24 +411,23 @@ fun MelodyPlayScreen(
                         }
 
                         if (!adventureMode && gameState.previewTimeSeconds == null && gameState.cue == null &&
-                            (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED)
+                            gameState.phase == PlayPhase.READY
                         ) {
                             IconButton(
                                 onClick = {
                                     if (isPreviewPlaying) viewModel.stopPreview()
-                                    if (gameState.phase == PlayPhase.READY) viewModel.startRun()
-                                    else viewModel.resume()
+                                    viewModel.startRun()
                                 },
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
-                                    .padding(bottom = PIANO_HEIGHT_DP.dp + 24.dp)
+                                    .padding(bottom = if (pageSheet) 24.dp else PIANO_HEIGHT_DP.dp + 24.dp)
                                     .size(72.dp)
                                     .background(PlayGreen.copy(alpha = 0.25f), CircleShape)
                                     .border(2.dp, PlayGreen.copy(alpha = 0.7f), CircleShape)
                             ) {
                                 Icon(
                                     Icons.Filled.PlayArrow,
-                                    contentDescription = if (gameState.phase == PlayPhase.READY) stringResource(R.string.start) else stringResource(R.string.melody_play_resume),
+                                    contentDescription = stringResource(R.string.start),
                                     tint = PlayGreen.copy(alpha = 0.9f),
                                     modifier = Modifier.size(40.dp)
                                 )
@@ -462,7 +463,7 @@ fun MelodyPlayScreen(
                             Column(
                                 modifier = Modifier
                                     .align(Alignment.BottomEnd)
-                                    .padding(bottom = PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
+                                    .padding(bottom = if (pageSheet) 8.dp else PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {

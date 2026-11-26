@@ -222,7 +222,6 @@
     <string name="melody_play_mic_input">Mic input</string>
     <string name="melody_play_midi_output_on">MIDI output active</string>
     <string name="melody_play_midi_output_off">MIDI output off</string>
-    <string name="melody_play_resume">Resume</string>
     <string name="melody_play_scroll_start">Scroll to beginning</string>
     <string name="melody_play_results">Results</string>
     <string name="melody_play_go_back">Go back</string>
@@ -247,7 +246,7 @@
     <string name="level_2_change">On level 2 the song is no longer previewed and you have less time to play each note</string>
     <string name="level_3_change">On level 3 pitch accuracy and wrong notes will count toward your score</string>
     <string name="level_4_change">On level 4 the game will not wait for you to play the note</string>
-    <string name="level_5_change">On level 5 note bars will not be shown</string>
+    <string name="level_5_change">On level 5 the sheet music fills the screen</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Pitch accuracy</string>

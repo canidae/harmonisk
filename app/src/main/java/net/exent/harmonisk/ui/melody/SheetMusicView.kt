@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.HorizontalScrollView
+import android.widget.ScrollView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +44,8 @@ private const val CURSOR_INSET_DP = 18f
 
 private const val ALPHATAB_TICKS_PER_QUARTER = 960.0
 
+private const val PAGE_BOTTOM_PADDING = 48.0
+
 private val BEAT_CURSOR_COLOR = android.graphics.Color.argb(255, 64, 64, 255)
 
 @Composable
@@ -55,7 +58,7 @@ fun SheetMusicView(
     scrollTimeSeconds: Double,
     songTimeOffsetSeconds: Double,
     durationSeconds: Double,
-    onScrolledToTime: (Double) -> Unit = {},
+    pageMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val apiRef = remember { mutableStateOf<AlphaTabApiBase<AlphaTabView>?>(null) }
@@ -64,18 +67,19 @@ fun SheetMusicView(
     var beatPositions by remember { mutableStateOf(emptyList<BeatPosition>()) }
     var beatCursorView by remember { mutableStateOf<View?>(null) }
     var scrollView by remember { mutableStateOf<HorizontalScrollView?>(null) }
-    var isSheetDragging by remember { mutableStateOf(false) }
+    var verticalScrollView by remember { mutableStateOf<ScrollView?>(null) }
+    var pageHeightCss by remember { mutableStateOf(0.0) }
+    var manualScrolled by remember { mutableStateOf(false) }
     val currentTime by rememberUpdatedState(currentTimeSeconds)
     val playing by rememberUpdatedState(isPlaying)
     val durationSec by rememberUpdatedState(durationSeconds)
     val seekTime by rememberUpdatedState(seekTimeSeconds)
     val scrollTime by rememberUpdatedState(scrollTimeSeconds)
     val songOffset by rememberUpdatedState(songTimeOffsetSeconds)
-    val onScrolledTo by rememberUpdatedState(onScrolledToTime)
     val density = LocalDensity.current.density
     val cursorInsetPx = CURSOR_INSET_DP * density
 
-    fun scrubTouchListener(context: android.content.Context): View.OnTouchListener {
+    fun sheetScrollTouchListener(context: android.content.Context): View.OnTouchListener {
         val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
         var lastX = 0f
         var lastDownTime = 0L
@@ -97,27 +101,13 @@ fun SheetMusicView(
                     totalDx += dx
                     if (!dragging && abs(totalDx) > touchSlop) dragging = true
                     if (!dragging) return@OnTouchListener false
-                    isSheetDragging = true
+                    manualScrolled = true
                     val scroll = scrollView ?: return@OnTouchListener true
                     scroll.scrollTo(scroll.scrollX - dx.toInt(), scroll.scrollY)
-                    val positions = beatPositions
-                    if (positions.isEmpty()) return@OnTouchListener true
-                    val firstBeatX = (positions.first().xCss * density).toInt()
-                    val cursor = beatCursorView
-                    val cursorParams = cursor?.layoutParams as? android.widget.RelativeLayout.LayoutParams
-                    if (cursor != null && cursorParams != null) {
-                        cursor.clearAnimation()
-                        cursorParams.leftMargin = maxOf(scroll.scrollX + cursorInsetPx.toInt(), firstBeatX)
-                        cursor.visibility = View.VISIBLE
-                        cursor.requestLayout()
-                    }
-                    val leftEdgeTime = timeForX(((scroll.scrollX + cursorInsetPx) / density).toDouble(), positions) / 1000.0
-                    onScrolledTo(leftEdgeTime)
                     true
                 }
                 MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP -> {
                     dragging = false
-                    isSheetDragging = false
                     false
                 }
                 else -> false
@@ -141,8 +131,9 @@ fun SheetMusicView(
                 player.enableElementHighlighting = false
                 player.enableUserInteraction = false
                 player.scrollMode = ScrollMode.Off
-                display.layoutMode = LayoutMode.Horizontal
+                display.layoutMode = if (pageMode) LayoutMode.Page else LayoutMode.Horizontal
                 display.staveProfile = StaveProfile.Score
+                if (pageMode) display.lastSystemPaddingBottom = PAGE_BOTTOM_PADDING
             }
             api.updateSettings()
 
@@ -159,16 +150,18 @@ fun SheetMusicView(
 
             api.midiLoaded.on { midiReady = true }
             api.error.on { e -> if (BuildConfig.DEBUG) Log.w(TAG, "alphaTab error", e) }
+            api.renderFinished.on { args -> pageHeightCss = args.totalHeight }
 
             val foundScroll = findHorizontalScrollView(view)
             scrollView = foundScroll
-            foundScroll?.setOnTouchListener(scrubTouchListener(context))
+            if (!pageMode) foundScroll?.setOnTouchListener(sheetScrollTouchListener(context))
+            verticalScrollView = findScrollView(view)
 
             var firstRenderDone = false
             api.postRenderFinished.on {
                 firstRenderDone = true
                 beatPositions = buildBeatPositions(api, melodyTrack)
-                if (beatCursorView == null) beatCursorView = findBeatCursor(view)
+                if (!pageMode && beatCursorView == null) beatCursorView = findBeatCursor(view)
             }
             api.scoreLoaded.on {
                 if (!firstRenderDone && view.measuredWidth > 0) api.render()
@@ -215,18 +208,19 @@ fun SheetMusicView(
         snapshotFlow { seekTime }
             .sample(50)
             .collectLatest { t ->
-                if (isSheetDragging || abs(songOffset) >= 0.001) return@collectLatest
+                if (!pageMode && abs(songOffset) >= 0.001) return@collectLatest
                 (apiRef.value?.player?.output as? IExternalMediaSynthOutput)
                     ?.updatePosition(t.coerceAtLeast(0.0) * 1000.0)
             }
     }
 
-    LaunchedEffect(midiReady, beatPositions, beatCursorView) {
-        if (!midiReady) return@LaunchedEffect
-        snapshotFlow { Triple(isSheetDragging, scrollTime, songOffset) }
+    LaunchedEffect(midiReady, beatPositions, beatCursorView, pageMode) {
+        if (!midiReady || pageMode) return@LaunchedEffect
+        snapshotFlow { scrollTime to songOffset }
             .sample(50)
-            .collectLatest { (dragging, time, offset) ->
-                if (dragging) return@collectLatest
+            .collectLatest { (time, offset) ->
+                if (playing) manualScrolled = false
+                else if (manualScrolled) return@collectLatest
                 val scroll = scrollView ?: return@collectLatest
                 val params = beatCursorView?.layoutParams as? android.widget.RelativeLayout.LayoutParams
                 if (abs(offset) < 0.001 && params != null) {
@@ -257,6 +251,24 @@ fun SheetMusicView(
                 }
             }
     }
+
+    LaunchedEffect(midiReady, beatPositions, pageMode, verticalScrollView, pageHeightCss) {
+        if (!midiReady || !pageMode) return@LaunchedEffect
+        val scroll = verticalScrollView ?: return@LaunchedEffect
+        val systems = pageSystems(beatPositions)
+        if (systems.size < 2) return@LaunchedEffect
+        val startMs = systems[1].timeMs
+        snapshotFlow { currentTime }
+            .sample(16)
+            .collectLatest { time ->
+                val viewportCss = scroll.height.toDouble() / density
+                val maxCss = (pageHeightCss - viewportCss).coerceAtLeast(0.0)
+                val rate = pageScrollRate(systems, startMs, viewportCss, maxCss)
+                if (maxCss <= 0.0 || rate <= 0.0) return@collectLatest
+                val offsetCss = (rate * (time * 1000.0 - startMs)).coerceIn(0.0, maxCss)
+                scroll.scrollTo(0, (offsetCss * density).toInt())
+            }
+    }
 }
 
 private fun findHorizontalScrollView(root: View): HorizontalScrollView? {
@@ -264,6 +276,16 @@ private fun findHorizontalScrollView(root: View): HorizontalScrollView? {
     if (root is ViewGroup) {
         for (i in 0 until root.childCount) {
             findHorizontalScrollView(root.getChildAt(i))?.let { return it }
+        }
+    }
+    return null
+}
+
+private fun findScrollView(root: View): ScrollView? {
+    if (root is ScrollView) return root
+    if (root is ViewGroup) {
+        for (i in 0 until root.childCount) {
+            findScrollView(root.getChildAt(i))?.let { return it }
         }
     }
     return null
@@ -280,7 +302,7 @@ private fun findBeatCursor(root: View): View? {
     return null
 }
 
-private class BeatPosition(val timeMs: Double, val xCss: Double, val isRest: Boolean)
+private class BeatPosition(val timeMs: Double, val xCss: Double, val yCss: Double, val hCss: Double)
 
 private fun buildBeatPositions(api: AlphaTabApiBase<AlphaTabView>, track: MelodyTrack): List<BeatPosition> {
     val lookup = api.boundsLookup ?: return emptyList()
@@ -295,13 +317,49 @@ private fun buildBeatPositions(api: AlphaTabApiBase<AlphaTabView>, track: Melody
                         val bounds = lookup.findBeat(beat) ?: continue
                         val alphaTabTick = tickCache.getBeatStart(beat)
                         val trackTick = (alphaTabTick * track.ticksPerQuarterNote.coerceAtLeast(1) / ALPHATAB_TICKS_PER_QUARTER).toLong()
-                        positions.add(BeatPosition(track.tickToSeconds(trackTick) * 1000.0, bounds.onNotesX, beat.isRest))
+                        positions.add(
+                            BeatPosition(
+                                timeMs = track.tickToSeconds(trackTick) * 1000.0,
+                                xCss = bounds.onNotesX,
+                                yCss = bounds.barBounds.masterBarBounds.visualBounds.y,
+                                hCss = bounds.barBounds.masterBarBounds.visualBounds.h
+                            )
+                        )
                     }
                 }
             }
         }
     }
     return positions.sortedBy { it.timeMs }
+}
+
+private fun pageSystems(positions: List<BeatPosition>): List<BeatPosition> {
+    val systems = mutableListOf<BeatPosition>()
+    var lastY = Double.NaN
+    for (position in positions) {
+        if (position.yCss != lastY) {
+            systems.add(position)
+            lastY = position.yCss
+        }
+    }
+    return systems
+}
+
+private fun pageScrollRate(
+    systems: List<BeatPosition>,
+    startMs: Double,
+    viewportCss: Double,
+    maxCss: Double
+): Double {
+    val stopIndex = (systems.size - 2).coerceAtLeast(1)
+    var rate = 0.0
+    for (i in 1..stopIndex) {
+        val required = if (i == stopIndex) maxCss
+        else (systems[i].yCss + systems[i].hCss - viewportCss).coerceAtLeast(0.0)
+        val span = systems[i].timeMs - startMs
+        if (required > 0.0 && span > 0.0) rate = maxOf(rate, required / span)
+    }
+    return rate
 }
 
 private fun xForTime(timeMs: Double, positions: List<BeatPosition>): Double {
@@ -313,15 +371,4 @@ private fun xForTime(timeMs: Double, positions: List<BeatPosition>): Double {
     if (next == null || next.timeMs <= current.timeMs) return current.xCss
     val fraction = ((timeMs - current.timeMs) / (next.timeMs - current.timeMs)).coerceIn(0.0, 1.0)
     return current.xCss + fraction * (next.xCss - current.xCss)
-}
-
-private fun timeForX(xCss: Double, positions: List<BeatPosition>): Double {
-    if (positions.isEmpty()) return 0.0
-    var i = positions.indexOfLast { it.xCss <= xCss }
-    if (i < 0) return positions.first().timeMs
-    val current = positions[i]
-    val next = positions.getOrNull(i + 1)
-    if (next == null || next.xCss <= current.xCss) return current.timeMs
-    val fraction = ((xCss - current.xCss) / (next.xCss - current.xCss)).coerceIn(0.0, 1.0)
-    return current.timeMs + fraction * (next.timeMs - current.timeMs)
 }

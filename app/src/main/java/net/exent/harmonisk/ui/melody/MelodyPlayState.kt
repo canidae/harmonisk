@@ -29,7 +29,6 @@ data class MelodyGameState(
     val noteCentsPositions: Map<Int, List<Float>> = emptyMap(),
     val notePlayProgress: Map<Int, Float> = emptyMap(),
     val noteFirstDetectionStart: Map<Int, Float> = emptyMap(),
-    val countdownResumeTarget: Double = 0.0,
     val previewTimeSeconds: Double? = null,
     val replayTimeSeconds: Double? = null,
     val replayNoteOffsetsMs: Map<Int, Long> = emptyMap(),
@@ -40,6 +39,7 @@ data class MelodyGameState(
     val currentLevel: Int = 1,
     val unlockedLevel: Int = 1,
     val playedLevel: Int = 1,
+    val runId: Int = 0,
     val newlyUnlockedLevel: Int? = null,
     val melodyName: String? = null,
     val hideNoteBars: Boolean = false,
@@ -70,7 +70,6 @@ enum class PlayPhase {
     NOT_STARTED,
     READY,
     PLAYING,
-    PAUSED,
     WAITING_FOR_NOTE,
     FINISHED
 }
@@ -116,16 +115,6 @@ fun audibleMelodyTracks(
 fun songPlayingSeconds(track: MelodyTrack): Double {
     val firstNote = track.notes.minByOrNull { it.startTick } ?: return 0.0
     return (track.durationSeconds - track.noteStartSeconds(firstNote)).coerceAtLeast(0.0)
-}
-
-fun previewStartSeconds(track: MelodyTrack, timeSeconds: Double): Double {
-    if (timeSeconds <= 0.0) return 0.0
-    val tick = track.secondsToTick(timeSeconds)
-    val timeSig = track.timeSignatureAt(tick)
-    val ticksPerBar = track.ticksPerQuarterNote.toLong() * 4 * timeSig.numerator / timeSig.denominator
-    if (ticksPerBar <= 0) return 0.0
-    val previousBarTick = (tick / ticksPerBar - 1) * ticksPerBar
-    return if (previousBarTick <= 0) 0.0 else track.tickToSeconds(previousBarTick)
 }
 
 fun songTimeRatio(track: MelodyTrack, waitMs: Long): Double {

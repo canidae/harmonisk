@@ -161,7 +161,6 @@ sealed interface CanvasMode {
         val fallSpeedPxPerSec: Float,
         val detectedMidiNote: Int?,
         val detectedCentsOff: Float?,
-        val hideNoteBars: Boolean = false,
         val instrument: Instrument = Instrument.VIOLIN,
         val bowedPositions: List<BowedPosition?> = emptyList(),
         val preferOpenStrings: Boolean = true,
@@ -678,8 +677,6 @@ private fun DrawScope.drawMelodyNotes(
     pianoAtBottom: Boolean,
     density: Float
 ) {
-    if (mode.hideNoteBars) return
-
     val pixelsPerSecond = mode.fallSpeedPxPerSec * density
     val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
     val minGapPx = 4f * density
@@ -984,8 +981,6 @@ private fun DrawScope.drawBowedMelodyNotes(
     textMeasurer: TextMeasurer,
     nowLineY: Float
 ) {
-    if (mode.hideNoteBars) return
-
     val width = size.width
     val pixelsPerSecond = bowedPixelsPerSecond(mode.fallSpeedPxPerSec, nowLineY)
     val viewTimeSeconds = mode.currentTimeSeconds + mode.songTimeOffsetSeconds
