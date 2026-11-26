@@ -144,6 +144,7 @@ class MelodyViewModel @Inject constructor(
     private var previewSavedOffset: Double? = null
     private var runStartJob: Job? = null
     private var adventureStartJob: Job? = null
+    private var playbackStartJob: Job? = null
     private var playbackStartWallMs = 0L
     private var pauseOffset = 0.0
 
@@ -370,6 +371,7 @@ class MelodyViewModel @Inject constructor(
 
     fun loadMelody(info: MelodyRepository.MelodyInfo): Boolean {
         stopPreview()
+        playbackStartJob?.cancel()
         runStartJob?.cancel()
         adventureStartJob?.cancel()
         val melodyTracks = assignChannels(melodyRepository.loadMultiTrack(info).filter { it.notes.isNotEmpty() })
@@ -1015,7 +1017,21 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun startPlaying() {
-        val track = _gameState.value.melodyTrack ?: return
+        if (playbackStartJob?.isActive == true) return
+        if (_gameState.value.melodyTrack == null) return
+        if (_gameState.value.phase == PlayPhase.PLAYING || _gameState.value.phase == PlayPhase.WAITING_FOR_NOTE) return
+        if (!soundFontSynthesizer.isReady && synthOpenJob?.isActive == true) {
+            playbackStartJob = viewModelScope.launch {
+                awaitSynthesizer()
+                startPlayback()
+            }
+            return
+        }
+        startPlayback()
+    }
+
+    private fun startPlayback() {
+        if (_gameState.value.melodyTrack == null) return
         if (_gameState.value.phase == PlayPhase.PLAYING || _gameState.value.phase == PlayPhase.WAITING_FOR_NOTE) return
         stopRecordingPlayback()
 
@@ -1058,16 +1074,16 @@ class MelodyViewModel @Inject constructor(
             playbackRecorder.startRecording(melodyId, _gameState.value.currentLevel)
         }
 
-        startPitchDetection()
-
         pauseOffset = startTime
         startPlaybackTimer()
+        startPitchDetection()
     }
 
     private fun playbackStartTime(leadInSeconds: Double): Double =
         -leadInSeconds - audioLeadSeconds(inputDelayMs, outputDelayMs)
 
     fun stop() {
+        playbackStartJob?.cancel()
         playbackJob?.cancel()
         pitchJob?.cancel()
         runStartJob?.cancel()
@@ -1175,6 +1191,7 @@ class MelodyViewModel @Inject constructor(
         playbackStartWallMs = SystemClock.elapsedRealtime()
         playbackJob = viewModelScope.launch {
             val track = _gameState.value.melodyTrack ?: return@launch
+            val countInTracks = leadInMetronome(_gameState.value.metronomeTrack)
             var pitchDetectionStarted = false
             var lastStateUpdate = 0L
 
@@ -1221,9 +1238,12 @@ class MelodyViewModel @Inject constructor(
                         )
                     )
                     val mt = gs.metronomeTrack
-                    if (mt != null && gs.metronomeEnabled &&
-                        (!gs.waitMode || !pitchDetectionStarted)) {
-                        add(mt)
+                    if (mt != null && gs.metronomeEnabled) {
+                        if (gs.waitMode) {
+                            if (!pitchDetectionStarted) addAll(countInTracks)
+                        } else {
+                            add(mt)
+                        }
                     }
                 }
                 if (soundFontSynthesizer.isReady) {
@@ -1718,6 +1738,7 @@ class MelodyViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        playbackStartJob?.cancel()
         playbackJob?.cancel()
         pitchJob?.cancel()
         runStartJob?.cancel()
