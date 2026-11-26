@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.TimerOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,6 +43,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.harmonisk.R
 import net.exent.harmonisk.audio.RecordingExporter
+import net.exent.harmonisk.data.MetronomeMode
 import net.exent.harmonisk.midi.MidiToAlphaTex
 import net.exent.harmonisk.music.Transpose
 import net.exent.harmonisk.ui.components.CanvasMode
@@ -211,16 +214,62 @@ fun MelodyPlayScreen(
                     }
 
                     if (!adventureMode) {
-                        IconButton(
-                            onClick = { viewModel.toggleMetronome() },
-                            modifier = Modifier.size(PANEL_BTN_SIZE)
-                        ) {
-                            Icon(
-                                Icons.Filled.Timer,
-                                contentDescription = if (gameState.metronomeEnabled) stringResource(R.string.metronome_on) else stringResource(R.string.metronome_off),
-                                tint = if (gameState.metronomeEnabled) MetronomeBlue else OVERLAY_ICON_TINT,
-                                modifier = Modifier.size(17.dp)
-                            )
+                        var showMetronomeMenu by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(
+                                onClick = { showMetronomeMenu = true },
+                                modifier = Modifier.size(PANEL_BTN_SIZE)
+                            ) {
+                                Icon(
+                                    metronomeModeIcon(gameState.metronomeMode),
+                                    contentDescription = stringResource(
+                                        R.string.metronome_mode_description,
+                                        stringResource(metronomeModeLabel(gameState.metronomeMode))
+                                    ),
+                                    tint = metronomeModeColor(gameState.metronomeMode),
+                                    modifier = Modifier.size(17.dp)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showMetronomeMenu,
+                                onDismissRequest = { showMetronomeMenu = false },
+                                offset = DpOffset((-140).dp, 0.dp)
+                            ) {
+                                MetronomeMode.entries.forEach { mode ->
+                                    val selected = mode == gameState.metronomeMode
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(metronomeModeLabel(mode)),
+                                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                metronomeModeIcon(mode),
+                                                contentDescription = null,
+                                                tint = metronomeModeColor(mode),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        },
+                                        trailingIcon = if (selected) {
+                                            { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                                        } else null,
+                                        onClick = {
+                                            viewModel.setMetronomeMode(mode)
+                                            showMetronomeMenu = false
+                                        }
+                                    )
+                                }
+                                Text(
+                                    text = stringResource(R.string.metronome_mode_level_hint),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .widthIn(max = 240.dp)
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
                         }
                     }
 
@@ -760,4 +809,21 @@ private fun MelodySettingsMenu(
             }
         }
     }
+}
+
+private fun metronomeModeLabel(mode: MetronomeMode): Int = when (mode) {
+    MetronomeMode.OFF -> R.string.metronome_mode_off
+    MetronomeMode.LEAD_IN -> R.string.metronome_mode_lead_in
+    MetronomeMode.ON -> R.string.metronome_mode_on
+}
+
+private fun metronomeModeIcon(mode: MetronomeMode) = when (mode) {
+    MetronomeMode.OFF -> Icons.Filled.TimerOff
+    MetronomeMode.LEAD_IN, MetronomeMode.ON -> Icons.Filled.Timer
+}
+
+private fun metronomeModeColor(mode: MetronomeMode) = when (mode) {
+    MetronomeMode.OFF -> OVERLAY_ICON_TINT
+    MetronomeMode.LEAD_IN -> AmberAccent
+    MetronomeMode.ON -> MetronomeBlue
 }

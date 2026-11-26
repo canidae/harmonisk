@@ -24,6 +24,11 @@
     <string name="none">Ingen</string>
     <string name="metronome_on">Metronom på</string>
     <string name="metronome_off">Metronom av</string>
+    <string name="metronome_mode_off">Av</string>
+    <string name="metronome_mode_lead_in">Inntelling</string>
+    <string name="metronome_mode_on">På</string>
+    <string name="metronome_mode_description">Metronom: %1$s</string>
+    <string name="metronome_mode_level_hint">På nivå 1–3 virker «På» som «Inntelling», siden de nivåene venter på at du spiller.</string>
 
     <!-- Home screen -->
     <string name="record_title">Opptak</string>

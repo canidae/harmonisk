@@ -15,6 +15,7 @@ import net.exent.harmonisk.data.AudioDelayRepository
 import net.exent.harmonisk.data.DevModeState
 import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.data.MelodySettingsRepository
+import net.exent.harmonisk.data.MetronomeMode
 import net.exent.harmonisk.data.PlaylistRepository
 import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.createProfileWithInstrument
@@ -197,7 +198,7 @@ class MelodyViewModel @Inject constructor(
         }
         viewModelScope.launch {
             settingsRepository.settings.first().let { settings ->
-                _gameState.update { it.copy(metronomeEnabled = settings.melodyMetronomeEnabled) }
+                _gameState.update { it.copy(metronomeMode = settings.metronomeMode) }
             }
         }
         viewModelScope.launch {
@@ -756,7 +757,12 @@ class MelodyViewModel @Inject constructor(
         val followsCanvas = state.phase == PlayPhase.READY || state.phase == PlayPhase.FINISHED
         if (followsCanvas) previewSavedOffset = _viewState.value.songTimeOffsetSeconds
         melodyPlayer.playWithTiming(
-            tracks + leadInMetronome(state.metronomeTrack),
+            tracks + metronomeTracks(
+                state.metronomeMode,
+                state.waitMode,
+                state.metronomeTrack,
+                leadInMetronome(state.metronomeTrack)
+            ),
             viewModelScope,
             leadInSeconds = leadIn,
             startSeconds = 0.0,
@@ -902,10 +908,9 @@ class MelodyViewModel @Inject constructor(
         saveMelodySettings()
     }
 
-    fun toggleMetronome() {
-        val newState = !_gameState.value.metronomeEnabled
-        _gameState.update { it.copy(metronomeEnabled = newState) }
-        viewModelScope.launch { settingsRepository.updateMelodyMetronomeEnabled(newState) }
+    fun setMetronomeMode(mode: MetronomeMode) {
+        _gameState.update { it.copy(metronomeMode = mode) }
+        viewModelScope.launch { settingsRepository.updateMetronomeMode(mode) }
     }
 
     private fun adjustedNowSeconds(phase: PlayPhase, currentTimeSeconds: Double): Double =
@@ -1237,14 +1242,7 @@ class MelodyViewModel @Inject constructor(
                             devModeEnabled = devModeState.isEnabled
                         )
                     )
-                    val mt = gs.metronomeTrack
-                    if (mt != null && gs.metronomeEnabled) {
-                        if (gs.waitMode) {
-                            if (!pitchDetectionStarted) addAll(countInTracks)
-                        } else {
-                            add(mt)
-                        }
-                    }
+                    addAll(metronomeTracks(gs.metronomeMode, gs.waitMode, gs.metronomeTrack, countInTracks))
                 }
                 if (soundFontSynthesizer.isReady) {
                     melodyPlayer.updateGameTime(currentTime + audioLeadSeconds(inputDelayMs, outputDelayMs), playTracks)

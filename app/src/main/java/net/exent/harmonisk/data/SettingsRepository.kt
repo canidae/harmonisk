@@ -29,6 +29,7 @@ class SettingsRepository(
         private const val RECORD_MIN_NOTE_DIVISION = "freeplay_min_note_division"
         private const val RECORD_SNAP_ENABLED = "freeplay_snap_enabled"
         private const val RECORD_METRONOME_ENABLED = "freeplay_metronome_enabled"
+        private const val MELODY_METRONOME_MODE = "melody_metronome_mode"
         private const val MELODY_METRONOME_ENABLED = "melody_metronome_enabled"
         private const val METRONOME_BPM = "metronome_bpm"
         private const val METRONOME_BEATS_PER_BAR = "metronome_beats_per_bar"
@@ -52,6 +53,7 @@ class SettingsRepository(
             RECORD_MIN_NOTE_DIVISION,
             RECORD_SNAP_ENABLED,
             RECORD_METRONOME_ENABLED,
+            MELODY_METRONOME_MODE,
             MELODY_METRONOME_ENABLED,
             METRONOME_BPM,
             METRONOME_BEATS_PER_BAR,
@@ -104,7 +106,7 @@ class SettingsRepository(
             recordMinNoteDivision = readInt(profileId, RECORD_MIN_NOTE_DIVISION, 16),
             recordSnapEnabled = readBoolean(profileId, RECORD_SNAP_ENABLED, true),
             recordMetronomeEnabled = readBoolean(profileId, RECORD_METRONOME_ENABLED, true),
-            melodyMetronomeEnabled = readBoolean(profileId, MELODY_METRONOME_ENABLED, true),
+            metronomeMode = readMetronomeMode(profileId),
             metronomeBpm = readInt(profileId, METRONOME_BPM, 100),
             metronomeBeatsPerBar = readInt(profileId, METRONOME_BEATS_PER_BAR, 4),
             metronomeAccentedBeats = accentedBeats,
@@ -124,6 +126,12 @@ class SettingsRepository(
 
     private fun Preferences.readBoolean(profileId: String, name: String, default: Boolean): Boolean =
         this[booleanPreferencesKey(ProfileRepository.scopedKey(profileId, name))] ?: default
+
+    private fun Preferences.readMetronomeMode(profileId: String): MetronomeMode {
+        val stored = this[stringPreferencesKey(ProfileRepository.scopedKey(profileId, MELODY_METRONOME_MODE))]
+        if (stored != null) return MetronomeMode.fromName(stored)
+        return if (readBoolean(profileId, MELODY_METRONOME_ENABLED, true)) MetronomeMode.ON else MetronomeMode.OFF
+    }
 
     private fun Preferences.readString(profileId: String, name: String, default: String): String =
         this[stringPreferencesKey(ProfileRepository.scopedKey(profileId, name))] ?: default
@@ -148,7 +156,7 @@ class SettingsRepository(
 
     suspend fun updateRecordMetronomeEnabled(enabled: Boolean) = setBoolean(RECORD_METRONOME_ENABLED, enabled)
 
-    suspend fun updateMelodyMetronomeEnabled(enabled: Boolean) = setBoolean(MELODY_METRONOME_ENABLED, enabled)
+    suspend fun updateMetronomeMode(mode: MetronomeMode) = setString(MELODY_METRONOME_MODE, mode.name)
 
     suspend fun updateMetronomeBpm(bpm: Int) = setInt(METRONOME_BPM, bpm)
 
@@ -253,7 +261,7 @@ data class AppSettings(
     val recordMinNoteDivision: Int = 16,
     val recordSnapEnabled: Boolean = true,
     val recordMetronomeEnabled: Boolean = true,
-    val melodyMetronomeEnabled: Boolean = true,
+    val metronomeMode: MetronomeMode = MetronomeMode.ON,
     val metronomeBpm: Int = 100,
     val metronomeBeatsPerBar: Int = 4,
     val metronomeAccentedBeats: Set<Int> = setOf(0),

@@ -1,5 +1,6 @@
 package net.exent.harmonisk.ui.melody
 
+import net.exent.harmonisk.data.MetronomeMode
 import net.exent.harmonisk.midi.MelodyTrack
 import net.exent.harmonisk.music.MelodyScore
 import net.exent.harmonisk.music.NoteScore
@@ -34,7 +35,7 @@ data class MelodyGameState(
     val replayNoteOffsetsMs: Map<Int, Long> = emptyMap(),
     val replayLevel: Int = 0,
     val cue: PlayCue? = null,
-    val metronomeEnabled: Boolean = true,
+    val metronomeMode: MetronomeMode = MetronomeMode.ON,
     val metronomeTrack: MelodyTrack? = null,
     val currentLevel: Int = 1,
     val unlockedLevel: Int = 1,
@@ -95,6 +96,17 @@ fun previewClockSeconds(
     elapsedSeconds: Double,
     outputDelayMs: Int
 ): Double = startSeconds + elapsedSeconds - leadInSeconds - outputDelayMs / 1000.0
+
+fun metronomeTracks(
+    mode: MetronomeMode,
+    waitMode: Boolean,
+    metronomeTrack: MelodyTrack?,
+    countIn: List<MelodyTrack>
+): List<MelodyTrack> = when {
+    metronomeTrack == null || mode == MetronomeMode.OFF -> emptyList()
+    mode == MetronomeMode.ON && !waitMode -> listOf(metronomeTrack)
+    else -> countIn
+}
 
 fun audibleMelodyTracks(
     melodyTracks: List<MelodyTrack>,
