@@ -257,15 +257,17 @@ fun SheetMusicView(
         val scroll = verticalScrollView ?: return@LaunchedEffect
         val systems = pageSystems(beatPositions)
         if (systems.size < 2) return@LaunchedEffect
-        val startMs = systems[1].timeMs
+        var schedule = emptyList<PageScrollPoint>()
+        var scheduleHeight = -1
         snapshotFlow { currentTime }
             .sample(16)
             .collectLatest { time ->
-                val viewportCss = scroll.height.toDouble() / density
-                val maxCss = (pageHeightCss - viewportCss).coerceAtLeast(0.0)
-                val rate = pageScrollRate(systems, startMs, viewportCss, maxCss)
-                if (maxCss <= 0.0 || rate <= 0.0) return@collectLatest
-                val offsetCss = (rate * (time * 1000.0 - startMs)).coerceIn(0.0, maxCss)
+                if (scheduleHeight != scroll.height) {
+                    scheduleHeight = scroll.height
+                    schedule = pageScrollSchedule(systems, scroll.height.toDouble() / density, pageHeightCss)
+                }
+                if (schedule.isEmpty()) return@collectLatest
+                val offsetCss = pageScrollAt(schedule, time * 1000.0)
                 scroll.scrollTo(0, (offsetCss * density).toInt())
             }
     }
@@ -345,21 +347,45 @@ private fun pageSystems(positions: List<BeatPosition>): List<BeatPosition> {
     return systems
 }
 
-private fun pageScrollRate(
+private class PageScrollPoint(val timeMs: Double, val offsetCss: Double)
+
+private fun pageScrollSchedule(
     systems: List<BeatPosition>,
-    startMs: Double,
     viewportCss: Double,
-    maxCss: Double
-): Double {
+    pageHeightCss: Double
+): List<PageScrollPoint> {
+    if (systems.size < 2 || viewportCss <= 0.0) return emptyList()
+    val maxCss = (pageHeightCss - viewportCss).coerceAtLeast(0.0)
+    if (maxCss <= 0.0) return emptyList()
     val stopIndex = (systems.size - 2).coerceAtLeast(1)
-    var rate = 0.0
-    for (i in 1..stopIndex) {
+    val points = mutableListOf(PageScrollPoint(systems[1].timeMs, 0.0))
+    var lastOffset = 0.0
+    for (i in 2..stopIndex) {
         val required = if (i == stopIndex) maxCss
         else (systems[i].yCss + systems[i].hCss - viewportCss).coerceAtLeast(0.0)
-        val span = systems[i].timeMs - startMs
-        if (required > 0.0 && span > 0.0) rate = maxOf(rate, required / span)
+        if (required > lastOffset) {
+            points.add(PageScrollPoint(systems[i].timeMs, required))
+            lastOffset = required
+        }
     }
-    return rate
+    return if (points.size > 1) points else emptyList()
+}
+
+private fun pageScrollAt(schedule: List<PageScrollPoint>, timeMs: Double): Double {
+    if (schedule.isEmpty() || timeMs <= schedule.first().timeMs) return 0.0
+    val last = schedule.last()
+    if (timeMs >= last.timeMs) return last.offsetCss
+    for (i in 1 until schedule.size) {
+        val next = schedule[i]
+        if (timeMs <= next.timeMs) {
+            val previous = schedule[i - 1]
+            val span = next.timeMs - previous.timeMs
+            if (span <= 0.0) return next.offsetCss
+            val fraction = ((timeMs - previous.timeMs) / span).coerceIn(0.0, 1.0)
+            return previous.offsetCss + fraction * (next.offsetCss - previous.offsetCss)
+        }
+    }
+    return last.offsetCss
 }
 
 private fun xForTime(timeMs: Double, positions: List<BeatPosition>): Double {
