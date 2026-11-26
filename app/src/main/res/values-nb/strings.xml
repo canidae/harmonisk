@@ -40,8 +40,6 @@
 
     <!-- Profiles -->
     <string name="profile_setup_title">Opprett en profil</string>
-    <string name="profile_name">Profilnavn</string>
-    <string name="profile_name_counter">%1$d/%2$d</string>
     <string name="profile_create">Opprett profil</string>
     <string name="profile_add">Legg til profil</string>
     <string name="profile_add_title">Ny profil</string>
@@ -50,9 +48,9 @@
     <string name="profile_switch_confirm_title">Bytte profil?</string>
     <string name="profile_switch_confirm_body">Økten du holder på med, nullstilles for den nye profilen.</string>
     <string name="profile_current">Gjeldende profil</string>
+    <string name="profile_name_label">Profilnavn (%1$d/%2$d)</string>
     <string name="profile_name_required">Skriv inn et profilnavn</string>
     <string name="profile_name_taken">Profilnavnet er allerede i bruk</string>
-    <string name="profile_instrument">Instrument</string>
     <string name="profile_delete">Slett profil</string>
     <string name="profile_delete_title">Slette %1$s?</string>
     <string name="profile_delete_body">Alle poengsummer og innstillinger for denne profilen blir permanent slettet. Dette kan ikke angres.</string>
@@ -248,10 +246,10 @@
     <string name="score_dismiss">Lukk</string>
     <string name="level_reached">Nivå %1$d nådd!</string>
     <string name="retry_level">Spill nivå på nytt</string>
-    <string name="level_2_change">På nivå 2 blir ikke sangen forhåndsavspilt lenger, og du har mindre tid på hver tone</string>
-    <string name="level_3_change">På nivå 3 teller treffsikkerhet og feil noter med i poengsummen</string>
-    <string name="level_4_change">På nivå 4 venter ikke spillet på at du spiller noten</string>
-    <string name="level_5_change">På nivå 5 fyller notearket hele skjermen</string>
+    <string name="level_2_change">På nivå 2 blir ikke sangen forhåndsavspilt lenger</string>
+    <string name="level_3_change">På nivå 3 teller treffsikkerhet med i poengsummen</string>
+    <string name="level_4_change">På nivå 4 venter ikke avspillingen på at du spiller noten</string>
+    <string name="level_5_change">På nivå 5 vises bare notearket</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Tonehøyde</string>
@@ -304,6 +302,17 @@
 
     <string name="profile_edit">Rediger profil</string>
     <string name="profile_save">Lagre</string>
+    <string name="profile_starting_level">Startnivå: %1$d</string>
+    <string name="profile_metronome">Metronom</string>
+    <string name="profile_prefer_open_strings">Foretrekk åpne strenger</string>
+    <string name="profile_easy_key">Enkel toneart</string>
+    <string name="profile_choose_emoji">Velg emoji</string>
+    <string name="profile_level_scoring_1">Forhåndsvisning av sangen og du får poeng for hvor lenge du holder hver note og tidsbruk på sangen.</string>
+    <string name="profile_level_scoring_2">Som nivå 1, men uten forhåndsvisning.</string>
+    <string name="profile_level_scoring_3">Treffsikkerhet, notelengde og tidsbruk på sangen teller nå på poengsummen.</string>
+    <string name="profile_level_scoring_4">Avspilling venter ikke på at du spiller notene.</string>
+    <string name="profile_level_scoring_5">Som nivå 4, med bare notarket vises.</string>
+    <string name="melody_reset_overrides">Tilbakestill innstillinger til profilstandarder</string>
     <plurals name="adventure_stickers_won">
         <item quantity="one">%1$d klistremerke</item>
         <item quantity="other">%1$d klistremerker</item>

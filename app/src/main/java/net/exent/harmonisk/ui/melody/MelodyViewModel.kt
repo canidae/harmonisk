@@ -114,6 +114,9 @@ class MelodyViewModel @Inject constructor(
     private val _allMelodyLevels = MutableStateFlow<Map<String, Int>>(emptyMap())
     val allMelodyLevels: StateFlow<Map<String, Int>> = _allMelodyLevels.asStateFlow()
 
+    private val _allMelodyOverrides = MutableStateFlow<Set<String>>(emptySet())
+    val allMelodyOverrides: StateFlow<Set<String>> = _allMelodyOverrides.asStateFlow()
+
     val playlists: StateFlow<List<PlaylistRepository.Playlist>> = playlistRepository.playlists
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -168,6 +171,7 @@ class MelodyViewModel @Inject constructor(
     private val _recordingAvailable = MutableStateFlow(false)
     val recordingAvailable: StateFlow<Boolean> = _recordingAvailable.asStateFlow()
     private var manualTranspose = Transpose(0, 0)
+    private var songOverrides: Set<String> = emptySet()
 
     private val _currentInstrument = MutableStateFlow(Instrument.VIOLIN.name)
     private val currentInstrumentFlow: StateFlow<String> = _currentInstrument.asStateFlow()
@@ -297,7 +301,7 @@ class MelodyViewModel @Inject constructor(
                 melodies to instrument
             }.flatMapLatest { (melodies, instrument) ->
                 if (melodies.isEmpty()) {
-                    flowOf(emptyMap<String, Int>() to emptyMap<String, MelodyScoreSummary>())
+                    flowOf(Triple(emptyMap<String, Int>(), emptyMap<String, MelodyScoreSummary>(), emptySet<String>()))
                 } else {
                     val flows = melodies.map { info ->
                         combine(
@@ -309,17 +313,22 @@ class MelodyViewModel @Inject constructor(
                                 level = level,
                                 score = scores.filter { it.level == level }.maxOfOrNull { it.overallScore }
                             )
-                            info.id to (level to summary)
+                            val hasOverrides = settings.overrides.orEmpty().any { it in MelodySettingsRepository.PREFERENCE_OVERRIDES }
+                            info.id to Triple(level, summary, hasOverrides)
                         }
                     }
                     combine(flows) { pairs ->
-                        pairs.associate { (id, data) -> id to data.first } to
-                            pairs.mapNotNull { (id, data) -> data.second?.let { id to it } }.toMap()
+                        Triple(
+                            pairs.associate { (id, data) -> id to data.first },
+                            pairs.mapNotNull { (id, data) -> data.second?.let { id to it } }.toMap(),
+                            pairs.filter { it.second.third }.map { it.first }.toSet()
+                        )
                     }
                 }
-            }.collect { (levels, summaries) ->
+            }.collect { (levels, summaries, overrideIds) ->
                 _allMelodyLevels.value = levels
                 _allMelodyScores.value = summaries
+                _allMelodyOverrides.value = overrideIds
             }
         }
     }
@@ -572,6 +581,7 @@ class MelodyViewModel @Inject constructor(
                 } catch (_: IllegalArgumentException) {
                     AccompanimentMode.ALL
                 }
+                songOverrides = saved.overrides.orEmpty().toSet()
                 _gameState.update {
                     it.copy(
                         waitMode = wm,
@@ -583,17 +593,19 @@ class MelodyViewModel @Inject constructor(
                         settingsLoaded = true,
                         activeVoiceIndex = saved.activeVoiceIndex,
                         accompanimentMode = accompanimentMode,
-                        preferOpenStrings = saved.preferOpenStrings
+                        preferOpenStrings = saved.preferOpenStrings,
+                        metronomeMode = MetronomeMode.fromName(saved.metronomeMode)
                     )
                 }
                 _viewState.update { it.copy(fallSpeedPxPerSec = migrateFallSpeed(saved.fallSpeedPxPerSec)) }
                 val tracks = _gameState.value.melodyTracks
                 if (tracks.isNotEmpty()) {
                     val idx = saved.activeVoiceIndex.coerceIn(0, tracks.lastIndex)
-                    setActiveVoice(idx)
+                    setActiveVoice(idx, persist = false)
                 }
                 manualTranspose = Transpose.fromSemitones(saved.transposeSemitones)
-                if (saved.autoTranspose) applyAuto() else applyTranspose(manualTranspose, auto = false)
+                if (saved.autoTranspose) applyAuto(persist = false)
+                else applyTranspose(manualTranspose, auto = false, persist = false)
             }
         }
         scoreHistoryJob = viewModelScope.launch {
@@ -626,23 +638,31 @@ class MelodyViewModel @Inject constructor(
     fun setOctave(octave: Int) {
         val next = Transpose.of(octave, _gameState.value.transpose.key)
         manualTranspose = next
+        pinOverrides(MelodySettingsRepository.OVERRIDE_EASY_KEY)
         applyTranspose(next, auto = false)
     }
 
     fun setKey(key: Int) {
         val next = Transpose.of(_gameState.value.transpose.octave, key)
         manualTranspose = next
+        pinOverrides(MelodySettingsRepository.OVERRIDE_EASY_KEY)
         applyTranspose(next, auto = false)
     }
 
     fun setAutoTranspose(enabled: Boolean) {
+        pinOverrides(MelodySettingsRepository.OVERRIDE_EASY_KEY)
         if (enabled) applyAuto() else applyTranspose(manualTranspose, auto = false)
     }
 
     fun setPreferOpenStrings(preferOpenStrings: Boolean) {
         if (_gameState.value.preferOpenStrings == preferOpenStrings) return
         _gameState.update { it.copy(preferOpenStrings = preferOpenStrings) }
+        pinOverrides(MelodySettingsRepository.OVERRIDE_OPEN_STRINGS)
         if (_gameState.value.autoTranspose) applyAuto() else applyTranspose(manualTranspose, auto = false)
+    }
+
+    private fun pinOverrides(vararg keys: String) {
+        songOverrides = songOverrides + keys
     }
 
     private fun autoOffset(): Int {
@@ -658,13 +678,13 @@ class MelodyViewModel @Inject constructor(
         )
     }
 
-    private fun applyAuto() {
+    private fun applyAuto(persist: Boolean = true) {
         val next = Transpose.fromSemitones(autoOffset())
         manualTranspose = next
-        applyTranspose(next, auto = true)
+        applyTranspose(next, auto = true, persist = persist)
     }
 
-    private fun applyTranspose(transposition: Transpose, auto: Boolean) {
+    private fun applyTranspose(transposition: Transpose, auto: Boolean, persist: Boolean = true) {
         if (originalMelodyTracks.isEmpty()) return
         val clamped = Transpose.of(transposition.octave, transposition.key)
         val melodyTracks = originalMelodyTracks.map { it.transpose(clamped.semitones) }
@@ -681,7 +701,7 @@ class MelodyViewModel @Inject constructor(
         }
         _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
         updateBowedPositions()
-        saveMelodySettings()
+        if (persist) saveMelodySettings()
     }
 
     private fun viewRangeFor(track: MelodyTrack): Pair<Float, Float> {
@@ -718,9 +738,9 @@ class MelodyViewModel @Inject constructor(
         val instrument = _currentInstrument.value
         val g = _gameState.value
         val v = _viewState.value
+        val overrides = songOverrides.toList()
         viewModelScope.launch {
             melodySettingsRepository.saveSettings(id, instrument, MelodySettingsRepository.MelodySettings(
-                waitMode = g.waitMode,
                 autoTranspose = g.autoTranspose,
                 transposeSemitones = g.transpose.semitones,
                 preferOpenStrings = g.preferOpenStrings,
@@ -728,7 +748,9 @@ class MelodyViewModel @Inject constructor(
                 level = g.currentLevel,
                 unlockedLevel = g.unlockedLevel,
                 activeVoiceIndex = g.activeVoiceIndex,
-                accompanimentMode = g.accompanimentMode.name
+                accompanimentMode = g.accompanimentMode.name,
+                metronomeMode = g.metronomeMode.name,
+                overrides = overrides
             ))
         }
     }
@@ -884,7 +906,7 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
-    fun setActiveVoice(index: Int) {
+    fun setActiveVoice(index: Int, persist: Boolean = true) {
         val tracks = _gameState.value.melodyTracks
         if (index < 0 || index >= tracks.size) return
         val selectedTrack = tracks[index]
@@ -897,7 +919,7 @@ class MelodyViewModel @Inject constructor(
         }
         _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
         updateBowedPositions()
-        saveMelodySettings()
+        if (persist) saveMelodySettings()
     }
 
     fun setAccompanimentMode(mode: AccompanimentMode) {
@@ -910,7 +932,8 @@ class MelodyViewModel @Inject constructor(
 
     fun setMetronomeMode(mode: MetronomeMode) {
         _gameState.update { it.copy(metronomeMode = mode) }
-        viewModelScope.launch { settingsRepository.updateMetronomeMode(mode) }
+        pinOverrides(MelodySettingsRepository.OVERRIDE_METRONOME)
+        saveMelodySettings()
     }
 
     private fun adjustedNowSeconds(phase: PlayPhase, currentTimeSeconds: Double): Double =
@@ -1117,6 +1140,12 @@ class MelodyViewModel @Inject constructor(
     fun resetScore(melodyId: String) {
         viewModelScope.launch {
             scoreHistoryRepository.resetScores(melodyId, currentInstrumentFlow.value)
+        }
+    }
+
+    fun resetMelodyOverrides(melodyId: String) {
+        viewModelScope.launch {
+            melodySettingsRepository.clearPreferenceOverrides(melodyId, currentInstrumentFlow.value)
         }
     }
 

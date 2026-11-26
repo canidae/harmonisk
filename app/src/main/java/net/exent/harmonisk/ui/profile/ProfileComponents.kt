@@ -1,5 +1,6 @@
 package net.exent.harmonisk.ui.profile
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,11 +35,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.exent.harmonisk.R
+import net.exent.harmonisk.data.MetronomeMode
+import net.exent.harmonisk.data.ProfileDefaults
 import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.ui.components.AppLogo
 import net.exent.harmonisk.ui.components.InstrumentSelector
 import net.exent.harmonisk.ui.components.brandBackground
+import kotlin.math.roundToInt
 
 @Composable
 fun ProfileButton(name: String, emoji: String, onClick: () -> Unit) {
@@ -115,18 +119,19 @@ fun ProfileSetupScreen(
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
-                    ProfileNameField(
+                    NameAndEmojiField(
                         name = name,
                         error = errorRes?.let { stringResource(it) },
                         onNameChange = {
                             name = it.take(ProfileRepository.MAX_NAME_LENGTH)
                             errorRes = null
                         },
-                        onSubmit = ::submit
+                        onSubmit = ::submit,
+                        emoji = emoji,
+                        onEmojiChange = { emoji = it }
                     )
-                    EmojiPicker(selected = emoji, onSelect = { emoji = it })
-                    InstrumentField(
-                        instrument = Instrument.fromName(instrument),
+                    InstrumentSelector(
+                        selected = Instrument.fromName(instrument),
                         onSelect = { instrument = it.name }
                     )
                     Button(
@@ -266,8 +271,9 @@ fun CreateProfileDialog(
     initialName = "",
     initialEmoji = ProfileRepository.DEFAULT_EMOJI,
     initialInstrument = initialInstrument,
+    initialDefaults = null,
     showInstrument = showInstrument,
-    onSubmit = onCreate,
+    onSubmit = { name, emoji, instrument, _ -> onCreate(name, emoji, instrument) },
     onDismiss = onDismiss
 )
 
@@ -275,7 +281,8 @@ fun CreateProfileDialog(
 fun ProfileEditDialog(
     profile: ProfileRepository.Profile,
     instrument: Instrument,
-    onSave: (String, String, Instrument) -> Boolean,
+    defaults: ProfileDefaults,
+    onSave: (String, String, Instrument, ProfileDefaults) -> Boolean,
     onDismiss: () -> Unit
 ) = ProfileFormDialog(
     titleRes = R.string.profile_edit,
@@ -283,6 +290,7 @@ fun ProfileEditDialog(
     initialName = profile.name,
     initialEmoji = profile.emoji,
     initialInstrument = instrument,
+    initialDefaults = defaults,
     onSubmit = onSave,
     onDismiss = onDismiss
 )
@@ -294,8 +302,9 @@ private fun ProfileFormDialog(
     initialName: String,
     initialEmoji: String,
     initialInstrument: Instrument,
+    initialDefaults: ProfileDefaults?,
     showInstrument: Boolean = true,
-    onSubmit: (String, String, Instrument) -> Boolean,
+    onSubmit: (String, String, Instrument, ProfileDefaults) -> Boolean,
     onDismiss: () -> Unit
 ) {
     var name by rememberSaveable(initialName, initialEmoji, initialInstrument.name) {
@@ -304,12 +313,13 @@ private fun ProfileFormDialog(
     var emoji by rememberSaveable(initialName, initialEmoji) { mutableStateOf(initialEmoji) }
     var instrument by rememberSaveable(initialInstrument.name) { mutableStateOf(initialInstrument.name) }
     var errorRes by rememberSaveable(initialName, initialEmoji) { mutableStateOf<Int?>(null) }
+    var defaults by remember(initialDefaults) { mutableStateOf(initialDefaults ?: ProfileDefaults()) }
 
     fun submit() {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) {
             errorRes = R.string.profile_name_required
-        } else if (!onSubmit(trimmed, emoji, Instrument.fromName(instrument))) {
+        } else if (!onSubmit(trimmed, emoji, Instrument.fromName(instrument), defaults)) {
             errorRes = R.string.profile_name_taken
         } else {
             onDismiss()
@@ -320,24 +330,32 @@ private fun ProfileFormDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(titleRes)) },
         text = {
-            Column {
-                ProfileNameField(
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 480.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                NameAndEmojiField(
                     name = name,
                     error = errorRes?.let { stringResource(it) },
                     onNameChange = {
                         name = it.take(ProfileRepository.MAX_NAME_LENGTH)
                         errorRes = null
                     },
-                    onSubmit = ::submit
+                    onSubmit = ::submit,
+                    emoji = emoji,
+                    onEmojiChange = { emoji = it }
                 )
-                Spacer(Modifier.height(8.dp))
-                EmojiPicker(selected = emoji, onSelect = { emoji = it })
                 if (showInstrument) {
-                    Spacer(Modifier.height(8.dp))
-                    InstrumentField(
-                        instrument = Instrument.fromName(instrument),
+                    Spacer(Modifier.height(12.dp))
+                    InstrumentSelector(
+                        selected = Instrument.fromName(instrument),
                         onSelect = { instrument = it.name }
                     )
+                }
+                if (initialDefaults != null) {
+                    HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                    DefaultsFields(defaults = defaults, onDefaultsChange = { defaults = it })
                 }
             }
         },
@@ -355,14 +373,171 @@ private fun ProfileFormDialog(
 }
 
 @Composable
-private fun InstrumentField(instrument: Instrument, onSelect: (Instrument) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+private fun DefaultsFields(defaults: ProfileDefaults, onDefaultsChange: (ProfileDefaults) -> Unit) {
+    var metronomeExpanded by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.profile_starting_level, defaults.startingLevel),
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Spacer(Modifier.width(12.dp))
+            Slider(
+                value = defaults.startingLevel.toFloat(),
+                onValueChange = { onDefaultsChange(defaults.copy(startingLevel = it.roundToInt().coerceIn(1, 5))) },
+                valueRange = 1f..5f,
+                steps = 3,
+                modifier = Modifier.weight(1f)
+            )
+        }
         Text(
-            text = stringResource(R.string.profile_instrument),
-            style = MaterialTheme.typography.labelLarge,
+            text = stringResource(levelScoringRes(defaults.startingLevel)),
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        InstrumentSelector(selected = instrument, onSelect = onSelect)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.profile_metronome),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Box {
+                OutlinedButton(onClick = { metronomeExpanded = true }) {
+                    Text(stringResource(metronomeModeRes(defaults.metronomeMode)))
+                    Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+                DropdownMenu(
+                    expanded = metronomeExpanded,
+                    onDismissRequest = { metronomeExpanded = false }
+                ) {
+                    MetronomeMode.entries.forEach { mode ->
+                        DropdownMenuItem(
+                            text = { Text(stringResource(metronomeModeRes(mode))) },
+                            trailingIcon = {
+                                if (mode == defaults.metronomeMode) {
+                                    Icon(Icons.Filled.Check, contentDescription = null)
+                                }
+                            },
+                            onClick = {
+                                metronomeExpanded = false
+                                onDefaultsChange(defaults.copy(metronomeMode = mode))
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        ToggleRow(
+            label = stringResource(R.string.profile_prefer_open_strings),
+            checked = defaults.preferOpenStrings,
+            onCheckedChange = { onDefaultsChange(defaults.copy(preferOpenStrings = it)) }
+        )
+        ToggleRow(
+            label = stringResource(R.string.profile_easy_key),
+            checked = defaults.easyKey,
+            onCheckedChange = { onDefaultsChange(defaults.copy(easyKey = it)) }
+        )
+    }
+}
+
+@Composable
+private fun ToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
+@StringRes
+private fun levelScoringRes(level: Int): Int = when (level) {
+    1 -> R.string.profile_level_scoring_1
+    2 -> R.string.profile_level_scoring_2
+    3 -> R.string.profile_level_scoring_3
+    4 -> R.string.profile_level_scoring_4
+    else -> R.string.profile_level_scoring_5
+}
+
+@StringRes
+private fun metronomeModeRes(mode: MetronomeMode): Int = when (mode) {
+    MetronomeMode.OFF -> R.string.metronome_mode_off
+    MetronomeMode.LEAD_IN -> R.string.metronome_mode_lead_in
+    MetronomeMode.ON -> R.string.metronome_mode_on
+}
+
+@Composable
+private fun NameAndEmojiField(
+    name: String,
+    error: String?,
+    onNameChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    emoji: String,
+    onEmojiChange: (String) -> Unit
+) {
+    Column {
+        Row(verticalAlignment = Alignment.Bottom) {
+            ProfileNameField(
+                name = name,
+                error = error,
+                onNameChange = onNameChange,
+                onSubmit = onSubmit,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(12.dp))
+            EmojiButton(emoji = emoji, onSelect = onEmojiChange)
+        }
+        error?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmojiButton(emoji: String, onSelect: (String) -> Unit) {
+    var showPicker by remember { mutableStateOf(false) }
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .clickable(
+                role = Role.Button,
+                onClickLabel = stringResource(R.string.profile_choose_emoji)
+            ) { showPicker = true },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(emoji, fontSize = 28.sp)
+    }
+    if (showPicker) {
+        AlertDialog(
+            onDismissRequest = { showPicker = false },
+            title = { Text(stringResource(R.string.profile_choose_emoji)) },
+            text = {
+                EmojiPicker(emoji) {
+                    onSelect(it)
+                    showPicker = false
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPicker = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 }
 
@@ -415,28 +590,28 @@ private fun ProfileNameField(
     name: String,
     error: String?,
     onNameChange: (String) -> Unit,
-    onSubmit: () -> Unit
+    onSubmit: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     OutlinedTextField(
         value = name,
         onValueChange = onNameChange,
-        label = { Text(stringResource(R.string.profile_name)) },
-        singleLine = true,
-        isError = error != null,
-        supportingText = {
+        label = {
             Text(
-                text = error ?: stringResource(
-                    R.string.profile_name_counter,
+                stringResource(
+                    R.string.profile_name_label,
                     name.length,
                     ProfileRepository.MAX_NAME_LENGTH
                 )
             )
         },
+        singleLine = true,
+        isError = error != null,
         keyboardOptions = KeyboardOptions(
             capitalization = KeyboardCapitalization.Words,
             imeAction = ImeAction.Done
         ),
         keyboardActions = KeyboardActions(onDone = { onSubmit() }),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     )
 }

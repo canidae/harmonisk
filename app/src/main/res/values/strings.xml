@@ -40,8 +40,6 @@
 
     <!-- Profiles -->
     <string name="profile_setup_title">Create a profile</string>
-    <string name="profile_name">Profile name</string>
-    <string name="profile_name_counter">%1$d/%2$d</string>
     <string name="profile_create">Create profile</string>
     <string name="profile_add">Add profile</string>
     <string name="profile_add_title">New profile</string>
@@ -50,9 +48,9 @@
     <string name="profile_switch_confirm_title">Switch profile?</string>
     <string name="profile_switch_confirm_body">The current session will be reset for the new profile.</string>
     <string name="profile_current">Current profile</string>
+    <string name="profile_name_label">Profile name (%1$d/%2$d)</string>
     <string name="profile_name_required">Enter a profile name</string>
     <string name="profile_name_taken">That profile name is already in use</string>
-    <string name="profile_instrument">Instrument</string>
     <string name="profile_delete">Delete profile</string>
     <string name="profile_delete_title">Delete %1$s?</string>
     <string name="profile_delete_body">All scores and settings for this profile will be permanently deleted. This cannot be undone.</string>
@@ -248,10 +246,10 @@
     <string name="score_dismiss">Dismiss</string>
     <string name="level_reached">Level %1$d reached!</string>
     <string name="retry_level">Retry level</string>
-    <string name="level_2_change">On level 2 the song is no longer previewed and you have less time to play each note</string>
-    <string name="level_3_change">On level 3 pitch accuracy and wrong notes will count toward your score</string>
-    <string name="level_4_change">On level 4 the game will not wait for you to play the note</string>
-    <string name="level_5_change">On level 5 the sheet music fills the screen</string>
+    <string name="level_2_change">On level 2 the song is no longer previewed</string>
+    <string name="level_3_change">On level 3 pitch accuracy will count toward your score</string>
+    <string name="level_4_change">On level 4 playback won\'t wait for you to play the note</string>
+    <string name="level_5_change">On level 5 only the sheet music is shown</string>
 
     <!-- Score summary -->
     <string name="score_pitch_accuracy">Pitch accuracy</string>
@@ -304,6 +302,17 @@
 
     <string name="profile_edit">Edit profile</string>
     <string name="profile_save">Save</string>
+    <string name="profile_starting_level">Starting level: %1$d</string>
+    <string name="profile_metronome">Metronome</string>
+    <string name="profile_prefer_open_strings">Prefer open strings</string>
+    <string name="profile_easy_key">Easy key</string>
+    <string name="profile_choose_emoji">Choose emoji</string>
+    <string name="profile_level_scoring_1">Preview of the song and you\'re scored on how long you hold each note and on song duration.</string>
+    <string name="profile_level_scoring_2">Like level 1, but without the preview.</string>
+    <string name="profile_level_scoring_3">Pitch accuracy, note length and song duration now count for the score.</string>
+    <string name="profile_level_scoring_4">Playback no longer waits for you to play the notes.</string>
+    <string name="profile_level_scoring_5">Like level 4, only sheet music is shown.</string>
+    <string name="melody_reset_overrides">Reset settings to profile defaults</string>
     <plurals name="adventure_stickers_won">
         <item quantity="one">%1$d sticker</item>
         <item quantity="other">%1$d stickers</item>

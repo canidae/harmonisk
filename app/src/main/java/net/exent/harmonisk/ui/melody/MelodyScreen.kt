@@ -125,6 +125,7 @@ fun MelodyScreen(
     val instrument by viewModel.currentInstrument.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     val melodyLevels by viewModel.allMelodyLevels.collectAsStateWithLifecycle()
+    val melodyOverrides by viewModel.allMelodyOverrides.collectAsStateWithLifecycle()
     val profileDialogs = rememberProfileDialogState()
 
     LaunchedEffect(Unit) {
@@ -264,7 +265,10 @@ fun MelodyScreen(
                     viewModel.loadMelody(info)
                 }
             },
-            onAddToPlaylist = { addingToPlaylistSong = info }
+            onAddToPlaylist = { addingToPlaylistSong = info },
+            onResetOverrides = if (info.id in melodyOverrides) {
+                { viewModel.resetMelodyOverrides(info.id) }
+            } else null
         )
     }
 
@@ -472,7 +476,10 @@ fun MelodyScreen(
                                     draggingSongId = null
                                     dragOffset = 0f
                                 },
-                                onRemove = { viewModel.setPlaylistMelodies(playlist.id, playlist.melodyIds - info.id) }
+                                onRemove = { viewModel.setPlaylistMelodies(playlist.id, playlist.melodyIds - info.id) },
+                                onResetOverrides = if (info.id in melodyOverrides) {
+                                    { viewModel.resetMelodyOverrides(info.id) }
+                                } else null
                             )
                         }
                     }
@@ -892,7 +899,8 @@ private fun PlaylistSongRow(
     onDragStart: () -> Unit,
     onDrag: (Float) -> Unit,
     onDragEnd: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onResetOverrides: (() -> Unit)?
 ) {
     var showMenu by remember { mutableStateOf(false) }
     Card(
@@ -956,6 +964,15 @@ private fun PlaylistSongRow(
             expanded = showMenu,
             onDismissRequest = { showMenu = false }
         ) {
+            onResetOverrides?.let { reset ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.melody_reset_overrides)) },
+                    onClick = {
+                        showMenu = false
+                        reset()
+                    }
+                )
+            }
             DropdownMenuItem(
                 text = {
                     Text(
@@ -1280,7 +1297,8 @@ private fun MelodyCard(
     onPlay: () -> Unit,
     onTogglePreview: () -> Unit,
     onToggleExpand: () -> Unit,
-    onAddToPlaylist: () -> Unit
+    onAddToPlaylist: () -> Unit,
+    onResetOverrides: (() -> Unit)?
 ) {
     var showMenu by remember { mutableStateOf(false) }
     Card(
@@ -1351,6 +1369,15 @@ private fun MelodyCard(
                         onAddToPlaylist()
                     }
                 )
+                onResetOverrides?.let { reset ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.melody_reset_overrides)) },
+                        onClick = {
+                            showMenu = false
+                            reset()
+                        }
+                    )
+                }
                 if (!info.isBundled) {
                     DropdownMenuItem(
                         text = {

@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import net.exent.harmonisk.audio.SoundFontSynthesizer
 import net.exent.harmonisk.data.DevModeState
 import net.exent.harmonisk.data.MelodySettingsRepository
+import net.exent.harmonisk.data.ProfileDefaults
 import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.ScoreHistoryRepository
 import net.exent.harmonisk.data.SettingsRepository
@@ -57,13 +58,24 @@ class HomeViewModel @Inject constructor(
     fun createProfile(name: String, emoji: String, instrument: Instrument): Boolean =
         createProfileWithInstrument(viewModelScope, profileRepository, settingsRepository, name, emoji, instrument)
 
-    fun updateProfile(id: String, name: String, emoji: String, instrument: Instrument): Boolean {
+    fun updateProfile(
+        id: String,
+        name: String,
+        emoji: String,
+        instrument: Instrument,
+        defaults: ProfileDefaults
+    ): Boolean {
         if (!profileRepository.updateProfile(id, name, emoji)) return false
-        viewModelScope.launch { settingsRepository.updateInstrument(id, instrument.name) }
+        viewModelScope.launch {
+            settingsRepository.updateInstrument(id, instrument.name)
+            settingsRepository.updateProfileDefaults(id, defaults)
+        }
         return true
     }
 
     fun instrument(profileId: String): Flow<Instrument> = settingsRepository.instrument(profileId)
+
+    fun profileDefaults(profileId: String): Flow<ProfileDefaults> = settingsRepository.profileDefaults(profileId)
 
     fun selectProfile(id: String) {
         profileRepository.selectProfile(id)
