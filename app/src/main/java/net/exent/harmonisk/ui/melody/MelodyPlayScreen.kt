@@ -94,9 +94,14 @@ fun MelodyPlayScreen(
         gameState.phase == PlayPhase.WAITING_FOR_NOTE
 
     BackHandler {
-        if (stopOnBack) viewModel.stop()
-        viewModel.endPlaylistSession()
-        onBack()
+        if (stopOnBack && (sessionActive || gameState.cue != null)) {
+            viewModel.stop()
+            viewModel.enterReadyPhase()
+        } else {
+            if (stopOnBack) viewModel.stop()
+            viewModel.endPlaylistSession()
+            onBack()
+        }
     }
 
     KeepScreenOn()
