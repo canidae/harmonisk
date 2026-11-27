@@ -589,7 +589,10 @@ fun MelodyScreen(
             onDismiss = { creatingPlaylist = false },
             onConfirm = { name ->
                 creatingPlaylist = false
-                viewModel.createPlaylist(name) { id -> currentPlaylistId = id }
+                viewModel.createPlaylist(name) { id ->
+                    currentPlaylistId = id
+                    addingSongs = true
+                }
             }
         )
     }
