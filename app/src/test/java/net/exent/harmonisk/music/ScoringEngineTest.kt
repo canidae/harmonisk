@@ -15,9 +15,7 @@ class ScoringEngineTest {
 
     @Test
     fun `pitch within the full-score range gives 100 points`() {
-        val result = score(3f)
-        assertEquals(100f, result.pitchScore, 0.01f)
-        assertTrue(result.isHit)
+        assertEquals(100f, score(3f).pitchScore, 0.01f)
     }
 
     @Test
@@ -35,25 +33,11 @@ class ScoringEngineTest {
     }
 
     @Test
-    fun `pitch at the acceptance limit scores zero but still counts as a hit`() {
-        val level3 = score(75f, 3)
-        assertEquals(0f, level3.pitchScore, 0.01f)
-        assertTrue(level3.isHit)
-
-        val level5 = score(50f, 5)
-        assertEquals(0f, level5.pitchScore, 0.01f)
-        assertTrue(level5.isHit)
-    }
-
-    @Test
-    fun `pitch beyond the acceptance limit is a miss`() {
-        val level3 = score(75.01f, 3)
-        assertEquals(0f, level3.pitchScore, 0.01f)
-        assertFalse(level3.isHit)
-
-        val level5 = score(50.01f, 5)
-        assertEquals(0f, level5.pitchScore, 0.01f)
-        assertFalse(level5.isHit)
+    fun `pitch at and beyond the acceptance limit scores zero`() {
+        assertEquals(0f, score(75f, 3).pitchScore, 0.01f)
+        assertEquals(0f, score(75.01f, 3).pitchScore, 0.01f)
+        assertEquals(0f, score(50f, 5).pitchScore, 0.01f)
+        assertEquals(0f, score(150f, 5).pitchScore, 0.01f)
     }
 
     @Test
@@ -114,38 +98,30 @@ class ScoringEngineTest {
     }
 
     @Test
-    fun `melody score counts every hit`() {
-        val scores = List(10) { NoteScore(100f, 100f, 100f, true) }
-        val melodyScore = engine.calculateMelodyScore(scores)
+    fun `melody score averages every note`() {
+        val melodyScore = engine.calculateMelodyScore(List(10) { NoteScore(100f, 100f, 100f) })
         assertEquals(100f, melodyScore.overallScore, 0.01f)
-        assertEquals(10, melodyScore.notesHit)
+        assertEquals(100f, melodyScore.avgPitchScore, 0.01f)
+        assertEquals(100f, melodyScore.avgDurationScore, 0.01f)
     }
 
     @Test
     fun `melody score with mixed results`() {
         val scores = listOf(
-            NoteScore(100f, 100f, 100f, true),
-            NoteScore(75f, 80f, 83f, true),
-            NoteScore(0f, 50f, 30f, false),
-            NoteScore(100f, 90f, 89f, true)
+            NoteScore(100f, 100f, 100f),
+            NoteScore(75f, 80f, 83f),
+            NoteScore(0f, 50f, 30f),
+            NoteScore(100f, 90f, 89f)
         )
         val melodyScore = engine.calculateMelodyScore(scores)
-        assertEquals(3, melodyScore.notesHit)
+        assertEquals(75.5f, melodyScore.overallScore, 0.01f)
+        assertEquals(68.75f, melodyScore.avgPitchScore, 0.01f)
+        assertEquals(80f, melodyScore.avgDurationScore, 0.01f)
     }
 
     @Test
     fun `empty melody score`() {
-        val melodyScore = engine.calculateMelodyScore(emptyList())
-        assertEquals(MelodyScore.EMPTY, melodyScore)
-    }
-
-
-
-    @Test
-    fun `all miss melody has zero notes hit`() {
-        val scores = List(5) { NoteScore(0f, 100f, 40f, false) }
-        val melodyScore = engine.calculateMelodyScore(scores)
-        assertEquals(0, melodyScore.notesHit)
+        assertEquals(MelodyScore.EMPTY, engine.calculateMelodyScore(emptyList()))
     }
 
 
@@ -239,27 +215,27 @@ class ScoringEngineTest {
     @Test
     fun `total score is 100 when every category in play is perfect`() {
         for (level in 1..5) {
-            assertEquals(100f, ScoringEngine.combineScores(100f, 1f, 100f, level), 0.01f)
+            assertEquals(100f, ScoringEngine.combineScores(100f, 1f, level), 0.01f)
         }
     }
 
     @Test
     fun `two half marks no longer compound into a quarter`() {
-        assertEquals(50f, ScoringEngine.combineScores(50f, 1f, 50f, 4), 0.01f)
-        assertEquals(50f, ScoringEngine.combineScores(50f, 0.5f, 100f, 1), 0.01f)
+        assertEquals(50f, ScoringEngine.combineScores(50f, 1f, 4), 0.01f)
+        assertEquals(50f, ScoringEngine.combineScores(50f, 0.5f, 1), 0.01f)
     }
 
     @Test
     fun `total score averages every category in play`() {
-        assertEquals(75f, ScoringEngine.combineScores(100f, 0.5f, 0f, 2), 0.01f)
-        assertEquals(66.67f, ScoringEngine.combineScores(100f, 0.5f, 50f, 3), 0.01f)
-        assertEquals(75f, ScoringEngine.combineScores(100f, 0f, 50f, 4), 0.01f)
+        assertEquals(75f, ScoringEngine.combineScores(100f, 0.5f, 2), 0.01f)
+        assertEquals(75f, ScoringEngine.combineScores(100f, 0.5f, 3), 0.01f)
+        assertEquals(50f, ScoringEngine.combineScores(100f, 0f, 3), 0.01f)
     }
 
     @Test
-    fun `total score ignores the categories that are not scored at that level`() {
-        assertEquals(100f, ScoringEngine.combineScores(100f, 1f, 0f, 2), 0.01f)
-        assertEquals(100f, ScoringEngine.combineScores(100f, 0f, 100f, 4), 0.01f)
+    fun `total score ignores the song duration on the highest levels`() {
+        assertEquals(100f, ScoringEngine.combineScores(100f, 0f, 4), 0.01f)
+        assertEquals(40f, ScoringEngine.combineScores(40f, 1f, 5), 0.01f)
     }
 
     @Test

@@ -1349,7 +1349,7 @@ class MelodyViewModel @Inject constructor(
                         evaluateNote(result)
                     } else {
                         noteTracking.lastPitchAtMs = 0L
-                        noteTracking.lastCorrectAtMs = 0L
+                        noteTracking.lastInTuneAtMs = 0L
                     }
                 }
             }
@@ -1458,18 +1458,18 @@ class MelodyViewModel @Inject constructor(
                 (now - noteTracking.lastPitchAtMs).coerceIn(frameDurationMs, 150L)
             }
             noteTracking.lastPitchAtMs = now
+            noteTracking.centsOffSum += abs(centsOff)
+            noteTracking.centsOffCount++
             if (isCorrectNote) {
-                noteTracking.centsOffSum += abs(centsOff)
-                noteTracking.centsOffCount++
-                noteTracking.correctPitchFrameCount++
-                noteTracking.correctPitchMs += if (noteTracking.lastCorrectAtMs == 0L) {
+                noteTracking.inTuneFrameCount++
+                noteTracking.inTuneMs += if (noteTracking.lastInTuneAtMs == 0L) {
                     frameDurationMs
                 } else {
-                    (now - noteTracking.lastCorrectAtMs).coerceIn(frameDurationMs, 150L)
+                    (now - noteTracking.lastInTuneAtMs).coerceIn(frameDurationMs, 150L)
                 }
-                noteTracking.lastCorrectAtMs = now
+                noteTracking.lastInTuneAtMs = now
             } else {
-                noteTracking.lastCorrectAtMs = 0L
+                noteTracking.lastInTuneAtMs = 0L
             }
         }
 
@@ -1539,16 +1539,15 @@ class MelodyViewModel @Inject constructor(
         val isMidi = _deviceState.value.midiInputEnabled
         val frameDurationMs = AudioConstants.FRAME_DURATION_MS
         val detectedDurationMs = if (isMidi) noteTracking.detectedPitchFrameCount * frameDurationMs else noteTracking.detectedPitchMs
-        val correctDurationMs = if (isMidi) noteTracking.correctPitchFrameCount * frameDurationMs else noteTracking.correctPitchMs
+        val inTuneMs = if (isMidi) noteTracking.inTuneFrameCount * frameDurationMs else noteTracking.inTuneMs
 
-        val playedDurationMs = if (level <= 2) detectedDurationMs else correctDurationMs
+        val playedDurationMs = if (level <= 2) detectedDurationMs else inTuneMs
         val score = if (level <= 2) {
             val durationScore = scoringEngine.scoreDuration(playedDurationMs, expectedDurationMs, level)
             NoteScore(
                 pitchScore = 100f,
                 durationScore = durationScore,
-                overallScore = durationScore,
-                isHit = currentNoteDetectedCorrectly
+                overallScore = durationScore
             )
         } else {
             val effectiveCentsOff = if (noteTracking.centsOffCount > 0) noteTracking.centsOffSum / noteTracking.centsOffCount else 100f
@@ -1557,11 +1556,11 @@ class MelodyViewModel @Inject constructor(
                 expectedDurationMs = expectedDurationMs,
                 actualDurationMs = playedDurationMs
             )
-            scoringEngine.scoreNote(performance, level).copy(isHit = currentNoteDetectedCorrectly)
+            scoringEngine.scoreNote(performance, level)
         }
 
         val actualDurationMs = playedDurationMs.coerceAtLeast(1L)
-        val resultState = if (score.isHit) NoteResultState.HIT else NoteResultState.MISS
+        val resultState = if (currentNoteDetectedCorrectly) NoteResultState.HIT else NoteResultState.MISS
 
         _gameState.update { current ->
             val results = current.noteResults.toMutableMap()
@@ -1616,19 +1615,14 @@ class MelodyViewModel @Inject constructor(
         val timeRatio = songTimeRatio(track, waitMs)
         val timeScore = ScoringEngine.scoreTime(timeRatio, currentLevel)
 
-        val totalNotes = noteScores.size
-        val wrongNoteScore = if (totalNotes > 0) (melodyScore.notesHit.toFloat() / totalNotes) * 100f else 100f
-
         val adjustedScore = ScoringEngine.combineScores(
             noteScore = melodyScore.overallScore,
             timeScore = timeScore,
-            wrongNoteScore = wrongNoteScore,
             level = currentLevel
         )
         val adjustedMelodyScore = melodyScore.copy(
             overallScore = adjustedScore,
-            timeScore = timeScore,
-            wrongNoteScore = wrongNoteScore
+            timeScore = timeScore
         )
 
         val unlockedLevel = _gameState.value.unlockedLevel
@@ -1780,12 +1774,12 @@ class MelodyViewModel @Inject constructor(
 private class NoteTrackingState {
     var centsOffSum = 0f
     var centsOffCount = 0
-    var correctPitchFrameCount = 0
+    var inTuneFrameCount = 0
     var detectedPitchFrameCount = 0
-    var correctPitchMs = 0L
+    var inTuneMs = 0L
     var detectedPitchMs = 0L
     var lastPitchAtMs = 0L
-    var lastCorrectAtMs = 0L
+    var lastInTuneAtMs = 0L
     var isWaitingForNote = false
 
     fun reset() {
@@ -1798,11 +1792,11 @@ private class NoteTrackingState {
     private fun resetPitchAccumulators() {
         centsOffSum = 0f
         centsOffCount = 0
-        correctPitchFrameCount = 0
+        inTuneFrameCount = 0
         detectedPitchFrameCount = 0
-        correctPitchMs = 0L
+        inTuneMs = 0L
         detectedPitchMs = 0L
         lastPitchAtMs = 0L
-        lastCorrectAtMs = 0L
+        lastInTuneAtMs = 0L
     }
 }

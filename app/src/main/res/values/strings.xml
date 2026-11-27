@@ -255,7 +255,6 @@
     <string name="score_pitch_accuracy">Pitch accuracy</string>
     <string name="score_note_duration">Note duration</string>
     <string name="score_song_duration">Song duration</string>
-    <string name="score_correct_notes">Correct notes</string>
     <string name="score_progress">Progress</string>
     <string name="score_personal_best">Personal best</string>
 

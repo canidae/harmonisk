@@ -46,19 +46,8 @@ class ScoringEngine {
         fun bestScoreForLevel(levelScores: List<Pair<Int, Float>>, level: Int): Float =
             levelScores.filter { it.first == level }.maxOfOrNull { it.second } ?: 0f
 
-        fun combineScores(noteScore: Float, timeScore: Float, wrongNoteScore: Float, level: Int): Float {
-            var total = noteScore
-            var categories = 1
-            if (level <= 3) {
-                total += timeScore * 100f
-                categories++
-            }
-            if (level >= 3) {
-                total += wrongNoteScore
-                categories++
-            }
-            return total / categories
-        }
+        fun combineScores(noteScore: Float, timeScore: Float, level: Int): Float =
+            if (level <= 3) (noteScore + timeScore * 100f) / 2f else noteScore
 
         fun scoreTime(ratio: Double, level: Int): Float {
             if (level >= 4) return 1f
@@ -87,8 +76,7 @@ class ScoringEngine {
         return NoteScore(
             pitchScore = pitchScore,
             durationScore = durationScore,
-            overallScore = overallScore,
-            isHit = NoteUtils.isPitchAccepted(result.centsOff, level)
+            overallScore = overallScore
         )
     }
 
@@ -101,13 +89,8 @@ class ScoringEngine {
     fun calculateMelodyScore(noteScores: List<NoteScore>): MelodyScore {
         if (noteScores.isEmpty()) return MelodyScore.EMPTY
 
-        val avgScore = noteScores.map { it.overallScore }.average().toFloat()
-        val notesHit = noteScores.count { it.isHit }
-
         return MelodyScore(
-            overallScore = avgScore,
-            totalNotes = noteScores.size,
-            notesHit = notesHit,
+            overallScore = noteScores.map { it.overallScore }.average().toFloat(),
             avgPitchScore = noteScores.map { it.pitchScore }.average().toFloat(),
             avgDurationScore = noteScores.map { it.durationScore }.average().toFloat()
         )
@@ -123,21 +106,17 @@ data class NotePerformance(
 data class NoteScore(
     val pitchScore: Float,
     val durationScore: Float,
-    val overallScore: Float,
-    val isHit: Boolean
+    val overallScore: Float
 )
 
 
 data class MelodyScore(
     val overallScore: Float,
-    val totalNotes: Int,
-    val notesHit: Int,
     val avgPitchScore: Float,
     val avgDurationScore: Float,
-    val timeScore: Float = 1.0f,
-    val wrongNoteScore: Float = 100f
+    val timeScore: Float = 1.0f
 ) {
     companion object {
-        val EMPTY = MelodyScore(0f, 0, 0, 0f, 0f)
+        val EMPTY = MelodyScore(0f, 0f, 0f)
     }
 }

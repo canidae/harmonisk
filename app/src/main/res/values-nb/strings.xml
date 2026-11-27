@@ -255,7 +255,6 @@
     <string name="score_pitch_accuracy">Tonehøyde</string>
     <string name="score_note_duration">Notelengde</string>
     <string name="score_song_duration">Sanglengde</string>
-    <string name="score_correct_notes">Riktige noter</string>
     <string name="score_progress">Fremdrift</string>
     <string name="score_personal_best">Personlig rekord</string>
 
