@@ -1683,7 +1683,7 @@ class MelodyViewModel @Inject constructor(
                 existing.map { it.level to it.overallScore },
                 currentLevel
             )
-            val scoreImproved = adjustedScore > previousBestScore
+            val scoreImproved = ScoringEngine.improvesPersonalBest(adjustedScore, previousBestScore)
             _personalBestScore.value = maxOf(previousBestScore, adjustedScore)
             _celebrationLevel.value = if (scoreImproved) CelebrationLevel.fromScore(adjustedScore)
             else CelebrationLevel.NONE

@@ -1,6 +1,7 @@
 package net.exent.harmonisk.music
 
 import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.max
 
@@ -45,6 +46,11 @@ class ScoringEngine {
 
         fun bestScoreForLevel(levelScores: List<Pair<Int, Float>>, level: Int): Float =
             levelScores.filter { it.first == level }.maxOfOrNull { it.second } ?: 0f
+
+        fun displayedScore(score: Float): Int = floor(score).toInt()
+
+        fun improvesPersonalBest(score: Float, personalBest: Float): Boolean =
+            displayedScore(score) > displayedScore(personalBest)
 
         fun combineScores(noteScore: Float, timeScore: Float, level: Int): Float =
             if (level <= 3) (noteScore + timeScore * 100f) / 2f else noteScore

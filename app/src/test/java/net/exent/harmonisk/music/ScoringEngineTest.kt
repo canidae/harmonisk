@@ -245,6 +245,14 @@ class ScoringEngineTest {
     }
 
     @Test
+    fun `a personal best must be visibly beaten`() {
+        assertFalse(ScoringEngine.improvesPersonalBest(83.9f, 83.6f))
+        assertFalse(ScoringEngine.improvesPersonalBest(83f, 83.9f))
+        assertTrue(ScoringEngine.improvesPersonalBest(84f, 83.9f))
+        assertTrue(ScoringEngine.improvesPersonalBest(100f, 0f))
+    }
+
+    @Test
     fun `best score for a level without runs is zero`() {
         assertEquals(0f, ScoringEngine.bestScoreForLevel(listOf(1 to 100f), 2), 0.01f)
     }
