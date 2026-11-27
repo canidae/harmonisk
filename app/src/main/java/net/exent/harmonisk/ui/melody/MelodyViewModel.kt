@@ -188,8 +188,7 @@ class MelodyViewModel @Inject constructor(
         }
 
     private var synthOpenJob: Job? = null
-    private var inputDelayMs: Int = 0
-    private var outputDelayMs: Int = 0
+    private var audioDelayMs: Int = 0
     private var referenceA4: Float = NoteUtils.DEFAULT_CONCERT_PITCH
 
     init {
@@ -222,13 +221,8 @@ class MelodyViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            audioDelayRepository.activeInputDelay.collect { delayMs ->
-                inputDelayMs = delayMs
-            }
-        }
-        viewModelScope.launch {
-            audioDelayRepository.activeOutputDelay.collect { delayMs ->
-                outputDelayMs = delayMs
+            audioDelayRepository.audioDelay.collect { delayMs ->
+                audioDelayMs = delayMs
             }
         }
         viewModelScope.launch {
@@ -265,9 +259,6 @@ class MelodyViewModel @Inject constructor(
                 }
         }
     }
-
-    val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     fun toggleMidiInput() {
         midiDeviceManager.setInputOverride(
@@ -877,13 +868,13 @@ class MelodyViewModel @Inject constructor(
         previewClockJob = null
         if (track == null) return
         _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
-        _gameState.update { it.copy(previewTimeSeconds = startSeconds - leadInSeconds - outputDelayMs / 1000.0) }
+        _gameState.update { it.copy(previewTimeSeconds = previewClockSeconds(startSeconds, leadInSeconds, 0.0, audioDelayMs)) }
         previewClockJob = viewModelScope.launch {
             val startTime = SystemClock.elapsedRealtime()
             while (isActive && melodyPlayer.isPlaying.value) {
                 val elapsed = (SystemClock.elapsedRealtime() - startTime) / 1000.0
                 _gameState.update {
-                    it.copy(previewTimeSeconds = previewClockSeconds(startSeconds, leadInSeconds, elapsed, outputDelayMs))
+                    it.copy(previewTimeSeconds = previewClockSeconds(startSeconds, leadInSeconds, elapsed, audioDelayMs))
                 }
                 delay(16)
             }
@@ -935,9 +926,6 @@ class MelodyViewModel @Inject constructor(
         pinOverrides(MelodySettingsRepository.OVERRIDE_METRONOME)
         saveMelodySettings()
     }
-
-    private fun adjustedNowSeconds(phase: PlayPhase, currentTimeSeconds: Double): Double =
-        currentTimeSeconds + nowLineLeadSeconds(phase, inputDelayMs)
 
     private fun twoBarLeadInSeconds(track: MelodyTrack? = _gameState.value.melodyTrack): Double {
         track ?: return 2.0 * 4 * (60.0 / 120.0)
@@ -1108,7 +1096,7 @@ class MelodyViewModel @Inject constructor(
     }
 
     private fun playbackStartTime(leadInSeconds: Double): Double =
-        -leadInSeconds - audioLeadSeconds(inputDelayMs, outputDelayMs)
+        -leadInSeconds - audioLeadSeconds(audioDelayMs)
 
     fun stop() {
         playbackStartJob?.cancel()
@@ -1180,9 +1168,8 @@ class MelodyViewModel @Inject constructor(
         if (_gameState.value.previewTimeSeconds != null || _gameState.value.replayTimeSeconds != null) return
         val phase = _gameState.value.phase
         if (phase == PlayPhase.PLAYING || phase == PlayPhase.WAITING_FOR_NOTE) return
-        val adjustedNow = adjustedNowSeconds(phase, _gameState.value.currentTimeSeconds)
         val currentOffset = _viewState.value.songTimeOffsetSeconds
-        seekToViewTime(adjustedNow + currentOffset + deltaSeconds)
+        seekToViewTime(_gameState.value.currentTimeSeconds + currentOffset + deltaSeconds)
     }
 
     fun seekToViewTime(viewTimeSeconds: Double) {
@@ -1192,12 +1179,11 @@ class MelodyViewModel @Inject constructor(
         val gameSnapshot = _gameState.value
         val track = gameSnapshot.melodyTrack ?: return
         val currentTimeSeconds = gameSnapshot.currentTimeSeconds
-        val adjustedNow = adjustedNowSeconds(phase, currentTimeSeconds)
         val timeSig = track.timeSignatureAt(0L)
         val firstTempoUs = track.tempoChanges.firstOrNull()?.microsecondsPerBeat ?: 500_000L
         val barDurationSeconds = timeSig.numerator * firstTempoUs / 1_000_000.0
         val minOffset = -2.0 * barDurationSeconds - currentTimeSeconds
-        val newOffset = (viewTimeSeconds - adjustedNow)
+        val newOffset = (viewTimeSeconds - currentTimeSeconds)
             .coerceIn(minOffset, track.durationSeconds - currentTimeSeconds + 2.0)
         _viewState.update { it.copy(songTimeOffsetSeconds = newOffset) }
     }
@@ -1274,7 +1260,7 @@ class MelodyViewModel @Inject constructor(
                     addAll(metronomeTracks(gs.metronomeMode, gs.waitMode, gs.metronomeTrack, countInTracks))
                 }
                 if (soundFontSynthesizer.isReady) {
-                    melodyPlayer.updateGameTime(currentTime + audioLeadSeconds(inputDelayMs, outputDelayMs), playTracks)
+                    melodyPlayer.updateGameTime(currentTime + audioLeadSeconds(audioDelayMs), playTracks)
                 }
 
                 delay(16)

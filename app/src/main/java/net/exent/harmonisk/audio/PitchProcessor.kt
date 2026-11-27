@@ -24,8 +24,6 @@ class PitchProcessor(
         private const val ONSET_DB_THRESHOLD = 5f
         private const val ONSET_DEBOUNCE_CHUNKS = 2
 
-        const val INPUT_ONSET_MS = (ONSET_DEBOUNCE_CHUNKS * AudioConstants.BUFFER_SIZE_SAMPLES * 1000 + AudioConstants.SAMPLE_RATE / 2) / AudioConstants.SAMPLE_RATE
-
         private const val LOWEST_NOTE_MARGIN_CENTS = 200f
 
         private const val HIGHEST_NOTE_MARGIN_CENTS = 200f
@@ -47,10 +45,6 @@ class PitchProcessor(
 
     @Volatile
     private var highestFrequency = highestDetectableFrequency(instrument, referenceA4)
-
-    @Volatile
-    var inferenceLatencyMs: Int = 0
-        private set
 
     fun setSilenceThreshold(db: Float) { silenceThresholdDb = db }
 
@@ -128,15 +122,12 @@ class PitchProcessor(
             return PitchResult.SILENT
         }
 
-        val start = System.nanoTime()
         val result = pitchDetector.detectPitch(
             buffer = buffer,
             lowestFrequency = lowestFrequency,
             referenceFrequency = referenceFrequency,
             highestFrequency = highestFrequency
         )
-        val elapsed = ((System.nanoTime() - start) / 1_000_000).toInt()
-        if (elapsed in 0..500) inferenceLatencyMs = elapsed
         if (result.frequency <= 0f) {
             debouncer.filter(0f)
             return PitchResult.SILENT

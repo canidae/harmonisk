@@ -179,14 +179,9 @@ fun SettingsScreen(
                 helpText = stringResource(R.string.settings_delay_help)
             ) {
                 val device by viewModel.currentDevice.collectAsStateWithLifecycle()
-                val inputDevice by viewModel.currentInputDevice.collectAsStateWithLifecycle()
-                val outputDelay by viewModel.activeOutputDelay.collectAsStateWithLifecycle()
-                val inputDelay by viewModel.activeInputDelay.collectAsStateWithLifecycle()
+                val audioDelay by viewModel.audioDelay.collectAsStateWithLifecycle()
 
-                val inName = inputDevice?.name
-                    ?: inputDevice?.nameRes?.takeIf { it != 0 }?.let { stringResource(it) }
-                    ?: stringResource(R.string.microphone)
-                val outName = device?.name
+                val deviceName = device?.name
                     ?: device?.nameRes?.takeIf { it != 0 }?.let { stringResource(it) }
                     ?: stringResource(R.string.speaker)
                 Row(
@@ -194,7 +189,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = stringResource(R.string.settings_devices, inName, outName),
+                        text = deviceName,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
@@ -230,16 +225,8 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
                 DelaySlider(
-                    name = stringResource(R.string.settings_output_name),
-                    value = outputDelay,
-                    onValueChange = viewModel::setOutputDelay
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-                DelaySlider(
-                    name = stringResource(R.string.settings_input_name),
-                    value = inputDelay,
-                    onValueChange = viewModel::setInputDelay
+                    value = audioDelay,
+                    onValueChange = viewModel::setAudioDelay
                 )
             }
 
@@ -280,7 +267,6 @@ private fun ThemeModeSelector(
 
 @Composable
 private fun DelaySlider(
-    name: String,
     value: Int,
     onValueChange: (Int) -> Unit
 ) {
@@ -293,17 +279,17 @@ private fun DelaySlider(
     )
     Box(modifier = Modifier.fillMaxWidth()) {
         Text(
-            stringResource(R.string.settings_input_delay_min),
+            stringResource(R.string.settings_delay_min),
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.align(Alignment.CenterStart)
         )
         Text(
-            stringResource(R.string.settings_input_delay_max),
+            stringResource(R.string.settings_delay_max),
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.align(Alignment.CenterEnd)
         )
         Text(
-            text = stringResource(R.string.settings_delay_value, name, value),
+            text = stringResource(R.string.settings_delay_value, value),
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.align(Alignment.Center)
         )

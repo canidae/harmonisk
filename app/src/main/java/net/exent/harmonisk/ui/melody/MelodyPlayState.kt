@@ -84,18 +84,14 @@ enum class NoteResultState {
     ACTIVE, HIT, MISS
 }
 
-fun nowLineLeadSeconds(phase: PlayPhase, inputDelayMs: Int): Double =
-    if (phase == PlayPhase.READY) 0.0 else inputDelayMs / 1000.0
-
-fun audioLeadSeconds(inputDelayMs: Int, outputDelayMs: Int): Double =
-    (inputDelayMs + outputDelayMs) / 1000.0
+fun audioLeadSeconds(audioDelayMs: Int): Double = audioDelayMs / 1000.0
 
 fun previewClockSeconds(
     startSeconds: Double,
     leadInSeconds: Double,
     elapsedSeconds: Double,
-    outputDelayMs: Int
-): Double = startSeconds + elapsedSeconds - leadInSeconds - outputDelayMs / 1000.0
+    audioDelayMs: Int
+): Double = startSeconds + elapsedSeconds - leadInSeconds - audioDelayMs / 1000.0
 
 fun metronomeTracks(
     mode: MetronomeMode,

@@ -80,12 +80,6 @@ class RecordViewModel @Inject constructor(
     private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val snackbarMessage: SharedFlow<String> = _snackbarMessage.asSharedFlow()
 
-    val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
-    val activeOutputDelay: StateFlow<Int> = audioDelayRepository.activeOutputDelay
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
     private var listeningJob: Job? = null
     private var midiListeningJob: Job? = null
     private var replayJob: Job? = null
@@ -106,8 +100,7 @@ class RecordViewModel @Inject constructor(
 
     private val activeMidiNotes = mutableMapOf<Int, PlayedNote>()
 
-    private var inputDelayMs: Int = 0
-    private var outputDelayMs: Int = 0
+    private var audioDelayMs: Int = 0
     private var replayGeneration = 0
     private var isPausedByGesture = false
     private var referenceA4: Float = NoteUtils.DEFAULT_CONCERT_PITCH
@@ -178,13 +171,8 @@ class RecordViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            audioDelayRepository.activeInputDelay.collect { delayMs ->
-                inputDelayMs = delayMs
-            }
-        }
-        viewModelScope.launch {
-            audioDelayRepository.activeOutputDelay.collect { delayMs ->
-                outputDelayMs = delayMs
+            audioDelayRepository.audioDelay.collect { delayMs ->
+                audioDelayMs = delayMs
             }
         }
     }
@@ -959,7 +947,6 @@ class RecordViewModel @Inject constructor(
                 return evts
             }
 
-            val visualStartOffsetMs = -inputDelayMs.toLong()
             var audioPositionMs = _state.value.songPositionMs
             var allowVisualBeforeLoopStart = true
             var seekAnchorMs = Long.MIN_VALUE
@@ -975,10 +962,9 @@ class RecordViewModel @Inject constructor(
                 }
 
                 val (loopStartMs, loopEndMs) = effectiveLoopBounds()
-                val rawVisualMs = audioPositionMs - visualStartOffsetMs
 
                 val stateVisualPosition = _state.value.songPositionMs
-                val expectedVisual = rawVisualMs.coerceIn(maxOf(seekAnchorMs, loopStartMs), loopEndMs)
+                val expectedVisual = audioPositionMs.coerceIn(maxOf(seekAnchorMs, loopStartMs), loopEndMs)
                 val currentBpm = _state.value.bpm
                 val currentBeatsPerBar = _state.value.beatsPerBar
                 val bpmChanged = currentBpm != lastBuiltBpm || currentBeatsPerBar != lastBuiltBeatsPerBar
@@ -1010,7 +996,7 @@ class RecordViewModel @Inject constructor(
 
                 audioPositionMs += delta
 
-                val outputOffsetMs = (inputDelayMs + outputDelayMs).toLong()
+                val outputOffsetMs = audioDelayMs.toLong()
                 while (eventIndex < events.size && events[eventIndex].timeMs - outputOffsetMs <= audioPositionMs) {
                     val ev = events[eventIndex++]
                     if (ev.trackOrigin == SoundFontSynthesizer.DRUM_CHANNEL) {
@@ -1022,13 +1008,12 @@ class RecordViewModel @Inject constructor(
                     }
                 }
 
-                val rawVisualMsPostDelta = audioPositionMs - visualStartOffsetMs
                 val visualLowerBound = maxOf(seekAnchorMs, loopStartMs)
                 val visualPositionMs =
-                    if (!allowVisualBeforeLoopStart && rawVisualMsPostDelta < loopStartMs) {
-                        (loopEndMs + rawVisualMsPostDelta - loopStartMs).coerceIn(loopStartMs, loopEndMs)
+                    if (!allowVisualBeforeLoopStart && audioPositionMs < loopStartMs) {
+                        (loopEndMs + audioPositionMs - loopStartMs).coerceIn(loopStartMs, loopEndMs)
                     } else {
-                        rawVisualMsPostDelta.coerceIn(visualLowerBound, loopEndMs)
+                        audioPositionMs.coerceIn(visualLowerBound, loopEndMs)
                     }
                 _state.update { it.copy(songPositionMs = visualPositionMs) }
 

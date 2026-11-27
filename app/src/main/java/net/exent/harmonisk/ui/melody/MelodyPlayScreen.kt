@@ -77,7 +77,6 @@ fun MelodyPlayScreen(
     val deviceState by viewModel.deviceState.collectAsStateWithLifecycle()
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsStateWithLifecycle()
     val recordingAvailable by viewModel.recordingAvailable.collectAsStateWithLifecycle()
-    val inputDelay by viewModel.activeInputDelay.collectAsStateWithLifecycle()
     val scoreHistory by viewModel.currentScoreHistory.collectAsStateWithLifecycle()
     val celebrationLevel by viewModel.celebrationLevel.collectAsStateWithLifecycle()
     val personalBest by viewModel.personalBestScore.collectAsStateWithLifecycle()
@@ -351,9 +350,8 @@ fun MelodyPlayScreen(
                         .fillMaxWidth()
                 ) {
                     val track = gameState.melodyTrack
-                    val adjustedNow = gameState.currentTimeSeconds +
-                            nowLineLeadSeconds(gameState.phase, inputDelay)
-                    val canvasNow = gameState.replayTimeSeconds ?: gameState.previewTimeSeconds ?: adjustedNow
+                    val canvasNow = gameState.replayTimeSeconds ?: gameState.previewTimeSeconds
+                            ?: gameState.currentTimeSeconds
                     val alphaTex = remember(track) { track?.let { MidiToAlphaTex.generate(it) } }
                     val pageSheet = gameState.hideNoteBars
                     val sheetPlaying = gameState.phase == PlayPhase.PLAYING ||
