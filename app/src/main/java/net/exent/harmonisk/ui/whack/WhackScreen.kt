@@ -26,6 +26,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -389,7 +390,7 @@ private fun FingerBadge(finger: Int, color: Color) {
             text = "$finger",
             fontSize = (BADGE_SIZE.value * 0.55f).sp,
             fontWeight = FontWeight.Black,
-            color = if (finger == 2 || finger == 3) Color.Black else Color.White
+            color = if (color.luminance() > 0.2f) Color.Black else Color.White
         )
     }
 }
