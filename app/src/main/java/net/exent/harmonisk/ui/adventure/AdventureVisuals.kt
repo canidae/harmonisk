@@ -161,25 +161,6 @@ fun ClapBurst(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun AdventurePill(text: String, color: Color, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .clip(CircleShape)
-            .background(color.copy(alpha = 0.18f))
-            .border(1.dp, color.copy(alpha = 0.55f), CircleShape)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = color,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-}
-
-@Composable
 fun StorybookCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,

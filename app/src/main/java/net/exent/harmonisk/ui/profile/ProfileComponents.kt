@@ -397,7 +397,7 @@ private fun DefaultsFields(defaults: ProfileDefaults, onDefaultsChange: (Profile
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = stringResource(R.string.profile_metronome),
+                text = stringResource(R.string.metronome_title),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
@@ -428,12 +428,12 @@ private fun DefaultsFields(defaults: ProfileDefaults, onDefaultsChange: (Profile
             }
         }
         ToggleRow(
-            label = stringResource(R.string.profile_prefer_open_strings),
+            label = stringResource(R.string.melody_play_prefer_open_strings),
             checked = defaults.preferOpenStrings,
             onCheckedChange = { onDefaultsChange(defaults.copy(preferOpenStrings = it)) }
         )
         ToggleRow(
-            label = stringResource(R.string.profile_easy_key),
+            label = stringResource(R.string.melody_play_auto_key),
             checked = defaults.easyKey,
             onCheckedChange = { onDefaultsChange(defaults.copy(easyKey = it)) }
         )

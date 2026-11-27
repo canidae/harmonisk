@@ -302,9 +302,6 @@
     <string name="profile_edit">Edit profile</string>
     <string name="profile_save">Save</string>
     <string name="profile_starting_level">Starting level: %1$d</string>
-    <string name="profile_metronome">Metronome</string>
-    <string name="profile_prefer_open_strings">Prefer open strings</string>
-    <string name="profile_easy_key">Easy key</string>
     <string name="profile_choose_emoji">Choose emoji</string>
     <string name="profile_level_scoring_1">Preview of the song and you\'re scored on how long you hold each note and on song duration.</string>
     <string name="profile_level_scoring_2">Like level 1, but without the preview.</string>
@@ -317,7 +314,6 @@
         <item quantity="other">%1$d stickers</item>
     </plurals>
     <string name="adventure_throw_again">Throw again</string>
-    <string name="adventure_go_again">Go again</string>
     <string name="adventure_pull_lever">Pull the lever</string>
     <string name="adventure_throw_dice">Throw the dice</string>
     <string name="adventure_choose_song">Choose a song</string>

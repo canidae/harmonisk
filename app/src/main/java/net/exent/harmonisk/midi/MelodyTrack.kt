@@ -105,16 +105,4 @@ class MelodyTrack(
             ?: timeSignatures.firstOrNull()
             ?: TimeSignatureEvent(tick = 0, numerator = 4, denominator = 4)
     }
-
-    fun secondsToTick(seconds: Double): Long {
-        if (seconds <= 0.0) return 0L
-        val seg = segmentFor(seconds) { it.startSecond }
-        val elapsedInSegment = seconds - seg.startSecond
-        val segmentEndSec = seg.startSecond + (seg.endTick - seg.startTick).toDouble() * seg.usPerBeat / (ticksPerQuarterNote * 1_000_000.0)
-        if (seconds >= segmentEndSec) {
-            return seg.endTick
-        }
-        return seg.startTick + (elapsedInSegment * ticksPerQuarterNote * 1_000_000.0 / seg.usPerBeat).toLong()
-    }
-
 }

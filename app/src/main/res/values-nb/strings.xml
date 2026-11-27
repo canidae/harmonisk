@@ -302,9 +302,6 @@
     <string name="profile_edit">Rediger profil</string>
     <string name="profile_save">Lagre</string>
     <string name="profile_starting_level">Startnivå: %1$d</string>
-    <string name="profile_metronome">Metronom</string>
-    <string name="profile_prefer_open_strings">Foretrekk åpne strenger</string>
-    <string name="profile_easy_key">Enkel toneart</string>
     <string name="profile_choose_emoji">Velg emoji</string>
     <string name="profile_level_scoring_1">Forhåndsvisning av sangen og du får poeng for hvor lenge du holder hver note og tidsbruk på sangen.</string>
     <string name="profile_level_scoring_2">Som nivå 1, men uten forhåndsvisning.</string>
@@ -317,7 +314,6 @@
         <item quantity="other">%1$d klistremerker</item>
     </plurals>
     <string name="adventure_throw_again">Kast igjen</string>
-    <string name="adventure_go_again">Igjen</string>
     <string name="adventure_pull_lever">Dra i spaken</string>
     <string name="adventure_throw_dice">Kast terningen</string>
     <string name="adventure_choose_song">Velg en sang</string>
