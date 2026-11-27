@@ -61,11 +61,11 @@ class ScoringEngineTest {
     }
 
     @Test
-    fun `level one gives full score from eighty five percent of the note`() {
+    fun `level one gives full score from seventy percent of the note`() {
         val result = engine.scoreNote(NotePerformance(
             centsOff = 0f,
             expectedDurationMs = 500,
-            actualDurationMs = 425
+            actualDurationMs = 350
         ), 1)
         assertEquals(100f, result.durationScore, 0.01f)
     }
@@ -75,7 +75,7 @@ class ScoringEngineTest {
         val result = engine.scoreNote(NotePerformance(
             centsOff = 0f,
             expectedDurationMs = 1000,
-            actualDurationMs = 425
+            actualDurationMs = 350
         ), 1)
         assertEquals(50f, result.durationScore, 0.01f)
     }

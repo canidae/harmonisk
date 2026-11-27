@@ -7,7 +7,7 @@ import kotlin.math.max
 class ScoringEngine {
 
     companion object {
-        const val DURATION_GRACE_LEVEL_1 = 0.85f
+        const val DURATION_GRACE_LEVEL_1 = 0.70f
         const val DURATION_GRACE_LEVEL_2 = 0.875f
         const val DURATION_GRACE_LEVEL_3 = 0.90f
         const val DURATION_GRACE_LEVEL_4 = 0.925f
