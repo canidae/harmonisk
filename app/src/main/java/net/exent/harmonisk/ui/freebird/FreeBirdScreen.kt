@@ -121,6 +121,8 @@ fun FreeBirdScreen(
                 GameOverOverlay(
                     score = game.score,
                     best = game.best,
+                    profile = profile,
+                    onProfile = { profileDialogs.open(false) },
                     onRestart = viewModel::startGame,
                     onBack = onBack
                 )
@@ -248,7 +250,14 @@ private fun FreeBirdTimer(seconds: Long, warning: Boolean, modifier: Modifier = 
 }
 
 @Composable
-private fun GameOverOverlay(score: Int, best: Int, onRestart: () -> Unit, onBack: () -> Unit) {
+private fun GameOverOverlay(
+    score: Int,
+    best: Int,
+    profile: ProfileRepository.Profile?,
+    onProfile: () -> Unit,
+    onRestart: () -> Unit,
+    onBack: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -286,6 +295,10 @@ private fun GameOverOverlay(score: Int, best: Int, onRestart: () -> Unit, onBack
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(20.dp))
+                profile?.let {
+                    ProfileButton(name = it.name, emoji = it.emoji, onClick = onProfile)
+                    Spacer(Modifier.height(16.dp))
+                }
                 Button(
                     onClick = onRestart,
                     modifier = Modifier.fillMaxWidth()

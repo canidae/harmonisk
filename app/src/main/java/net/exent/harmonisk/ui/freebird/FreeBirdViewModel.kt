@@ -53,7 +53,7 @@ class FreeBirdViewModel @Inject constructor(
                 val profileId = profile?.id
                 best = profile?.let { freeBirdRepository.best(it.id) } ?: 0
                 _game.update { it.copy(best = best) }
-                if (lastProfileId != null && lastProfileId != profileId) stopGame()
+                if (lastProfileId != null && lastProfileId != profileId && _game.value.playing) stopGame()
                 lastProfileId = profileId
             }
         }
