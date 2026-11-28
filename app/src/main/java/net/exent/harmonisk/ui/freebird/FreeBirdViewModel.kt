@@ -72,7 +72,8 @@ class FreeBirdViewModel @Inject constructor(
         gameJob?.cancel()
         paused = false
         startListening()
-        best = profileRepository.activeProfileId?.let { freeBirdRepository.best(it) } ?: 0
+        val profileId = profileRepository.activeProfileId
+        best = profileId?.let { freeBirdRepository.best(it) } ?: 0
         _game.value = FreeBirdGameState(best = best, playing = true, timeMs = FREEBIRD_GAME_TIME_MS, level = 1)
         gameJob = viewModelScope.launch {
             val startedAt = SystemClock.elapsedRealtime()
@@ -159,7 +160,9 @@ class FreeBirdViewModel @Inject constructor(
                 }
                 if (score > best) {
                     best = score
-                    profileRepository.activeProfileId?.let { freeBirdRepository.saveBest(it, score) }
+                    if (profileId == profileRepository.activeProfileId) {
+                        profileId?.let { freeBirdRepository.saveBest(it, score) }
+                    }
                 }
                 _game.value = state.copy(
                     score = score,
