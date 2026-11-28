@@ -15,28 +15,33 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlin.math.sqrt
 
-private val GullBody = Color(0xFFF8F7F1)
-private val GullShade = Color(0xFFDCE3E3)
-private val GullMantle = Color(0xFFC3D0D5)
-private val GullWing = Color(0xFFC9D4D8)
-private val GullWingLight = Color(0xFFE4EAEA)
-private val GullWingShade = Color(0xFFB4C3C8)
-private val GullTip = Color(0xFF5F6F77)
-private val GullBeak = Color(0xFFF2B33E)
-private val GullBeakSpot = Color(0xFFDC7B31)
-private val GullEye = Color(0xFF273137)
-private val GullShadow = Color(0xFF46575A)
+private val GullBody = Color(0xFFFBFAF4)
+private val GullBodyShade = Color(0xFFE2E9E9)
+private val GullMantle = Color(0xFFC5D1D6)
+private val GullWing = Color(0xFFCBD6DA)
+private val GullWingLight = Color(0xFFEAF0F0)
+private val GullWingShade = Color(0xFFAEBEC4)
+private val GullTip = Color(0xFF444A4F)
+private val GullBeak = Color(0xFFF4A93F)
+private val GullBeakLight = Color(0xFFFFC971)
+private val GullBeakTip = Color(0xFFDE7C36)
+private val GullEyeBlue = Color(0xFF3C70D4)
+private val GullEye = Color(0xFF1F2428)
+private val GullFoot = Color(0xFFEC9A42)
+private val GullFootShade = Color(0xFFC87428)
+private val GullLine = Color(0xFF5D6C71)
 
 @Composable
 fun FreeBirdSeagull(modifier: Modifier = Modifier) {
-    val phase by rememberFreeBirdPhase(5_600L, fps = 12)
+    val phase by rememberFreeBirdPhase(3_200L, fps = 30)
     Canvas(modifier) {
         val unit = size.width
         val bx = unit * BIRD_PERCH_X
         val by = size.height * BIRD_PERCH_Y - unit * 0.0105f
         val angle = phase * 2f * PI.toFloat()
-        drawSeagull(unit, bx, by, sin(angle), sin(angle + 1.1f), sin(angle + 2.2f))
+        drawSeagull(unit, bx, by, sin(angle), sin(angle + 3.4f))
     }
 }
 
@@ -44,175 +49,276 @@ private fun DrawScope.drawSeagull(
     unit: Float,
     bx: Float,
     by: Float,
-    lift: Float,
-    headTurn: Float,
+    flap: Float,
     tailSway: Float
 ) {
     fun x(value: Float) = bx + value * unit
     fun y(value: Float) = by + value * unit
     fun point(px: Float, py: Float) = Offset(x(px), y(py))
+    val outline = Stroke(unit * 0.0026f)
 
-    rotate(-1.0f * lift, pivot = point(0.0f, 0.025f)) {
+    rotate(flap * 2.4f + 10f, pivot = point(0.080f, 0.010f)) {
         val farWing = Path().apply {
-            moveTo(x(0.0f), y(0.018f))
-            cubicTo(x(0.06f), y(0.01f), x(0.15f), y(0.04f), x(0.245f), y(0.08f))
-            cubicTo(x(0.2f), y(0.09f), x(0.13f), y(0.085f), x(0.07f), y(0.062f))
-            lineTo(x(0.0f), y(0.042f))
+            moveTo(x(0.070f), y(0.020f))
+            cubicTo(x(0.096f), y(-0.024f), x(0.150f), y(-0.062f), x(0.222f), y(-0.072f))
+            cubicTo(x(0.248f), y(-0.075f), x(0.262f), y(-0.068f), x(0.264f), y(-0.058f))
+            lineTo(x(0.250f), y(-0.048f))
+            lineTo(x(0.242f), y(-0.058f))
+            lineTo(x(0.236f), y(-0.042f))
+            lineTo(x(0.226f), y(-0.052f))
+            lineTo(x(0.218f), y(-0.034f))
+            lineTo(x(0.206f), y(-0.044f))
+            lineTo(x(0.196f), y(-0.024f))
+            lineTo(x(0.182f), y(-0.034f))
+            lineTo(x(0.170f), y(-0.012f))
+            cubicTo(x(0.140f), y(0.010f), x(0.104f), y(0.026f), x(0.070f), y(0.020f))
             close()
         }
-        drawPath(farWing, GullWingShade)
+        drawPath(farWing, GullWing)
         clipPath(farWing) {
-            drawRect(
-                GullTip.copy(alpha = 0.85f),
-                topLeft = Offset(x(0.205f), y(0.045f)),
-                size = Size(0.06f * unit, 0.07f * unit)
+            drawPath(
+                Path().apply {
+                    moveTo(x(0.070f), y(0.020f))
+                    cubicTo(x(0.100f), y(-0.032f), x(0.164f), y(-0.070f), x(0.246f), y(-0.070f))
+                    cubicTo(x(0.258f), y(-0.068f), x(0.262f), y(-0.058f), x(0.254f), y(-0.050f))
+                },
+                GullWingLight,
+                style = Stroke(unit * 0.010f)
             )
+            val wrist = point(0.198f, -0.042f)
+            listOf(
+                0.266f to -0.050f,
+                0.264f to -0.060f,
+                0.255f to -0.070f,
+                0.240f to -0.078f
+            ).forEach { (tipX, tipY) ->
+                feather(wrist, point(tipX, tipY), unit * 0.012f, GullTip, 0.2f)
+            }
             drawLine(
-                GullMantle.copy(alpha = 0.45f),
-                point(0.215f, 0.06f),
-                point(0.235f, 0.088f),
-                strokeWidth = unit * 0.003f,
-                cap = StrokeCap.Round
-            )
-            drawLine(
-                GullMantle.copy(alpha = 0.35f),
-                point(0.228f, 0.062f),
-                point(0.243f, 0.085f),
-                strokeWidth = unit * 0.0025f,
+                GullWingShade.copy(alpha = 0.6f),
+                point(0.168f, -0.016f),
+                point(0.198f, -0.046f),
+                strokeWidth = unit * 0.0022f,
                 cap = StrokeCap.Round
             )
         }
+        drawPath(farWing, GullLine.copy(alpha = 0.32f), style = outline)
+    }
+
+    rotate(tailSway * 1.6f, pivot = point(-0.060f, 0.042f)) {
+        val root = point(-0.058f, 0.042f)
+        listOf(
+            -0.150f to 0.032f,
+            -0.150f to 0.050f,
+            -0.136f to 0.066f
+        ).forEach { (tipX, tipY) ->
+            val tip = point(tipX, tipY)
+            drawPath(featherPath(root, tip, unit * 0.013f, 0f, 1f), GullWingLight)
+            drawPath(featherPath(root, tip, unit * 0.013f, 0.72f, 1f), GullMantle)
+            drawPath(
+                featherPath(root, tip, unit * 0.013f, 0f, 1f),
+                GullLine.copy(alpha = 0.25f),
+                style = Stroke(unit * 0.0016f)
+            )
+        }
+    }
+
+    val legs = listOf(
+        Triple(0.014f, 0.060f, -0.010f),
+        Triple(0.000f, 0.062f, -0.034f)
+    )
+    legs.forEachIndexed { index, (startX, startY, ankleX) ->
+        val ankle = point(ankleX, 0.080f + index * 0.001f)
         drawLine(
-            GullWingLight.copy(alpha = 0.5f),
-            point(0.01f, 0.02f),
-            point(0.22f, 0.076f),
-            strokeWidth = unit * 0.0035f,
+            GullFootShade,
+            point(startX, startY),
+            ankle,
+            strokeWidth = unit * 0.0055f,
             cap = StrokeCap.Round
         )
-        drawPath(farWing, GullShade.copy(alpha = 0.5f), style = Stroke(unit * 0.005f))
+        foot(unit, ankle, -26f - index * 4f, if (index == 0) GullFootShade else GullFoot)
     }
 
-    rotate(tailSway * 2.4f, pivot = point(-0.06f, 0.075f)) {
-        val tail = Path().apply {
-            moveTo(x(-0.072f), y(0.052f))
-            cubicTo(x(-0.105f), y(0.058f), x(-0.135f), y(0.066f), x(-0.158f), y(0.078f))
-            lineTo(x(-0.11f), y(0.095f))
-            lineTo(x(-0.05f), y(0.088f))
-            close()
-        }
-        drawPath(tail, GullWing)
-        val tailTip = Path().apply {
-            moveTo(x(-0.158f), y(0.078f))
-            lineTo(x(-0.132f), y(0.079f))
-            lineTo(x(-0.118f), y(0.088f))
-            close()
-        }
-        drawPath(tailTip, GullTip.copy(alpha = 0.5f))
-        drawPath(tail, GullShade.copy(alpha = 0.5f), style = Stroke(unit * 0.005f))
-    }
-
-    val body = Path().apply {
-        moveTo(x(-0.09f), y(0.034f))
-        cubicTo(x(-0.096f), y(0.068f), x(-0.06f), y(0.094f), x(0.002f), y(0.098f))
-        cubicTo(x(0.064f), y(0.103f), x(0.101f), y(0.071f), x(0.106f), y(0.04f))
-        cubicTo(x(0.109f), y(0.006f), x(0.062f), y(-0.006f), x(0.018f), y(-0.002f))
-        cubicTo(x(-0.02f), y(0.002f), x(-0.073f), y(0.009f), x(-0.09f), y(0.034f))
+    val gull = Path().apply {
+        moveTo(x(-0.068f), y(0.030f))
+        cubicTo(x(-0.062f), y(0.004f), x(-0.022f), y(-0.007f), x(0.016f), y(-0.005f))
+        cubicTo(x(0.050f), y(-0.003f), x(0.078f), y(0.002f), x(0.090f), y(0.010f))
+        cubicTo(x(0.092f), y(-0.008f), x(0.098f), y(-0.030f), x(0.112f), y(-0.044f))
+        cubicTo(x(0.124f), y(-0.056f), x(0.146f), y(-0.054f), x(0.158f), y(-0.040f))
+        cubicTo(x(0.168f), y(-0.030f), x(0.170f), y(-0.016f), x(0.163f), y(-0.005f))
+        cubicTo(x(0.156f), y(0.010f), x(0.144f), y(0.022f), x(0.130f), y(0.032f))
+        cubicTo(x(0.118f), y(0.042f), x(0.106f), y(0.050f), x(0.096f), y(0.058f))
+        cubicTo(x(0.076f), y(0.066f), x(0.052f), y(0.068f), x(0.034f), y(0.068f))
+        cubicTo(x(-0.016f), y(0.072f), x(-0.058f), y(0.062f), x(-0.066f), y(0.048f))
         close()
     }
-    drawPath(body, GullShadow.copy(alpha = 0.12f), style = Stroke(unit * 0.012f))
-    drawPath(body, GullBody)
-    val mantle = Path().apply {
-        moveTo(x(-0.086f), y(0.041f))
-        cubicTo(x(-0.077f), y(0.009f), x(-0.019f), y(-0.001f), x(0.026f), y(0.001f))
-        cubicTo(x(0.065f), y(0.002f), x(0.098f), y(0.018f), x(0.104f), y(0.04f))
-        cubicTo(x(0.06f), y(0.054f), x(0.0f), y(0.058f), x(-0.04f), y(0.055f))
-        close()
+    drawPath(gull, GullBody)
+    clipPath(gull) {
+        val mantle = Path().apply {
+            moveTo(x(-0.070f), y(0.044f))
+            cubicTo(x(-0.062f), y(0.010f), x(-0.024f), y(-0.006f), x(0.018f), y(-0.004f))
+            cubicTo(x(0.050f), y(-0.002f), x(0.078f), y(0.002f), x(0.090f), y(0.010f))
+            cubicTo(x(0.056f), y(0.026f), x(-0.004f), y(0.034f), x(-0.070f), y(0.044f))
+            close()
+        }
+        drawPath(mantle, GullMantle)
+        drawOval(
+            GullBodyShade.copy(alpha = 0.35f),
+            topLeft = point(-0.020f, 0.054f),
+            size = Size(unit * 0.100f, unit * 0.018f)
+        )
     }
-    drawPath(mantle, GullMantle.copy(alpha = 0.66f))
-    drawOval(
-        GullShade.copy(alpha = 0.6f),
-        topLeft = point(-0.052f, 0.073f),
-        size = Size(0.12f * unit, 0.031f * unit)
-    )
-    drawPath(body, GullShade.copy(alpha = 0.55f), style = Stroke(unit * 0.005f))
+    drawPath(gull, GullLine.copy(alpha = 0.4f), style = outline)
 
-    rotate(2.2f * lift, pivot = point(-0.06f, 0.025f)) {
-        val wing = Path().apply {
-            moveTo(x(-0.06f), y(0.025f))
-            cubicTo(x(-0.095f), y(0.04f), x(-0.14f), y(0.08f), x(-0.19f), y(0.12f))
-            cubicTo(x(-0.16f), y(0.118f), x(-0.12f), y(0.092f), x(-0.085f), y(0.065f))
-            lineTo(x(-0.06f), y(0.04f))
+    rotate(flap * 4.4f - 35f, pivot = point(0.058f, 0.014f)) {
+        val nearWing = Path().apply {
+            moveTo(x(0.072f), y(0.022f))
+            cubicTo(x(0.040f), y(-0.012f), x(-0.004f), y(-0.042f), x(-0.064f), y(-0.068f))
+            cubicTo(x(-0.098f), y(-0.082f), x(-0.132f), y(-0.090f), x(-0.154f), y(-0.084f))
+            cubicTo(x(-0.163f), y(-0.081f), x(-0.166f), y(-0.074f), x(-0.162f), y(-0.068f))
+            lineTo(x(-0.150f), y(-0.062f))
+            lineTo(x(-0.146f), y(-0.070f))
+            lineTo(x(-0.140f), y(-0.050f))
+            lineTo(x(-0.128f), y(-0.060f))
+            lineTo(x(-0.120f), y(-0.038f))
+            lineTo(x(-0.108f), y(-0.048f))
+            lineTo(x(-0.096f), y(-0.024f))
+            lineTo(x(-0.084f), y(-0.036f))
+            lineTo(x(-0.070f), y(-0.010f))
+            lineTo(x(-0.056f), y(-0.022f))
+            lineTo(x(-0.040f), y(0.004f))
+            lineTo(x(-0.024f), y(-0.008f))
+            lineTo(x(-0.008f), y(0.018f))
+            cubicTo(x(0.014f), y(0.030f), x(0.044f), y(0.036f), x(0.068f), y(0.032f))
             close()
         }
-        drawPath(wing, GullWingShade)
-        val wingLight = Path().apply {
-            moveTo(x(-0.06f), y(0.026f))
-            cubicTo(x(-0.095f), y(0.043f), x(-0.137f), y(0.081f), x(-0.182f), y(0.117f))
-            cubicTo(x(-0.15f), y(0.103f), x(-0.112f), y(0.079f), x(-0.078f), y(0.05f))
-            close()
-        }
-        drawPath(wingLight, GullWingLight.copy(alpha = 0.45f))
-        clipPath(wing) {
-            drawRect(
-                GullTip.copy(alpha = 0.9f),
-                topLeft = Offset(x(-0.21f), y(0.085f)),
-                size = Size(0.055f * unit, 0.06f * unit)
+        drawPath(nearWing, GullWing)
+        clipPath(nearWing) {
+            drawPath(
+                Path().apply {
+                    moveTo(x(0.072f), y(0.022f))
+                    cubicTo(x(0.040f), y(-0.012f), x(-0.004f), y(-0.042f), x(-0.064f), y(-0.068f))
+                    cubicTo(x(-0.098f), y(-0.082f), x(-0.132f), y(-0.090f), x(-0.154f), y(-0.084f))
+                },
+                GullWingLight,
+                style = Stroke(unit * 0.011f)
             )
+            val wrist = point(-0.078f, -0.058f)
+            listOf(
+                -0.172f to -0.050f,
+                -0.169f to -0.066f,
+                -0.157f to -0.082f,
+                -0.138f to -0.095f,
+                -0.114f to -0.103f
+            ).forEach { (tipX, tipY) ->
+                feather(wrist, point(tipX, tipY), unit * 0.013f, GullTip, 0.22f)
+            }
             drawLine(
-                GullWingLight.copy(alpha = 0.35f),
-                point(-0.17f, 0.1f),
-                point(-0.155f, 0.12f),
-                strokeWidth = unit * 0.003f,
+                GullWingShade.copy(alpha = 0.65f),
+                point(-0.064f, -0.062f),
+                point(-0.036f, -0.020f),
+                strokeWidth = unit * 0.0022f,
                 cap = StrokeCap.Round
             )
             drawLine(
-                GullWingLight.copy(alpha = 0.28f),
-                point(-0.155f, 0.095f),
-                point(-0.14f, 0.117f),
-                strokeWidth = unit * 0.0025f,
+                GullWingShade.copy(alpha = 0.5f),
+                point(-0.088f, -0.054f),
+                point(-0.064f, -0.006f),
+                strokeWidth = unit * 0.002f,
                 cap = StrokeCap.Round
             )
         }
-        drawPath(wing, GullShadow.copy(alpha = 0.2f), style = Stroke(unit * 0.006f))
+        drawPath(nearWing, GullLine.copy(alpha = 0.35f), style = outline)
     }
 
-    drawOval(
-        GullShadow.copy(alpha = 0.1f),
-        topLeft = point(-0.078f, -0.005f),
-        size = Size(0.156f * unit, 0.026f * unit)
-    )
-    drawOval(
-        GullShadow.copy(alpha = 0.16f),
-        topLeft = point(-0.042f, -0.002f),
-        size = Size(0.084f * unit, 0.013f * unit)
-    )
-
-    rotate(headTurn * 3.4f, pivot = point(0.078f, 0.02f)) {
-        val neck = Path().apply {
-            moveTo(x(0.046f), y(0.05f))
-            cubicTo(x(0.052f), y(0.014f), x(0.073f), y(-0.012f), x(0.095f), y(-0.021f))
-            lineTo(x(0.146f), y(0.0f))
-            cubicTo(x(0.134f), y(0.034f), x(0.108f), y(0.054f), x(0.072f), y(0.058f))
-            close()
-        }
-        drawPath(neck, GullBody)
-        drawCircle(GullBody, unit * 0.033f, point(0.118f, -0.025f))
-        val nape = Path().apply {
-            moveTo(x(0.087f), y(-0.049f))
-            cubicTo(x(0.079f), y(-0.022f), x(0.083f), y(0.006f), x(0.1f), y(0.026f))
-            cubicTo(x(0.112f), y(0.008f), x(0.116f), y(-0.014f), x(0.108f), y(-0.043f))
-            close()
-        }
-        drawPath(nape, GullMantle.copy(alpha = 0.5f))
-        val beak = Path().apply {
-            moveTo(x(0.144f), y(-0.036f))
-            lineTo(x(0.212f), y(-0.022f))
-            lineTo(x(0.144f), y(-0.01f))
-            close()
-        }
-        drawPath(beak, GullBeak)
-        drawCircle(GullBeakSpot, unit * 0.006f, point(0.173f, -0.023f))
-        drawCircle(GullEye, unit * 0.0075f, point(0.126f, -0.035f))
-        drawCircle(Color.White.copy(alpha = 0.9f), unit * 0.0027f, point(0.128f, -0.0375f))
+    val beak = Path().apply {
+        moveTo(x(0.156f), y(-0.026f))
+        cubicTo(x(0.178f), y(-0.032f), x(0.203f), y(-0.028f), x(0.219f), y(-0.017f))
+        cubicTo(x(0.225f), y(-0.012f), x(0.227f), y(-0.005f), x(0.223f), y(-0.001f))
+        cubicTo(x(0.215f), y(0.005f), x(0.197f), y(0.007f), x(0.179f), y(0.005f))
+        cubicTo(x(0.166f), y(0.003f), x(0.157f), y(0.000f), x(0.156f), y(-0.004f))
+        close()
     }
+    drawPath(beak, GullBeak)
+    drawPath(
+        Path().apply {
+            moveTo(x(0.158f), y(-0.024f))
+            cubicTo(x(0.178f), y(-0.029f), x(0.200f), y(-0.026f), x(0.214f), y(-0.016f))
+        },
+        GullBeakLight.copy(alpha = 0.5f),
+        style = Stroke(unit * 0.0035f)
+    )
+    drawPath(
+        Path().apply {
+            moveTo(x(0.160f), y(-0.001f))
+            cubicTo(x(0.180f), y(0.001f), x(0.203f), y(0.000f), x(0.222f), y(-0.003f))
+        },
+        GullBeakTip.copy(alpha = 0.45f),
+        style = Stroke(unit * 0.0016f)
+    )
+    drawCircle(GullBeakTip.copy(alpha = 0.7f), unit * 0.0026f, point(0.171f, -0.016f))
+
+    drawOval(
+        GullEyeBlue,
+        topLeft = point(0.130f, -0.040f),
+        size = Size(unit * 0.018f, unit * 0.021f)
+    )
+    drawCircle(GullEye, unit * 0.0066f, point(0.1405f, -0.0285f))
+    drawCircle(Color.White.copy(alpha = 0.95f), unit * 0.0028f, point(0.1435f, -0.0330f))
+}
+
+private fun DrawScope.foot(unit: Float, ankle: Offset, angle: Float, color: Color) {
+    rotate(angle, pivot = ankle) {
+        val length = unit * 0.034f
+        val web = Path().apply {
+            moveTo(ankle.x, ankle.y)
+            lineTo(ankle.x - length, ankle.y - length * 0.04f)
+            quadraticTo(ankle.x - length * 0.72f, ankle.y + length * 0.03f, ankle.x - length * 0.94f, ankle.y + length * 0.16f)
+            quadraticTo(ankle.x - length * 0.62f, ankle.y + length * 0.20f, ankle.x - length * 0.66f, ankle.y + length * 0.34f)
+            quadraticTo(ankle.x - length * 0.24f, ankle.y + length * 0.16f, ankle.x, ankle.y)
+            close()
+        }
+        drawPath(web, color)
+        drawPath(web, GullFootShade.copy(alpha = 0.7f), style = Stroke(unit * 0.0016f))
+    }
+}
+
+private fun featherPath(
+    base: Offset,
+    tip: Offset,
+    halfWidth: Float,
+    from: Float,
+    to: Float
+): Path {
+    val dx = tip.x - base.x
+    val dy = tip.y - base.y
+    val length = sqrt(dx * dx + dy * dy)
+    val nx = -dy / length
+    val ny = dx / length
+    val x0 = base.x + dx * from
+    val y0 = base.y + dy * from
+    val x1 = base.x + dx * to
+    val y1 = base.y + dy * to
+    val w0 = halfWidth * (1f - 0.45f * from)
+    val w1 = halfWidth * (1f - 0.92f * to).coerceAtLeast(0.06f)
+    val mx = (x0 + x1) / 2f
+    val my = (y0 + y1) / 2f
+    val bulge = (w0 + w1) * 0.7f
+    return Path().apply {
+        moveTo(x0 + nx * w0, y0 + ny * w0)
+        quadraticTo(mx + nx * bulge, my + ny * bulge, x1 + nx * w1, y1 + ny * w1)
+        lineTo(x1 - nx * w1, y1 - ny * w1)
+        quadraticTo(mx - nx * bulge, my - ny * bulge, x0 - nx * w0, y0 - ny * w0)
+        close()
+    }
+}
+
+private fun DrawScope.feather(
+    base: Offset,
+    tip: Offset,
+    halfWidth: Float,
+    color: Color,
+    from: Float
+) {
+    drawPath(featherPath(base, tip, halfWidth, from, 1f), color)
 }
