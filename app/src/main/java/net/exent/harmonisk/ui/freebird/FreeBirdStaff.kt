@@ -71,7 +71,7 @@ fun freeBirdStaffLayout(
         step = step,
         middleC = origin + topSteps * step,
         clefX = with(density) { 12.dp.toPx() },
-        staffEnd = width - with(density) { 14.dp.toPx() }
+        staffEnd = width
     )
 }
 
