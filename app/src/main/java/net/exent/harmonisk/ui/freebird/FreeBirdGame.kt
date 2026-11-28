@@ -20,6 +20,11 @@ const val FREEBIRD_FEEDBACK_MS = 1_500L
 const val FREEBIRD_NOTE_RADIUS = 0.040f
 const val FREEBIRD_SPAWN_X = 1.08f
 const val FREEBIRD_FADE_MS = 400L
+const val FREEBIRD_BEATS_PER_BAR = 4
+const val FREEBIRD_COUNT_IN_BARS = 2
+const val FREEBIRD_COUNT_IN_BEATS = FREEBIRD_COUNT_IN_BARS * FREEBIRD_BEATS_PER_BAR
+const val FREEBIRD_BEAT_MUTE_MS = 180L
+const val FREEBIRD_BAR_MS = FREEBIRD_BEATS_PER_BAR * FREEBIRD_NOTE_INTERVAL_MS
 
 val FreeBirdKey = KeySignature(0, false)
 val FREEBIRD_HIT_WINDOW = FREEBIRD_HIT_WINDOW_MS * (FREEBIRD_SPAWN_X - BIRD_PERCH_X) / FREEBIRD_NOTE_TRAVEL_MS
@@ -57,7 +62,9 @@ data class FreeBirdGameState(
     val letters: List<FreeBirdLetter> = emptyList(),
     val playing: Boolean = false,
     val finished: Boolean = false,
-    val feedback: FreeBirdHit? = null
+    val feedback: FreeBirdHit? = null,
+    val beatAt: Long = 0L,
+    val beatAccent: Boolean = false
 )
 
 data class FreeBirdSpelling(val naturalMidi: Int, val accidental: Int)
@@ -102,6 +109,18 @@ fun pointsForCents(cents: Float): Int = when (val distance = abs(cents)) {
 
 fun timeAfterHit(timeLeftMs: Long, bonusMs: Long, points: Int): Long =
     (timeLeftMs + bonusMs * points / 5).coerceAtMost(FREEBIRD_GAME_TIME_MS)
+
+fun freeBirdFirstNoteBeatMs(): Long =
+    FREEBIRD_NOTE_INTERVAL_MS + FREEBIRD_BEAK_LEAD_MS.toLong()
+
+fun freeBirdFirstBeatMs(): Long =
+    freeBirdFirstNoteBeatMs() - FREEBIRD_COUNT_IN_BEATS * FREEBIRD_NOTE_INTERVAL_MS
+
+fun freeBirdNextPhraseBeatMs(lastNoteBeatMs: Long, firstNoteBeatMs: Long): Long {
+    val earliest = lastNoteBeatMs + FREEBIRD_PHRASE_GAP_MS
+    val bars = (earliest - firstNoteBeatMs + FREEBIRD_BAR_MS - 1) / FREEBIRD_BAR_MS
+    return firstNoteBeatMs + bars * FREEBIRD_BAR_MS
+}
 
 fun freeBirdInHitWindow(noteX: Float): Boolean {
     val leading = noteX - FREEBIRD_NOTE_RADIUS

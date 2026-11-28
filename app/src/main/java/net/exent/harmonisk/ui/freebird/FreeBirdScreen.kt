@@ -64,7 +64,7 @@ fun FreeBirdScreen(
         FreeBirdSeagull(layer)
         FreeBirdLetters(instrument, game.letters, pitch, layer)
         RequireMicPermission {
-            FreeBirdBird(instrument, pitch, layer)
+            FreeBirdBird(instrument, pitch, game.beatAt, game.beatAccent, layer)
             if (!game.playing && !game.finished) {
                 FreeBirdStartOverlay(
                     profile = profile,

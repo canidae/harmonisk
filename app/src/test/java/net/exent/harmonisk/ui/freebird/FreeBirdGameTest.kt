@@ -95,6 +95,25 @@ class FreeBirdGameTest {
     }
 
     @Test
+    fun `the count in is two bars before the first note`() {
+        val firstNoteAt = FREEBIRD_NOTE_INTERVAL_MS + FREEBIRD_BEAK_LEAD_MS.toLong()
+        assertEquals(8 * FREEBIRD_NOTE_INTERVAL_MS, firstNoteAt - freeBirdFirstBeatMs())
+        assertEquals(8, FREEBIRD_COUNT_IN_BEATS)
+        assertTrue(freeBirdFirstBeatMs() > 0L)
+    }
+
+    @Test
+    fun `every pattern starts on a bar downbeat`() {
+        val firstBeat = freeBirdFirstNoteBeatMs()
+        listOf(0L to 2_000L, 1_000L to 4_000L, 2_000L to 4_000L, 3_000L to 6_000L, 4_000L to 6_000L)
+            .forEach { (lastOffset, nextOffset) ->
+                val next = freeBirdNextPhraseBeatMs(firstBeat + lastOffset, firstBeat)
+                assertEquals(firstBeat + nextOffset, next)
+                assertEquals(0L, (next - firstBeat) % FREEBIRD_BAR_MS)
+            }
+    }
+
+    @Test
     fun `the fade begins when the note leaves the hit window`() {
         assertTrue(freeBirdInHitWindow(FREEBIRD_FADE_START_X))
         assertTrue(!freeBirdInHitWindow(FREEBIRD_FADE_START_X - 0.01f))

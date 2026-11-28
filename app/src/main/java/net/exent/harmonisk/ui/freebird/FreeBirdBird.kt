@@ -8,6 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -22,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import android.os.SystemClock
 import kotlinx.coroutines.delay
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.PitchResult
@@ -41,11 +44,17 @@ private val Wing = Color(0xFFD97B3E)
 private val WingDark = Color(0xFFB85E2C)
 private val Beak = Color(0xFFF4C542)
 private val Eye = Color(0xFF2A1A12)
+private val BeatRing = Color(0xFFFFFFFF)
+private val BeatRingAccent = Color(0xFFFFE08A)
+private const val BEAT_PULSE_MS = 220L
+private const val LANDING_RING_BEATS = 2
 
 @Composable
 fun FreeBirdBird(
     instrument: Instrument,
     pitch: PitchResult,
+    beatAt: Long,
+    beatAccent: Boolean,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(modifier) {
@@ -61,6 +70,14 @@ fun FreeBirdBird(
         val flying = !pitch.isSilent
         val targetY = if (flying) freeBirdPitchY(layout, pitch, key, height) else perchY
         var birdY by remember { mutableFloatStateOf(perchY) }
+        var landedAt by remember { mutableLongStateOf(0L) }
+        var wasPerched by remember { mutableStateOf(true) }
+        val perched = !flying && abs(birdY - perchY) < birdSize * 0.24f
+        LaunchedEffect(perched) {
+            if (perched && !wasPerched) landedAt = SystemClock.elapsedRealtime()
+            if (!perched) landedAt = 0L
+            wasPerched = perched
+        }
         val latestTarget by rememberUpdatedState(targetY)
         LaunchedEffect(flying) {
             val factor = if (flying) 0.22f else 0.12f
@@ -92,6 +109,21 @@ fun FreeBirdBird(
                 perchedNow -> 0f
                 divingNow -> -26f
                 else -> sin(flap * 2f * PI.toFloat()) * 42f * wingAmount
+            }
+            val now = SystemClock.elapsedRealtime()
+            val sinceBeat = if (beatAt > 0L) now - beatAt else BEAT_PULSE_MS
+            val ringVisible = !perchedNow ||
+                (landedAt > 0L && beatAt > 0L &&
+                    beatAt <= landedAt + LANDING_RING_BEATS * FREEBIRD_NOTE_INTERVAL_MS)
+            if (ringVisible && sinceBeat < BEAT_PULSE_MS) {
+                val progress = sinceBeat.toFloat() / BEAT_PULSE_MS
+                drawCircle(
+                    color = if (beatAccent) BeatRingAccent else BeatRing,
+                    radius = birdSize * (0.36f + 0.11f * progress),
+                    center = Offset(birdSize * 0.47f, birdSize * 0.5f),
+                    alpha = 0.85f * (1f - progress),
+                    style = Stroke(width = birdSize * (if (beatAccent) 0.034f else 0.026f))
+                )
             }
             drawBird(birdSize, perchedNow, wingAngle)
         }

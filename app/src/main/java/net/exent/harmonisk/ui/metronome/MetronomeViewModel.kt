@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.exent.harmonisk.audio.MetronomeClick
 import net.exent.harmonisk.audio.SoundFontSynthesizer
 import net.exent.harmonisk.data.SettingsRepository
 import javax.inject.Inject
@@ -124,17 +125,18 @@ class MetronomeViewModel @Inject constructor(
     fun stop() {
         tickJob?.cancel()
         tickJob = null
-        soundFontSynthesizer.noteOff(SoundFontSynthesizer.DRUM_CHANNEL, BEAT_NOTE)
-        soundFontSynthesizer.noteOff(SoundFontSynthesizer.DRUM_CHANNEL, ACCENT_NOTE)
+        soundFontSynthesizer.noteOff(SoundFontSynthesizer.DRUM_CHANNEL, MetronomeClick.BEAT_NOTE)
+        soundFontSynthesizer.noteOff(SoundFontSynthesizer.DRUM_CHANNEL, MetronomeClick.ACCENT_NOTE)
         _state.update { it.copy(isRunning = false, currentBeat = 0) }
     }
 
     private fun click(accented: Boolean) {
         if (!_state.value.soundEnabled || !soundFontSynthesizer.isReady) return
-        val note = if (accented) ACCENT_NOTE else BEAT_NOTE
-        soundFontSynthesizer.noteOn(SoundFontSynthesizer.DRUM_CHANNEL, note, if (accented) 112 else 80)
+        val note = if (accented) MetronomeClick.ACCENT_NOTE else MetronomeClick.BEAT_NOTE
+        val velocity = if (accented) MetronomeClick.ACCENT_VELOCITY else MetronomeClick.BEAT_VELOCITY
+        soundFontSynthesizer.noteOn(SoundFontSynthesizer.DRUM_CHANNEL, note, velocity)
         viewModelScope.launch {
-            delay(CLICK_LENGTH_MS)
+            delay(MetronomeClick.LENGTH_MS)
             soundFontSynthesizer.noteOff(SoundFontSynthesizer.DRUM_CHANNEL, note)
         }
     }
@@ -156,11 +158,5 @@ class MetronomeViewModel @Inject constructor(
     override fun onCleared() {
         tickJob?.cancel()
         soundFontSynthesizer.close()
-    }
-
-    companion object {
-        private const val BEAT_NOTE = 85
-        private const val ACCENT_NOTE = 86
-        private const val CLICK_LENGTH_MS = 50L
     }
 }
