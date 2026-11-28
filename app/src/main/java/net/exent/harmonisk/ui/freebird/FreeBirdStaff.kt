@@ -44,8 +44,8 @@ private const val F_CLEF_WIDTH_SCALE = 0.55f
 
 private val ClefFont = FontFamily(Font(R.font.freebird_clefs))
 
-private val StaffInk = Color(0xFFDCE0D9).copy(alpha = 0.52f)
-private val StaffShadow = Color(0xFF18291F).copy(alpha = 0.12f)
+private val StaffInk = Color(0xFFDCE0D9).copy(alpha = 0.70f)
+private val StaffShadow = Color(0xFF18291F).copy(alpha = 0.16f)
 private val NOTE_DEGREE = intArrayOf(0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6)
 
 data class FreeBirdStaffLayout(
@@ -128,7 +128,7 @@ fun FreeBirdStaff(
         }
 
         drawLine(
-            color = StaffInk.copy(alpha = 0.22f),
+            color = StaffInk.copy(alpha = 0.32f),
             start = Offset(staffStart, middleC),
             end = Offset(staffEnd, middleC),
             strokeWidth = lineWidth
@@ -187,7 +187,7 @@ fun diatonic(midi: Int): Int = (midi / 12) * 7 + NOTE_DEGREE[midi % 12]
 
 fun DrawScope.drawAccidentalSign(center: Offset, height: Float, sign: Int, color: Color) {
     val half = height / 2f
-    val stroke = height * 0.10f
+    val stroke = height * 0.08f
     when {
         sign > 0 -> {
             val offset = height * 0.10f

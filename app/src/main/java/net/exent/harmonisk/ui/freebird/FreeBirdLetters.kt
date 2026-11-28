@@ -160,8 +160,8 @@ fun FreeBirdLetters(
                 val accidental = spelling.accidental != letterAlteration
                 if (accidental) {
                     drawAccidentalSign(
-                        Offset(x + headRadius * 0.45f, y),
-                        headRadius * 1.25f,
+                        Offset(x - headRadius * 0.40f, y),
+                        headRadius,
                         spelling.accidental.coerceIn(-1, 1),
                         ink
                     )
@@ -169,7 +169,7 @@ fun FreeBirdLetters(
                 drawText(
                     text,
                     topLeft = Offset(
-                        x - text.size.width / 2f - if (accidental) headRadius * 0.3f else 0f,
+                        x - text.size.width / 2f + if (accidental) headRadius * 0.22f else 0f,
                         y - text.size.height / 2f
                     )
                 )
