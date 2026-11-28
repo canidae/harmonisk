@@ -161,15 +161,21 @@ private fun DrawScope.drawClouds(time: Float) {
         Triple(0.20f, 0.34f, 0.56f)
     )
     clouds.forEachIndexed { index, (baseX, baseY, scale) ->
-        val travel = (baseX + time * (index + 2) + 0.15f) % 1f
+        val travel = ((baseX - time * (index + 2) + 0.15f) % 1f + 1f) % 1f
         val x = travel * size.width
         val y = baseY * size.height
         val w = size.width * 0.26f * scale
         val h = w * 0.26f
-        drawCloudPuff(Offset(x, y), w * 0.55f, 0.26f)
-        drawCloudPuff(Offset(x + w * 0.30f, y - h * 0.35f), w * 0.42f, 0.34f)
-        drawCloudPuff(Offset(x - w * 0.32f, y + h * 0.18f), w * 0.36f, 0.22f)
-        drawCloudPuff(Offset(x + w * 0.05f, y + h * 0.30f), w * 0.44f, 0.18f)
+        val reach = w * 0.72f
+        fun puffAt(centerX: Float) {
+            drawCloudPuff(Offset(centerX, y), w * 0.55f, 0.26f)
+            drawCloudPuff(Offset(centerX + w * 0.30f, y - h * 0.35f), w * 0.42f, 0.34f)
+            drawCloudPuff(Offset(centerX - w * 0.32f, y + h * 0.18f), w * 0.36f, 0.22f)
+            drawCloudPuff(Offset(centerX + w * 0.05f, y + h * 0.30f), w * 0.44f, 0.18f)
+        }
+        puffAt(x)
+        if (x < reach) puffAt(x + size.width)
+        if (x > size.width - reach) puffAt(x - size.width)
     }
 }
 
