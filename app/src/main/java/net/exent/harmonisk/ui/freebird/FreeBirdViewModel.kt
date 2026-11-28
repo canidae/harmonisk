@@ -154,7 +154,7 @@ class FreeBirdViewModel @Inject constructor(
                             judged = true
                         }
                     }
-                    if (x > -0.12f) {
+                    if (x > FREEBIRD_FADE_END_X) {
                         remaining += letter.copy(x = x, judged = judged)
                     }
                 }

@@ -7,8 +7,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -70,6 +72,8 @@ fun FreeBirdLetters(
             letters.forEach { letter ->
                 val x = width * letter.x
                 if (x < -width * 0.1f || x > width * 1.15f) return@forEach
+                val fade = freeBirdNoteAlpha(letter.x)
+                if (fade <= 0f) return@forEach
                 val spelling = freeBirdSpelling(letter.midi, key)
                 val y = freeBirdNoteY(layout, letter.midi, key, height)
                 val color = FingerColors[letter.finger]
@@ -82,6 +86,15 @@ fun FreeBirdLetters(
                     )
                 }
                 val center = Offset(x, y)
+                drawContext.canvas.saveLayer(
+                    Rect(
+                        x - headRadius * 3.2f,
+                        y - headRadius * 4.4f,
+                        x + headRadius * 3.2f,
+                        y + headRadius * 3.2f
+                    ),
+                    Paint().apply { alpha = fade }
+                )
 
                 drawCircle(
                     brush = Brush.radialGradient(
@@ -173,6 +186,7 @@ fun FreeBirdLetters(
                         y - text.size.height / 2f
                     )
                 )
+                drawContext.canvas.restore()
             }
         }
     }

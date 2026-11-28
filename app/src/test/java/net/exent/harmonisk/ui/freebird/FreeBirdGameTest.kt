@@ -86,6 +86,22 @@ class FreeBirdGameTest {
     }
 
     @Test
+    fun `notes fade out after the hit window closes`() {
+        assertEquals(1f, freeBirdNoteAlpha(FREEBIRD_SPAWN_X), 0.001f)
+        assertEquals(1f, freeBirdNoteAlpha(FREEBIRD_FADE_START_X), 0.001f)
+        assertEquals(0.5f, freeBirdNoteAlpha((FREEBIRD_FADE_START_X + FREEBIRD_FADE_END_X) / 2f), 0.01f)
+        assertEquals(0f, freeBirdNoteAlpha(FREEBIRD_FADE_END_X), 0.001f)
+        assertEquals(0f, freeBirdNoteAlpha(FREEBIRD_FADE_END_X - 0.05f), 0.001f)
+    }
+
+    @Test
+    fun `the fade begins when the note leaves the hit window`() {
+        assertTrue(freeBirdInHitWindow(FREEBIRD_FADE_START_X))
+        assertTrue(!freeBirdInHitWindow(FREEBIRD_FADE_START_X - 0.01f))
+        assertTrue(FREEBIRD_FADE_END_X > 0f)
+    }
+
+    @Test
     fun `a perfectly pitched note refills the time since the previous note`() {
         assertEquals(30_000L, timeAfterHit(28_500L, 1_500L, 5))
         assertEquals(29_400L, timeAfterHit(28_500L, 1_500L, 3))
