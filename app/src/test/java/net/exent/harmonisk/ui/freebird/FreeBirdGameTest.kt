@@ -5,6 +5,7 @@ import net.exent.harmonisk.music.PitchResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.random.Random
 
 class FreeBirdGameTest {
 
@@ -28,25 +29,72 @@ class FreeBirdGameTest {
     }
 
     @Test
-    fun `open strings are the first level`() {
-        val notes = notesForLevel(Instrument.VIOLIN, 1)
-        assertEquals(listOf(55, 62, 69, 76), notes.map { it.midi })
-        assertTrue(notes.all { it.finger == 0 })
+    fun `levels walk up the string one finger at a time and back`() {
+        assertEquals(listOf(0), freeBirdPattern(1))
+        assertEquals(listOf(0, 1, 0), freeBirdPattern(2))
+        assertEquals(listOf(0, 1, 2, 1, 0), freeBirdPattern(3))
+        assertEquals(listOf(0, 1, 2, 3, 2, 1, 0), freeBirdPattern(4))
+        assertEquals(listOf(0, 1, 2, 3, 4, 3, 2, 1, 0), freeBirdPattern(5))
+        assertEquals(listOf(0, 1, 2, 3, 4, 3, 2, 1, 0), freeBirdPattern(9))
     }
 
     @Test
-    fun `a finger level contains only that finger`() {
-        val notes = notesForLevel(Instrument.VIOLIN, 2)
-        assertEquals(listOf(57, 64, 71, 78), notes.map { it.midi })
-        assertTrue(notes.all { it.finger == 1 })
+    fun `the first level is a single open string`() {
+        val phrase = freeBirdPhrase(Instrument.VIOLIN, 1, Random(3))
+        assertEquals(1, phrase.size)
+        assertEquals(0, phrase.first().finger)
+        assertTrue(phrase.first().midi in Instrument.VIOLIN.tuning)
     }
 
     @Test
-    fun `the final level includes all fingers`() {
-        val notes = notesForLevel(Instrument.VIOLIN, 6)
-        assertTrue(notes.any { it.finger == 0 })
-        assertTrue(notes.any { it.finger == 4 })
-        assertTrue(notes.size > notesForLevel(Instrument.VIOLIN, 1).size)
+    fun `bowed phrases use the first position fingers`() {
+        val phrase = freeBirdPhrase(Instrument.VIOLIN, 5, Random(7))
+        val open = phrase.first().midi
+        assertEquals(listOf(0, 1, 2, 3, 4, 3, 2, 1, 0), phrase.map { it.finger })
+        assertEquals(listOf(0, 2, 4, 5, 7, 5, 4, 2, 0), phrase.map { it.midi - open })
+    }
+
+    @Test
+    fun `cello phrases use the cello fingers`() {
+        val phrase = freeBirdPhrase(Instrument.CELLO, 5, Random(7))
+        val open = phrase.first().midi
+        assertEquals(listOf(0, 1, 2, 3, 4, 3, 2, 1, 0), phrase.map { it.finger })
+        assertEquals(listOf(0, 2, 3, 4, 5, 4, 3, 2, 0), phrase.map { it.midi - open })
+    }
+
+    @Test
+    fun `all instruments are written in C major`() {
+        assertEquals(0, FreeBirdKey.fifths)
+    }
+
+    @Test
+    fun `accidentals are spelled against C major`() {
+        assertEquals(FreeBirdSpelling(65, 1), freeBirdSpelling(66, FreeBirdKey))
+        assertEquals(FreeBirdSpelling(60, 1), freeBirdSpelling(61, FreeBirdKey))
+        assertEquals(FreeBirdSpelling(67, 1), freeBirdSpelling(68, FreeBirdKey))
+        assertEquals(FreeBirdSpelling(62, 1), freeBirdSpelling(63, FreeBirdKey))
+        assertEquals(FreeBirdSpelling(64, 0), freeBirdSpelling(64, FreeBirdKey))
+    }
+
+    @Test
+    fun `the hit window starts at the beak and lasts 0_3 seconds`() {
+        val beak = BIRD_BEAK_X + FREEBIRD_NOTE_RADIUS
+        assertTrue(freeBirdInHitWindow(beak))
+        assertTrue(freeBirdInHitWindow(beak - FREEBIRD_HIT_WINDOW))
+        assertTrue(!freeBirdInHitWindow(beak + 0.01f))
+        assertTrue(!freeBirdInHitWindow(beak - FREEBIRD_HIT_WINDOW - 0.01f))
+    }
+
+    @Test
+    fun `a perfectly pitched note refills the time since the previous note`() {
+        assertEquals(30_000L, timeAfterHit(28_500L, 1_500L, 5))
+        assertEquals(29_400L, timeAfterHit(28_500L, 1_500L, 3))
+        assertEquals(28_800L, timeAfterHit(28_500L, 1_500L, 1))
+    }
+
+    @Test
+    fun `time never rises above the starting time`() {
+        assertEquals(30_000L, timeAfterHit(29_000L, 9_000L, 5))
     }
 
     private fun pitch(midi: Int, cents: Float) = PitchResult(

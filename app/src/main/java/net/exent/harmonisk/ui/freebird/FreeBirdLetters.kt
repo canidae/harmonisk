@@ -4,7 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -12,6 +11,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import net.exent.harmonisk.midi.KeySignature
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.NoteUtils
 import net.exent.harmonisk.music.PitchResult
@@ -29,14 +31,12 @@ import kotlin.math.sin
 
 private val GoodShimmer = Color(0xFFE8FFF2)
 private val EdgeShimmer = Color(0xFFFFE6A3)
-
-private class FreeBirdLetterText(val text: TextLayoutResult, val shadow: TextLayoutResult)
+private val NoteInk = Color(0xFF152820)
 
 @Composable
 fun FreeBirdLetters(
     instrument: Instrument,
     letters: List<FreeBirdLetter>,
-    level: Int,
     pitch: PitchResult,
     modifier: Modifier = Modifier
 ) {
@@ -45,25 +45,20 @@ fun FreeBirdLetters(
         val density = LocalDensity.current
         val width = with(density) { maxWidth.toPx() }
         val height = with(density) { maxHeight.toPx() }
-        val layout = remember(width, height, instrument, level) {
-            freeBirdStaffLayout(width, height, instrument, level, density)
+        val layout = remember(width, height, instrument) {
+            freeBirdStaffLayout(width, height, instrument, density)
         }
+        val key = FreeBirdKey
         val textMeasurer = rememberTextMeasurer()
-        val fontSize = with(density) { (width * 0.055f).toSp() }
-        val shadowStyle = remember(fontSize) {
-            TextStyle(
-                fontSize = fontSize,
-                fontWeight = FontWeight.Black,
-                color = Color(0xFF17301F).copy(alpha = 0.55f)
-            )
-        }
+        val fontSize = with(density) { (width * 0.042f).toSp() }
+        val headRadius = width * FREEBIRD_NOTE_RADIUS
         val textCache = remember(width, density, textMeasurer) {
-            mutableMapOf<Pair<String, Color>, FreeBirdLetterText>()
+            mutableMapOf<Pair<String, Color>, TextLayoutResult>()
         }
         Canvas(Modifier.fillMaxSize()) {
             val next = letters.filterNot { it.judged }.minByOrNull { it.x }
             if (next != null) {
-                val nextY = freeBirdNoteY(layout, next.midi, height)
+                val nextY = freeBirdNoteY(layout, next.midi, key, height)
                 drawLine(
                     color = FingerColors[next.finger].copy(alpha = 0.13f),
                     start = Offset(width * BIRD_PERCH_X, nextY),
@@ -75,24 +70,18 @@ fun FreeBirdLetters(
             letters.forEach { letter ->
                 val x = width * letter.x
                 if (x < -width * 0.1f || x > width * 1.15f) return@forEach
-                val y = freeBirdNoteY(layout, letter.midi, height)
+                val spelling = freeBirdSpelling(letter.midi, key)
+                val y = freeBirdNoteY(layout, letter.midi, key, height)
                 val color = FingerColors[letter.finger]
-                val note = NoteUtils.resolveMidiNote(letter.midi)
-                val label = note.noteName + note.octave
-                val cached = textCache.getOrPut(label to color) {
-                    FreeBirdLetterText(
-                        text = textMeasurer.measure(
-                            AnnotatedString(label),
-                            TextStyle(fontSize = fontSize, fontWeight = FontWeight.Black, color = color)
-                        ),
-                        shadow = textMeasurer.measure(AnnotatedString(label), shadowStyle)
+                val ink = if (color.luminance() > 0.2f) NoteInk else Color.White
+                val name = NoteUtils.resolveMidiNote(spelling.naturalMidi).noteName
+                val text = textCache.getOrPut(name to ink) {
+                    textMeasurer.measure(
+                        AnnotatedString(name),
+                        TextStyle(fontSize = fontSize, fontWeight = FontWeight.Black, color = ink)
                     )
                 }
-                val text = cached.text
-                val shadow = cached.shadow
                 val center = Offset(x, y)
-                val textWidth = text.size.width.toFloat()
-                val textHeight = text.size.height.toFloat()
 
                 drawCircle(
                     brush = Brush.radialGradient(
@@ -101,9 +90,9 @@ fun FreeBirdLetters(
                             Color.Transparent
                         ),
                         center = center,
-                        radius = textHeight * 0.95f
+                        radius = headRadius * 2.4f
                     ),
-                    radius = textHeight * 0.95f,
+                    radius = headRadius * 2.4f,
                     center = center
                 )
 
@@ -120,47 +109,69 @@ fun FreeBirdLetters(
                                     Color.Transparent
                                 ),
                                 center = center,
-                                radius = textHeight * 1.3f
+                                radius = headRadius * 3f
                             ),
-                            radius = textHeight * 1.3f,
+                            radius = headRadius * 3f,
                             center = center
                         )
-                        val drift = sin(letter.x * 30f + letter.id * 0.07f) * textHeight * 0.025f
-                        sparkle(Offset(x - textWidth * 0.34f, y - textHeight * 0.32f + drift), textHeight * 0.10f, shimmerColor, 1f * shimmer)
-                        sparkle(Offset(x + textWidth * 0.34f, y - textHeight * 0.32f + drift), textHeight * 0.10f, shimmerColor, 1f * shimmer)
-                        sparkle(Offset(x - textWidth * 0.34f, y + textHeight * 0.3f - drift), textHeight * 0.085f, shimmerColor, 0.9f * shimmer)
-                        sparkle(Offset(x + textWidth * 0.34f, y + textHeight * 0.3f - drift), textHeight * 0.085f, shimmerColor, 0.9f * shimmer)
+                        val drift = sin(letter.x * 30f + letter.id * 0.07f) * headRadius * 0.06f
+                        sparkle(Offset(x - headRadius * 1.05f, y - headRadius * 0.85f + drift), headRadius * 0.26f, shimmerColor, shimmer)
+                        sparkle(Offset(x + headRadius * 1.05f, y - headRadius * 0.85f + drift), headRadius * 0.26f, shimmerColor, shimmer)
+                        sparkle(Offset(x - headRadius * 1.05f, y + headRadius * 0.85f - drift), headRadius * 0.22f, shimmerColor, 0.9f * shimmer)
+                        sparkle(Offset(x + headRadius * 1.05f, y + headRadius * 0.85f - drift), headRadius * 0.22f, shimmerColor, 0.9f * shimmer)
                     } else {
                         val below = targetCents < 0f
-                        val edgeY = y + if (below) textHeight * 0.56f else -textHeight * 0.56f
+                        val edgeY = y + if (below) headRadius * 1.6f else -headRadius * 1.6f
                         drawLine(
                             color = shimmerColor.copy(alpha = 0.52f * shimmer),
-                            start = Offset(x - textWidth * 0.34f, edgeY),
-                            end = Offset(x + textWidth * 0.34f, edgeY),
-                            strokeWidth = textHeight * 0.16f,
+                            start = Offset(x - headRadius * 0.9f, edgeY),
+                            end = Offset(x + headRadius * 0.9f, edgeY),
+                            strokeWidth = headRadius * 0.22f,
                             cap = StrokeCap.Round
                         )
                         repeat(3) { index ->
                             sparkle(
-                                Offset(x + (index - 1) * textWidth * 0.23f, edgeY),
-                                textHeight * 0.085f,
+                                Offset(x + (index - 1) * headRadius * 0.62f, edgeY),
+                                headRadius * 0.22f,
                                 shimmerColor,
-                                1f * shimmer
+                                shimmer
                             )
                         }
                     }
                 }
 
-                drawText(
-                    shadow,
-                    topLeft = Offset(
-                        x - textWidth / 2f + with(density) { 1.5.dp.toPx() },
-                        y - textHeight / 2f + with(density) { 2.dp.toPx() }
-                    )
+                val stemX = x + headRadius * 0.78f
+                val stemTop = y - headRadius * 3.4f
+                val stemWidth = headRadius * 0.2f
+                drawLine(
+                    color = NoteInk.copy(alpha = 0.25f),
+                    start = Offset(stemX + with(density) { 1.dp.toPx() }, y + with(density) { 1.dp.toPx() }),
+                    end = Offset(stemX + with(density) { 1.dp.toPx() }, stemTop + with(density) { 1.dp.toPx() }),
+                    strokeWidth = stemWidth,
+                    cap = StrokeCap.Round
                 )
+                drawLine(color, Offset(stemX, y), Offset(stemX, stemTop), strokeWidth = stemWidth, cap = StrokeCap.Round)
+                drawCircle(color, headRadius, center)
+                drawCircle(NoteInk.copy(alpha = 0.3f), headRadius, center, style = Stroke(headRadius * 0.08f))
+                val letterAlteration = KeySignature.keyAlteration(
+                    ((spelling.naturalMidi % 12) + 12) % 12,
+                    key.fifths
+                )
+                val accidental = spelling.accidental != letterAlteration
+                if (accidental) {
+                    drawAccidentalSign(
+                        Offset(x + headRadius * 0.45f, y),
+                        headRadius * 1.25f,
+                        spelling.accidental.coerceIn(-1, 1),
+                        ink
+                    )
+                }
                 drawText(
                     text,
-                    topLeft = Offset(x - textWidth / 2f, y - textHeight / 2f)
+                    topLeft = Offset(
+                        x - text.size.width / 2f - if (accidental) headRadius * 0.3f else 0f,
+                        y - text.size.height / 2f
+                    )
                 )
             }
         }

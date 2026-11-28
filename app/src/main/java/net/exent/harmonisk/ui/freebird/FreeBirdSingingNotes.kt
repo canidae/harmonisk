@@ -28,7 +28,6 @@ import kotlin.math.sin
 @Composable
 fun FreeBirdSingingNotes(
     instrument: Instrument,
-    level: Int,
     hit: FreeBirdHit,
     modifier: Modifier = Modifier
 ) {
@@ -36,9 +35,10 @@ fun FreeBirdSingingNotes(
         val density = LocalDensity.current
         val width = with(density) { maxWidth.toPx() }
         val height = with(density) { maxHeight.toPx() }
-        val layout = remember(width, height, instrument, level) {
-            freeBirdStaffLayout(width, height, instrument, level, density)
+        val layout = remember(width, height, instrument) {
+            freeBirdStaffLayout(width, height, instrument, density)
         }
+        val key = FreeBirdKey
         var now by remember(hit.id) { mutableLongStateOf(hit.createdAt) }
         LaunchedEffect(hit.id) {
             while (true) {
@@ -49,9 +49,9 @@ fun FreeBirdSingingNotes(
             val t = ((now - hit.createdAt) / 1_100f).coerceIn(0f, 1f)
             if (t >= 1f) return@Canvas
             val birdSize = width * BIRD_SIZE_FRACTION
-            val noteY = freeBirdNoteY(layout, hit.midi, height)
+            val noteY = freeBirdNoteY(layout, hit.midi, key, height)
             val beak = Offset(
-                x = width * BIRD_PERCH_X + birdSize * 0.48f,
+                x = width * BIRD_BEAK_X,
                 y = noteY - birdSize * 0.12f
             )
             val color = FingerColors[hit.finger]

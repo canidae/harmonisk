@@ -5,6 +5,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
@@ -17,6 +21,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.exent.harmonisk.R
+import net.exent.harmonisk.midi.KeySignature
 import net.exent.harmonisk.music.BowedAlgorithm
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.PitchResult
@@ -42,7 +47,6 @@ private val ClefFont = FontFamily(Font(R.font.freebird_clefs))
 private val StaffInk = Color(0xFFDCE0D9).copy(alpha = 0.52f)
 private val StaffShadow = Color(0xFF18291F).copy(alpha = 0.12f)
 private val NOTE_DEGREE = intArrayOf(0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6)
-private val PITCH_STEP = floatArrayOf(0f, 0.5f, 1f, 1.5f, 2f, 3f, 3.5f, 4f, 4.5f, 5f, 5.5f, 6f)
 
 data class FreeBirdStaffLayout(
     val step: Float,
@@ -55,10 +59,9 @@ fun freeBirdStaffLayout(
     width: Float,
     height: Float,
     instrument: Instrument,
-    level: Int,
     density: Density
 ): FreeBirdStaffLayout {
-    val range = levelRange(instrument, level)
+    val range = freeBirdStaffRange(instrument)
     val topSteps = max(STAFF_HALF_STEPS.toFloat(), (diatonic(range.last) - MIDDLE_C_DIATONIC + STAFF_MARGIN_STEPS).toFloat())
     val bottomSteps = max(STAFF_HALF_STEPS.toFloat(), (MIDDLE_C_DIATONIC - diatonic(range.first) + STAFF_MARGIN_STEPS).toFloat())
     val available = height * 0.52f
@@ -72,33 +75,28 @@ fun freeBirdStaffLayout(
     )
 }
 
-fun freeBirdNoteY(layout: FreeBirdStaffLayout, midi: Int, height: Float): Float {
-    val notePosition = notePosition(midi, 0f)
-    return (layout.middleC - (notePosition - MIDDLE_C_DIATONIC) * layout.step)
-        .coerceIn(height * 0.10f, height * 0.78f)
-}
-
-fun freeBirdPitchY(layout: FreeBirdStaffLayout, pitch: PitchResult, height: Float): Float {
-    val position = notePosition(pitch.midiNoteNumber, pitch.centsOff)
+fun freeBirdNoteY(layout: FreeBirdStaffLayout, midi: Int, key: KeySignature, height: Float): Float {
+    val position = diatonic(freeBirdSpelling(midi, key).naturalMidi)
     return (layout.middleC - (position - MIDDLE_C_DIATONIC) * layout.step)
         .coerceIn(height * 0.10f, height * 0.78f)
 }
 
-private fun notePosition(midi: Int, cents: Float): Float {
-    val pitchClass = ((midi % 12) + 12) % 12
-    return (midi / 12) * 7 + PITCH_STEP[pitchClass] + cents / 100f * 0.5f
+fun freeBirdPitchY(layout: FreeBirdStaffLayout, pitch: PitchResult, key: KeySignature, height: Float): Float {
+    val position = diatonic(freeBirdSpelling(pitch.midiNoteNumber, key).naturalMidi) +
+        pitch.centsOff / 100f * 0.5f
+    return (layout.middleC - (position - MIDDLE_C_DIATONIC) * layout.step)
+        .coerceIn(height * 0.10f, height * 0.78f)
 }
 
 @Composable
 fun FreeBirdStaff(
     instrument: Instrument,
-    level: Int = 1,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
     Canvas(modifier) {
-        val layout = freeBirdStaffLayout(size.width, size.height, instrument, level, density)
+        val layout = freeBirdStaffLayout(size.width, size.height, instrument, density)
         val step = layout.step
         val middleC = layout.middleC
         val staffStart = 0f
@@ -177,9 +175,8 @@ fun FreeBirdStaff(
     }
 }
 
-fun levelRange(instrument: Instrument, level: Int): IntRange {
-    val fingers = if (level >= FREEBIRD_MAX_LEVEL) 0..4 else listOf((level - 1).coerceIn(0, 4))
-    val midis = fingers.flatMap { finger ->
+fun freeBirdStaffRange(instrument: Instrument): IntRange {
+    val midis = (0 until FREEBIRD_FINGERS).flatMap { finger ->
         val offset = BowedAlgorithm.defaultFingerOffset(instrument, finger) ?: return@flatMap emptyList()
         instrument.tuning.map { it + offset }
     }
@@ -187,3 +184,34 @@ fun levelRange(instrument: Instrument, level: Int): IntRange {
 }
 
 fun diatonic(midi: Int): Int = (midi / 12) * 7 + NOTE_DEGREE[midi % 12]
+
+fun DrawScope.drawAccidentalSign(center: Offset, height: Float, sign: Int, color: Color) {
+    val half = height / 2f
+    val stroke = height * 0.10f
+    when {
+        sign > 0 -> {
+            val offset = height * 0.10f
+            val width = height * 0.26f
+            drawLine(color, Offset(center.x - offset, center.y - half), Offset(center.x - offset, center.y + half), stroke * 0.8f, StrokeCap.Round)
+            drawLine(color, Offset(center.x + offset, center.y - half), Offset(center.x + offset, center.y + half), stroke * 0.8f, StrokeCap.Round)
+            drawLine(color, Offset(center.x - width, center.y - half * 0.18f), Offset(center.x + width, center.y - half * 0.55f), stroke * 1.7f)
+            drawLine(color, Offset(center.x - width, center.y + half * 0.35f), Offset(center.x + width, center.y - half * 0.02f), stroke * 1.7f)
+        }
+        sign < 0 -> {
+            val stemX = center.x + height * 0.10f
+            drawLine(color, Offset(stemX, center.y - half), Offset(stemX, center.y + half), stroke, StrokeCap.Round)
+            val loop = Path().apply {
+                moveTo(stemX, center.y - half * 0.05f)
+                cubicTo(center.x - height * 0.18f, center.y + half * 0.12f, center.x - height * 0.18f, center.y + half * 0.55f, stemX, center.y + half * 0.62f)
+            }
+            drawPath(loop, color, style = Stroke(stroke * 1.1f, cap = StrokeCap.Round))
+        }
+        else -> {
+            val offset = height * 0.10f
+            drawLine(color, Offset(center.x - offset, center.y - half), Offset(center.x - offset, center.y + half * 0.35f), stroke, StrokeCap.Round)
+            drawLine(color, Offset(center.x + offset, center.y - half * 0.35f), Offset(center.x + offset, center.y + half), stroke, StrokeCap.Round)
+            drawLine(color, Offset(center.x - offset * 1.9f, center.y - half * 0.12f), Offset(center.x + offset * 1.9f, center.y - half * 0.12f), stroke * 1.5f)
+            drawLine(color, Offset(center.x - offset * 1.9f, center.y + half * 0.55f), Offset(center.x + offset * 1.9f, center.y + half * 0.55f), stroke * 1.5f)
+        }
+    }
+}

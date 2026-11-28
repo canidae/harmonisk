@@ -32,6 +32,7 @@ import kotlin.math.sin
 const val BIRD_SIZE_FRACTION = 0.13f
 const val BIRD_PERCH_X = 0.21f
 const val BIRD_PERCH_Y = 0.842f
+const val BIRD_BEAK_X = BIRD_PERCH_X + BIRD_SIZE_FRACTION * 0.48f
 
 private val Body = Color(0xFFF0A25A)
 private val BodyLight = Color(0xFFFFCB92)
@@ -45,20 +46,20 @@ private val Eye = Color(0xFF2A1A12)
 fun FreeBirdBird(
     instrument: Instrument,
     pitch: PitchResult,
-    level: Int = 1,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(modifier) {
         val density = LocalDensity.current
         val width = with(density) { maxWidth.toPx() }
         val height = with(density) { maxHeight.toPx() }
-        val layout = remember(width, height, instrument, level) {
-            freeBirdStaffLayout(width, height, instrument, level, density)
+        val layout = remember(width, height, instrument) {
+            freeBirdStaffLayout(width, height, instrument, density)
         }
+        val key = FreeBirdKey
         val birdSize = width * BIRD_SIZE_FRACTION
         val perchY = height * BIRD_PERCH_Y - width * 0.0105f - birdSize * 0.36f
         val flying = !pitch.isSilent
-        val targetY = if (flying) freeBirdPitchY(layout, pitch, height) else perchY
+        val targetY = if (flying) freeBirdPitchY(layout, pitch, key, height) else perchY
         var birdY by remember { mutableFloatStateOf(perchY) }
         val latestTarget by rememberUpdatedState(targetY)
         LaunchedEffect(flying) {

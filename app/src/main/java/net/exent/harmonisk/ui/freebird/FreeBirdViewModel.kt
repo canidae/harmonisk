@@ -73,19 +73,19 @@ class FreeBirdViewModel @Inject constructor(
         paused = false
         startListening()
         best = profileRepository.activeProfileId?.let { freeBirdRepository.best(it) } ?: 0
-        _game.value = FreeBirdGameState(
-            best = best,
-            playing = true,
-            timeMs = FREEBIRD_GAME_TIME_MS,
-            level = 1
-        )
+        _game.value = FreeBirdGameState(best = best, playing = true, timeMs = FREEBIRD_GAME_TIME_MS, level = 1)
         gameJob = viewModelScope.launch {
-            var last = SystemClock.elapsedRealtime()
-            var nextSpawn = last + 1_000L
-            var pauseUntil = 0L
+            val startedAt = SystemClock.elapsedRealtime()
+            var last = startedAt
+            var lastSpawn = startedAt
+            var nextSpawn = startedAt + FREEBIRD_NOTE_INTERVAL_MS
             var feedback: FreeBirdHit? = null
             var feedbackUntil = 0L
             var nextId = 1L
+            var level = 1
+            var phrase = emptyList<FreeBirdNote>()
+            var phraseIndex = 0
+            var phrasesLeft = FREEBIRD_PHRASES_PER_LEVEL
             while (isActive) {
                 delay(33)
                 val now = SystemClock.elapsedRealtime()
@@ -95,7 +95,6 @@ class FreeBirdViewModel @Inject constructor(
                 val state = _game.value
                 if (!state.playing) break
                 _pitch.value = latestPitch
-                if (now < pauseUntil) continue
                 if (feedback != null && now >= feedbackUntil) feedback = null
                 var timeLeft = state.timeMs - delta
                 if (timeLeft <= 0) {
@@ -105,65 +104,58 @@ class FreeBirdViewModel @Inject constructor(
                             finished = true,
                             timeMs = 0,
                             letters = emptyList(),
-                            levelUp = null,
                             feedback = null
                         )
                     }
                     stopListening()
                     break
                 }
-                var level = state.level
-                var elapsed = state.levelElapsedMs + delta
-                val levelEnded = elapsed >= FREEBIRD_LEVEL_TIME_MS
-                val progress = (elapsed.toFloat() / FREEBIRD_LEVEL_TIME_MS).coerceIn(0f, 1f)
-                val interval = (FREEBIRD_SPAWN_MAX_MS -
-                    (FREEBIRD_SPAWN_MAX_MS - FREEBIRD_SPAWN_MIN_MS) * progress).toLong()
                 val letters = state.letters.toMutableList()
-                if (level >= FREEBIRD_MAX_LEVEL || !levelEnded) {
-                    if (now >= nextSpawn) {
-                        val pool = notesForLevel(_instrument.value, level)
-                        if (pool.isNotEmpty()) {
-                            val note = pool.random()
-                            letters += FreeBirdLetter(nextId++, note.midi, note.finger, 1.08f)
-                            nextSpawn = now + interval
+                if (now >= nextSpawn) {
+                    if (phraseIndex >= phrase.size) {
+                        if (phrasesLeft <= 0) {
+                            if (level < FREEBIRD_MAX_LEVEL) level++
+                            phrasesLeft = FREEBIRD_PHRASES_PER_LEVEL
                         }
+                        phrase = freeBirdPhrase(_instrument.value, level)
+                        phraseIndex = 0
+                        phrasesLeft--
                     }
+                    val bonus = if (nextId == 1L) now - startedAt + FREEBIRD_BEAK_LEAD_MS.toLong() else now - lastSpawn
+                    lastSpawn = now
+                    val note = phrase[phraseIndex++]
+                    letters += FreeBirdLetter(nextId++, note.midi, note.finger, FREEBIRD_SPAWN_X, bonus)
+                    val phraseFinished = phraseIndex >= phrase.size
+                    nextSpawn = now +
+                        if (phraseFinished) FREEBIRD_PHRASE_GAP_MS else FREEBIRD_NOTE_INTERVAL_MS
                 }
-                val speed = (1.08f - BIRD_PERCH_X) / FREEBIRD_NOTE_TRAVEL_MS
+                val speed = (FREEBIRD_SPAWN_X - BIRD_PERCH_X) / FREEBIRD_NOTE_TRAVEL_MS
+                val next = letters.firstOrNull { !it.judged }
                 val remaining = ArrayList<FreeBirdLetter>(letters.size)
                 var score = state.score
                 for (letter in letters) {
                     val x = letter.x - speed * delta
                     var judged = letter.judged
-                    if (!judged && x <= BIRD_PERCH_X) {
-                        judged = true
-                        val pitch = _pitch.value
-                        val targetCents = if (pitch.isSilent) 0f else centsFromTarget(pitch, letter.midi)
-                        val hit = !pitch.isSilent && abs(targetCents) <= FREEBIRD_HIT_CENTS
-                        if (hit) {
-                            val points = pointsForCents(targetCents)
-                            score += points
-                            timeLeft += FREEBIRD_TIME_BONUS_MS
-                            feedback = FreeBirdHit(nextId++, letter.midi, letter.finger, SystemClock.elapsedRealtime())
-                            feedbackUntil = now + FREEBIRD_FEEDBACK_MS
-                            continue
+                    if (!judged) {
+                        if (letter.id == next?.id && freeBirdInHitWindow(x)) {
+                            val pitch = _pitch.value
+                            val targetCents = if (pitch.isSilent) 0f else centsFromTarget(pitch, letter.midi)
+                            if (!pitch.isSilent && abs(targetCents) <= FREEBIRD_HIT_CENTS) {
+                                val points = pointsForCents(targetCents)
+                                score += points
+                                timeLeft = timeAfterHit(timeLeft, letter.bonusMs, points)
+                                feedback = FreeBirdHit(nextId++, letter.midi, letter.finger, now)
+                                feedbackUntil = now + FREEBIRD_FEEDBACK_MS
+                                continue
+                            }
+                        }
+                        if (x - FREEBIRD_NOTE_RADIUS < BIRD_BEAK_X - FREEBIRD_HIT_WINDOW) {
+                            judged = true
                         }
                     }
                     if (x > -0.12f) {
                         remaining += letter.copy(x = x, judged = judged)
                     }
-                }
-                var levelUp: Int? = null
-                if (levelEnded && level < FREEBIRD_MAX_LEVEL) {
-                    if (remaining.isEmpty()) {
-                        level++
-                        elapsed = 0
-                        levelUp = level
-                        pauseUntil = now + FREEBIRD_LEVEL_PAUSE_MS
-                        nextSpawn = pauseUntil + 200
-                    }
-                } else if (level >= FREEBIRD_MAX_LEVEL && levelEnded) {
-                    elapsed = FREEBIRD_LEVEL_TIME_MS
                 }
                 if (score > best) {
                     best = score
@@ -174,9 +166,7 @@ class FreeBirdViewModel @Inject constructor(
                     best = best,
                     timeMs = timeLeft,
                     level = level,
-                    levelElapsedMs = elapsed,
                     letters = remaining,
-                    levelUp = levelUp,
                     feedback = feedback
                 )
             }

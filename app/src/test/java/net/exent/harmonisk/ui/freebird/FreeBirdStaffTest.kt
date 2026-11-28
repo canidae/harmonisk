@@ -21,32 +21,36 @@ class FreeBirdStaffTest {
     @Test
     fun `bird pitch follows the diatonic staff position`() {
         val layout = FreeBirdStaffLayout(step = 10f, middleC = 500f, clefX = 0f, staffEnd = 100f)
-        assertEquals(500f, freeBirdPitchY(layout, pitch(60), 1_000f), 0.01f)
-        assertEquals(490f, freeBirdPitchY(layout, pitch(62), 1_000f), 0.01f)
-        assertEquals(480f, freeBirdPitchY(layout, pitch(64), 1_000f), 0.01f)
-        assertEquals(450f, freeBirdPitchY(layout, pitch(69), 1_000f), 0.01f)
+        val key = FreeBirdKey
+        assertEquals(500f, freeBirdPitchY(layout, pitch(60), key, 1_000f), 0.01f)
+        assertEquals(490f, freeBirdPitchY(layout, pitch(62), key, 1_000f), 0.01f)
+        assertEquals(480f, freeBirdPitchY(layout, pitch(64), key, 1_000f), 0.01f)
+        assertEquals(450f, freeBirdPitchY(layout, pitch(69), key, 1_000f), 0.01f)
     }
 
     @Test
     fun `bird pitch follows cents within a step`() {
         val layout = FreeBirdStaffLayout(step = 10f, middleC = 500f, clefX = 0f, staffEnd = 100f)
-        assertEquals(497.5f, freeBirdPitchY(layout, pitch(60, 50f), 1_000f), 0.01f)
-        assertEquals(502.5f, freeBirdPitchY(layout, pitch(60, -50f), 1_000f), 0.01f)
+        val key = FreeBirdKey
+        assertEquals(497.5f, freeBirdPitchY(layout, pitch(60, 50f), key, 1_000f), 0.01f)
+        assertEquals(502.5f, freeBirdPitchY(layout, pitch(60, -50f), key, 1_000f), 0.01f)
     }
 
     @Test
-    fun `violin level ranges grow with the available fingers`() {
-        assertEquals(55..76, levelRange(Instrument.VIOLIN, 1))
-        assertEquals(57..78, levelRange(Instrument.VIOLIN, 2))
-        assertEquals(62..83, levelRange(Instrument.VIOLIN, 5))
-        assertEquals(55..83, levelRange(Instrument.VIOLIN, 99))
+    fun `notes with an accidental sit on their natural staff position`() {
+        val layout = FreeBirdStaffLayout(step = 10f, middleC = 500f, clefX = 0f, staffEnd = 100f)
+        val key = FreeBirdKey
+        assertEquals(470f, freeBirdNoteY(layout, 66, key, 1_000f), 0.01f)
+        assertEquals(470f, freeBirdNoteY(layout, 65, key, 1_000f), 0.01f)
+        assertEquals(460f, freeBirdNoteY(layout, 67, key, 1_000f), 0.01f)
+        assertEquals(470f, freeBirdPitchY(layout, pitch(66), key, 1_000f), 0.01f)
     }
 
     @Test
-    fun `cello level ranges include the low open strings`() {
-        assertEquals(36..57, levelRange(Instrument.CELLO, 1))
-        assertEquals(41..62, levelRange(Instrument.CELLO, 5))
-        assertEquals(36..62, levelRange(Instrument.CELLO, 99))
+    fun `the grand staff covers every first position note`() {
+        assertEquals(55..83, freeBirdStaffRange(Instrument.VIOLIN))
+        assertEquals(48..76, freeBirdStaffRange(Instrument.VIOLA))
+        assertEquals(36..62, freeBirdStaffRange(Instrument.CELLO))
     }
 
     private fun pitch(midi: Int, cents: Float = 0f) = PitchResult(

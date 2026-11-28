@@ -60,11 +60,11 @@ fun FreeBirdScreen(
     val layer = remember { Modifier.fillMaxSize() }
     Box(Modifier.fillMaxSize()) {
         FreeBirdBackdrop(layer)
-        FreeBirdStaff(instrument, game.level, layer)
+        FreeBirdStaff(instrument, layer)
         FreeBirdSeagull(layer)
-        FreeBirdLetters(instrument, game.letters, game.level, pitch, layer)
+        FreeBirdLetters(instrument, game.letters, pitch, layer)
         RequireMicPermission {
-            FreeBirdBird(instrument, pitch, game.level, layer)
+            FreeBirdBird(instrument, pitch, layer)
             if (!game.playing && !game.finished) {
                 FreeBirdStartOverlay(
                     profile = profile,
@@ -74,7 +74,7 @@ fun FreeBirdScreen(
             }
         }
         game.feedback?.let {
-            FreeBirdSingingNotes(instrument, game.level, it, layer)
+            FreeBirdSingingNotes(instrument, it, layer)
         }
         val openProfile = remember(profileDialogs, game.playing) {
             { profileDialogs.open(game.playing) }
@@ -117,7 +117,6 @@ fun FreeBirdScreen(
             )
         }
         if (game.playing || game.finished) {
-            game.levelUp?.let { LevelUpOverlay(it) }
             if (game.finished) {
                 GameOverOverlay(
                     score = game.score,
@@ -245,25 +244,6 @@ private fun FreeBirdTimer(seconds: Long, warning: Boolean, modifier: Modifier = 
             color = if (warning) Color(0xFFFF5C5C) else Color.White,
             modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp)
         )
-    }
-}
-
-@Composable
-private fun LevelUpOverlay(level: Int) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Surface(
-            color = Color.Black.copy(alpha = 0.32f),
-            shape = RoundedCornerShape(50),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
-        ) {
-            Text(
-                text = stringResource(R.string.freebird_level, level),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Black,
-                color = Color.White,
-                modifier = Modifier.padding(horizontal = 30.dp, vertical = 14.dp)
-            )
-        }
     }
 }
 
