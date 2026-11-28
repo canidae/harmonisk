@@ -102,6 +102,14 @@ class FreeBirdGameTest {
     }
 
     @Test
+    fun `perfect hits refill the note spacing and the pattern gap`() {
+        assertEquals(500L, FREEBIRD_NOTE_INTERVAL_MS)
+        assertEquals(2_000L, FREEBIRD_PHRASE_GAP_MS)
+        assertEquals(25_000L, timeAfterHit(25_000L - FREEBIRD_NOTE_INTERVAL_MS, FREEBIRD_NOTE_INTERVAL_MS, 5))
+        assertEquals(25_000L, timeAfterHit(25_000L - FREEBIRD_PHRASE_GAP_MS, FREEBIRD_PHRASE_GAP_MS, 5))
+    }
+
+    @Test
     fun `a perfectly pitched note refills the time since the previous note`() {
         assertEquals(30_000L, timeAfterHit(28_500L, 1_500L, 5))
         assertEquals(29_400L, timeAfterHit(28_500L, 1_500L, 3))
