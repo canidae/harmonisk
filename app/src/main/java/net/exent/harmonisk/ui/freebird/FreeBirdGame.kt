@@ -25,6 +25,8 @@ const val FREEBIRD_COUNT_IN_BARS = 2
 const val FREEBIRD_COUNT_IN_BEATS = FREEBIRD_COUNT_IN_BARS * FREEBIRD_BEATS_PER_BAR
 const val FREEBIRD_BEAT_MUTE_MS = 180L
 const val FREEBIRD_BAR_MS = FREEBIRD_BEATS_PER_BAR * FREEBIRD_NOTE_INTERVAL_MS
+const val FREEBIRD_METERS_PER_SECOND = 4f
+const val FREEBIRD_METERS_PER_MS = FREEBIRD_METERS_PER_SECOND / 1_000f
 
 val FreeBirdKey = KeySignature(0, false)
 val FREEBIRD_HIT_WINDOW = FREEBIRD_HIT_WINDOW_MS * (FREEBIRD_SPAWN_X - BIRD_PERCH_X) / FREEBIRD_NOTE_TRAVEL_MS
@@ -55,8 +57,10 @@ data class FreeBirdLetter(
 )
 
 data class FreeBirdGameState(
-    val score: Int = 0,
-    val best: Int = 0,
+    val distanceMeters: Float = 0f,
+    val bestTenths: Int = 0,
+    val recordTenths: Int = 0,
+    val newRecord: Boolean = false,
     val timeMs: Long = FREEBIRD_GAME_TIME_MS,
     val level: Int = 1,
     val letters: List<FreeBirdLetter> = emptyList(),
@@ -129,3 +133,14 @@ fun freeBirdInHitWindow(noteX: Float): Boolean {
 
 fun freeBirdNoteAlpha(noteX: Float): Float =
     ((noteX - FREEBIRD_FADE_END_X) / (FREEBIRD_FADE_START_X - FREEBIRD_FADE_END_X)).coerceIn(0f, 1f)
+
+fun freeBirdDistanceMeters(elapsedMs: Long): Float = elapsedMs * FREEBIRD_METERS_PER_MS
+
+fun freeBirdFlightTimeMs(elapsedMs: Long, timeLeftMs: Long): Long =
+    elapsedMs + timeLeftMs.coerceAtMost(0L)
+
+fun freeBirdBestLineX(width: Float, recordTenths: Int, distanceMeters: Float): Float {
+    val pixelsPerMeter = (FREEBIRD_SPAWN_X - BIRD_PERCH_X) * width /
+        (FREEBIRD_NOTE_TRAVEL_MS / 1_000f * FREEBIRD_METERS_PER_SECOND)
+    return width * BIRD_PERCH_X + (recordTenths / 10f - distanceMeters) * pixelsPerMeter
+}

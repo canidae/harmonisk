@@ -12,19 +12,31 @@ class FreeBirdRepository @Inject constructor(
     @ApplicationContext context: Context
 ) {
     companion object {
-        private const val KEY_BEST = "best_score"
+        private const val KEY_BEST_SCORE = "best_score"
+        private const val KEY_BEST_DISTANCE = "best_distance_tenths"
     }
 
     private val prefs = context.getSharedPreferences("freebird_scores", Context.MODE_PRIVATE)
 
-    fun best(profileId: String): Int = prefs.getInt(ProfileRepository.scopedKey(profileId, KEY_BEST), 0)
+    fun bestDistance(profileId: String): Int {
+        val key = ProfileRepository.scopedKey(profileId, KEY_BEST_DISTANCE)
+        if (prefs.contains(key)) return prefs.getInt(key, 0)
+        val legacy = prefs.getInt(ProfileRepository.scopedKey(profileId, KEY_BEST_SCORE), 0)
+        if (legacy <= 0) return 0
+        val tenths = legacy * 10
+        prefs.edit { putInt(key, tenths) }
+        return tenths
+    }
 
-    fun saveBest(profileId: String, score: Int) {
-        if (score <= best(profileId)) return
-        prefs.edit { putInt(ProfileRepository.scopedKey(profileId, KEY_BEST), score) }
+    fun saveBestDistance(profileId: String, tenths: Int) {
+        if (tenths <= bestDistance(profileId)) return
+        prefs.edit { putInt(ProfileRepository.scopedKey(profileId, KEY_BEST_DISTANCE), tenths) }
     }
 
     fun deleteProfileData(profileId: String) {
-        prefs.edit { remove(ProfileRepository.scopedKey(profileId, KEY_BEST)) }
+        prefs.edit {
+            remove(ProfileRepository.scopedKey(profileId, KEY_BEST_SCORE))
+            remove(ProfileRepository.scopedKey(profileId, KEY_BEST_DISTANCE))
+        }
     }
 }

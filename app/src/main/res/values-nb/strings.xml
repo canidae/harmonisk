@@ -31,8 +31,9 @@
     <string name="record_title">Opptak</string>
     <string name="developer_tools_title">Utviklerverktøy</string>
     <string name="games_title">Spill</string>
-    <string name="freebird_best">Beste %1$d</string>
-    <string name="freebird_score">Poeng %1$d</string>
+    <string name="freebird_best">Beste %1$s m</string>
+    <string name="freebird_distance">%1$s / %2$s m</string>
+    <string name="freebird_distance_only">%1$s m</string>
     <string name="freebird_level">Nivå %1$d</string>
     <string name="freebird_time_up">Tiden er ute</string>
     <string name="freebird_play_again">Spill igjen</string>

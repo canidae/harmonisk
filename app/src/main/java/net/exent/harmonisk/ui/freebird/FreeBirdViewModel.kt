@@ -21,6 +21,7 @@ import net.exent.harmonisk.data.createProfileWithInstrument
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.music.PitchResult
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import javax.inject.Inject
 
 @HiltViewModel
@@ -47,6 +48,7 @@ class FreeBirdViewModel @Inject constructor(
     private var gameJob: Job? = null
     private var synthJob: Job? = null
     private var best = 0
+    private var runProfileId: String? = null
     private var paused = false
     private var latestPitch = PitchResult.SILENT
 
@@ -56,9 +58,12 @@ class FreeBirdViewModel @Inject constructor(
             var lastProfileId: String? = null
             profileRepository.activeProfile.collect { profile ->
                 val profileId = profile?.id
-                best = profile?.let { freeBirdRepository.best(it.id) } ?: 0
-                _game.update { it.copy(best = best) }
-                if (lastProfileId != null && lastProfileId != profileId && _game.value.playing) stopGame()
+                val switched = lastProfileId != null && lastProfileId != profileId
+                if (switched) stopGame()
+                if (!_game.value.playing) {
+                    best = profile?.let { freeBirdRepository.bestDistance(it.id) } ?: 0
+                    _game.update { it.copy(bestTenths = best) }
+                }
                 lastProfileId = profileId
             }
         }
@@ -79,8 +84,15 @@ class FreeBirdViewModel @Inject constructor(
         startListening()
         openSynthesizer()
         val profileId = profileRepository.activeProfileId
-        best = profileId?.let { freeBirdRepository.best(it) } ?: 0
-        _game.value = FreeBirdGameState(best = best, playing = true, timeMs = FREEBIRD_GAME_TIME_MS, level = 1)
+        runProfileId = profileId
+        best = profileId?.let { freeBirdRepository.bestDistance(it) } ?: 0
+        _game.value = FreeBirdGameState(
+            bestTenths = best,
+            recordTenths = best,
+            playing = true,
+            timeMs = FREEBIRD_GAME_TIME_MS,
+            level = 1
+        )
         gameJob = viewModelScope.launch {
             var last = SystemClock.elapsedRealtime()
             var elapsed = 0L
@@ -95,6 +107,7 @@ class FreeBirdViewModel @Inject constructor(
             var feedbackUntil = 0L
             var nextId = 1L
             var level = 1
+            var newRecord = false
             var phrase = emptyList<FreeBirdNote>()
             var phraseIndex = 0
             var phrasesLeft = FREEBIRD_PHRASES_PER_LEVEL
@@ -107,14 +120,24 @@ class FreeBirdViewModel @Inject constructor(
                 val state = _game.value
                 if (!state.playing) break
                 elapsed += delta
+                var timeLeft = state.timeMs - delta
+                val gameElapsed = freeBirdFlightTimeMs(elapsed, timeLeft)
+                val distance = freeBirdDistanceMeters(gameElapsed)
+                val distanceTenths = (distance * 10f).roundToInt()
+                if (distanceTenths > best) best = distanceTenths
+                if (state.recordTenths > 0 && distanceTenths > state.recordTenths) newRecord = true
                 _pitch.value = latestPitch
                 if (feedback != null && now >= feedbackUntil) feedback = null
-                var timeLeft = state.timeMs - delta
                 if (timeLeft <= 0) {
+                    if (distanceTenths > state.recordTenths) newRecord = true
+                    saveRunBest()
                     _game.update {
                         it.copy(
                             playing = false,
                             finished = true,
+                            distanceMeters = distance,
+                            bestTenths = best,
+                            newRecord = newRecord,
                             timeMs = 0,
                             letters = emptyList(),
                             feedback = null
@@ -161,7 +184,6 @@ class FreeBirdViewModel @Inject constructor(
                 val speed = (FREEBIRD_SPAWN_X - BIRD_PERCH_X) / FREEBIRD_NOTE_TRAVEL_MS
                 val next = letters.firstOrNull { !it.judged }
                 val remaining = ArrayList<FreeBirdLetter>(letters.size)
-                var score = state.score
                 for (letter in letters) {
                     val x = letter.x - speed * delta
                     var judged = letter.judged
@@ -171,7 +193,6 @@ class FreeBirdViewModel @Inject constructor(
                             val targetCents = if (pitch.isSilent) 0f else centsFromTarget(pitch, letter.midi)
                             if (!pitch.isSilent && abs(targetCents) <= FREEBIRD_HIT_CENTS) {
                                 val points = pointsForCents(targetCents)
-                                score += points
                                 timeLeft = timeAfterHit(timeLeft, letter.bonusMs, points)
                                 feedback = FreeBirdHit(nextId++, letter.midi, letter.finger, now)
                                 feedbackUntil = now + FREEBIRD_FEEDBACK_MS
@@ -186,15 +207,10 @@ class FreeBirdViewModel @Inject constructor(
                         remaining += letter.copy(x = x, judged = judged)
                     }
                 }
-                if (score > best) {
-                    best = score
-                    if (profileId == profileRepository.activeProfileId) {
-                        profileId?.let { freeBirdRepository.saveBest(it, score) }
-                    }
-                }
                 _game.value = state.copy(
-                    score = score,
-                    best = best,
+                    distanceMeters = distance,
+                    bestTenths = best,
+                    newRecord = newRecord,
                     timeMs = timeLeft,
                     level = level,
                     letters = remaining,
@@ -242,11 +258,18 @@ class FreeBirdViewModel @Inject constructor(
         }
     }
 
+    private fun saveRunBest() {
+        val profileId = runProfileId ?: return
+        freeBirdRepository.saveBestDistance(profileId, best)
+        runProfileId = null
+    }
+
     private fun stopGame() {
+        saveRunBest()
         gameJob?.cancel()
         gameJob = null
         stopListening()
-        _game.value = FreeBirdGameState(best = best)
+        _game.value = FreeBirdGameState(bestTenths = best)
     }
 
     private fun stopListening() {
@@ -264,6 +287,7 @@ class FreeBirdViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        saveRunBest()
         listenJob?.cancel()
         listenJob = null
         gameJob?.cancel()

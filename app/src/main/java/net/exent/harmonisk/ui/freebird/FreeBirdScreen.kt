@@ -61,6 +61,7 @@ fun FreeBirdScreen(
     Box(Modifier.fillMaxSize()) {
         FreeBirdBackdrop(layer)
         FreeBirdStaff(instrument, layer)
+        if (game.playing) FreeBirdBestLine(game.recordTenths, game.distanceMeters, layer)
         FreeBirdSeagull(layer)
         FreeBirdLetters(instrument, game.letters, pitch, layer)
         RequireMicPermission {
@@ -81,8 +82,9 @@ fun FreeBirdScreen(
         }
         if (game.playing || game.finished) {
             FreeBirdHud(
-                score = game.score,
-                best = game.best,
+                distanceMeters = game.distanceMeters,
+                bestTenths = game.bestTenths,
+                recordTenths = game.recordTenths,
                 level = game.level,
                 playing = game.playing,
                 profile = profile,
@@ -119,14 +121,17 @@ fun FreeBirdScreen(
         if (game.playing || game.finished) {
             if (game.finished) {
                 GameOverOverlay(
-                    score = game.score,
-                    best = game.best,
+                    distanceMeters = game.distanceMeters,
+                    bestTenths = game.bestTenths,
                     profile = profile,
                     onProfile = { profileDialogs.open(false) },
                     onRestart = viewModel::startGame,
                     onBack = onBack
                 )
             }
+        }
+        if (game.newRecord && (game.playing || game.finished)) {
+            FreeBirdConfetti(layer)
         }
         ProfileDialogs(
             state = profileDialogs,
@@ -187,8 +192,9 @@ private fun FreeBirdStartOverlay(
 
 @Composable
 private fun FreeBirdHud(
-    score: Int,
-    best: Int,
+    distanceMeters: Float,
+    bestTenths: Int,
+    recordTenths: Int,
     level: Int,
     playing: Boolean,
     profile: ProfileRepository.Profile?,
@@ -202,8 +208,7 @@ private fun FreeBirdHud(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        HudChip(stringResource(R.string.freebird_score, score))
-        HudChip(stringResource(R.string.freebird_best, best))
+        DistanceMeter(distanceMeters, bestTenths, recordTenths > 0)
         Spacer(Modifier.weight(1f))
         HudChip(stringResource(R.string.freebird_level, level))
         if (playing) {
@@ -212,6 +217,21 @@ private fun FreeBirdHud(
             }
         }
     }
+}
+
+@Composable
+private fun DistanceMeter(distanceMeters: Float, bestTenths: Int, showBest: Boolean) {
+    HudChip(
+        text = if (showBest) {
+            stringResource(
+                R.string.freebird_distance,
+                formatMeters(distanceMeters),
+                formatMeters(bestTenths / 10f)
+            )
+        } else {
+            stringResource(R.string.freebird_distance_only, formatMeters(distanceMeters))
+        }
+    )
 }
 
 @Composable
@@ -251,8 +271,8 @@ private fun FreeBirdTimer(seconds: Long, warning: Boolean, modifier: Modifier = 
 
 @Composable
 private fun GameOverOverlay(
-    score: Int,
-    best: Int,
+    distanceMeters: Float,
+    bestTenths: Int,
     profile: ProfileRepository.Profile?,
     onProfile: () -> Unit,
     onRestart: () -> Unit,
@@ -283,14 +303,14 @@ private fun GameOverOverlay(
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    text = stringResource(R.string.freebird_score, score),
+                    text = stringResource(R.string.freebird_distance_only, formatMeters(distanceMeters)),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    text = stringResource(R.string.freebird_best, best),
+                    text = stringResource(R.string.freebird_best, formatMeters(bestTenths / 10f)),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -320,3 +340,5 @@ private fun formatTime(seconds: Long): String {
     val total = seconds.coerceAtLeast(0)
     return "%d:%02d".format(total / 60, total % 60)
 }
+
+private fun formatMeters(meters: Float): String = "%.1f".format(meters)

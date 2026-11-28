@@ -140,6 +140,41 @@ class FreeBirdGameTest {
         assertEquals(30_000L, timeAfterHit(29_000L, 9_000L, 5))
     }
 
+    @Test
+    fun `distance grows with the time flown`() {
+        assertEquals(4f, freeBirdDistanceMeters(1_000), 0.001f)
+        assertEquals(120f, freeBirdDistanceMeters(30_000), 0.001f)
+    }
+
+    @Test
+    fun `the final frame does not add distance past the timer`() {
+        assertEquals(30_000L, freeBirdFlightTimeMs(30_033L, -33L))
+        assertEquals(30_000L, freeBirdFlightTimeMs(30_000L, 33L))
+        assertEquals(120f, freeBirdDistanceMeters(freeBirdFlightTimeMs(30_033L, -33L)), 0.001f)
+    }
+
+    @Test
+    fun `the best marker moves at the same speed as the notes`() {
+        val width = 1_080f
+        val atBest = freeBirdBestLineX(width, 2_510, 251f)
+        assertEquals(width * BIRD_PERCH_X, atBest, 0.01f)
+        val later = freeBirdBestLineX(width, 2_510, 251f + freeBirdDistanceMeters(1_000))
+        val noteSpeed = (FREEBIRD_SPAWN_X - BIRD_PERCH_X) * width / (FREEBIRD_NOTE_TRAVEL_MS / 1_000f)
+        assertEquals(noteSpeed, atBest - later, 0.01f)
+    }
+
+    @Test
+    fun `the best marker sits ahead of the bird until the record is passed`() {
+        val width = 1_080f
+        val ahead = freeBirdBestLineX(width, 1_000, 90f)
+        val atBest = freeBirdBestLineX(width, 1_000, 100f)
+        val behind = freeBirdBestLineX(width, 1_000, 110f)
+
+        assertTrue(ahead > atBest)
+        assertEquals(width * BIRD_PERCH_X, atBest, 0.01f)
+        assertTrue(behind < atBest)
+    }
+
     private fun pitch(midi: Int, cents: Float) = PitchResult(
         frequency = 440f,
         noteName = "-",
