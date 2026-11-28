@@ -81,12 +81,16 @@ fun freeBirdNoteY(layout: FreeBirdStaffLayout, midi: Int, key: KeySignature, hei
         .coerceIn(height * 0.10f, height * 0.78f)
 }
 
-fun freeBirdPitchY(layout: FreeBirdStaffLayout, pitch: PitchResult, key: KeySignature, height: Float): Float {
-    val position = diatonic(freeBirdSpelling(pitch.midiNoteNumber, key).naturalMidi) +
-        pitch.centsOff / 100f * 0.5f
-    return (layout.middleC - (position - MIDDLE_C_DIATONIC) * layout.step)
-        .coerceIn(height * 0.10f, height * 0.78f)
+fun freeBirdPitchStep(pitch: PitchResult, key: KeySignature): Float {
+    val position = diatonic(freeBirdSpelling(pitch.midiNoteNumber, key).naturalMidi)
+    return (position - MIDDLE_C_DIATONIC) + pitch.centsOff / 100f * 0.5f
 }
+
+fun freeBirdStepY(layout: FreeBirdStaffLayout, step: Float, height: Float): Float =
+    (layout.middleC - step * layout.step).coerceIn(height * 0.10f, height * 0.78f)
+
+fun freeBirdPitchY(layout: FreeBirdStaffLayout, pitch: PitchResult, key: KeySignature, height: Float): Float =
+    freeBirdStepY(layout, freeBirdPitchStep(pitch, key), height)
 
 @Composable
 fun FreeBirdStaff(

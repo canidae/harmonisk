@@ -68,8 +68,9 @@ fun FreeBirdBird(
         val birdSize = width * BIRD_SIZE_FRACTION
         val perchY = height * BIRD_PERCH_Y - width * 0.0105f - birdSize * 0.36f
         val flying = !pitch.isSilent
-        val targetY = if (flying) freeBirdPitchY(layout, pitch, key, height) else perchY
+        val pitchFilter = remember { FreeBirdPitchFilter() }
         var birdY by remember { mutableFloatStateOf(perchY) }
+        var altitudeY by remember { mutableFloatStateOf(perchY) }
         var landedAt by remember { mutableLongStateOf(0L) }
         var wasPerched by remember { mutableStateOf(true) }
         val perched = !flying && abs(birdY - perchY) < birdSize * 0.24f
@@ -78,13 +79,25 @@ fun FreeBirdBird(
             if (!perched) landedAt = 0L
             wasPerched = perched
         }
-        val latestTarget by rememberUpdatedState(targetY)
-        LaunchedEffect(flying) {
-            val factor = if (flying) 0.22f else 0.12f
+        val latestPitch by rememberUpdatedState(pitch)
+        LaunchedEffect(layout, height) {
+            var last = SystemClock.elapsedRealtime()
             while (true) {
-                val diff = latestTarget - birdY
-                birdY = if (abs(diff) <= 0.5f) latestTarget else birdY + diff * factor
                 delay(33)
+                val now = SystemClock.elapsedRealtime()
+                val dt = (now - last).coerceIn(1L, 100L)
+                last = now
+                val current = latestPitch
+                if (current.isSilent) {
+                    pitchFilter.reset()
+                    altitudeY = perchY
+                } else {
+                    val step = freeBirdPitchStep(current, key)
+                    altitudeY = freeBirdStepY(layout, pitchFilter.accept(step, dt.toFloat()), height)
+                }
+                val diff = altitudeY - birdY
+                val factor = if (current.isSilent) 0.12f else 0.32f
+                birdY = if (abs(diff) <= 0.5f) altitudeY else birdY + diff * factor
             }
         }
 
@@ -100,7 +113,7 @@ fun FreeBirdBird(
                     translationX = birdX - birdSize / 2f
                     translationY = birdY - birdSize / 2f
                     val perchedNow = !flying && abs(birdY - perch) < birdSize * 0.24f
-                    rotationZ = if (perchedNow) 0f else ((targetY - birdY) / birdSize).coerceIn(-1f, 1f) * 28f
+                    rotationZ = if (perchedNow) 0f else ((altitudeY - birdY) / birdSize).coerceIn(-1f, 1f) * 28f
                 }
         ) {
             val perchedNow = !flying && abs(birdY - perch) < birdSize * 0.24f
