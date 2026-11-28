@@ -8,9 +8,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import net.exent.harmonisk.audio.AudioCaptureService
 import net.exent.harmonisk.audio.AudioDeviceMonitor
-import net.exent.harmonisk.audio.AudioInputDevice
 import net.exent.harmonisk.audio.AudioOutputDevice
 import net.exent.harmonisk.audio.PitchProcessor
 import net.exent.harmonisk.audio.SoundFontSynthesizer
@@ -29,8 +27,7 @@ class SettingsViewModel @Inject constructor(
     private val audioDeviceMonitor: AudioDeviceMonitor,
     private val audioDelayRepository: AudioDelayRepository,
     private val soundFontSynthesizer: SoundFontSynthesizer,
-    private val pitchProcessor: PitchProcessor,
-    private val audioCaptureService: AudioCaptureService
+    private val pitchProcessor: PitchProcessor
 ) : ViewModel() {
 
     companion object {
@@ -40,8 +37,6 @@ class SettingsViewModel @Inject constructor(
         private const val FREQ_TOLERANCE = 30f
         private const val REQUIRED_DETECTIONS = 5
         const val DELAY_STEP_MS = 25
-        private const val FALLBACK_CAPTURE_LATENCY_MS = 15
-        private const val FALLBACK_INFERENCE_LATENCY_MS = 40
     }
 
     val settings: StateFlow<AppSettings> = settingsRepository.settings
@@ -53,13 +48,7 @@ class SettingsViewModel @Inject constructor(
     val currentDevice: StateFlow<AudioOutputDevice?> = audioDeviceMonitor.currentDevice
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val currentInputDevice: StateFlow<AudioInputDevice?> = audioDeviceMonitor.currentInputDevice
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    val activeOutputDelay: StateFlow<Int> = audioDelayRepository.activeOutputDelay
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
-    val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
+    val audioDelay: StateFlow<Int> = audioDelayRepository.audioDelay
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     private val _isCalibrating = MutableStateFlow(false)
@@ -88,12 +77,8 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.updateSilenceThreshold(db) }
     }
 
-    fun setInputDelay(ms: Int) {
-        viewModelScope.launch { audioDelayRepository.setInputDelayForCurrentDevices(ms) }
-    }
-
-    fun setOutputDelay(ms: Int) {
-        viewModelScope.launch { audioDelayRepository.setOutputDelayForCurrentDevices(ms) }
+    fun setAudioDelay(ms: Int) {
+        viewModelScope.launch { audioDelayRepository.setAudioDelayForCurrentDevice(ms) }
     }
 
     fun resetToDefaults() {
@@ -178,11 +163,8 @@ class SettingsViewModel @Inject constructor(
                     }
                 }
 
-                val roundTripMs = roundToStep(measurements.average().toInt())
-                val inputMs = measureInputDelayMs()
-                audioDelayRepository.setInputDelayForCurrentDevices(inputMs)
-                audioDelayRepository.setOutputDelayForCurrentDevices(
-                    roundToStep(roundTripMs - inputMs).coerceAtLeast(0)
+                audioDelayRepository.setAudioDelayForCurrentDevice(
+                    roundToStep(measurements.average().toInt())
                 )
             } catch (_: Exception) {
             } finally {
@@ -203,24 +185,6 @@ class SettingsViewModel @Inject constructor(
         }
         _isCalibrating.value = false
         _calibrationNoDetection.value = false
-    }
-
-    private suspend fun measureInputDelayMs(): Int {
-        var captureSum = 0
-        var inferenceSum = 0
-        var captureCount = 0
-        var inferenceCount = 0
-        repeat(5) {
-            val capture = audioCaptureService.captureLatencyMs
-            if (capture > 0) { captureSum += capture; captureCount++ }
-            val inference = pitchProcessor.inferenceLatencyMs
-            if (inference > 0) { inferenceSum += inference; inferenceCount++ }
-            delay(100)
-        }
-        val capture = if (captureCount > 0) captureSum / captureCount else FALLBACK_CAPTURE_LATENCY_MS
-        val inference = if (inferenceCount > 0) inferenceSum / inferenceCount else FALLBACK_INFERENCE_LATENCY_MS
-        val inputMs = capture + PitchProcessor.ANALYSIS_WINDOW_MS + inference + PitchProcessor.INPUT_ONSET_MS
-        return roundToStep(inputMs)
     }
 
     override fun onCleared() {

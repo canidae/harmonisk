@@ -36,25 +36,7 @@ class MelodyPlayer(
             val sounding = mutableSetOf<Int>()
             try {
                 val startTimeMs = System.currentTimeMillis()
-
-                val events = mutableListOf<TimedEvent>()
-                for (track in melodyTracks) {
-                    val channel = track.channel
-                    for (note in track.notes) {
-                        val noteStart = track.noteStartSeconds(note)
-                        val noteEnd = noteStart + track.noteDurationSeconds(note)
-                        if (noteEnd <= startSeconds) continue
-                        val localStart = (noteStart - startSeconds).coerceAtLeast(0.0) + leadInSeconds
-                        val localEnd = (noteEnd - startSeconds).coerceAtLeast(0.0) + leadInSeconds
-                        val startMs = (localStart * 1000).toLong()
-                        val endMs = (localEnd * 1000).toLong()
-                        events.add(TimedEvent(startMs, note.noteNumber, true, note.velocity.coerceIn(1, 127), channel))
-                        events.add(TimedEvent(endMs, note.noteNumber, false, 0, channel))
-                    }
-                }
-                events.sortBy { it.timeMs }
-
-                for (event in events) {
+                for (event in scheduledEvents(melodyTracks, startSeconds, leadInSeconds)) {
                     if (!isActive) break
                     val waitMs = startTimeMs + event.timeMs - System.currentTimeMillis()
                     if (waitMs > 0) delay(waitMs)
@@ -83,7 +65,7 @@ class MelodyPlayer(
             for (note in track.notes) {
                 val start = track.noteStartSeconds(note)
                 val end = start + track.noteDurationSeconds(note)
-                if (gameTimeSeconds >= start && gameTimeSeconds < end) {
+                if (gameTimeSeconds + ATTACK_LOOKAHEAD_SECONDS >= start && gameTimeSeconds < end) {
                     val key = noteKey(channel, note.noteNumber)
                     if (key !in nextActive) {
                         nextActive[key] = note
@@ -131,11 +113,34 @@ class MelodyPlayer(
     }
 
     companion object {
+        private const val ATTACK_LOOKAHEAD_SECONDS = 0.01
         private fun noteKey(channel: Int, note: Int): Int = (channel shl 7) or (note and 0x7F)
     }
 }
 
-private data class TimedEvent(
+internal fun scheduledEvents(
+    melodyTracks: List<MelodyTrack>,
+    startSeconds: Double,
+    leadInSeconds: Double
+): List<TimedEvent> {
+    val windowStart = startSeconds - leadInSeconds
+    val events = mutableListOf<TimedEvent>()
+    for (track in melodyTracks) {
+        val channel = track.channel
+        for (note in track.notes) {
+            val noteStart = track.noteStartSeconds(note)
+            val noteEnd = noteStart + track.noteDurationSeconds(note)
+            if (noteEnd <= windowStart) continue
+            val startMs = ((noteStart - windowStart).coerceAtLeast(0.0) * 1000).toLong()
+            val endMs = ((noteEnd - windowStart).coerceAtLeast(0.0) * 1000).toLong()
+            events.add(TimedEvent(startMs, note.noteNumber, true, note.velocity.coerceIn(1, 127), channel))
+            events.add(TimedEvent(endMs, note.noteNumber, false, 0, channel))
+        }
+    }
+    return events.sortedBy { it.timeMs }
+}
+
+internal data class TimedEvent(
     val timeMs: Long,
     val noteNumber: Int,
     val isOn: Boolean,

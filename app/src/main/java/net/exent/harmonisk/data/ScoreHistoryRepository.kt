@@ -29,13 +29,10 @@ class ScoreHistoryRepository(
     data class ScoreEntry(
         val timestamp: Long,
         val overallScore: Float,
-        val totalNotes: Int,
-        val notesHit: Int,
         val avgPitchScore: Float,
         val avgDurationScore: Float,
         val level: Int = 1,
-        val instrument: String = "PIANO",
-        val wrongNoteScore: Float = 100f
+        val instrument: String = "PIANO"
     ) {
         companion object {
             fun from(
@@ -46,13 +43,10 @@ class ScoreHistoryRepository(
             ) = ScoreEntry(
                 timestamp = System.currentTimeMillis(),
                 overallScore = overallScore,
-                totalNotes = score.totalNotes,
-                notesHit = score.notesHit,
                 avgPitchScore = score.avgPitchScore,
                 avgDurationScore = score.avgDurationScore,
                 level = level,
-                instrument = instrument,
-                wrongNoteScore = score.wrongNoteScore
+                instrument = instrument
             )
         }
     }

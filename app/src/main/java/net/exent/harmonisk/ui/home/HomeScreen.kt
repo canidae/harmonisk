@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.withTimeoutOrNull
 import net.exent.harmonisk.BuildConfig
 import net.exent.harmonisk.R
+import net.exent.harmonisk.data.ProfileDefaults
 import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.music.Instrument
 import net.exent.harmonisk.ui.components.AppLogo
@@ -243,11 +244,14 @@ fun HomeScreen(
     editingProfile?.let { profile ->
         val instrument by remember(profile.id) { viewModel.instrument(profile.id) }
             .collectAsStateWithLifecycle(initialValue = Instrument.VIOLIN)
+        val defaults by remember(profile.id) { viewModel.profileDefaults(profile.id) }
+            .collectAsStateWithLifecycle(initialValue = ProfileDefaults())
         ProfileEditDialog(
             profile = profile,
             instrument = instrument,
-            onSave = { name, emoji, selected ->
-                viewModel.updateProfile(profile.id, name, emoji, selected)
+            defaults = defaults,
+            onSave = { name, emoji, selected, newDefaults ->
+                viewModel.updateProfile(profile.id, name, emoji, selected, newDefaults)
             },
             onDismiss = { editingProfile = null }
         )

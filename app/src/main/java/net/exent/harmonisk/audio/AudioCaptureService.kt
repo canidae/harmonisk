@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
-import android.media.AudioTimestamp
 import android.media.MediaRecorder
 import android.os.Build
 import androidx.core.app.ActivityCompat
@@ -31,12 +30,6 @@ class AudioCaptureService(
         AudioConstants.SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT
     )
 
-    @Volatile
-    var captureLatencyMs: Int = 0
-        private set
-
-    private var totalFramesRead: Long = 0L
-
     private val sampleListeners = CopyOnWriteArrayList<(FloatArray) -> Unit>()
 
     fun addSampleListener(listener: (FloatArray) -> Unit) {
@@ -45,17 +38,6 @@ class AudioCaptureService(
 
     fun removeSampleListener(listener: (FloatArray) -> Unit) {
         sampleListeners.remove(listener)
-    }
-
-    private fun updateCaptureLatency(record: AudioRecord) {
-        val ts = AudioTimestamp()
-        if (record.getTimestamp(ts, AudioTimestamp.TIMEBASE_MONOTONIC) == AudioRecord.SUCCESS) {
-            val nsSinceCapture = System.nanoTime() - ts.nanoTime
-            val framesBehind = (ts.framePosition - totalFramesRead).coerceAtLeast(0)
-            val ms = nsSinceCapture / 1_000_000.0 + framesBehind * 1000.0 / AudioConstants.SAMPLE_RATE
-            val rounded = ms.toInt()
-            if (rounded in 0..200) captureLatencyMs = rounded
-        }
     }
 
     fun audioFlow(): Flow<FloatArray> = callbackFlow {
@@ -95,8 +77,6 @@ class AudioCaptureService(
                         audioRecord.read(buffer, 0, AudioConstants.BUFFER_SIZE_SAMPLES, AudioRecord.READ_BLOCKING)
                     }.getOrElse { break }
                     if (read > 0) {
-                        totalFramesRead += read
-                        updateCaptureLatency(audioRecord)
                         val samples = buffer.copyOf(read)
                         for (listener in sampleListeners) listener(samples)
                         trySend(samples)

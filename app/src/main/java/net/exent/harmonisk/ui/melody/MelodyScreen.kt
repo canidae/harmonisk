@@ -125,6 +125,7 @@ fun MelodyScreen(
     val instrument by viewModel.currentInstrument.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     val melodyLevels by viewModel.allMelodyLevels.collectAsStateWithLifecycle()
+    val melodyOverrides by viewModel.allMelodyOverrides.collectAsStateWithLifecycle()
     val profileDialogs = rememberProfileDialogState()
 
     LaunchedEffect(Unit) {
@@ -229,6 +230,17 @@ fun MelodyScreen(
         else -> emptyList()
     }
 
+    fun playSong(info: MelodyRepository.MelodyInfo) {
+        viewModel.stopPreview()
+        previewingMelody = null
+        viewModel.endPlaylistSession()
+        if (viewModel.loadMelody(info)) {
+            onStartPlay()
+        } else {
+            Toast.makeText(context, resources.getString(R.string.melody_failed_load_melody), Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val songCard: @Composable (MelodyRepository.MelodyInfo) -> Unit = { info ->
         MelodyCard(
             viewModel = viewModel,
@@ -237,16 +249,7 @@ fun MelodyScreen(
             difficulty = difficulties[info.id],
             isPreviewing = previewingMelody == info.name && isPreviewPlaying,
             isExpanded = expandedMelodyId == info.id,
-            onPlay = {
-                viewModel.stopPreview()
-                previewingMelody = null
-                viewModel.endPlaylistSession()
-                if (viewModel.loadMelody(info)) {
-                    onStartPlay()
-                } else {
-                    Toast.makeText(context, resources.getString(R.string.melody_failed_load_melody), Toast.LENGTH_SHORT).show()
-                }
-            },
+            onPlay = { playSong(info) },
             onTogglePreview = {
                 if (previewingMelody == info.name && isPreviewPlaying) {
                     viewModel.stopPreview()
@@ -262,7 +265,10 @@ fun MelodyScreen(
                     viewModel.loadMelody(info)
                 }
             },
-            onAddToPlaylist = { addingToPlaylistSong = info }
+            onAddToPlaylist = { addingToPlaylistSong = info },
+            onResetOverrides = if (info.id in melodyOverrides) {
+                { viewModel.resetMelodyOverrides(info.id) }
+            } else null
         )
     }
 
@@ -449,6 +455,7 @@ fun MelodyScreen(
                                 score = scores[info.id]?.score,
                                 dragging = draggingSongId == info.id,
                                 dragOffset = if (draggingSongId == info.id) dragOffset else 0f,
+                                onPlay = { playSong(info) },
                                 onDragStart = {
                                     draggingSongId = info.id
                                     dragOffset = 0f
@@ -469,7 +476,10 @@ fun MelodyScreen(
                                     draggingSongId = null
                                     dragOffset = 0f
                                 },
-                                onRemove = { viewModel.setPlaylistMelodies(playlist.id, playlist.melodyIds - info.id) }
+                                onRemove = { viewModel.setPlaylistMelodies(playlist.id, playlist.melodyIds - info.id) },
+                                onResetOverrides = if (info.id in melodyOverrides) {
+                                    { viewModel.resetMelodyOverrides(info.id) }
+                                } else null
                             )
                         }
                     }
@@ -579,7 +589,10 @@ fun MelodyScreen(
             onDismiss = { creatingPlaylist = false },
             onConfirm = { name ->
                 creatingPlaylist = false
-                viewModel.createPlaylist(name) { id -> currentPlaylistId = id }
+                viewModel.createPlaylist(name) { id ->
+                    currentPlaylistId = id
+                    addingSongs = true
+                }
             }
         )
     }
@@ -885,10 +898,12 @@ private fun PlaylistSongRow(
     score: Float?,
     dragging: Boolean,
     dragOffset: Float,
+    onPlay: () -> Unit,
     onDragStart: () -> Unit,
     onDrag: (Float) -> Unit,
     onDragEnd: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onResetOverrides: (() -> Unit)?
 ) {
     var showMenu by remember { mutableStateOf(false) }
     Card(
@@ -899,7 +914,7 @@ private fun PlaylistSongRow(
                 translationY = dragOffset
                 shadowElevation = if (dragging) 12f else 0f
             }
-            .combinedClickable(onClick = {}, onLongClick = { showMenu = true }),
+            .combinedClickable(onClick = onPlay, onLongClick = { showMenu = true }),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
@@ -952,6 +967,15 @@ private fun PlaylistSongRow(
             expanded = showMenu,
             onDismissRequest = { showMenu = false }
         ) {
+            onResetOverrides?.let { reset ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.melody_reset_overrides)) },
+                    onClick = {
+                        showMenu = false
+                        reset()
+                    }
+                )
+            }
             DropdownMenuItem(
                 text = {
                     Text(
@@ -1276,7 +1300,8 @@ private fun MelodyCard(
     onPlay: () -> Unit,
     onTogglePreview: () -> Unit,
     onToggleExpand: () -> Unit,
-    onAddToPlaylist: () -> Unit
+    onAddToPlaylist: () -> Unit,
+    onResetOverrides: (() -> Unit)?
 ) {
     var showMenu by remember { mutableStateOf(false) }
     Card(
@@ -1347,6 +1372,15 @@ private fun MelodyCard(
                         onAddToPlaylist()
                     }
                 )
+                onResetOverrides?.let { reset ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.melody_reset_overrides)) },
+                        onClick = {
+                            showMenu = false
+                            reset()
+                        }
+                    )
+                }
                 if (!info.isBundled) {
                     DropdownMenuItem(
                         text = {

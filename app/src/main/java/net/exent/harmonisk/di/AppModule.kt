@@ -89,8 +89,9 @@ object AppModule {
     @Singleton
     fun provideMelodySettingsRepository(
         @ApplicationContext context: Context,
-        profileRepository: ProfileRepository
-    ): MelodySettingsRepository = MelodySettingsRepository(context, profileRepository)
+        profileRepository: ProfileRepository,
+        settingsRepository: SettingsRepository
+    ): MelodySettingsRepository = MelodySettingsRepository(context, profileRepository, settingsRepository)
 
     @Provides
     @Singleton

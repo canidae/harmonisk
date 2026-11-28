@@ -30,9 +30,6 @@ fun ScoreSummaryPanel(
         if (currentLevel <= 3) {
             BreakdownRow(stringResource(R.string.score_song_duration), score.timeScore * 100f)
         }
-        if (currentLevel >= 3) {
-            BreakdownRow(stringResource(R.string.score_correct_notes), score.wrongNoteScore)
-        }
         if (personalBest != null) {
             Spacer(Modifier.height(8.dp))
             Row(

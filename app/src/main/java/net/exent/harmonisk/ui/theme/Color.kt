@@ -45,9 +45,9 @@ val TunerGreenLight = Color(0xFF00695C)
 val TunerAmberLight = Color(0xFFB26A00)
 
 val FingerColors = listOf(
-    Color(0xFF2196F3),
-    Color(0xFF4CAF50),
-    Color(0xFFFFEB3B),
-    Color(0xFFFF9800),
-    Color(0xFFF44336)
+    Color(0xFF0072B2),
+    Color(0xFF009E73),
+    Color(0xFFF0E442),
+    Color(0xFFE69F00),
+    Color(0xFFD55E00)
 )

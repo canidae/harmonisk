@@ -47,6 +47,46 @@ class MelodyPlayerTest {
         channel = channel
     )
 
+    private fun countIn() = MelodyTrack(
+        name = "count-in",
+        notes = listOf(
+            NoteEvent(86, 120, startTick = -1_920L, durationTicks = 48L),
+            NoteEvent(85, 100, startTick = -1_440L, durationTicks = 48L),
+            NoteEvent(85, 100, startTick = -960L, durationTicks = 48L),
+            NoteEvent(85, 100, startTick = -480L, durationTicks = 48L)
+        ),
+        tempoChanges = listOf(TempoEvent(0L, 500_000L)),
+        timeSignatures = emptyList(),
+        ticksPerQuarterNote = 480,
+        channel = 9
+    )
+
+    @Test
+    fun countInClicksPlayBeforeTheSongStarts() {
+        val clicks = scheduledEvents(listOf(countIn()), startSeconds = 0.0, leadInSeconds = 2.0)
+            .filter { it.isOn }
+
+        assertEquals(listOf(0L, 500L, 1000L, 1500L), clicks.map { it.timeMs })
+    }
+
+    @Test
+    fun notesBeforeThePlaybackWindowAreDropped() {
+        val clicks = scheduledEvents(listOf(countIn()), startSeconds = 1.0, leadInSeconds = 0.0)
+            .filter { it.isOn }
+
+        assertTrue(clicks.isEmpty())
+    }
+
+    @Test
+    fun attacksFireSlightlyBeforeTheirStart() {
+        val player = RecordingNotePlayer()
+        val melodyPlayer = MelodyPlayer(player)
+
+        melodyPlayer.updateGameTime(-0.005, listOf(track(noteNumber = 62)))
+
+        assertEquals(listOf("on 0 62"), player.snapshot())
+    }
+
     @Test
     fun stoppingGameSyncReleasesOnlyItsOwnNotes() {
         val player = RecordingNotePlayer()

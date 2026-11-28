@@ -1,5 +1,6 @@
 package net.exent.harmonisk.ui.melody
 
+import net.exent.harmonisk.data.MetronomeMode
 import net.exent.harmonisk.midi.MelodyTrack
 import net.exent.harmonisk.music.MelodyScore
 import net.exent.harmonisk.music.NoteScore
@@ -29,17 +30,17 @@ data class MelodyGameState(
     val noteCentsPositions: Map<Int, List<Float>> = emptyMap(),
     val notePlayProgress: Map<Int, Float> = emptyMap(),
     val noteFirstDetectionStart: Map<Int, Float> = emptyMap(),
-    val countdownResumeTarget: Double = 0.0,
     val previewTimeSeconds: Double? = null,
     val replayTimeSeconds: Double? = null,
     val replayNoteOffsetsMs: Map<Int, Long> = emptyMap(),
     val replayLevel: Int = 0,
     val cue: PlayCue? = null,
-    val metronomeEnabled: Boolean = true,
+    val metronomeMode: MetronomeMode = MetronomeMode.ON,
     val metronomeTrack: MelodyTrack? = null,
     val currentLevel: Int = 1,
     val unlockedLevel: Int = 1,
     val playedLevel: Int = 1,
+    val runId: Int = 0,
     val newlyUnlockedLevel: Int? = null,
     val melodyName: String? = null,
     val hideNoteBars: Boolean = false,
@@ -70,7 +71,6 @@ enum class PlayPhase {
     NOT_STARTED,
     READY,
     PLAYING,
-    PAUSED,
     WAITING_FOR_NOTE,
     FINISHED
 }
@@ -84,18 +84,25 @@ enum class NoteResultState {
     ACTIVE, HIT, MISS
 }
 
-fun nowLineLeadSeconds(phase: PlayPhase, inputDelayMs: Int): Double =
-    if (phase == PlayPhase.READY) 0.0 else inputDelayMs / 1000.0
-
-fun audioLeadSeconds(inputDelayMs: Int, outputDelayMs: Int): Double =
-    (inputDelayMs + outputDelayMs) / 1000.0
+fun audioLeadSeconds(audioDelayMs: Int): Double = audioDelayMs / 1000.0
 
 fun previewClockSeconds(
     startSeconds: Double,
     leadInSeconds: Double,
     elapsedSeconds: Double,
-    outputDelayMs: Int
-): Double = startSeconds + elapsedSeconds - leadInSeconds - outputDelayMs / 1000.0
+    audioDelayMs: Int
+): Double = startSeconds + elapsedSeconds - leadInSeconds - audioDelayMs / 1000.0
+
+fun metronomeTracks(
+    mode: MetronomeMode,
+    waitMode: Boolean,
+    metronomeTrack: MelodyTrack?,
+    countIn: List<MelodyTrack>
+): List<MelodyTrack> = when {
+    metronomeTrack == null || mode == MetronomeMode.OFF -> emptyList()
+    mode == MetronomeMode.ON && !waitMode -> listOf(metronomeTrack)
+    else -> countIn
+}
 
 fun audibleMelodyTracks(
     melodyTracks: List<MelodyTrack>,
@@ -116,16 +123,6 @@ fun audibleMelodyTracks(
 fun songPlayingSeconds(track: MelodyTrack): Double {
     val firstNote = track.notes.minByOrNull { it.startTick } ?: return 0.0
     return (track.durationSeconds - track.noteStartSeconds(firstNote)).coerceAtLeast(0.0)
-}
-
-fun previewStartSeconds(track: MelodyTrack, timeSeconds: Double): Double {
-    if (timeSeconds <= 0.0) return 0.0
-    val tick = track.secondsToTick(timeSeconds)
-    val timeSig = track.timeSignatureAt(tick)
-    val ticksPerBar = track.ticksPerQuarterNote.toLong() * 4 * timeSig.numerator / timeSig.denominator
-    if (ticksPerBar <= 0) return 0.0
-    val previousBarTick = (tick / ticksPerBar - 1) * ticksPerBar
-    return if (previousBarTick <= 0) 0.0 else track.tickToSeconds(previousBarTick)
 }
 
 fun songTimeRatio(track: MelodyTrack, waitMs: Long): Double {

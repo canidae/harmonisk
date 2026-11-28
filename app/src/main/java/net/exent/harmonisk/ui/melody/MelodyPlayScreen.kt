@@ -5,12 +5,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.TimerOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,6 +43,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.exent.harmonisk.R
 import net.exent.harmonisk.audio.RecordingExporter
+import net.exent.harmonisk.data.MetronomeMode
 import net.exent.harmonisk.midi.MidiToAlphaTex
 import net.exent.harmonisk.music.Transpose
 import net.exent.harmonisk.ui.components.CanvasMode
@@ -75,7 +77,6 @@ fun MelodyPlayScreen(
     val deviceState by viewModel.deviceState.collectAsStateWithLifecycle()
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsStateWithLifecycle()
     val recordingAvailable by viewModel.recordingAvailable.collectAsStateWithLifecycle()
-    val inputDelay by viewModel.activeInputDelay.collectAsStateWithLifecycle()
     val scoreHistory by viewModel.currentScoreHistory.collectAsStateWithLifecycle()
     val celebrationLevel by viewModel.celebrationLevel.collectAsStateWithLifecycle()
     val personalBest by viewModel.personalBestScore.collectAsStateWithLifecycle()
@@ -92,19 +93,16 @@ fun MelodyPlayScreen(
     val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val sessionActive = gameState.phase == PlayPhase.PLAYING ||
-        gameState.phase == PlayPhase.WAITING_FOR_NOTE ||
-        gameState.phase == PlayPhase.PAUSED
+        gameState.phase == PlayPhase.WAITING_FOR_NOTE
 
     BackHandler {
-        val run = playlistRun
-        when {
-            run?.retrySongIndex != null -> viewModel.cancelPlaylistRetry()
-            run != null && !run.pending && !run.finished -> viewModel.pausePlaylist()
-            else -> {
-                if (stopOnBack) viewModel.stop()
-                viewModel.endPlaylistSession()
-                onBack()
-            }
+        if (stopOnBack && (sessionActive || gameState.cue != null)) {
+            viewModel.stop()
+            viewModel.enterReadyPhase()
+        } else {
+            if (stopOnBack) viewModel.stop()
+            viewModel.endPlaylistSession()
+            onBack()
         }
     }
 
@@ -175,9 +173,10 @@ fun MelodyPlayScreen(
                     gameState.melodyName?.let { name ->
                         Spacer(Modifier.width(6.dp))
                         val levelLabel = stringResource(R.string.melody_level, gameState.currentLevel)
-                        val latestScore = if (adventureMode) null else scoreHistory.lastOrNull()?.let {
-                            stringResource(R.string.melody_score, formatScore(it.overallScore))
-                        }
+                        val bestScore = if (adventureMode) null else scoreHistory
+                            .filter { it.level == gameState.currentLevel }
+                            .maxOfOrNull { it.overallScore }
+                            ?.let { stringResource(R.string.melody_score, formatScore(it)) }
                         Column {
                             Text(
                                 text = name,
@@ -187,7 +186,7 @@ fun MelodyPlayScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = latestScore?.let { "$levelLabel  $it" } ?: levelLabel,
+                                text = bestScore?.let { "$levelLabel  $it" } ?: levelLabel,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(alpha = 0.7f)
                             )
@@ -197,7 +196,7 @@ fun MelodyPlayScreen(
                     Spacer(Modifier.weight(1f))
 
                     if (gameState.cue == null &&
-                        (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED ||
+                        (gameState.phase == PlayPhase.READY ||
                         gameState.phase == PlayPhase.FINISHED ||
                         devModeEnabled && (gameState.phase == PlayPhase.PLAYING || gameState.phase == PlayPhase.WAITING_FOR_NOTE))) {
                         IconButton(
@@ -214,16 +213,62 @@ fun MelodyPlayScreen(
                     }
 
                     if (!adventureMode) {
-                        IconButton(
-                            onClick = { viewModel.toggleMetronome() },
-                            modifier = Modifier.size(PANEL_BTN_SIZE)
-                        ) {
-                            Icon(
-                                Icons.Filled.Timer,
-                                contentDescription = if (gameState.metronomeEnabled) stringResource(R.string.metronome_on) else stringResource(R.string.metronome_off),
-                                tint = if (gameState.metronomeEnabled) MetronomeBlue else OVERLAY_ICON_TINT,
-                                modifier = Modifier.size(17.dp)
-                            )
+                        var showMetronomeMenu by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(
+                                onClick = { showMetronomeMenu = true },
+                                modifier = Modifier.size(PANEL_BTN_SIZE)
+                            ) {
+                                Icon(
+                                    metronomeModeIcon(gameState.metronomeMode),
+                                    contentDescription = stringResource(
+                                        R.string.metronome_mode_description,
+                                        stringResource(metronomeModeLabel(gameState.metronomeMode))
+                                    ),
+                                    tint = metronomeModeColor(gameState.metronomeMode),
+                                    modifier = Modifier.size(17.dp)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showMetronomeMenu,
+                                onDismissRequest = { showMetronomeMenu = false },
+                                offset = DpOffset((-140).dp, 0.dp)
+                            ) {
+                                MetronomeMode.entries.forEach { mode ->
+                                    val selected = mode == gameState.metronomeMode
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(metronomeModeLabel(mode)),
+                                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                metronomeModeIcon(mode),
+                                                contentDescription = null,
+                                                tint = metronomeModeColor(mode),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        },
+                                        trailingIcon = if (selected) {
+                                            { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                                        } else null,
+                                        onClick = {
+                                            viewModel.setMetronomeMode(mode)
+                                            showMetronomeMenu = false
+                                        }
+                                    )
+                                }
+                                Text(
+                                    text = stringResource(R.string.metronome_mode_level_hint),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .widthIn(max = 240.dp)
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
                         }
                     }
 
@@ -305,54 +350,64 @@ fun MelodyPlayScreen(
                         .fillMaxWidth()
                 ) {
                     val track = gameState.melodyTrack
-                    val adjustedNow = gameState.currentTimeSeconds +
-                            nowLineLeadSeconds(gameState.phase, inputDelay)
-                    val canvasNow = gameState.replayTimeSeconds ?: gameState.previewTimeSeconds ?: adjustedNow
+                    val canvasNow = gameState.replayTimeSeconds ?: gameState.previewTimeSeconds
+                            ?: gameState.currentTimeSeconds
+                    val alphaTex = remember(track) { track?.let { MidiToAlphaTex.generate(it) } }
+                    val pageSheet = gameState.hideNoteBars
+                    val sheetPlaying = gameState.phase == PlayPhase.PLAYING ||
+                            gameState.previewTimeSeconds != null || gameState.replayTimeSeconds != null
+                    val viewTimeSeconds = canvasNow + viewState.songTimeOffsetSeconds
 
-                    if (track != null) {
-                        val alphaTex = remember(track) { MidiToAlphaTex.generate(track) }
-                        val viewTimeSeconds = canvasNow + viewState.songTimeOffsetSeconds
-                        SheetMusicView(
-                            melodyTrack = track,
-                            alphaTex = alphaTex,
-                            currentTimeSeconds = canvasNow,
-                            isPlaying = gameState.phase == PlayPhase.PLAYING ||
-                                    gameState.previewTimeSeconds != null || gameState.replayTimeSeconds != null,
-                            seekTimeSeconds = canvasNow,
-                            scrollTimeSeconds = viewTimeSeconds,
-                            songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
-                            durationSeconds = track.durationSeconds,
-                            onScrolledToTime = { viewModel.seekToViewTime(it) },
-                            modifier = Modifier.fillMaxWidth().height(205.dp).zIndex(1f)
-                        )
+                    if (track != null && alphaTex != null && !pageSheet) {
+                        key(gameState.runId) {
+                            SheetMusicView(
+                                melodyTrack = track,
+                                alphaTex = alphaTex,
+                                currentTimeSeconds = canvasNow,
+                                isPlaying = sheetPlaying,
+                                seekTimeSeconds = canvasNow,
+                                scrollTimeSeconds = viewTimeSeconds,
+                                songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
+                                durationSeconds = track.durationSeconds,
+                                modifier = Modifier.fillMaxWidth().height(205.dp).zIndex(1f)
+                            )
+                        }
                     }
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .pointerInput(Unit) {
-                                detectTransformGestures { _, pan, zoom, _ ->
-                                    if (zoom != 1f) viewModel.onVerticalZoom(zoom)
-                                    val panValue = pan.y
-                                    if (panValue != 0f) {
-                                        val secondsPerPx = 1.0 / (viewState.fallSpeedPxPerSec * density.density)
-                                        viewModel.onVerticalScroll(panValue * secondsPerPx)
+                            .then(
+                                if (pageSheet) Modifier else Modifier.pointerInput(Unit) {
+                                    detectTransformGestures { _, pan, zoom, _ ->
+                                        if (zoom != 1f) viewModel.onVerticalZoom(zoom)
+                                        val panValue = pan.y
+                                        if (panValue != 0f) {
+                                            val secondsPerPx = 1.0 / (viewState.fallSpeedPxPerSec * density.density)
+                                            viewModel.onVerticalScroll(panValue * secondsPerPx)
+                                        }
                                     }
                                 }
-                            }
-                            .pointerInput(gameState.phase) {
-                                detectTapGestures {
-                                    val phase = gameState.phase
-                                    if (!adventureMode &&
-                                        (phase == PlayPhase.PLAYING || phase == PlayPhase.WAITING_FOR_NOTE)
-                                    ) {
-                                        viewModel.pause()
-                                    }
-                                }
-                            }
+                            )
                     ) {
-                        if (track != null) {
+                        if (track != null && alphaTex != null) {
+                        if (pageSheet) {
+                            key(gameState.runId) {
+                                SheetMusicView(
+                                    melodyTrack = track,
+                                    alphaTex = alphaTex,
+                                    currentTimeSeconds = canvasNow,
+                                    isPlaying = sheetPlaying,
+                                    seekTimeSeconds = canvasNow,
+                                    scrollTimeSeconds = viewTimeSeconds,
+                                    songTimeOffsetSeconds = viewState.songTimeOffsetSeconds,
+                                    durationSeconds = track.durationSeconds,
+                                    pageMode = true,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        } else {
                         SharedNoteCanvas(
                             mode = CanvasMode.Melody(
                                 melodyTrack = track,
@@ -367,7 +422,6 @@ fun MelodyPlayScreen(
                                 fallSpeedPxPerSec = viewState.fallSpeedPxPerSec,
                                 detectedMidiNote = if (gameState.pitchResult.isValid) gameState.pitchResult.midiNoteNumber else null,
                                 detectedCentsOff = if (gameState.pitchResult.isValid) gameState.pitchResult.centsOff else null,
-                                hideNoteBars = gameState.hideNoteBars,
                                 instrument = currentInstrument,
                                 bowedPositions = viewState.bowedPositions,
                                 preferOpenStrings = gameState.preferOpenStrings,
@@ -380,6 +434,7 @@ fun MelodyPlayScreen(
                             viewMaxMidi = viewState.viewMaxMidi,
                             modifier = Modifier.fillMaxSize()
                         )
+                        }
 
                         if (gameState.replayTimeSeconds != null) {
                             Text(
@@ -408,24 +463,23 @@ fun MelodyPlayScreen(
                         }
 
                         if (!adventureMode && gameState.previewTimeSeconds == null && gameState.cue == null &&
-                            (gameState.phase == PlayPhase.READY || gameState.phase == PlayPhase.PAUSED)
+                            gameState.phase == PlayPhase.READY
                         ) {
                             IconButton(
                                 onClick = {
                                     if (isPreviewPlaying) viewModel.stopPreview()
-                                    if (gameState.phase == PlayPhase.READY) viewModel.startRun()
-                                    else viewModel.resume()
+                                    viewModel.startRun()
                                 },
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
-                                    .padding(bottom = PIANO_HEIGHT_DP.dp + 24.dp)
+                                    .padding(bottom = if (pageSheet) 24.dp else PIANO_HEIGHT_DP.dp + 24.dp)
                                     .size(72.dp)
                                     .background(PlayGreen.copy(alpha = 0.25f), CircleShape)
                                     .border(2.dp, PlayGreen.copy(alpha = 0.7f), CircleShape)
                             ) {
                                 Icon(
                                     Icons.Filled.PlayArrow,
-                                    contentDescription = if (gameState.phase == PlayPhase.READY) stringResource(R.string.start) else stringResource(R.string.melody_play_resume),
+                                    contentDescription = stringResource(R.string.start),
                                     tint = PlayGreen.copy(alpha = 0.9f),
                                     modifier = Modifier.size(40.dp)
                                 )
@@ -461,7 +515,7 @@ fun MelodyPlayScreen(
                             Column(
                                 modifier = Modifier
                                     .align(Alignment.BottomEnd)
-                                    .padding(bottom = PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
+                                    .padding(bottom = if (pageSheet) 8.dp else PIANO_HEIGHT_DP.dp + 8.dp, end = 6.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
@@ -753,4 +807,21 @@ private fun MelodySettingsMenu(
             }
         }
     }
+}
+
+private fun metronomeModeLabel(mode: MetronomeMode): Int = when (mode) {
+    MetronomeMode.OFF -> R.string.metronome_mode_off
+    MetronomeMode.LEAD_IN -> R.string.metronome_mode_lead_in
+    MetronomeMode.ON -> R.string.metronome_mode_on
+}
+
+private fun metronomeModeIcon(mode: MetronomeMode) = when (mode) {
+    MetronomeMode.OFF -> Icons.Filled.TimerOff
+    MetronomeMode.LEAD_IN, MetronomeMode.ON -> Icons.Filled.Timer
+}
+
+private fun metronomeModeColor(mode: MetronomeMode) = when (mode) {
+    MetronomeMode.OFF -> OVERLAY_ICON_TINT
+    MetronomeMode.LEAD_IN -> AmberAccent
+    MetronomeMode.ON -> MetronomeBlue
 }

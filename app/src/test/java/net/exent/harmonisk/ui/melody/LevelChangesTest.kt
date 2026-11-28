@@ -11,8 +11,6 @@ class LevelChangesTest {
     private fun run(number: Int, level: Int): ScoreEntry = ScoreEntry(
         timestamp = number.toLong(),
         overallScore = 50f,
-        totalNotes = 10,
-        notesHit = 5,
         avgPitchScore = 50f,
         avgDurationScore = 50f,
         level = level

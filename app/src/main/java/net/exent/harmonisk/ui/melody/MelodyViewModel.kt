@@ -15,6 +15,7 @@ import net.exent.harmonisk.data.AudioDelayRepository
 import net.exent.harmonisk.data.DevModeState
 import net.exent.harmonisk.data.MelodyRepository
 import net.exent.harmonisk.data.MelodySettingsRepository
+import net.exent.harmonisk.data.MetronomeMode
 import net.exent.harmonisk.data.PlaylistRepository
 import net.exent.harmonisk.data.ProfileRepository
 import net.exent.harmonisk.data.createProfileWithInstrument
@@ -113,6 +114,9 @@ class MelodyViewModel @Inject constructor(
     private val _allMelodyLevels = MutableStateFlow<Map<String, Int>>(emptyMap())
     val allMelodyLevels: StateFlow<Map<String, Int>> = _allMelodyLevels.asStateFlow()
 
+    private val _allMelodyOverrides = MutableStateFlow<Set<String>>(emptySet())
+    val allMelodyOverrides: StateFlow<Set<String>> = _allMelodyOverrides.asStateFlow()
+
     val playlists: StateFlow<List<PlaylistRepository.Playlist>> = playlistRepository.playlists
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -144,6 +148,7 @@ class MelodyViewModel @Inject constructor(
     private var previewSavedOffset: Double? = null
     private var runStartJob: Job? = null
     private var adventureStartJob: Job? = null
+    private var playbackStartJob: Job? = null
     private var playbackStartWallMs = 0L
     private var pauseOffset = 0.0
 
@@ -166,6 +171,7 @@ class MelodyViewModel @Inject constructor(
     private val _recordingAvailable = MutableStateFlow(false)
     val recordingAvailable: StateFlow<Boolean> = _recordingAvailable.asStateFlow()
     private var manualTranspose = Transpose(0, 0)
+    private var songOverrides: Set<String> = emptySet()
 
     private val _currentInstrument = MutableStateFlow(Instrument.VIOLIN.name)
     private val currentInstrumentFlow: StateFlow<String> = _currentInstrument.asStateFlow()
@@ -182,8 +188,7 @@ class MelodyViewModel @Inject constructor(
         }
 
     private var synthOpenJob: Job? = null
-    private var inputDelayMs: Int = 0
-    private var outputDelayMs: Int = 0
+    private var audioDelayMs: Int = 0
     private var referenceA4: Float = NoteUtils.DEFAULT_CONCERT_PITCH
 
     init {
@@ -196,7 +201,7 @@ class MelodyViewModel @Inject constructor(
         }
         viewModelScope.launch {
             settingsRepository.settings.first().let { settings ->
-                _gameState.update { it.copy(metronomeEnabled = settings.melodyMetronomeEnabled) }
+                _gameState.update { it.copy(metronomeMode = settings.metronomeMode) }
             }
         }
         viewModelScope.launch {
@@ -216,13 +221,8 @@ class MelodyViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            audioDelayRepository.activeInputDelay.collect { delayMs ->
-                inputDelayMs = delayMs
-            }
-        }
-        viewModelScope.launch {
-            audioDelayRepository.activeOutputDelay.collect { delayMs ->
-                outputDelayMs = delayMs
+            audioDelayRepository.audioDelay.collect { delayMs ->
+                audioDelayMs = delayMs
             }
         }
         viewModelScope.launch {
@@ -260,9 +260,6 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
-    val activeInputDelay: StateFlow<Int> = audioDelayRepository.activeInputDelay
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
     fun toggleMidiInput() {
         midiDeviceManager.setInputOverride(
             computeNextOverride(midiDeviceManager.inputOverride.value, _deviceState.value.midiInputEnabled)
@@ -295,7 +292,7 @@ class MelodyViewModel @Inject constructor(
                 melodies to instrument
             }.flatMapLatest { (melodies, instrument) ->
                 if (melodies.isEmpty()) {
-                    flowOf(emptyMap<String, Int>() to emptyMap<String, MelodyScoreSummary>())
+                    flowOf(Triple(emptyMap<String, Int>(), emptyMap<String, MelodyScoreSummary>(), emptySet<String>()))
                 } else {
                     val flows = melodies.map { info ->
                         combine(
@@ -307,17 +304,22 @@ class MelodyViewModel @Inject constructor(
                                 level = level,
                                 score = scores.filter { it.level == level }.maxOfOrNull { it.overallScore }
                             )
-                            info.id to (level to summary)
+                            val hasOverrides = settings.overrides.orEmpty().any { it in MelodySettingsRepository.PREFERENCE_OVERRIDES }
+                            info.id to Triple(level, summary, hasOverrides)
                         }
                     }
                     combine(flows) { pairs ->
-                        pairs.associate { (id, data) -> id to data.first } to
-                            pairs.mapNotNull { (id, data) -> data.second?.let { id to it } }.toMap()
+                        Triple(
+                            pairs.associate { (id, data) -> id to data.first },
+                            pairs.mapNotNull { (id, data) -> data.second?.let { id to it } }.toMap(),
+                            pairs.filter { it.second.third }.map { it.first }.toSet()
+                        )
                     }
                 }
-            }.collect { (levels, summaries) ->
+            }.collect { (levels, summaries, overrideIds) ->
                 _allMelodyLevels.value = levels
                 _allMelodyScores.value = summaries
+                _allMelodyOverrides.value = overrideIds
             }
         }
     }
@@ -370,6 +372,7 @@ class MelodyViewModel @Inject constructor(
 
     fun loadMelody(info: MelodyRepository.MelodyInfo): Boolean {
         stopPreview()
+        playbackStartJob?.cancel()
         runStartJob?.cancel()
         adventureStartJob?.cancel()
         val melodyTracks = assignChannels(melodyRepository.loadMultiTrack(info).filter { it.notes.isNotEmpty() })
@@ -445,20 +448,6 @@ class MelodyViewModel @Inject constructor(
             enterReadyPhase()
             startRun()
         }
-    }
-
-    fun pausePlaylist() {
-        val run = _playlistRun.value ?: return
-        if (run.pending || run.finished) return
-        stop()
-        _playlistRun.value = run.copy(pending = true)
-    }
-
-    fun cancelPlaylistRetry() {
-        val run = _playlistRun.value ?: return
-        if (run.retrySongIndex == null) return
-        stop()
-        _playlistRun.value = run.copy(pending = false, finished = true, retrySongIndex = null)
     }
 
     fun retryPlaylistSong(index: Int) {
@@ -559,7 +548,6 @@ class MelodyViewModel @Inject constructor(
         noteCentsPositions = emptyMap(),
         notePlayProgress = emptyMap(),
         noteFirstDetectionStart = emptyMap(),
-        countdownResumeTarget = 0.0,
         cue = null,
         settingsLoaded = false,
         replayTimeSeconds = null,
@@ -584,6 +572,7 @@ class MelodyViewModel @Inject constructor(
                 } catch (_: IllegalArgumentException) {
                     AccompanimentMode.ALL
                 }
+                songOverrides = saved.overrides.orEmpty().toSet()
                 _gameState.update {
                     it.copy(
                         waitMode = wm,
@@ -595,17 +584,19 @@ class MelodyViewModel @Inject constructor(
                         settingsLoaded = true,
                         activeVoiceIndex = saved.activeVoiceIndex,
                         accompanimentMode = accompanimentMode,
-                        preferOpenStrings = saved.preferOpenStrings
+                        preferOpenStrings = saved.preferOpenStrings,
+                        metronomeMode = MetronomeMode.fromName(saved.metronomeMode)
                     )
                 }
                 _viewState.update { it.copy(fallSpeedPxPerSec = migrateFallSpeed(saved.fallSpeedPxPerSec)) }
                 val tracks = _gameState.value.melodyTracks
                 if (tracks.isNotEmpty()) {
                     val idx = saved.activeVoiceIndex.coerceIn(0, tracks.lastIndex)
-                    setActiveVoice(idx)
+                    setActiveVoice(idx, persist = false)
                 }
                 manualTranspose = Transpose.fromSemitones(saved.transposeSemitones)
-                if (saved.autoTranspose) applyAuto() else applyTranspose(manualTranspose, auto = false)
+                if (saved.autoTranspose) applyAuto(persist = false)
+                else applyTranspose(manualTranspose, auto = false, persist = false)
             }
         }
         scoreHistoryJob = viewModelScope.launch {
@@ -638,23 +629,31 @@ class MelodyViewModel @Inject constructor(
     fun setOctave(octave: Int) {
         val next = Transpose.of(octave, _gameState.value.transpose.key)
         manualTranspose = next
+        pinOverrides(MelodySettingsRepository.OVERRIDE_EASY_KEY)
         applyTranspose(next, auto = false)
     }
 
     fun setKey(key: Int) {
         val next = Transpose.of(_gameState.value.transpose.octave, key)
         manualTranspose = next
+        pinOverrides(MelodySettingsRepository.OVERRIDE_EASY_KEY)
         applyTranspose(next, auto = false)
     }
 
     fun setAutoTranspose(enabled: Boolean) {
+        pinOverrides(MelodySettingsRepository.OVERRIDE_EASY_KEY)
         if (enabled) applyAuto() else applyTranspose(manualTranspose, auto = false)
     }
 
     fun setPreferOpenStrings(preferOpenStrings: Boolean) {
         if (_gameState.value.preferOpenStrings == preferOpenStrings) return
         _gameState.update { it.copy(preferOpenStrings = preferOpenStrings) }
+        pinOverrides(MelodySettingsRepository.OVERRIDE_OPEN_STRINGS)
         if (_gameState.value.autoTranspose) applyAuto() else applyTranspose(manualTranspose, auto = false)
+    }
+
+    private fun pinOverrides(vararg keys: String) {
+        songOverrides = songOverrides + keys
     }
 
     private fun autoOffset(): Int {
@@ -670,13 +669,13 @@ class MelodyViewModel @Inject constructor(
         )
     }
 
-    private fun applyAuto() {
+    private fun applyAuto(persist: Boolean = true) {
         val next = Transpose.fromSemitones(autoOffset())
         manualTranspose = next
-        applyTranspose(next, auto = true)
+        applyTranspose(next, auto = true, persist = persist)
     }
 
-    private fun applyTranspose(transposition: Transpose, auto: Boolean) {
+    private fun applyTranspose(transposition: Transpose, auto: Boolean, persist: Boolean = true) {
         if (originalMelodyTracks.isEmpty()) return
         val clamped = Transpose.of(transposition.octave, transposition.key)
         val melodyTracks = originalMelodyTracks.map { it.transpose(clamped.semitones) }
@@ -693,7 +692,7 @@ class MelodyViewModel @Inject constructor(
         }
         _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
         updateBowedPositions()
-        saveMelodySettings()
+        if (persist) saveMelodySettings()
     }
 
     private fun viewRangeFor(track: MelodyTrack): Pair<Float, Float> {
@@ -730,9 +729,9 @@ class MelodyViewModel @Inject constructor(
         val instrument = _currentInstrument.value
         val g = _gameState.value
         val v = _viewState.value
+        val overrides = songOverrides.toList()
         viewModelScope.launch {
             melodySettingsRepository.saveSettings(id, instrument, MelodySettingsRepository.MelodySettings(
-                waitMode = g.waitMode,
                 autoTranspose = g.autoTranspose,
                 transposeSemitones = g.transpose.semitones,
                 preferOpenStrings = g.preferOpenStrings,
@@ -740,7 +739,9 @@ class MelodyViewModel @Inject constructor(
                 level = g.currentLevel,
                 unlockedLevel = g.unlockedLevel,
                 activeVoiceIndex = g.activeVoiceIndex,
-                accompanimentMode = g.accompanimentMode.name
+                accompanimentMode = g.accompanimentMode.name,
+                metronomeMode = g.metronomeMode.name,
+                overrides = overrides
             ))
         }
     }
@@ -765,21 +766,22 @@ class MelodyViewModel @Inject constructor(
         if (tracks.isEmpty() || !soundFontSynthesizer.isReady) return
         stopPreview()
 
-        val paused = state.phase == PlayPhase.PAUSED
-        val countIn = !paused
-        val leadIn = if (countIn) twoBarLeadInSeconds() else 0.0
-        val start = if (paused) previewStartSeconds(state.melodyTrack ?: return, state.currentTimeSeconds) else 0.0
-        val followsCanvas = state.phase == PlayPhase.READY || state.phase == PlayPhase.PAUSED ||
-                state.phase == PlayPhase.FINISHED
+        val leadIn = twoBarLeadInSeconds()
+        val followsCanvas = state.phase == PlayPhase.READY || state.phase == PlayPhase.FINISHED
         if (followsCanvas) previewSavedOffset = _viewState.value.songTimeOffsetSeconds
         melodyPlayer.playWithTiming(
-            if (countIn) tracks + leadInMetronome(state.metronomeTrack) else tracks,
+            tracks + metronomeTracks(
+                state.metronomeMode,
+                state.waitMode,
+                state.metronomeTrack,
+                leadInMetronome(state.metronomeTrack)
+            ),
             viewModelScope,
             leadInSeconds = leadIn,
-            startSeconds = start,
+            startSeconds = 0.0,
             tailSeconds = PREVIEW_TAIL_SECONDS
         )
-        if (followsCanvas) startPreviewClock(state.melodyTrack, leadIn, start)
+        if (followsCanvas) startPreviewClock(state.melodyTrack, leadIn, 0.0)
     }
 
     fun previewMelody(info: MelodyRepository.MelodyInfo) {
@@ -866,13 +868,13 @@ class MelodyViewModel @Inject constructor(
         previewClockJob = null
         if (track == null) return
         _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
-        _gameState.update { it.copy(previewTimeSeconds = startSeconds - leadInSeconds - outputDelayMs / 1000.0) }
+        _gameState.update { it.copy(previewTimeSeconds = previewClockSeconds(startSeconds, leadInSeconds, 0.0, audioDelayMs)) }
         previewClockJob = viewModelScope.launch {
             val startTime = SystemClock.elapsedRealtime()
             while (isActive && melodyPlayer.isPlaying.value) {
                 val elapsed = (SystemClock.elapsedRealtime() - startTime) / 1000.0
                 _gameState.update {
-                    it.copy(previewTimeSeconds = previewClockSeconds(startSeconds, leadInSeconds, elapsed, outputDelayMs))
+                    it.copy(previewTimeSeconds = previewClockSeconds(startSeconds, leadInSeconds, elapsed, audioDelayMs))
                 }
                 delay(16)
             }
@@ -895,7 +897,7 @@ class MelodyViewModel @Inject constructor(
         }
     }
 
-    fun setActiveVoice(index: Int) {
+    fun setActiveVoice(index: Int, persist: Boolean = true) {
         val tracks = _gameState.value.melodyTracks
         if (index < 0 || index >= tracks.size) return
         val selectedTrack = tracks[index]
@@ -908,7 +910,7 @@ class MelodyViewModel @Inject constructor(
         }
         _viewState.update { it.copy(viewMinMidi = viewMin, viewMaxMidi = viewMax) }
         updateBowedPositions()
-        saveMelodySettings()
+        if (persist) saveMelodySettings()
     }
 
     fun setAccompanimentMode(mode: AccompanimentMode) {
@@ -919,14 +921,11 @@ class MelodyViewModel @Inject constructor(
         saveMelodySettings()
     }
 
-    fun toggleMetronome() {
-        val newState = !_gameState.value.metronomeEnabled
-        _gameState.update { it.copy(metronomeEnabled = newState) }
-        viewModelScope.launch { settingsRepository.updateMelodyMetronomeEnabled(newState) }
+    fun setMetronomeMode(mode: MetronomeMode) {
+        _gameState.update { it.copy(metronomeMode = mode) }
+        pinOverrides(MelodySettingsRepository.OVERRIDE_METRONOME)
+        saveMelodySettings()
     }
-
-    private fun adjustedNowSeconds(phase: PlayPhase, currentTimeSeconds: Double): Double =
-        currentTimeSeconds + nowLineLeadSeconds(phase, inputDelayMs)
 
     private fun twoBarLeadInSeconds(track: MelodyTrack? = _gameState.value.melodyTrack): Double {
         track ?: return 2.0 * 4 * (60.0 / 120.0)
@@ -1034,7 +1033,21 @@ class MelodyViewModel @Inject constructor(
     }
 
     fun startPlaying() {
-        val track = _gameState.value.melodyTrack ?: return
+        if (playbackStartJob?.isActive == true) return
+        if (_gameState.value.melodyTrack == null) return
+        if (_gameState.value.phase == PlayPhase.PLAYING || _gameState.value.phase == PlayPhase.WAITING_FOR_NOTE) return
+        if (!soundFontSynthesizer.isReady && synthOpenJob?.isActive == true) {
+            playbackStartJob = viewModelScope.launch {
+                awaitSynthesizer()
+                startPlayback()
+            }
+            return
+        }
+        startPlayback()
+    }
+
+    private fun startPlayback() {
+        if (_gameState.value.melodyTrack == null) return
         if (_gameState.value.phase == PlayPhase.PLAYING || _gameState.value.phase == PlayPhase.WAITING_FOR_NOTE) return
         stopRecordingPlayback()
 
@@ -1052,8 +1065,8 @@ class MelodyViewModel @Inject constructor(
                 noteCentsHistory = emptyMap(),
                 noteCentsPositions = emptyMap(),
                 noteFirstDetectionStart = emptyMap(),
-                countdownResumeTarget = 0.0,
                 playedLevel = it.currentLevel,
+                runId = it.runId + 1,
                 newlyUnlockedLevel = null
             )
         }
@@ -1077,75 +1090,16 @@ class MelodyViewModel @Inject constructor(
             playbackRecorder.startRecording(melodyId, _gameState.value.currentLevel)
         }
 
-        startPitchDetection()
-
         pauseOffset = startTime
         startPlaybackTimer()
+        startPitchDetection()
     }
 
     private fun playbackStartTime(leadInSeconds: Double): Double =
-        -leadInSeconds - audioLeadSeconds(inputDelayMs, outputDelayMs)
-
-    fun pause() {
-        pauseOffset = _gameState.value.currentTimeSeconds
-        playbackJob?.cancel()
-        pitchJob?.cancel()
-        melodyPlayer.resetGameSync()
-        noteTracking.wasWaitingForNote = noteTracking.isWaitingForNote
-        noteTracking.isWaitingForNote = false
-        endWait()
-        _gameState.update { it.copy(phase = PlayPhase.PAUSED) }
-    }
-
-    fun resume() {
-        val currentGameState = _gameState.value
-        val currentViewState = _viewState.value
-
-        if (currentViewState.songTimeOffsetSeconds != 0.0) {
-            _viewState.update { it.copy(songTimeOffsetSeconds = 0.0) }
-            noteTracking.isWaitingForNote = false
-            endWait()
-            noteTracking.wasWaitingForNote = false
-        } else if (noteTracking.wasWaitingForNote) {
-            noteTracking.isWaitingForNote = true
-            beginWait()
-            noteTracking.wasWaitingForNote = false
-            _gameState.update { it.copy(phase = PlayPhase.WAITING_FOR_NOTE) }
-            startPlaybackTimer()
-            return
-        }
-
-        val targetTime = when {
-            currentGameState.countdownResumeTarget > 0.0 -> currentGameState.countdownResumeTarget
-            currentGameState.currentTimeSeconds >= 0.0 -> currentGameState.currentTimeSeconds
-            else -> 0.0
-        }
-
-        val track = _gameState.value.melodyTrack
-        val countInStart = playbackStartTime(twoBarLeadInSeconds())
-        val rewindTo = if (track != null) {
-            val tick = track.secondsToTick(targetTime)
-            val timeSig = track.timeSignatureAt(tick)
-            val ticksPerBar = track.ticksPerQuarterNote.toLong() * 4 * timeSig.numerator / timeSig.denominator
-            if (ticksPerBar > 0) {
-                val currentBarTick = (tick / ticksPerBar) * ticksPerBar
-                val startBarTick = currentBarTick - 2 * ticksPerBar
-                if (startBarTick < 0) countInStart else track.tickToSeconds(startBarTick)
-            } else countInStart
-        } else countInStart
-
-        pauseOffset = rewindTo
-        _gameState.update {
-            it.copy(
-                phase = PlayPhase.PLAYING,
-                currentTimeSeconds = rewindTo,
-                countdownResumeTarget = targetTime
-            )
-        }
-        startPlaybackTimer()
-    }
+        -leadInSeconds - audioLeadSeconds(audioDelayMs)
 
     fun stop() {
+        playbackStartJob?.cancel()
         playbackJob?.cancel()
         pitchJob?.cancel()
         runStartJob?.cancel()
@@ -1158,7 +1112,6 @@ class MelodyViewModel @Inject constructor(
         _gameState.update { it.copy(cue = null) }
         pauseOffset = 0.0
         noteTracking.isWaitingForNote = false
-        noteTracking.wasWaitingForNote = false
         endWait()
         _gameState.update {
             it.copy(
@@ -1168,7 +1121,6 @@ class MelodyViewModel @Inject constructor(
                 noteCentsHistory = emptyMap(),
                 noteCentsPositions = emptyMap(),
                 noteFirstDetectionStart = emptyMap(),
-                countdownResumeTarget = 0.0
             )
         }
     }
@@ -1176,6 +1128,12 @@ class MelodyViewModel @Inject constructor(
     fun resetScore(melodyId: String) {
         viewModelScope.launch {
             scoreHistoryRepository.resetScores(melodyId, currentInstrumentFlow.value)
+        }
+    }
+
+    fun resetMelodyOverrides(melodyId: String) {
+        viewModelScope.launch {
+            melodySettingsRepository.clearPreferenceOverrides(melodyId, currentInstrumentFlow.value)
         }
     }
 
@@ -1210,9 +1168,8 @@ class MelodyViewModel @Inject constructor(
         if (_gameState.value.previewTimeSeconds != null || _gameState.value.replayTimeSeconds != null) return
         val phase = _gameState.value.phase
         if (phase == PlayPhase.PLAYING || phase == PlayPhase.WAITING_FOR_NOTE) return
-        val adjustedNow = adjustedNowSeconds(phase, _gameState.value.currentTimeSeconds)
         val currentOffset = _viewState.value.songTimeOffsetSeconds
-        seekToViewTime(adjustedNow + currentOffset + deltaSeconds)
+        seekToViewTime(_gameState.value.currentTimeSeconds + currentOffset + deltaSeconds)
     }
 
     fun seekToViewTime(viewTimeSeconds: Double) {
@@ -1222,12 +1179,11 @@ class MelodyViewModel @Inject constructor(
         val gameSnapshot = _gameState.value
         val track = gameSnapshot.melodyTrack ?: return
         val currentTimeSeconds = gameSnapshot.currentTimeSeconds
-        val adjustedNow = adjustedNowSeconds(phase, currentTimeSeconds)
         val timeSig = track.timeSignatureAt(0L)
         val firstTempoUs = track.tempoChanges.firstOrNull()?.microsecondsPerBeat ?: 500_000L
         val barDurationSeconds = timeSig.numerator * firstTempoUs / 1_000_000.0
         val minOffset = -2.0 * barDurationSeconds - currentTimeSeconds
-        val newOffset = (viewTimeSeconds - adjustedNow)
+        val newOffset = (viewTimeSeconds - currentTimeSeconds)
             .coerceIn(minOffset, track.durationSeconds - currentTimeSeconds + 2.0)
         _viewState.update { it.copy(songTimeOffsetSeconds = newOffset) }
     }
@@ -1255,7 +1211,7 @@ class MelodyViewModel @Inject constructor(
         playbackStartWallMs = SystemClock.elapsedRealtime()
         playbackJob = viewModelScope.launch {
             val track = _gameState.value.melodyTrack ?: return@launch
-            val pitchStartThreshold = _gameState.value.countdownResumeTarget.let { if (it > 0.0) it else 0.0 }
+            val countInTracks = leadInMetronome(_gameState.value.metronomeTrack)
             var pitchDetectionStarted = false
             var lastStateUpdate = 0L
 
@@ -1270,9 +1226,8 @@ class MelodyViewModel @Inject constructor(
                 val elapsed = (now - playbackStartWallMs) / 1000.0
                 val currentTime = pauseOffset + elapsed
 
-                if (!pitchDetectionStarted && currentTime >= pitchStartThreshold) {
+                if (!pitchDetectionStarted && currentTime >= 0.0) {
                     pitchDetectionStarted = true
-                    _gameState.update { it.copy(countdownResumeTarget = 0.0) }
                     startPitchDetection()
                 }
 
@@ -1302,14 +1257,10 @@ class MelodyViewModel @Inject constructor(
                             devModeEnabled = devModeState.isEnabled
                         )
                     )
-                    val mt = gs.metronomeTrack
-                    if (mt != null && gs.metronomeEnabled &&
-                        (!gs.waitMode || !pitchDetectionStarted)) {
-                        add(mt)
-                    }
+                    addAll(metronomeTracks(gs.metronomeMode, gs.waitMode, gs.metronomeTrack, countInTracks))
                 }
                 if (soundFontSynthesizer.isReady) {
-                    melodyPlayer.updateGameTime(currentTime + audioLeadSeconds(inputDelayMs, outputDelayMs), playTracks)
+                    melodyPlayer.updateGameTime(currentTime + audioLeadSeconds(audioDelayMs), playTracks)
                 }
 
                 delay(16)
@@ -1384,7 +1335,7 @@ class MelodyViewModel @Inject constructor(
                         evaluateNote(result)
                     } else {
                         noteTracking.lastPitchAtMs = 0L
-                        noteTracking.lastCorrectAtMs = 0L
+                        noteTracking.lastInTuneAtMs = 0L
                     }
                 }
             }
@@ -1493,18 +1444,18 @@ class MelodyViewModel @Inject constructor(
                 (now - noteTracking.lastPitchAtMs).coerceIn(frameDurationMs, 150L)
             }
             noteTracking.lastPitchAtMs = now
+            noteTracking.centsOffSum += abs(centsOff)
+            noteTracking.centsOffCount++
             if (isCorrectNote) {
-                noteTracking.centsOffSum += abs(centsOff)
-                noteTracking.centsOffCount++
-                noteTracking.correctPitchFrameCount++
-                noteTracking.correctPitchMs += if (noteTracking.lastCorrectAtMs == 0L) {
+                noteTracking.inTuneFrameCount++
+                noteTracking.inTuneMs += if (noteTracking.lastInTuneAtMs == 0L) {
                     frameDurationMs
                 } else {
-                    (now - noteTracking.lastCorrectAtMs).coerceIn(frameDurationMs, 150L)
+                    (now - noteTracking.lastInTuneAtMs).coerceIn(frameDurationMs, 150L)
                 }
-                noteTracking.lastCorrectAtMs = now
+                noteTracking.lastInTuneAtMs = now
             } else {
-                noteTracking.lastCorrectAtMs = 0L
+                noteTracking.lastInTuneAtMs = 0L
             }
         }
 
@@ -1574,16 +1525,15 @@ class MelodyViewModel @Inject constructor(
         val isMidi = _deviceState.value.midiInputEnabled
         val frameDurationMs = AudioConstants.FRAME_DURATION_MS
         val detectedDurationMs = if (isMidi) noteTracking.detectedPitchFrameCount * frameDurationMs else noteTracking.detectedPitchMs
-        val correctDurationMs = if (isMidi) noteTracking.correctPitchFrameCount * frameDurationMs else noteTracking.correctPitchMs
+        val inTuneMs = if (isMidi) noteTracking.inTuneFrameCount * frameDurationMs else noteTracking.inTuneMs
 
-        val playedDurationMs = if (level <= 2) detectedDurationMs else correctDurationMs
+        val playedDurationMs = if (level <= 2) detectedDurationMs else inTuneMs
         val score = if (level <= 2) {
             val durationScore = scoringEngine.scoreDuration(playedDurationMs, expectedDurationMs, level)
             NoteScore(
                 pitchScore = 100f,
                 durationScore = durationScore,
-                overallScore = durationScore,
-                isHit = currentNoteDetectedCorrectly
+                overallScore = durationScore
             )
         } else {
             val effectiveCentsOff = if (noteTracking.centsOffCount > 0) noteTracking.centsOffSum / noteTracking.centsOffCount else 100f
@@ -1592,11 +1542,11 @@ class MelodyViewModel @Inject constructor(
                 expectedDurationMs = expectedDurationMs,
                 actualDurationMs = playedDurationMs
             )
-            scoringEngine.scoreNote(performance, level).copy(isHit = currentNoteDetectedCorrectly)
+            scoringEngine.scoreNote(performance, level)
         }
 
         val actualDurationMs = playedDurationMs.coerceAtLeast(1L)
-        val resultState = if (score.isHit) NoteResultState.HIT else NoteResultState.MISS
+        val resultState = if (currentNoteDetectedCorrectly) NoteResultState.HIT else NoteResultState.MISS
 
         _gameState.update { current ->
             val results = current.noteResults.toMutableMap()
@@ -1651,19 +1601,14 @@ class MelodyViewModel @Inject constructor(
         val timeRatio = songTimeRatio(track, waitMs)
         val timeScore = ScoringEngine.scoreTime(timeRatio, currentLevel)
 
-        val totalNotes = noteScores.size
-        val wrongNoteScore = if (totalNotes > 0) (melodyScore.notesHit.toFloat() / totalNotes) * 100f else 100f
-
         val adjustedScore = ScoringEngine.combineScores(
             noteScore = melodyScore.overallScore,
             timeScore = timeScore,
-            wrongNoteScore = wrongNoteScore,
             level = currentLevel
         )
         val adjustedMelodyScore = melodyScore.copy(
             overallScore = adjustedScore,
-            timeScore = timeScore,
-            wrongNoteScore = wrongNoteScore
+            timeScore = timeScore
         )
 
         val unlockedLevel = _gameState.value.unlockedLevel
@@ -1724,7 +1669,7 @@ class MelodyViewModel @Inject constructor(
                 existing.map { it.level to it.overallScore },
                 currentLevel
             )
-            val scoreImproved = adjustedScore > previousBestScore
+            val scoreImproved = ScoringEngine.improvesPersonalBest(adjustedScore, previousBestScore)
             _personalBestScore.value = maxOf(previousBestScore, adjustedScore)
             _celebrationLevel.value = if (scoreImproved) CelebrationLevel.fromScore(adjustedScore)
             else CelebrationLevel.NONE
@@ -1800,6 +1745,7 @@ class MelodyViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        playbackStartJob?.cancel()
         playbackJob?.cancel()
         pitchJob?.cancel()
         runStartJob?.cancel()
@@ -1814,19 +1760,17 @@ class MelodyViewModel @Inject constructor(
 private class NoteTrackingState {
     var centsOffSum = 0f
     var centsOffCount = 0
-    var correctPitchFrameCount = 0
+    var inTuneFrameCount = 0
     var detectedPitchFrameCount = 0
-    var correctPitchMs = 0L
+    var inTuneMs = 0L
     var detectedPitchMs = 0L
     var lastPitchAtMs = 0L
-    var lastCorrectAtMs = 0L
+    var lastInTuneAtMs = 0L
     var isWaitingForNote = false
-    var wasWaitingForNote = false
 
     fun reset() {
         resetPitchAccumulators()
         isWaitingForNote = false
-        wasWaitingForNote = false
     }
 
     fun resetForNewNote() = resetPitchAccumulators()
@@ -1834,11 +1778,11 @@ private class NoteTrackingState {
     private fun resetPitchAccumulators() {
         centsOffSum = 0f
         centsOffCount = 0
-        correctPitchFrameCount = 0
+        inTuneFrameCount = 0
         detectedPitchFrameCount = 0
-        correctPitchMs = 0L
+        inTuneMs = 0L
         detectedPitchMs = 0L
         lastPitchAtMs = 0L
-        lastCorrectAtMs = 0L
+        lastInTuneAtMs = 0L
     }
 }

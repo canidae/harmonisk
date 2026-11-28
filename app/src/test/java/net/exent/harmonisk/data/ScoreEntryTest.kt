@@ -32,12 +32,9 @@ class ScoreEntryTest {
 
         assertEquals(1L, entry.timestamp)
         assertEquals(80f, entry.overallScore, 0.01f)
-        assertEquals(10, entry.totalNotes)
-        assertEquals(8, entry.notesHit)
         assertEquals(82f, entry.avgPitchScore, 0.01f)
         assertEquals(78f, entry.avgDurationScore, 0.01f)
         assertEquals(2, entry.level)
         assertEquals("VIOLIN", entry.instrument)
-        assertEquals(80f, entry.wrongNoteScore, 0.01f)
     }
 }

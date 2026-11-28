@@ -1,5 +1,5 @@
 package net.exent.harmonisk.ui.utils
 
-import kotlin.math.floor
+import net.exent.harmonisk.music.ScoringEngine
 
-fun formatScore(score: Float): String = floor(score).toInt().toString()
+fun formatScore(score: Float): String = ScoringEngine.displayedScore(score).toString()
