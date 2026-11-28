@@ -97,10 +97,10 @@ class FreeBirdViewModel @Inject constructor(
             var last = SystemClock.elapsedRealtime()
             var elapsed = 0L
             var lastSpawn = 0L
-            var nextSpawn = FREEBIRD_NOTE_INTERVAL_MS
-            val firstNoteBeat = freeBirdFirstNoteBeatMs()
-            val firstBeat = freeBirdFirstBeatMs()
-            var nextBeat = firstBeat
+            var spawnInterval = FREEBIRD_NOTE_INTERVAL_MS
+            var beatInterval = spawnInterval
+            var nextSpawn = spawnInterval
+            var nextBeat = freeBirdFirstBeatMs(spawnInterval)
             var beatIndex = 0L
             var beatMuteUntil = 0L
             var feedback: FreeBirdHit? = null
@@ -108,9 +108,12 @@ class FreeBirdViewModel @Inject constructor(
             var nextId = 1L
             var level = 1
             var newRecord = false
-            var phrase = emptyList<FreeBirdNote>()
+            var phrase = freeBirdPhrase(_instrument.value, level)
             var phraseIndex = 0
-            var phrasesLeft = FREEBIRD_PHRASES_PER_LEVEL
+            var phrasesLeft = FREEBIRD_PHRASES_PER_LEVEL - 1
+            var phraseFirstBeat = freeBirdFirstNoteBeatMs(spawnInterval)
+            var pendingBeatAt = 0L
+            var pendingBeatInterval = 0L
             while (isActive) {
                 delay(33)
                 val now = SystemClock.elapsedRealtime()
@@ -149,36 +152,57 @@ class FreeBirdViewModel @Inject constructor(
                 var beatAt = state.beatAt
                 var beatAccent = state.beatAccent
                 if (elapsed >= nextBeat) {
+                    if (pendingBeatAt > 0L && nextBeat >= pendingBeatAt) {
+                        beatInterval = pendingBeatInterval
+                        beatIndex = 0L
+                        nextBeat = pendingBeatAt
+                        pendingBeatAt = 0L
+                    }
                     val accent = beatIndex % FREEBIRD_BEATS_PER_BAR == 0L
                     beatAt = now
                     beatAccent = accent
                     click(accent)
                     beatMuteUntil = elapsed + FREEBIRD_BEAT_MUTE_MS
                     beatIndex++
-                    nextBeat += FREEBIRD_NOTE_INTERVAL_MS
+                    nextBeat += beatInterval
                 }
                 val letters = state.letters.toMutableList()
                 if (elapsed >= nextSpawn) {
-                    if (phraseIndex >= phrase.size) {
-                        if (phrasesLeft <= 0) {
-                            if (level < FREEBIRD_MAX_LEVEL) level++
-                            phrasesLeft = FREEBIRD_PHRASES_PER_LEVEL
-                        }
-                        phrase = freeBirdPhrase(_instrument.value, level)
-                        phraseIndex = 0
-                        phrasesLeft--
-                    }
                     val firstNote = nextId == 1L
                     val bonus = if (firstNote) elapsed + FREEBIRD_BEAK_LEAD_MS.toLong() else elapsed - lastSpawn
                     lastSpawn = elapsed
                     val note = phrase[phraseIndex++]
                     letters += FreeBirdLetter(nextId++, note.midi, note.finger, FREEBIRD_SPAWN_X, bonus)
-                    val phraseFinished = phraseIndex >= phrase.size
-                    nextSpawn = if (phraseFinished) {
-                        val lastBeat = elapsed + FREEBIRD_BEAK_LEAD_MS.toLong()
-                        freeBirdNextPhraseBeatMs(lastBeat, firstNoteBeat) - FREEBIRD_BEAK_LEAD_MS.toLong()
+                    if (phraseIndex >= phrase.size) {
+                        val currentLevel = level
+                        if (phrasesLeft <= 0) {
+                            if (level < FREEBIRD_MAX_LEVEL) level++
+                            phrasesLeft = FREEBIRD_PHRASES_PER_LEVEL
+                        }
+                        val lastNoteBeat = phraseFirstBeat + (phrase.size - 1) * spawnInterval
+                        val nextInterval = if (currentLevel == FREEBIRD_MAX_LEVEL) {
+                            freeBirdFasterInterval(spawnInterval)
+                        } else {
+                            spawnInterval
+                        }
+                        val nextFirstBeat = if (currentLevel == FREEBIRD_MAX_LEVEL) {
+                            val changeBeat = freeBirdTempoChangeBeatMs(lastNoteBeat, phraseFirstBeat, spawnInterval)
+                            pendingBeatAt = changeBeat
+                            changeBeat + FREEBIRD_BEATS_PER_BAR * nextInterval
+                        } else {
+                            freeBirdNextPhraseBeatMs(lastNoteBeat, phraseFirstBeat, spawnInterval).also {
+                                pendingBeatAt = it
+                            }
+                        }
+                        phrase = freeBirdPhrase(_instrument.value, level)
+                        phraseIndex = 0
+                        phrasesLeft--
+                        nextSpawn = nextFirstBeat - FREEBIRD_BEAK_LEAD_MS.toLong()
+                        phraseFirstBeat = nextFirstBeat
+                        spawnInterval = nextInterval
+                        pendingBeatInterval = nextInterval
                     } else {
-                        elapsed + FREEBIRD_NOTE_INTERVAL_MS
+                        nextSpawn = elapsed + spawnInterval
                     }
                 }
                 val speed = (FREEBIRD_SPAWN_X - BIRD_PERCH_X) / FREEBIRD_NOTE_TRAVEL_MS

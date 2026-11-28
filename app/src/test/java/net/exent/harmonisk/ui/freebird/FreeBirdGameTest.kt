@@ -29,13 +29,43 @@ class FreeBirdGameTest {
     }
 
     @Test
-    fun `levels walk up the string one finger at a time and back`() {
-        assertEquals(listOf(0), freeBirdPattern(1))
-        assertEquals(listOf(0, 1, 0), freeBirdPattern(2))
-        assertEquals(listOf(0, 1, 2, 1, 0), freeBirdPattern(3))
-        assertEquals(listOf(0, 1, 2, 3, 2, 1, 0), freeBirdPattern(4))
-        assertEquals(listOf(0, 1, 2, 3, 4, 3, 2, 1, 0), freeBirdPattern(5))
-        assertEquals(listOf(0, 1, 2, 3, 4, 3, 2, 1, 0), freeBirdPattern(9))
+    fun `levels walk up the strings one finger at a time and back`() {
+        assertEquals(listOf(0), freeBirdFingerings(1).map { it.finger })
+        assertEquals(listOf(0, 1, 0), freeBirdFingerings(2).map { it.finger })
+        assertEquals(listOf(0, 1, 2, 1, 0), freeBirdFingerings(3).map { it.finger })
+        assertEquals(listOf(0, 1, 2, 3, 2, 1, 0), freeBirdFingerings(4).map { it.finger })
+        assertEquals(listOf(0, 1, 2, 3, 4, 3, 2, 1, 0), freeBirdFingerings(5).map { it.finger })
+        assertEquals(
+            listOf(0, 1, 2, 3, 0, 1, 2, 3, 4, 4, 3, 2, 1, 0, 3, 2, 1, 0),
+            freeBirdFingerings(6).map { it.finger }
+        )
+        assertEquals(
+            listOf(
+                0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 4,
+                4, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0
+            ),
+            freeBirdFingerings(7).map { it.finger }
+        )
+    }
+
+    @Test
+    fun `the octave level uses the next string`() {
+        assertEquals(
+            listOf(0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0),
+            freeBirdFingerings(6).map { it.string }
+        )
+    }
+
+    @Test
+    fun `the final level uses all four strings`() {
+        assertEquals(
+            listOf(
+                0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3,
+                3, 3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0
+            ),
+            freeBirdFingerings(7).map { it.string }
+        )
+        assertEquals(34, freeBirdFingerings(7).size)
     }
 
     @Test
@@ -52,6 +82,33 @@ class FreeBirdGameTest {
         val open = phrase.first().midi
         assertEquals(listOf(0, 1, 2, 3, 4, 3, 2, 1, 0), phrase.map { it.finger })
         assertEquals(listOf(0, 2, 4, 5, 7, 5, 4, 2, 0), phrase.map { it.midi - open })
+    }
+
+    @Test
+    fun `the octave phrase walks two neighbouring strings`() {
+        val phrase = freeBirdPhrase(Instrument.VIOLIN, 6, Random(7))
+        val open = phrase.first().midi
+        assertTrue(open in Instrument.VIOLIN.tuning.dropLast(1))
+        assertEquals(
+            listOf(0, 2, 4, 5, 7, 9, 11, 12, 14, 14, 12, 11, 9, 7, 5, 4, 2, 0),
+            phrase.map { it.midi - open }
+        )
+    }
+
+    @Test
+    fun `the final phrase walks the whole first position`() {
+        val phrase = freeBirdPhrase(Instrument.VIOLIN, 7, Random(7))
+        val open = Instrument.VIOLIN.tuning.first()
+        assertEquals(34, phrase.size)
+        assertEquals(open, phrase.first().midi)
+        assertEquals(open, phrase.last().midi)
+        assertEquals(
+            listOf(
+                0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 25, 26, 28,
+                28, 26, 25, 23, 21, 19, 18, 16, 14, 12, 11, 9, 7, 5, 4, 2, 0
+            ),
+            phrase.map { it.midi - open }
+        )
     }
 
     @Test
@@ -111,6 +168,41 @@ class FreeBirdGameTest {
                 assertEquals(firstBeat + nextOffset, next)
                 assertEquals(0L, (next - firstBeat) % FREEBIRD_BAR_MS)
             }
+    }
+
+    @Test
+    fun `the final level accelerates without a tempo cap`() {
+        var interval = FREEBIRD_NOTE_INTERVAL_MS
+        repeat(100) { interval = freeBirdFasterInterval(interval) }
+
+        assertTrue(interval < 100L)
+        assertTrue(interval > 0L)
+    }
+
+    @Test
+    fun `the tempo rises on the next downbeat after the last note`() {
+        val interval = FREEBIRD_NOTE_INTERVAL_MS
+        val first = freeBirdFirstNoteBeatMs()
+        val last = first + 33 * interval
+        val change = freeBirdTempoChangeBeatMs(last, first, interval)
+        val faster = freeBirdFasterInterval(interval)
+
+        assertEquals(first + 36 * interval, change)
+        assertEquals(0L, (change - first) % (interval * FREEBIRD_BEATS_PER_BAR))
+        val next = change + FREEBIRD_BEATS_PER_BAR * faster
+        assertEquals(0L, (next - change) % (faster * FREEBIRD_BEATS_PER_BAR))
+        assertTrue(next > change)
+    }
+
+    @Test
+    fun `a faster phrase still starts on a bar downbeat`() {
+        val interval = freeBirdFasterInterval(FREEBIRD_NOTE_INTERVAL_MS)
+        val phraseStart = freeBirdFirstNoteBeatMs(interval)
+        val lastNote = phraseStart + 17 * interval
+        val next = freeBirdNextPhraseBeatMs(lastNote, phraseStart, interval)
+
+        assertEquals(0L, (next - phraseStart) % (interval * FREEBIRD_BEATS_PER_BAR))
+        assertTrue(next - lastNote >= interval * FREEBIRD_PHRASE_GAP_BEATS)
     }
 
     @Test
